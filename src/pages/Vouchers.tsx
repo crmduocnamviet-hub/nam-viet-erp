@@ -15,13 +15,13 @@ import {
   Switch,
   Tag,
 } from "antd";
-import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import { PlusOutlined, EditOutlined } from "@ant-design/icons";
 import { supabase } from "../lib/supabaseClient";
 
 const { Title } = Typography;
 
 const Vouchers: React.FC = () => {
-  const { notification, modal } = App.useApp();
+  const { notification } = App.useApp();
   const [form] = Form.useForm();
   const [vouchers, setVouchers] = useState<any[]>([]);
   const [promotions, setPromotions] = useState<

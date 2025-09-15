@@ -43,7 +43,6 @@ const PromotionDetail: React.FC = () => {
   const [promotion, setPromotion] = useState<any | null>(null);
   const [vouchers, setVouchers] = useState<any[]>([]);
   const [isVoucherModalOpen, setIsVoucherModalOpen] = useState(false);
-  const [editingPromo, setEditingPromo] = useState<any | null>(null);
   const [promotionType, setPromotionType] = useState<string | null>(null);
 
   // State để lưu các tùy chọn cho bộ lọc điều kiện

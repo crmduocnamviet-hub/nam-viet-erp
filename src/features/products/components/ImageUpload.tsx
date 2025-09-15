@@ -12,7 +12,7 @@ interface ImageUploadProps {
 const ImageUpload: React.FC<ImageUploadProps> = ({ value, onChange }) => {
   const { notification } = App.useApp();
   const [previewOpen, setPreviewOpen] = useState(false);
-  const [previewImage, setPreviewImage] = useState("");
+  const [previewImage] = useState("");
   const [fileList, setFileList] = useState<UploadFile[]>([]);
 
   // Cập nhật ảnh hiển thị khi dữ liệu sửa được nạp vào

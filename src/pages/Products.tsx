@@ -28,27 +28,27 @@ const { Title, Text } = Typography;
 const { Search } = Input;
 const { Option } = Select;
 
-const InventoryDisplay = ({
-  inventoryData,
-  warehouseName,
-  unit,
-}: {
-  inventoryData: any[];
-  warehouseName: string;
-  unit: string;
-}) => {
-  if (!inventoryData) {
-    return <span>0 {unit}</span>;
-  }
-  const warehouse = inventoryData.find(
-    (inv) => inv.warehouse_name === warehouseName
-  );
-  return (
-    <span>
-      {warehouse ? warehouse.quantity : 0} {unit}
-    </span>
-  );
-};
+// const InventoryDisplay = ({
+//   inventoryData,
+//   warehouseName,
+//   unit,
+// }: {
+//   inventoryData: any[];
+//   warehouseName: string;
+//   unit: string;
+// }) => {
+//   if (!inventoryData) {
+//     return <span>0 {unit}</span>;
+//   }
+//   const warehouse = inventoryData.find(
+//     (inv) => inv.warehouse_name === warehouseName
+//   );
+//   return (
+//     <span>
+//       {warehouse ? warehouse.quantity : 0} {unit}
+//     </span>
+//   );
+// };
 
 const Products: React.FC = () => {
   const { notification, modal } = App.useApp();
@@ -138,7 +138,7 @@ const Products: React.FC = () => {
             message: "Đã xóa!",
             description: `Sản phẩm "${productName}" đã được xóa thành công.`,
           });
-          fetchProducts(); // Tải lại danh sách sản phẩm
+          fetchProducts(searchTerm, statusFilter); // Tải lại danh sách sản phẩm
         } catch (error: any) {
           notification.error({
             message: "Lỗi khi xóa",
@@ -323,7 +323,7 @@ const Products: React.FC = () => {
         }" thành công.`,
       });
       handleCloseModal();
-      fetchProducts();
+      fetchProducts(searchTerm, statusFilter);
     } catch (error: any) {
       notification.error({ message: "Thất bại", description: error.message });
     } finally {
