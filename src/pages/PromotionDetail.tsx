@@ -22,8 +22,6 @@ import {
   SaveOutlined,
   ArrowLeftOutlined,
   PlusOutlined,
-  EditOutlined,
-  DeleteOutlined,
 } from "@ant-design/icons";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
@@ -33,7 +31,7 @@ const { Title } = Typography;
 const { RangePicker } = DatePicker;
 
 const PromotionDetail: React.FC = () => {
-  const { notification, modal } = App.useApp();
+  const { notification } = App.useApp();
   const [form] = Form.useForm();
   const [voucherForm] = Form.useForm();
   const params = useParams();

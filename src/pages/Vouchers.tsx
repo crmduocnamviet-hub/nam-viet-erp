@@ -74,7 +74,38 @@ const Vouchers: React.FC = () => {
   };
 
   const handleFinish = async (values: any) => {
-    // Logic thêm/sửa voucher tương tự trang Khuyến mại
+    try {
+      const record = {
+        code: values.code,
+        promotion_id: values.promotion_id,
+        usage_limit: values.usage_limit,
+        is_active: values.is_active,
+      };
+
+      let error;
+      if (editingVoucher) {
+        ({ error } = await supabase
+          .from("vouchers")
+          .update(record)
+          .eq("id", editingVoucher.id));
+      } else {
+        ({ error } = await supabase.from("vouchers").insert([record]));
+      }
+
+      if (error) throw error;
+      notification.success({
+        message: `Đã ${
+          editingVoucher ? "cập nhật" : "tạo"
+        } mã giảm giá thành công!`,
+      });
+      handleCancel();
+      fetchVouchers();
+    } catch (error: any) {
+      notification.error({
+        message: "Thao tác thất bại",
+        description: error.message,
+      });
+    }
   };
 
   const columns = [
@@ -103,7 +134,7 @@ const Vouchers: React.FC = () => {
     {
       title: "Hành động",
       key: "action",
-      render: (_: any, record: any) => (
+      render: (_: any) => (
         <Space>
           <Button icon={<EditOutlined />} />
         </Space>

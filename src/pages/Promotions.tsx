@@ -3,7 +3,6 @@ import { Button, Table, Space, Row, Col, Typography, App, Tag } from "antd";
 import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom"; // Import hook điều hướng
 import { supabase } from "../lib/supabaseClient";
-import dayjs from "dayjs";
 
 const { Title } = Typography;
 

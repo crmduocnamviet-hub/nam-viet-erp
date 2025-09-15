@@ -4,6 +4,14 @@ import { Modal, Upload, App } from "antd";
 import type { UploadFile, UploadProps } from "antd";
 import { supabase } from "../../../lib/supabaseClient";
 
+const getBase64 = (file: File): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = (error) => reject(error);
+  });
+
 interface ImageUploadProps {
   value?: string; // Nhận URL ảnh từ Form
   onChange?: (value: string) => void; // Gửi URL ảnh mới về cho Form
@@ -12,7 +20,7 @@ interface ImageUploadProps {
 const ImageUpload: React.FC<ImageUploadProps> = ({ value, onChange }) => {
   const { notification } = App.useApp();
   const [previewOpen, setPreviewOpen] = useState(false);
-  const [previewImage] = useState("");
+  const [previewImage, setPreviewImage] = useState("");
   const [fileList, setFileList] = useState<UploadFile[]>([]);
 
   // Cập nhật ảnh hiển thị khi dữ liệu sửa được nạp vào
@@ -32,7 +40,11 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ value, onChange }) => {
   }, [value]);
 
   const handlePreview = async (file: UploadFile) => {
-    /* ... Giữ nguyên ... */
+    if (!file.url && !file.preview) {
+      file.preview = await getBase64(file.originFileObj as File);
+    }
+    setPreviewImage(file.url || (file.preview as string));
+    setPreviewOpen(true);
   };
 
   const handleChange: UploadProps["onChange"] = ({ fileList: newFileList }) => {
