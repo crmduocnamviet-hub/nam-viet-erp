@@ -313,7 +313,7 @@ const QuickQuote: React.FC = () => {
                         borderRadius: 4,
                       }}
                     >
-                      <span style={{ fontWeight: 600 }}>Công dụng:</span>{" "}
+                      <span style={{ fontWeight: 600 }}>Công dụng/Bệnh:</span>{" "}
                       {product.disease}
                     </Paragraph>
                   )}
