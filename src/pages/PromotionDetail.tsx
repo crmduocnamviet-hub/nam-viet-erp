@@ -261,7 +261,13 @@ const PromotionDetail: React.FC = () => {
             />
           </Form.Item>
           <Form.Item name="value" label="Giá trị" rules={[{ required: true }]}>
-            <InputNumber style={{ width: "100%" }} />
+            <InputNumber
+              style={{ width: "100%" }}
+              formatter={(value) =>
+                `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ".")
+              }
+              parser={(value) => Number(value!.replace(/\./g, ""))}
+            />
           </Form.Item>
           <Form.Item
             name="dateRange"
@@ -304,7 +310,15 @@ const PromotionDetail: React.FC = () => {
               label="Phần trăm giảm giá (%)"
               rules={[{ required: true }]}
             >
-              <InputNumber style={{ width: "100%" }} min={0} max={100} />
+              <InputNumber
+                style={{ width: "100%" }}
+                formatter={(value) =>
+                  `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ".")
+                }
+                parser={(value) => Number(value!.replace(/\./g, ""))}
+                min={0}
+                max={100}
+              />
             </Form.Item>
           )}
           {promotionType === "fixed_amount" && (
@@ -313,7 +327,13 @@ const PromotionDetail: React.FC = () => {
               label="Số tiền giảm giá (VNĐ)"
               rules={[{ required: true }]}
             >
-              <InputNumber style={{ width: "100%" }} />
+              <InputNumber
+                style={{ width: "100%" }}
+                formatter={(value) =>
+                  `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ".")
+                }
+                parser={(value) => Number(value!.replace(/\./g, ""))}
+              />
             </Form.Item>
           )}
           {promotionType === "order_discount" && (
@@ -323,14 +343,26 @@ const PromotionDetail: React.FC = () => {
                 label="Giá trị đơn hàng tối thiểu (VNĐ)"
                 rules={[{ required: true }]}
               >
-                <InputNumber style={{ width: "100%" }} />
+                <InputNumber
+                  style={{ width: "100%" }}
+                  formatter={(value) =>
+                    `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ".")
+                  }
+                  parser={(value) => Number(value!.replace(/\./g, ""))}
+                />
               </Form.Item>
               <Form.Item
                 name="value"
                 label="Số tiền giảm giá (VNĐ)"
                 rules={[{ required: true }]}
               >
-                <InputNumber style={{ width: "100%" }} />
+                <InputNumber
+                  style={{ width: "100%" }}
+                  formatter={(value) =>
+                    `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ".")
+                  }
+                  parser={(value) => Number(value!.replace(/\./g, ""))}
+                />
               </Form.Item>
             </>
           )}
@@ -396,7 +428,14 @@ const PromotionDetail: React.FC = () => {
             label="Giới hạn lượt sử dụng"
             rules={[{ required: true }]}
           >
-            <InputNumber style={{ width: "100%" }} min={1} />
+            <InputNumber
+              style={{ width: "100%" }}
+              formatter={(value) =>
+                `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ".")
+              }
+              parser={(value) => Number(value!.replace(/\./g, ""))}
+              min={1}
+            />
           </Form.Item>
           <Form.Item name="is_active" label="Kích hoạt" valuePropName="checked">
             <Switch />
