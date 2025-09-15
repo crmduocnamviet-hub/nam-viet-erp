@@ -22,58 +22,73 @@ const calculateBestPrice = (product: any, promotions: any[]) => {
   let bestPrice = product.wholesale_price;
   let appliedPromotionName: string | null = null;
 
-  if (bestPrice === null || bestPrice === undefined) {
+  if (bestPrice === null || bestPrice === undefined || bestPrice <= 0) {
     return { finalPrice: 0, originalPrice: 0, promotionApplied: null };
   }
 
   for (const promo of promotions) {
     const conditions = promo.conditions;
-    let isApplicable = true; // Mặc định là có thể áp dụng
+    let isApplicable = true;
 
-    // Bắt đầu kiểm tra các điều kiện
-    if (!conditions) {
-      isApplicable = true;
-    } else {
-      // Điều kiện 1: Bảng giá (chỉ áp dụng cho Bán buôn)
+    // Kiểm tra các điều kiện chung (hãng, loại sản phẩm...)
+    if (conditions) {
       if (
         conditions.price_groups &&
         !conditions.price_groups.includes("Bán buôn")
-      ) {
+      )
         isApplicable = false;
-      }
-      // Điều kiện 2: Hãng sản xuất
       if (
         isApplicable &&
         conditions.manufacturers &&
-        conditions.manufacturers.length > 0
-      ) {
-        if (!conditions.manufacturers.includes(product.manufacturer)) {
-          isApplicable = false;
-        }
-      }
-      // Điều kiện 3: Phân loại sản phẩm
+        conditions.manufacturers.length > 0 &&
+        !conditions.manufacturers.includes(product.manufacturer)
+      )
+        isApplicable = false;
       if (
         isApplicable &&
         conditions.product_categories &&
-        conditions.product_categories.length > 0
-      ) {
-        if (!conditions.product_categories.includes(product.category)) {
-          isApplicable = false;
-        }
-      }
+        conditions.product_categories.length > 0 &&
+        !conditions.product_categories.includes(product.category)
+      )
+        isApplicable = false;
     }
 
-    // Nếu tất cả các điều kiện đều thỏa mãn
     if (isApplicable) {
-      let currentPrice = product.wholesale_price; // Luôn tính từ giá gốc
+      let currentPrice = product.wholesale_price;
+      let calculated = false;
+
+      // Xử lý các loại khuyến mại trên SẢN PHẨM
       if (promo.type === "percentage") {
         currentPrice = product.wholesale_price * (1 - promo.value / 100);
+        calculated = true;
       } else if (promo.type === "fixed_amount") {
         currentPrice = product.wholesale_price - promo.value;
+        calculated = true;
+      }
+      // === LOGIC MỚI: Xử lý khuyến mại trên ĐƠN HÀNG ===
+      else if (
+        promo.type === "order_discount" &&
+        conditions?.min_order_value > 0
+      ) {
+        const minOrderValue = conditions.min_order_value;
+        const discountValue = promo.value;
+
+        // Tính số lượng sản phẩm cần mua để đạt ngưỡng KM
+        const requiredUnits = Math.ceil(
+          minOrderValue / product.wholesale_price
+        );
+        if (requiredUnits > 0) {
+          // Phân bổ giá trị KM trên mỗi sản phẩm
+          const perUnitDiscount = discountValue / requiredUnits;
+          // Làm tròn tăng lên hàng nghìn gần nhất
+          const roundedUpDiscount = Math.ceil(perUnitDiscount / 1000) * 1000;
+          // Tính giá tham khảo cuối cùng
+          currentPrice = product.wholesale_price - roundedUpDiscount;
+          calculated = true;
+        }
       }
 
-      // Nếu giá sau khi áp dụng KM này tốt hơn giá tốt nhất hiện tại, cập nhật lại
-      if (currentPrice < bestPrice) {
+      if (calculated && currentPrice < bestPrice) {
         bestPrice = currentPrice;
         appliedPromotionName = promo.name;
       }
@@ -81,7 +96,7 @@ const calculateBestPrice = (product: any, promotions: any[]) => {
   }
 
   return {
-    finalPrice: bestPrice,
+    finalPrice: Math.round(bestPrice), // Làm tròn giá cuối cùng
     originalPrice: product.wholesale_price,
     promotionApplied: appliedPromotionName,
   };
