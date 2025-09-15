@@ -15,13 +15,13 @@ import {
   Switch,
   Tag,
 } from "antd";
-import { PlusOutlined, EditOutlined } from "@ant-design/icons";
+import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import { supabase } from "../lib/supabaseClient";
 
 const { Title } = Typography;
 
 const Vouchers: React.FC = () => {
-  const { notification } = App.useApp();
+  const { notification, modal } = App.useApp();
   const [form] = Form.useForm();
   const [vouchers, setVouchers] = useState<any[]>([]);
   const [promotions, setPromotions] = useState<
@@ -31,27 +31,26 @@ const Vouchers: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingVoucher, setEditingVoucher] = useState<any | null>(null);
 
-  useEffect(() => {
-    const fetchVouchers = async () => {
-      setLoading(true);
-      try {
-        // Lấy dữ liệu voucher và "nhờ" Supabase lấy luôn tên của chương trình khuyến mại liên quan
-        const { data, error } = await supabase
-          .from("vouchers")
-          .select("*, promotions(name)")
-          .order("created_at", { ascending: false });
-        if (error) throw error;
-        setVouchers(data || []);
-      } catch (error: any) {
-        notification.error({
-          message: "Lỗi tải mã giảm giá",
-          description: error.message,
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchVouchers = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("vouchers")
+        .select("*, promotions(name)")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      setVouchers(data || []);
+    } catch (error: any) {
+      notification.error({
+        message: "Lỗi tải mã giảm giá",
+        description: error.message,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     const fetchPromotions = async () => {
       const { data, error } = await supabase
         .from("promotions")
@@ -71,6 +70,39 @@ const Vouchers: React.FC = () => {
     setIsModalOpen(false);
     setEditingVoucher(null);
     form.resetFields();
+  };
+
+  const handleAdd = () => {
+    setEditingVoucher(null);
+    form.resetFields();
+    setIsModalOpen(true);
+  };
+
+  const handleEdit = (record: any) => {
+    setEditingVoucher(record);
+    form.setFieldsValue(record);
+    setIsModalOpen(true);
+  };
+
+  const handleDelete = (id: number, code: string) => {
+    modal.confirm({
+      title: "Bạn chắc chắn muốn xóa mã này?",
+      content: `Mã giảm giá "${code}" sẽ bị xóa vĩnh viễn.`,
+      okText: "Xóa",
+      okType: "danger",
+      onOk: async () => {
+        const { error } = await supabase.from("vouchers").delete().eq("id", id);
+        if (error) {
+          notification.error({
+            message: "Lỗi khi xóa",
+            description: error.message,
+          });
+        } else {
+          notification.success({ message: "Đã xóa thành công!" });
+          fetchVouchers();
+        }
+      },
+    });
   };
 
   const handleFinish = async (values: any) => {
@@ -124,6 +156,7 @@ const Vouchers: React.FC = () => {
     { title: "Đã dùng", dataIndex: "times_used", key: "times_used" },
     {
       title: "Trạng thái",
+      dataIndex: "is_active",
       key: "is_active",
       render: (isActive: boolean) => (
         <Tag color={isActive ? "green" : "red"}>
@@ -134,9 +167,14 @@ const Vouchers: React.FC = () => {
     {
       title: "Hành động",
       key: "action",
-      render: (_: any) => (
+      render: (_: any, record: any) => (
         <Space>
-          <Button icon={<EditOutlined />} />
+          <Button icon={<EditOutlined />} onClick={() => handleEdit(record)} />
+          <Button
+            icon={<DeleteOutlined />}
+            danger
+            onClick={() => handleDelete(record.id, record.code)}
+          />
         </Space>
       ),
     },
@@ -149,11 +187,7 @@ const Vouchers: React.FC = () => {
           <Title level={2}>Quản lý Mã Giảm Giá</Title>
         </Col>
         <Col>
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => setIsModalOpen(true)}
-          >
+          <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
             Tạo Mã mới
           </Button>
         </Col>
@@ -176,6 +210,7 @@ const Vouchers: React.FC = () => {
           layout="vertical"
           onFinish={handleFinish}
           style={{ paddingTop: 24 }}
+          initialValues={{ is_active: true, usage_limit: 1 }}
         >
           <Form.Item
             name="promotion_id"
@@ -197,17 +232,11 @@ const Vouchers: React.FC = () => {
           <Form.Item
             name="usage_limit"
             label="Giới hạn lượt sử dụng"
-            initialValue={1}
             rules={[{ required: true }]}
           >
             <InputNumber style={{ width: "100%" }} min={1} />
           </Form.Item>
-          <Form.Item
-            name="is_active"
-            label="Kích hoạt"
-            valuePropName="checked"
-            initialValue={true}
-          >
+          <Form.Item name="is_active" label="Kích hoạt" valuePropName="checked">
             <Switch />
           </Form.Item>
         </Form>
