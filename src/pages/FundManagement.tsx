@@ -1,0 +1,289 @@
+import React, { useState, useEffect } from "react";
+import {
+  Button,
+  Table,
+  Space,
+  Row,
+  Col,
+  Typography,
+  App,
+  Modal,
+  Form,
+  Input,
+  Select,
+  InputNumber,
+  Tag,
+  Avatar, // Thêm Avatar để hiển thị logo ngân hàng
+} from "antd";
+import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import { supabase } from "../lib/supabaseClient";
+
+const { Title } = Typography;
+
+const FundManagement: React.FC = () => {
+  const { notification, modal } = App.useApp();
+  const [form] = Form.useForm();
+
+  const [funds, setFunds] = useState<any[]>([]);
+  const [banks, setBanks] = useState<any[]>([]); // State mới để lưu danh sách ngân hàng
+  const [loading, setLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingFund, setEditingFund] = useState<any | null>(null);
+
+  // Lấy cả danh sách quỹ và danh sách ngân hàng khi component được tải
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const fundsPromise = supabase
+          .from("funds")
+          .select("*, banks(*)")
+          .order("created_at");
+        const banksPromise = supabase.from("banks").select("*");
+
+        const [fundsRes, banksRes] = await Promise.all([
+          fundsPromise,
+          banksPromise,
+        ]);
+
+        if (fundsRes.error) throw fundsRes.error;
+        if (banksRes.error) throw banksRes.error;
+
+        setFunds(fundsRes.data || []);
+        setBanks(banksRes.data || []);
+      } catch (error: any) {
+        notification.error({
+          message: "Lỗi tải dữ liệu",
+          description: error.message,
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, [notification]);
+
+  const handleCancel = () => {
+    setIsModalOpen(false);
+    setEditingFund(null);
+    form.resetFields();
+  };
+
+  const handleAdd = () => {
+    setEditingFund(null);
+    form.resetFields();
+    form.setFieldsValue({ type: "cash" }); // Mặc định là tiền mặt
+    setIsModalOpen(true);
+  };
+
+  const handleEdit = (record: any) => {
+    setEditingFund(record);
+    // Cần gán bank_id từ object lồng nhau
+    form.setFieldsValue({ ...record, bank_id: record.banks?.id });
+    setIsModalOpen(true);
+  };
+
+  const handleDelete = (id: number, name: string) => {
+    // ... logic xóa không đổi
+  };
+
+  const handleFinish = async (values: any) => {
+    try {
+      // Dọn dẹp dữ liệu trước khi gửi đi
+      const record = {
+        name: values.name,
+        type: values.type,
+        initial_balance: values.initial_balance || 0,
+        account_holder_name:
+          values.type === "bank" ? values.account_holder_name : null,
+        account_number: values.type === "bank" ? values.account_number : null,
+        bank_id: values.type === "bank" ? values.bank_id : null,
+      };
+
+      let error;
+      if (editingFund) {
+        ({ error } = await supabase
+          .from("funds")
+          .update(record)
+          .eq("id", editingFund.id));
+      } else {
+        ({ error } = await supabase.from("funds").insert([record]));
+      }
+      if (error) throw error;
+      notification.success({
+        message: `Đã ${editingFund ? "cập nhật" : "tạo"} thành công!`,
+      });
+      // Tải lại dữ liệu sau khi thành công
+      const { data } = await supabase
+        .from("funds")
+        .select("*, banks(*)")
+        .order("created_at");
+      setFunds(data || []);
+      handleCancel();
+    } catch (error: any) {
+      notification.error({
+        message: "Thao tác thất bại",
+        description: error.message,
+      });
+    }
+  };
+
+  // Cập nhật lại cột để hiển thị thông tin ngân hàng
+  const columns = [
+    {
+      title: "Tên Quỹ / Tài khoản",
+      dataIndex: "name",
+      key: "name",
+      render: (text: string, record: any) => (
+        <Space>
+          {record.banks?.logo && <Avatar src={record.banks.logo} />}
+          <Text strong>{text}</Text>
+        </Space>
+      ),
+    },
+    {
+      title: "Loại",
+      dataIndex: "type",
+      key: "type",
+      render: (type: string) => (
+        <Tag color={type === "cash" ? "gold" : "blue"}>
+          {type === "cash" ? "Tiền mặt" : "Ngân hàng"}
+        </Tag>
+      ),
+    },
+    {
+      title: "Chủ tài khoản",
+      dataIndex: "account_holder_name",
+      key: "account_holder_name",
+    },
+    {
+      title: "Số tài khoản",
+      dataIndex: "account_number",
+      key: "account_number",
+    },
+    {
+      title: "Số dư ban đầu",
+      dataIndex: "initial_balance",
+      key: "initial_balance",
+      render: (balance: number) =>
+        `${(balance || 0).toLocaleString("vi-VN")} đ`,
+    },
+    {
+      title: "Hành động",
+      key: "action",
+      render: (_: any, record: any) => (
+        <Space>
+          <Button icon={<EditOutlined />} onClick={() => handleEdit(record)} />
+          <Button
+            icon={<DeleteOutlined />}
+            danger
+            onClick={() => handleDelete(record.id, record.name)}
+          />
+        </Space>
+      ),
+    },
+  ];
+
+  const fundType = Form.useWatch("type", form);
+
+  return (
+    <>
+      <Row justify="space-between" align="middle" style={{ marginBottom: 24 }}>
+        <Col>
+          <Title level={2}>Cấu hình Quỹ & Tài khoản</Title>
+        </Col>
+        <Col>
+          <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
+            Thêm mới
+          </Button>
+        </Col>
+      </Row>
+      <Table
+        columns={columns}
+        dataSource={funds}
+        loading={loading}
+        rowKey="id"
+      />
+      <Modal
+        title={
+          editingFund ? "Cập nhật Quỹ/Tài khoản" : "Thêm mới Quỹ/Tài khoản"
+        }
+        open={isModalOpen}
+        onCancel={handleCancel}
+        onOk={() => form.submit()}
+        destroyOnClose
+      >
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleFinish}
+          style={{ paddingTop: 24 }}
+          initialValues={{ initial_balance: 0, type: "cash" }}
+        >
+          <Form.Item name="type" label="Loại" rules={[{ required: true }]}>
+            <Select>
+              <Select.Option value="cash">Tiền mặt</Select.Option>
+              <Select.Option value="bank">Ngân hàng</Select.Option>
+            </Select>
+          </Form.Item>
+          <Form.Item
+            name="name"
+            label="Tên gợi nhớ"
+            rules={[{ required: true }]}
+          >
+            <Input placeholder="Ví dụ: Quỹ tiền mặt công ty, TK Techcombank Hiền..." />
+          </Form.Item>
+          {fundType === "bank" && (
+            <>
+              <Form.Item
+                name="bank_id"
+                label="Ngân hàng"
+                rules={[{ required: true }]}
+              >
+                <Select
+                  showSearch
+                  placeholder="Chọn ngân hàng"
+                  optionFilterProp="children"
+                  filterOption={(input, option) =>
+                    (option?.label ?? "")
+                      .toLowerCase()
+                      .includes(input.toLowerCase())
+                  }
+                  options={banks.map((b) => ({
+                    value: b.id,
+                    label: `${b.short_name} - ${b.name}`,
+                  }))}
+                />
+              </Form.Item>
+              <Form.Item
+                name="account_holder_name"
+                label="Tên chủ tài khoản"
+                rules={[{ required: true }]}
+              >
+                <Input placeholder="Tên in trên thẻ/tài khoản" />
+              </Form.Item>
+              <Form.Item
+                name="account_number"
+                label="Số tài khoản"
+                rules={[{ required: true }]}
+              >
+                <Input />
+              </Form.Item>
+            </>
+          )}
+          <Form.Item name="initial_balance" label="Số dư ban đầu">
+            <InputNumber
+              style={{ width: "100%" }}
+              formatter={(value) =>
+                `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ".")
+              }
+              parser={(value) => Number(value!.replace(/\./g, ""))}
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
+    </>
+  );
+};
+
+export default FundManagement;
