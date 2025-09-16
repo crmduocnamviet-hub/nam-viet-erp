@@ -257,7 +257,7 @@ const TransactionPageContent: React.FC = () => {
         recipient_bank: values.recipient_bank,
         recipient_account: values.recipient_account,
         recipient_name: values.recipient_name,
-        qr_code_url: qrUrl, // <-- LƯU URL VÀO ĐÂY
+        qr_code_url: qrUrl,
         transaction_date: values.transaction_date.format("YYYY-MM-DD"),
         created_by:
           user?.user_metadata?.full_name || user?.email || "Không xác định",
