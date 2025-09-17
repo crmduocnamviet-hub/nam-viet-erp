@@ -11,6 +11,7 @@ import {
   Avatar,
   App as AntApp,
   Upload,
+  Grid, // <-- Thêm Grid
   type TableProps,
 } from "antd";
 import {
@@ -28,9 +29,11 @@ import { useDebounce } from "../hooks/useDebounce";
 const { Title, Text } = Typography;
 const { Search } = Input;
 const { Option } = Select;
+const { useBreakpoint } = Grid; // <-- Khai báo hook "mắt thần"
 
 const ProductsPageContent: React.FC = () => {
   const { notification, modal } = AntApp.useApp();
+  const screens = useBreakpoint(); // <-- Gọi hook để lấy thông tin màn hình
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
   const [products, setProducts] = useState<any[]>([]);
@@ -466,21 +469,17 @@ const ProductsPageContent: React.FC = () => {
   const columns: TableProps<any>["columns"] = useMemo(() => {
     const baseColumns = [
       {
-        title: "Ảnh",
-        dataIndex: "image_url",
-        key: "image_url",
-        render: (url: string) => <Avatar shape="square" size={64} src={url} />,
-      },
-      {
-        title: "Tên Sản Phẩm",
+        title: "Sản phẩm",
         dataIndex: "name",
         key: "name",
-        width: 300,
-        render: (text: string, record: { sku: string }) => (
-          <div>
-            <Typography.Text strong>{text}</Typography.Text>
-            <div style={{ color: "gray" }}>SKU: {record.sku}</div>
-          </div>
+        render: (text: string, record: any) => (
+          <Space>
+            <Avatar shape="square" size={64} src={record.image_url} />
+            <div>
+              <Typography.Text strong>{text}</Typography.Text>
+              <div style={{ color: "gray" }}>SKU: {record.sku}</div>
+            </div>
+          </Space>
         ),
       },
     ];
@@ -489,7 +488,7 @@ const ProductsPageContent: React.FC = () => {
       title: `Tồn ${wh.name}`,
       dataIndex: "inventory_data",
       key: `stock_${wh.id}`,
-      responsive: ["lg"] as const,
+      // KHÔNG CÒN `responsive` ở đây nữa
       render: (inventoryData: any[], record: any) => {
         if (!inventoryData) return `0 ${record.retail_unit || ""}`;
         const inventory = inventoryData.find(
@@ -521,8 +520,15 @@ const ProductsPageContent: React.FC = () => {
         </Space>
       ),
     };
-    return [...baseColumns, ...warehouseColumns, actionColumn];
-  }, [warehouses]);
+
+    // Nếu màn hình lớn (lg trở lên), mới ghép các cột tồn kho vào
+    if (screens.lg) {
+      return [...baseColumns, ...warehouseColumns, actionColumn];
+    }
+
+    // Nếu không, chỉ hiển thị các cột cơ bản
+    return [...baseColumns, actionColumn];
+  }, [warehouses, screens.lg]); // Thêm screens.lg vào dependencies
 
   return (
     <>
