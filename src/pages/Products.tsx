@@ -11,7 +11,7 @@ import {
   Avatar,
   App as AntApp,
   Upload,
-  type TableProps, // <-- Đảm bảo import đúng 'type'
+  type TableProps,
 } from "antd";
 import {
   PlusOutlined,
@@ -144,9 +144,74 @@ const ProductsPageContent: React.FC = () => {
   const handleBulkActions = async (
     action: "deactivate" | "activate" | "setFixed" | "unsetFixed" | "delete"
   ) => {
-    // ... logic xử lý hàng loạt
-  };
+    let confirmTitle = "";
+    let okType: "primary" | "danger" = "primary";
+    let successMessage = `Đã cập nhật ${selectedRowKeys.length} sản phẩm.`;
+    let updateData: any = null;
+    let isDelete = false;
 
+    switch (action) {
+      case "deactivate":
+        confirmTitle = "Xác nhận Ngừng kinh doanh";
+        okType = "danger";
+        updateData = { is_active: false };
+        break;
+      case "activate":
+        confirmTitle = "Xác nhận Kinh doanh lại";
+        updateData = { is_active: true };
+        break;
+      case "setFixed":
+        confirmTitle = "Xác nhận Đặt làm SP Cố định";
+        updateData = { is_fixed_asset: true };
+        break;
+      case "unsetFixed":
+        confirmTitle = "Xác nhận Bỏ SP Cố định";
+        updateData = { is_fixed_asset: false };
+        break;
+      case "delete":
+        confirmTitle = "Xác nhận Xóa vĩnh viễn";
+        okType = "danger";
+        isDelete = true;
+        successMessage = `Đã xóa ${selectedRowKeys.length} sản phẩm.`;
+        break;
+    }
+
+    modal.confirm({
+      title: confirmTitle,
+      content: `Bạn có chắc muốn thực hiện hành động này cho ${selectedRowKeys.length} sản phẩm đã chọn?`,
+      okText: "Đồng ý",
+      okType,
+      cancelText: "Hủy",
+      onOk: async () => {
+        try {
+          let error;
+          if (isDelete) {
+            ({ error } = await supabase
+              .from("products")
+              .delete()
+              .in("id", selectedRowKeys));
+          } else {
+            ({ error } = await supabase
+              .from("products")
+              .update(updateData)
+              .in("id", selectedRowKeys));
+          }
+          if (error) throw error;
+          notification.success({
+            message: "Thành công!",
+            description: successMessage,
+          });
+          fetchProducts();
+          setSelectedRowKeys([]);
+        } catch (error: any) {
+          notification.error({
+            message: "Thất bại",
+            description: error.message,
+          });
+        }
+      },
+    });
+  };
   const handleEdit = (product: any) => {
     setEditingProduct(product);
     setIsModalOpen(true);
@@ -163,7 +228,97 @@ const ProductsPageContent: React.FC = () => {
   };
 
   const handleFormFinish = async (values: any) => {
-    // ... logic xử lý form
+    setFormLoading(true);
+    try {
+      // 1. Chuẩn bị dữ liệu sản phẩm để gửi lên CSDL
+      const productData = {
+        name: values.name,
+        sku: values.sku,
+        image_url: values.image_url,
+        product_type: values.productType,
+        is_fixed_asset: values.isFixedAsset,
+        barcode: values.barcode,
+        category: values.category,
+        tags: values.tags,
+        manufacturer: values.manufacturer,
+        distributor: values.distributor,
+        registration_number: values.registrationNumber,
+        packaging: values.packaging,
+        description: values.description,
+        hdsd_0_2: values.hdsd_0_2,
+        hdsd_2_6: values.hdsd_2_6,
+        hdsd_6_18: values.hdsd_6_18,
+        hdsd_over_18: values.hdsd_over_18,
+        disease: values.disease,
+        is_chronic: values.isChronic,
+        wholesale_unit: values.wholesaleUnit,
+        retail_unit: values.retailUnit,
+        conversion_rate: values.conversionRate,
+        invoice_price: values.invoicePrice,
+        cost_price: values.costPrice,
+        wholesale_profit: values.wholesaleProfit,
+        retail_profit: values.retailProfit,
+        wholesale_price: values.wholesalePrice,
+        retail_price: values.retailPrice,
+      };
+
+      let productId = editingProduct?.id;
+      let successMessage = "";
+
+      // 2. Kiểm tra xem đây là Sửa hay Thêm mới
+      if (editingProduct) {
+        // --- CẬP NHẬT SẢN PHẨM ---
+        const { error } = await supabase
+          .from("products")
+          .update(productData)
+          .eq("id", editingProduct.id);
+        if (error) throw error;
+        successMessage = `Đã cập nhật sản phẩm "${values.name}" thành công.`;
+      } else {
+        // --- THÊM MỚI SẢN PHẨM ---
+        const { data, error } = await supabase
+          .from("products")
+          .insert(productData)
+          .select()
+          .single();
+        if (error) throw error;
+        productId = data.id; // Lấy ID của sản phẩm vừa được tạo
+        successMessage = `Đã thêm sản phẩm "${values.name}" thành công.`;
+      }
+
+      // 3. Xử lý Cài đặt Tồn kho (Thêm mới hoặc Cập nhật)
+      if (values.inventory_settings && productId) {
+        const inventoryRecords = Object.entries(values.inventory_settings)
+          .filter(([, settings]) => settings !== undefined && settings !== null)
+          .map(([warehouseId, settings]: [string, any]) => ({
+            product_id: productId,
+            warehouse_id: parseInt(warehouseId, 10),
+            min_stock: settings.min_stock,
+            max_stock: settings.max_stock,
+          }));
+
+        if (inventoryRecords.length > 0) {
+          // Dùng "upsert" để tự động cập nhật nếu đã có, hoặc thêm mới nếu chưa có
+          const { error } = await supabase
+            .from("inventory")
+            .upsert(inventoryRecords, {
+              onConflict: "product_id, warehouse_id",
+            });
+          if (error) throw error;
+        }
+      }
+
+      notification.success({
+        message: "Thành công!",
+        description: successMessage,
+      });
+      handleCloseModal();
+      fetchProducts(debouncedSearchTerm, statusFilter);
+    } catch (error: any) {
+      notification.error({ message: "Thất bại", description: error.message });
+    } finally {
+      setFormLoading(false);
+    }
   };
 
   const onSelectChange = (newSelectedRowKeys: React.Key[]) => {
@@ -172,13 +327,132 @@ const ProductsPageContent: React.FC = () => {
 
   const rowSelection = { selectedRowKeys, onChange: onSelectChange };
   const handleDownloadTemplate = () => {
-    /* ... */
+    // Định nghĩa các cột cho file mẫu
+    const headers = [
+      {
+        "Tên Sản Phẩm*": "Panadol Extra",
+        "Mã SKU*": "PND-EXT-01",
+        "Giá vốn*": 5000,
+        "Đường dùng": "Uống",
+        "Đơn vị Bán Buôn": "Hộp",
+        "Đơn vị Bán lẻ": "Vỉ",
+        "Số lượng Quy đổi": 10,
+        "Quy cách đóng gói": "Hộp 10 vỉ x 12 viên",
+        "Mã vạch": "8934534000132",
+        "Phân loại": "Thuốc giảm đau, hạ sốt",
+        "Công ty sản xuất": "GSK",
+        "Số Đăng Ký": "VN-12345-12",
+      },
+    ];
+    try {
+      const ws = XLSX.utils.json_to_sheet(headers);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Sản phẩm");
+      XLSX.writeFile(wb, "file-mau-san-pham.xlsx");
+      notification.success({ message: "Đã tải file mẫu thành công!" });
+    } catch (error: any) {
+      notification.error({
+        message: "Lỗi khi tạo file mẫu",
+        description: error.message,
+      });
+    }
   };
+
   const handleExportExcel = async () => {
-    /* ... */
+    try {
+      setTableLoading(true);
+      // Lấy tất cả sản phẩm, không chỉ trang hiện tại
+      const { data, error } = await supabase
+        .from("products_with_inventory")
+        .select("*")
+        .order("name", { ascending: true });
+      if (error) throw error;
+
+      // Chuyển đổi dữ liệu sang định dạng thân thiện với người dùng
+      const dataToExport = data.map((p) => ({
+        "Tên Sản Phẩm": p.name,
+        "Mã SKU": p.sku,
+        "Mã vạch": p.barcode,
+        "Phân loại": p.category,
+        "Đường dùng": p.route,
+        "Giá vốn": p.cost_price,
+        "Giá bán buôn": p.wholesale_price,
+        "Giá bán lẻ": p.retail_price,
+        "Đơn vị Bán Buôn": p.wholesale_unit,
+        "Đơn vị Bán lẻ": p.retail_unit,
+        "Số lượng Quy đổi": p.conversion_rate,
+        "Quy cách đóng gói": p.packaging,
+        "Công ty sản xuất": p.manufacturer,
+        "Số Đăng Ký": p.registration_number,
+        "Trạng thái": p.is_active ? "Đang kinh doanh" : "Ngừng kinh doanh",
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(dataToExport);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Danh sách Sản phẩm");
+      XLSX.writeFile(wb, "danh-sach-san-pham.xlsx");
+      notification.success({ message: "Đã xuất file excel thành công!" });
+    } catch (err: any) {
+      notification.error({
+        message: "Xuất file thất bại",
+        description: err.message,
+      });
+    } finally {
+      setTableLoading(false);
+    }
   };
+
   const handleImportExcel = (file: File) => {
-    /* ... */
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const data = e.target?.result;
+        const workbook = XLSX.read(data, { type: "binary" });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const json = XLSX.utils.sheet_to_json(worksheet);
+
+        if (json.length === 0) {
+          throw new Error("File không có dữ liệu.");
+        }
+
+        // Ánh xạ từ tên cột trong Excel sang tên cột trong CSDL
+        const dataToUpsert = json.map((row: any) => ({
+          name: row["Tên Sản Phẩm*"],
+          sku: row["Mã SKU*"],
+          cost_price: row["Giá vốn*"],
+          route: row["Đường dùng"],
+          wholesale_unit: row["Đơn vị Bán Buôn"],
+          retail_unit: row["Đơn vị Bán lẻ"],
+          conversion_rate: row["Số lượng Quy đổi"],
+          packaging: row["Quy cách đóng gói"],
+          barcode: row["Mã vạch"],
+          category: row["Phân loại"],
+          manufacturer: row["Công ty sản xuất"],
+          registration_number: row["Số Đăng Ký"],
+        }));
+
+        // Dùng upsert để vừa thêm mới vừa cập nhật (dựa vào cột sku)
+        const { error } = await supabase
+          .from("products")
+          .upsert(dataToUpsert, { onConflict: "sku" });
+
+        if (error) throw error;
+
+        notification.success({
+          message: "Thành công!",
+          description: `Đã nhập thành công ${dataToUpsert.length} sản phẩm.`,
+        });
+        fetchProducts(debouncedSearchTerm, statusFilter); // Tải lại dữ liệu
+      } catch (err: any) {
+        notification.error({
+          message: "Nhập file thất bại",
+          description:
+            "Vui lòng kiểm tra lại định dạng file hoặc " + err.message,
+        });
+      }
+    };
+    reader.readAsBinaryString(file);
   };
 
   const handleTableChange: TableProps<any>["onChange"] = (newPagination) => {

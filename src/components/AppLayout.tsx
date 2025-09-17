@@ -145,7 +145,7 @@ const SiderContent: React.FC<{ onMenuClick: MenuProps["onClick"] }> = ({
 );
 
 const AppLayout: React.FC = () => {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false); // State cho menu di động
   const navigate = useNavigate();
   const screens = useBreakpoint(); // Lấy thông tin màn hình hiện tại
