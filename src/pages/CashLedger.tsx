@@ -23,25 +23,41 @@ import isBetween from "dayjs/plugin/isBetween";
 
 dayjs.extend(isBetween);
 
+const { Title } = Typography;
 const { RangePicker } = DatePicker;
 const { Option } = Select;
 
-// Component Card cho từng quỹ, tích hợp báo cáo chi nhanh
-const FundCard: React.FC<{ fund: any; transactions: any[]; range: any }> = ({
-  fund,
-  transactions,
-  range,
-}) => {
+// Component Card cho từng quỹ, logic tính toán từng quỹ.
+const FundCard: React.FC<{
+  fund: any;
+  transactions: any[];
+  transfers: any[];
+  range: any;
+}> = ({ fund, transactions, transfers, range }) => {
   const currentBalance = useMemo(() => {
-    const balance = transactions
-      .filter((t) => t.status === "đã thu" || t.status === "đã chi") // Chỉ tính các giao dịch đã hoàn tất
-      .reduce((acc, t) => {
-        if (t.fund_id !== fund.id) return acc;
-        return acc + (t.type === "income" ? t.amount : -t.amount);
-      }, fund.initial_balance);
-    return balance;
-  }, [transactions, fund]);
+    // Chỉ tính các giao dịch đã hoàn tất
+    const incomeAndExpense = transactions
+      .filter(
+        (t) =>
+          t.fund_id === fund.id &&
+          (t.status === "đã thu" || t.status === "đã chi")
+      )
+      .reduce(
+        (acc, t) => acc + (t.type === "income" ? t.amount : -t.amount),
+        0
+      );
 
+    // Tính các khoản chuyển tiền nội bộ
+    const internalTransfers = transfers.reduce((acc, t) => {
+      if (t.from_fund_id === fund.id) return acc - t.amount;
+      if (t.to_fund_id === fund.id) return acc + t.amount;
+      return acc;
+    }, 0);
+
+    return fund.initial_balance + incomeAndExpense + internalTransfers;
+  }, [transactions, transfers, fund]);
+
+  // Báo cáo chi nhanh - không bao gồm chuyển tiền nội bộ
   const expenseReport = useMemo(() => {
     if (!range || !range[0] || !range[1]) return { total: 0 };
     const [startDate, endDate] = range;
@@ -50,6 +66,7 @@ const FundCard: React.FC<{ fund: any; transactions: any[]; range: any }> = ({
         (t) =>
           t.fund_id === fund.id &&
           t.type === "expense" &&
+          t.status === "đã chi" && // Chỉ tính các khoản đã chi
           dayjs(t.transaction_date).isBetween(startDate, endDate, null, "[]")
       )
       .reduce((acc, t) => acc + t.amount, 0);
@@ -57,13 +74,13 @@ const FundCard: React.FC<{ fund: any; transactions: any[]; range: any }> = ({
   }, [transactions, fund, range]);
 
   return (
-    <Col xs={24} sm={12} md={8}>
+    <Col xs={24} sm={12} lg={8}>
       <Card title={fund.name} style={{ height: "100%" }}>
         <Statistic
           title="Số dư hiện tại"
           value={currentBalance}
           precision={0}
-          valueStyle={{ color: "#00809D" }}
+          valueStyle={{ color: "#0D5EA6" }}
           suffix="VNĐ"
         />
         <div
@@ -75,15 +92,12 @@ const FundCard: React.FC<{ fund: any; transactions: any[]; range: any }> = ({
         >
           <Typography.Text strong>Báo cáo chi trong kỳ</Typography.Text>
           <Statistic
-            title="Tổng chi"
+            title="Tổng chi (không gồm chuyển nội bộ)"
             value={expenseReport.total}
             precision={0}
             valueStyle={{ color: "#cf1322" }}
             suffix="VNĐ"
           />
-          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-            Phân loại chi tiết sẽ được cập nhật ở phiên bản sau.
-          </Typography.Text>
         </div>
       </Card>
     </Col>
@@ -96,6 +110,7 @@ const CashLedgerPageContent: React.FC = () => {
 
   const [funds, setFunds] = useState<any[]>([]);
   const [transactions, setTransactions] = useState<any[]>([]);
+  const [internalTransfers, setInternalTransfers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState<any>([
     dayjs().startOf("month"),
@@ -106,18 +121,25 @@ const CashLedgerPageContent: React.FC = () => {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const fundsPromise = supabase.from("funds").select("*, banks(*)"); // Lấy cả thông tin ngân hàng
+      const fundsPromise = supabase.from("funds").select("*, banks(*)");
       const transPromise = supabase.from("transactions").select("*");
-      const [fundsRes, transRes] = await Promise.all([
+      const internalTransfersPromise = supabase
+        .from("internal_fund_transfers")
+        .select("*");
+
+      const [fundsRes, transRes, internalTransfersRes] = await Promise.all([
         fundsPromise,
         transPromise,
+        internalTransfersPromise,
       ]);
 
       if (fundsRes.error) throw fundsRes.error;
       if (transRes.error) throw transRes.error;
+      if (internalTransfersRes.error) throw internalTransfersRes.error;
 
       setFunds(fundsRes.data || []);
       setTransactions(transRes.data || []);
+      setInternalTransfers(internalTransfersRes.data || []);
     } catch (error: any) {
       notification.error({
         message: "Lỗi tải dữ liệu",
@@ -135,12 +157,14 @@ const CashLedgerPageContent: React.FC = () => {
   const totalBalance = useMemo(() => {
     const totalInitial = funds.reduce((acc, f) => acc + f.initial_balance, 0);
     const totalTransactions = transactions
-      .filter((t) => t.status === "đã thu" || t.status === "đã chi") // Chỉ tính các giao dịch đã hoàn tất
-      .reduce((acc, t) => {
-        return acc + (t.type === "income" ? t.amount : -t.amount);
-      }, 0);
+      .filter((t) => t.status === "đã thu" || t.status === "đã chi")
+      .reduce(
+        (acc, t) => acc + (t.type === "income" ? t.amount : -t.amount),
+        0
+      );
     return totalInitial + totalTransactions;
   }, [funds, transactions]);
+
   const handleTransferCancel = () => {
     setIsTransferModalOpen(false);
     transferForm.resetFields();
@@ -217,6 +241,7 @@ const CashLedgerPageContent: React.FC = () => {
             key={fund.id}
             fund={fund}
             transactions={transactions}
+            transfers={internalTransfers}
             range={dateRange}
           />
         ))}
