@@ -74,18 +74,18 @@ const menuItems: MenuProps["items"] = [
 const namVietTheme = {
   token: {
     colorBgLayout: "#f0f2f5",
-    colorPrimary: "#145893ff", // <-- ĐỔI MÀU CHỦ ĐẠO
+    colorPrimary: "#195523ff", // <-- ĐỔI MÀU CHỦ ĐẠO
     borderRadius: 5,
   },
   components: {
     Layout: {
       headerBg: "#ffffff",
-      siderBg: "#0b4578ff", // <-- ĐỔI MÀU NỀN SIDER
+      siderBg: "#2a6033ff", // <-- ĐỔI MÀU NỀN SIDER
     },
     Menu: {
       // Tùy chỉnh cho Menu có theme="dark"
-      darkItemBg: "#0b4578ff", // Nền item trùng với nền Sider
-      darkSubMenuItemBg: "#0D5EA6", //Nền menu con khi rê chu
+      darkItemBg: "#2a6033ff", // Nền item trùng với nền Sider
+      darkSubMenuItemBg: "#2a6033ff", //Nền menu con khi rê chu
       darkItemColor: "rgba(255, 255, 255, 0.75)", // Màu chữ item thường
       darkItemHoverBg: "rgba(255, 255, 255, 0.15)", // Nền item khi rê chuột
       darkItemHoverColor: "#ffffff", // Màu chữ item khi rê chuột
