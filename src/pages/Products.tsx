@@ -11,7 +11,7 @@ import {
   Avatar,
   App,
   Upload,
-  TableProps,
+  type TableProps,
 } from "antd";
 import {
   PlusOutlined,
