@@ -74,18 +74,19 @@ const menuItems: MenuProps["items"] = [
 const namVietTheme = {
   token: {
     colorBgLayout: "#f0f2f5",
-    colorPrimary: "#195523ff", // <-- ĐỔI MÀU CHỦ ĐẠO
+    colorPrimary: "#1773adff", // <-- ĐỔI MÀU CHỦ ĐẠO
     borderRadius: 5,
   },
   components: {
     Layout: {
       headerBg: "#ffffff",
-      siderBg: "#2a6033ff", // <-- ĐỔI MÀU NỀN SIDER
+      siderBg: "#015ba9ff", // <-- ĐỔI MÀU NỀN SIDER
+      triggerBg: "#015ba9ff", // <-- ĐỔI MÀU NÚT ẨN / HIỆN SIDEBAR MENU BAR
     },
     Menu: {
       // Tùy chỉnh cho Menu có theme="dark"
-      darkItemBg: "#2a6033ff", // Nền item trùng với nền Sider
-      darkSubMenuItemBg: "#2a6033ff", //Nền menu con khi rê chu
+      darkItemBg: "#015ba9ff", // Nền item trùng với nền Sider
+      darkSubMenuItemBg: "#015ba9ff", //Nền menu con khi rê chu
       darkItemColor: "rgba(255, 255, 255, 0.75)", // Màu chữ item thường
       darkItemHoverBg: "rgba(255, 255, 255, 0.15)", // Nền item khi rê chuột
       darkItemHoverColor: "#ffffff", // Màu chữ item khi rê chuột
@@ -98,7 +99,7 @@ const namVietTheme = {
 const ComingSoon = () => <h1>Tính năng này sắp ra mắt!</h1>;
 
 const AppLayout: React.FC = () => {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
   const navigate = useNavigate();
 
   const handleMenuClick: MenuProps["onClick"] = (e) => navigate(e.key);
@@ -115,6 +116,7 @@ const AppLayout: React.FC = () => {
           collapsible
           collapsed={collapsed}
           onCollapse={(value) => setCollapsed(value)}
+          width={200} // <-- GIẢM CHIỀU RỘNG MENU BAR
           style={{
             overflow: "auto",
             height: "100vh",
@@ -151,11 +153,12 @@ const AppLayout: React.FC = () => {
             mode="inline"
             items={menuItems}
             onClick={handleMenuClick}
+            style={{ fontSize: "16px" }} // <-- TĂNG KÍCH THƯỚC ICON & CHỮ TRÊN MENU BAR
           />
         </Sider>
         <Layout
           style={{
-            marginLeft: collapsed ? 80 : 200,
+            marginLeft: collapsed ? 80 : 180,
             transition: "margin-left 0.2s",
           }}
         >
@@ -166,17 +169,18 @@ const AppLayout: React.FC = () => {
               display: "flex",
               justifyContent: "flex-end",
               alignItems: "center",
+              height: 46, // <-- TĂNG GIẢM CHIỀU CAO HEADER
             }}
           >
             <Button onClick={handleLogout}>Đăng xuất</Button>
           </Header>
-          <Content style={{ margin: "24px 16px 0", overflow: "initial" }}>
+          <Content style={{ margin: "8px 11px 0", overflow: "initial" }}>
             <div
               style={{
-                padding: 24,
+                padding: 10,
                 background: "#ffffff",
                 borderRadius: namVietTheme.token.borderRadius,
-                minHeight: "calc(100vh - 160px)",
+                minHeight: "calc(100vh - 128px)", // <-- TÍNH TOÁN CHIỀU CAO VÀ CĂN LỀ
               }}
             >
               <Routes>
@@ -197,7 +201,7 @@ const AppLayout: React.FC = () => {
               </Routes>
             </div>
           </Content>
-          <Footer style={{ textAlign: "center" }}>
+          <Footer style={{ textAlign: "center", padding: "10px 0" }}>
             Nam Việt ERP ©{new Date().getFullYear()} - LVH
           </Footer>
         </Layout>
