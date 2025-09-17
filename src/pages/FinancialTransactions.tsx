@@ -25,7 +25,6 @@ import { useDebounce } from "../hooks/useDebounce";
 import TransactionCreationModal from "../features/finance/components/TransactionCreationModal";
 import TransactionViewModal from "../features/finance/components/TransactionViewModal";
 
-const { Title } = Typography;
 const { Search } = Input;
 
 const sanitizeFilename = (filename: string) => {

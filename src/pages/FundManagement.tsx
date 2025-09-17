@@ -84,7 +84,26 @@ const FundManagementContent: React.FC = () => {
   };
 
   const handleDelete = (id: number, name: string) => {
-    // ... logic xóa không đổi
+    modal.confirm({
+      title: "Bạn có chắc chắn muốn xóa?",
+      content: `Quỹ/Tài khoản "${name}" sẽ bị xóa. Hành động này có thể ảnh hưởng đến các giao dịch đã ghi nhận.`,
+      okText: "Xóa",
+      okType: "danger",
+      cancelText: "Hủy",
+      onOk: async () => {
+        try {
+          const { error } = await supabase.from("funds").delete().eq("id", id);
+          if (error) throw error;
+          notification.success({ message: "Đã xóa thành công!" });
+          fetchData(); // Tải lại danh sách sau khi xóa
+        } catch (error: any) {
+          notification.error({
+            message: "Lỗi khi xóa",
+            description: error.message,
+          });
+        }
+      },
+    });
   };
 
   const handleFinish = async (values: any) => {

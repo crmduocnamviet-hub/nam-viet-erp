@@ -70,9 +70,28 @@ const menuItems: MenuProps["items"] = [
   },
 ];
 
+// === BẢN CẬP NHẬT THEME HOÀN CHỈNH ===
 const namVietTheme = {
-  token: { colorBgLayout: "#f0f2f5", colorPrimary: "#00809D", borderRadius: 5 },
-  components: { Layout: { headerBg: "#ffffff", siderBg: "#001529" } },
+  token: {
+    colorBgLayout: "#f0f2f5",
+    colorPrimary: "#145893ff", // <-- ĐỔI MÀU CHỦ ĐẠO
+    borderRadius: 5,
+  },
+  components: {
+    Layout: {
+      headerBg: "#ffffff",
+      siderBg: "#0b4578ff", // <-- ĐỔI MÀU NỀN SIDER
+    },
+    Menu: {
+      // Tùy chỉnh cho Menu có theme="dark"
+      darkItemBg: "#0b4578ff", // Nền item trùng với nền Sider
+      darkItemColor: "rgba(255, 255, 255, 0.75)", // Màu chữ item thường
+      darkItemHoverBg: "rgba(255, 255, 255, 0.15)", // Nền item khi rê chuột
+      darkItemHoverColor: "#ffffff", // Màu chữ item khi rê chuột
+      darkItemSelectedBg: "#00809D", // Màu nền item được chọn (có thể dùng colorPrimary hoặc màu khác)
+      darkItemSelectedColor: "#ffffff", // Màu chữ item được chọn
+    },
+  },
 };
 
 const ComingSoon = () => <h1>Tính năng này sắp ra mắt!</h1>;
@@ -126,7 +145,7 @@ const AppLayout: React.FC = () => {
             )}
           </div>
           <Menu
-            theme="dark"
+            theme="dark" // <-- SỬA TỪ "light" THÀNH "dark"
             defaultSelectedKeys={["/"]}
             mode="inline"
             items={menuItems}
@@ -178,7 +197,7 @@ const AppLayout: React.FC = () => {
             </div>
           </Content>
           <Footer style={{ textAlign: "center" }}>
-            Nam Việt ERP ©{new Date().getFullYear()} - Kiến tạo bởi SENKO V400
+            Nam Việt ERP ©{new Date().getFullYear()} - LVH
           </Footer>
         </Layout>
       </Layout>
