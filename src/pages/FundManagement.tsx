@@ -137,7 +137,7 @@ const FundManagement: React.FC = () => {
       render: (text: string, record: any) => (
         <Space>
           {record.banks?.logo && <Avatar src={record.banks.logo} />}
-          <Text strong>{text}</Text>
+          <Typography.Text strong>{text}</Typography.Text>
         </Space>
       ),
     },

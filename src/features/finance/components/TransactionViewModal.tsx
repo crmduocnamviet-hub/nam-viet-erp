@@ -25,6 +25,7 @@ interface TransactionViewModalProps {
   onExecute: (values: any) => void;
   transaction: any | null;
   funds: any[];
+  banks: any[];
   form: FormInstance;
 }
 
