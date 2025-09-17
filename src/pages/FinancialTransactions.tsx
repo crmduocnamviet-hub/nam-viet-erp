@@ -20,15 +20,14 @@ import {
 } from "@ant-design/icons";
 import { supabase } from "../lib/supabaseClient";
 import dayjs from "dayjs";
+import { useAuth } from "../context/AuthContext";
 import { useDebounce } from "../hooks/useDebounce";
 import TransactionCreationModal from "../features/finance/components/TransactionCreationModal";
 import TransactionViewModal from "../features/finance/components/TransactionViewModal";
-import { useAuth } from "../context/AuthContext";
 
-const { Title, Text } = Typography;
+const { Title } = Typography;
 const { Search } = Input;
 
-// Tiện ích làm sạch tên file
 const sanitizeFilename = (filename: string) => {
   return filename
     .normalize("NFD")
@@ -39,7 +38,7 @@ const sanitizeFilename = (filename: string) => {
 
 const TransactionPageContent: React.FC = () => {
   const { notification, modal } = AntApp.useApp();
-  const { user } = useAuth(); // Lấy thông tin người dùng từ context
+  const { user } = useAuth();
   const [creationForm] = Form.useForm();
   const [executionForm] = Form.useForm();
 
@@ -67,60 +66,13 @@ const TransactionPageContent: React.FC = () => {
     total: 0,
   });
 
-  const handleDelete = (transactionId: number) => {
-    modal.confirm({
-      title: "Bạn có chắc chắn muốn xóa phiếu này?",
-      content: "Hành động này không thể hoàn tác.",
-      okText: "Xóa",
-      okType: "danger",
-      cancelText: "Hủy",
-      onOk: async () => {
-        try {
-          const { error } = await supabase
-            .from("transactions")
-            .delete()
-            .eq("id", transactionId);
-          if (error) throw error;
-          notification.success({ message: "Đã xóa phiếu thành công!" });
-          fetchData(); // Tải lại dữ liệu
-        } catch (error: any) {
-          notification.error({
-            message: "Xóa thất bại",
-            description: error.message,
-          });
-        }
-      },
-    });
-  };
-
-  const handleEdit = (record: any) => {
-    setTransactionType(record.type);
-    // Giả sử file đính kèm được lưu trong cột attachments
-    const currentFileList =
-      record.attachments?.map((url: string, index: number) => ({
-        uid: `${-index - 1}`,
-        name: url.substring(url.lastIndexOf("/") + 1),
-        status: "done",
-        url: url,
-      })) || [];
-    setFileList(currentFileList);
-
-    creationForm.setFieldsValue({
-      ...record,
-      transaction_date: dayjs(record.transaction_date),
-    });
-    setIsCreationModalOpen(true);
-  };
-
   const fetchData = useCallback(
     async (page = 1, pageSize = 10, search = debouncedSearchTerm) => {
       setLoading(true);
       try {
-        // Tải danh sách quỹ và ngân hàng nếu chúng chưa có
-        if (funds.length === 0) {
+        if (funds.length === 0 || banks.length === 0) {
           const fundsPromise = supabase.from("funds").select("*, banks(*)");
           const banksPromise = supabase.from("banks").select("*");
-
           const [fundsRes, banksRes] = await Promise.all([
             fundsPromise,
             banksPromise,
@@ -131,7 +83,6 @@ const TransactionPageContent: React.FC = () => {
 
           setFunds(fundsRes.data || []);
 
-          // Chuyển đổi dữ liệu ngân hàng cho component AutoComplete
           const bankList =
             banksRes.data?.map((b) => ({
               value: b.short_name,
@@ -144,7 +95,6 @@ const TransactionPageContent: React.FC = () => {
         const from = (page - 1) * pageSize;
         const to = from + pageSize - 1;
 
-        // Logic tìm kiếm hoặc lấy dữ liệu thông thường
         if (search) {
           const { data, error, count } = await supabase
             .rpc(
@@ -233,7 +183,6 @@ const TransactionPageContent: React.FC = () => {
   const handleCreationFinish = async (values: any) => {
     try {
       let qrUrl = null;
-      // Chỉ tạo URL QR cho phiếu chi chuyển khoản
       if (values.payment_method === "bank" && transactionType === "expense") {
         const selectedBank = banks.find(
           (b) => b.value === values.recipient_bank
@@ -261,7 +210,6 @@ const TransactionPageContent: React.FC = () => {
         transaction_date: values.transaction_date.format("YYYY-MM-DD"),
         created_by:
           user?.user_metadata?.full_name || user?.email || "Không xác định",
-
         attachments: attachmentUrls.length > 0 ? attachmentUrls : null,
         status: transactionType === "income" ? "chờ thực thu" : "chờ duyệt",
       };
@@ -285,7 +233,7 @@ const TransactionPageContent: React.FC = () => {
         .from("transactions")
         .update({
           status: selectedTransaction.type === "income" ? "đã thu" : "đã chi",
-          executed_by: "Thủ quỹ",
+          executed_by: user?.user_metadata?.full_name || user?.email,
           fund_id: values.fund_id,
         })
         .eq("id", selectedTransaction.id);
@@ -313,7 +261,10 @@ const TransactionPageContent: React.FC = () => {
         try {
           const { error } = await supabase
             .from("transactions")
-            .update({ status: "Đã duyệt - Chờ chi", approved_by: "Quản lý" })
+            .update({
+              status: "đã duyệt - chờ chi",
+              approved_by: user?.user_metadata?.full_name || user?.email,
+            })
             .eq("id", selectedTransaction.id);
           if (error) throw error;
           notification.success({ message: `Duyệt chi thành công!` });
@@ -329,12 +280,64 @@ const TransactionPageContent: React.FC = () => {
     });
   };
 
-  // CẬP NHẬT: Nhãn trạng thái rõ ràng hơn
+  const handleDelete = (transactionId: number) => {
+    modal.confirm({
+      title: "Bạn có chắc chắn muốn xóa phiếu này?",
+      content: "Hành động này không thể hoàn tác.",
+      okText: "Xóa",
+      okType: "danger",
+      cancelText: "Hủy",
+      onOk: async () => {
+        try {
+          const { error } = await supabase
+            .from("transactions")
+            .delete()
+            .eq("id", transactionId);
+          if (error) throw error;
+          notification.success({ message: "Đã xóa phiếu thành công!" });
+          fetchData(); // Tải lại dữ liệu
+        } catch (error: any) {
+          notification.error({
+            message: "Xóa thất bại",
+            description: error.message,
+          });
+        }
+      },
+    });
+  };
+  const handleEdit = (record: any) => {
+    // Đặt lại selectedTransaction để đảm bảo chúng ta đang sửa bản ghi đúng
+    setSelectedTransaction(record);
+    setTransactionType(record.type);
+
+    // Khôi phục lại danh sách file đã đính kèm
+    const currentFileList =
+      record.attachments?.map((url: string, index: number) => ({
+        uid: `${-index - 1}`, // Tạo uid âm để không bị trùng
+        name: url
+          .substring(url.lastIndexOf("/") + 1)
+          .split("?")[0]
+          .substring(14), // Lấy lại tên file gốc
+        status: "done",
+        url: url,
+      })) || [];
+    setFileList(currentFileList);
+
+    // Điền tất cả dữ liệu của bản ghi vào form
+    creationForm.setFieldsValue({
+      ...record,
+      transaction_date: dayjs(record.transaction_date),
+    });
+
+    // Mở modal tạo/sửa phiếu
+    setIsCreationModalOpen(true);
+  };
+
   const getStatusTag = (status: string) => {
     switch (status) {
       case "chờ duyệt":
         return <Tag color="blue">Chờ duyệt</Tag>;
-      case "đã duyệt":
+      case "đã duyệt - chờ chi":
         return <Tag color="purple">Đã duyệt - Chờ chi</Tag>;
       case "đã chi":
         return <Tag color="green">Đã Chi</Tag>;
@@ -401,7 +404,6 @@ const TransactionPageContent: React.FC = () => {
           >
             Xem
           </Button>
-          {/* CẬP NHẬT: Thêm nút Sửa/Xóa với điều kiện */}
           {(record.status === "chờ duyệt" ||
             record.status === "chờ thực thu") && (
             <>
@@ -471,18 +473,15 @@ const TransactionPageContent: React.FC = () => {
         loading={loading}
         rowKey="id"
         pagination={pagination}
-        onChange={(p) =>
-          setPagination((prev) => ({
-            ...prev,
-            current: p.current!,
-            pageSize: p.pageSize!,
-          }))
-        }
+        onChange={handleTableChange}
       />
 
       <TransactionCreationModal
         open={isCreationModalOpen}
-        onCancel={() => setIsCreationModalOpen(false)}
+        onCancel={() => {
+          setIsCreationModalOpen(false);
+          creationForm.resetFields();
+        }}
         onFinish={handleCreationFinish}
         transactionType={transactionType}
         form={creationForm}
@@ -498,7 +497,7 @@ const TransactionPageContent: React.FC = () => {
         onExecute={handleExecutionFinish}
         transaction={selectedTransaction}
         funds={funds}
-        banks={banks} // <-- Thêm prop này
+        banks={banks}
         form={executionForm}
       />
     </>

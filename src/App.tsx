@@ -2,9 +2,6 @@ import React from "react";
 import { Routes, Route } from "react-router-dom";
 import AppLayout from "./components/AppLayout"; // <-- Chúng ta sẽ tách Layout ra file riêng
 import Login from "./pages/Login";
-import Dashboard from "./pages/Dashboard";
-import Products from "./pages/Products";
-// ... import các page khác
 import { useAuth } from "./context/AuthContext";
 import { Spin, Row } from "antd";
 

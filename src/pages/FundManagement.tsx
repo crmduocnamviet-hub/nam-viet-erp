@@ -6,26 +6,26 @@ import {
   Row,
   Col,
   Typography,
-  App,
+  App as AntApp,
   Modal,
   Form,
   Input,
   Select,
   InputNumber,
   Tag,
-  Avatar, // Thêm Avatar để hiển thị logo ngân hàng
+  Avatar,
 } from "antd";
 import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import { supabase } from "../lib/supabaseClient";
 
 const { Title } = Typography;
 
-const FundManagement: React.FC = () => {
-  const { notification, modal } = App.useApp();
+const FundManagementContent: React.FC = () => {
+  const { notification } = AntApp.useApp();
   const [form] = Form.useForm();
 
   const [funds, setFunds] = useState<any[]>([]);
-  const [banks, setBanks] = useState<any[]>([]); // State mới để lưu danh sách ngân hàng
+  const [banks, setBanks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingFund, setEditingFund] = useState<any | null>(null);
@@ -285,5 +285,11 @@ const FundManagement: React.FC = () => {
     </>
   );
 };
+
+const FundManagement: React.FC = () => (
+  <AntApp>
+    <FundManagementContent />
+  </AntApp>
+);
 
 export default FundManagement;

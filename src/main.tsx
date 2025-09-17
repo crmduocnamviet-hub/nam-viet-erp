@@ -10,10 +10,13 @@ import { App as AntApp } from "antd";
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <BrowserRouter>
-      {/* AuthProvider bao bọc App */}
-      <AuthProvider>
-        <App />
-      </AuthProvider>
+      <AntApp>
+        {" "}
+        {/* Đảm bảo AntApp được sử dụng ở đây - tránh lỗi deploy trên netlify */}
+        <AuthProvider>
+          <App />
+        </AuthProvider>
+      </AntApp>
     </BrowserRouter>
   </React.StrictMode>
 );

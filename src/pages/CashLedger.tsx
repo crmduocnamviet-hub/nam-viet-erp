@@ -34,10 +34,12 @@ const FundCard: React.FC<{ fund: any; transactions: any[]; range: any }> = ({
   range,
 }) => {
   const currentBalance = useMemo(() => {
-    const balance = transactions.reduce((acc, t) => {
-      if (t.fund_id !== fund.id) return acc;
-      return acc + (t.type === "income" ? t.amount : -t.amount);
-    }, fund.initial_balance);
+    const balance = transactions
+      .filter((t) => t.status === "đã thu" || t.status === "đã chi") // Chỉ tính các giao dịch đã hoàn tất
+      .reduce((acc, t) => {
+        if (t.fund_id !== fund.id) return acc;
+        return acc + (t.type === "income" ? t.amount : -t.amount);
+      }, fund.initial_balance);
     return balance;
   }, [transactions, fund]);
 
@@ -133,12 +135,13 @@ const CashLedgerPageContent: React.FC = () => {
 
   const totalBalance = useMemo(() => {
     const totalInitial = funds.reduce((acc, f) => acc + f.initial_balance, 0);
-    const totalTransactions = transactions.reduce((acc, t) => {
-      return acc + (t.type === "income" ? t.amount : -t.amount);
-    }, 0);
+    const totalTransactions = transactions
+      .filter((t) => t.status === "đã thu" || t.status === "đã chi") // Chỉ tính các giao dịch đã hoàn tất
+      .reduce((acc, t) => {
+        return acc + (t.type === "income" ? t.amount : -t.amount);
+      }, 0);
     return totalInitial + totalTransactions;
   }, [funds, transactions]);
-
   const handleTransferCancel = () => {
     setIsTransferModalOpen(false);
     transferForm.resetFields();

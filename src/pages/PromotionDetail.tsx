@@ -266,7 +266,7 @@ const PromotionDetail: React.FC = () => {
               formatter={(value) =>
                 `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ".")
               }
-              parser={(value) => Number(value!.replace(/\./g, ""))}
+              parser={(value) => value!.replace(/\./g, "")}
             />
           </Form.Item>
           <Form.Item
@@ -315,7 +315,7 @@ const PromotionDetail: React.FC = () => {
                 formatter={(value) =>
                   `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ".")
                 }
-                parser={(value) => Number(value!.replace(/\./g, ""))}
+                parser={(value) => value!.replace(/\./g, "")}
                 min={0}
                 max={100}
               />
@@ -332,7 +332,7 @@ const PromotionDetail: React.FC = () => {
                 formatter={(value) =>
                   `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ".")
                 }
-                parser={(value) => Number(value!.replace(/\./g, ""))}
+                parser={(value) => value!.replace(/\./g, "")}
               />
             </Form.Item>
           )}
@@ -348,7 +348,7 @@ const PromotionDetail: React.FC = () => {
                   formatter={(value) =>
                     `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ".")
                   }
-                  parser={(value) => Number(value!.replace(/\./g, ""))}
+                  parser={(value) => value!.replace(/\./g, "")}
                 />
               </Form.Item>
               <Form.Item
@@ -361,7 +361,7 @@ const PromotionDetail: React.FC = () => {
                   formatter={(value) =>
                     `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ".")
                   }
-                  parser={(value) => Number(value!.replace(/\./g, ""))}
+                  parser={(value) => value!.replace(/\./g, "")}
                 />
               </Form.Item>
             </>
@@ -433,7 +433,7 @@ const PromotionDetail: React.FC = () => {
               formatter={(value) =>
                 `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ".")
               }
-              parser={(value) => Number(value!.replace(/\./g, ""))}
+              parser={(value) => value!.replace(/\./g, "")}
               min={1}
             />
           </Form.Item>
