@@ -475,6 +475,7 @@ const Products: React.FC = () => {
       title: `Tồn ${wh.name}`,
       dataIndex: "inventory_data",
       key: `stock_${wh.id}`,
+      responsive: ["lg"],
       render: (inventoryData: any[], record: any) => {
         if (!inventoryData) return `0 ${record.retail_unit || ""}`;
         const inventory = inventoryData.find(

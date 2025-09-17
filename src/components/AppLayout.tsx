@@ -7,10 +7,20 @@ import {
   DollarOutlined,
   SettingOutlined,
   UsergroupAddOutlined,
+  MenuOutlined,
 } from "@ant-design/icons";
 import type { MenuProps } from "antd";
 import { Routes, Route, useNavigate } from "react-router-dom";
-import { Layout, Menu, ConfigProvider, Avatar, Typography, Button } from "antd";
+import {
+  Layout,
+  Menu,
+  ConfigProvider,
+  Avatar,
+  Typography,
+  Button,
+  Grid,
+  Drawer,
+} from "antd";
 import viVN from "antd/locale/vi_VN";
 import { supabase } from "../lib/supabaseClient";
 
@@ -28,6 +38,7 @@ import logo from "../assets/logo.png";
 
 const { Header, Content, Footer, Sider } = Layout;
 const { Title } = Typography;
+const { useBreakpoint } = Grid; // <-- "Mắt thần" theo dõi kích thước màn hình
 
 const menuItems: MenuProps["items"] = [
   { label: "Tổng quan", key: "/", icon: <PieChartOutlined /> },
@@ -98,11 +109,54 @@ const namVietTheme = {
 
 const ComingSoon = () => <h1>Tính năng này sắp ra mắt!</h1>;
 
-const AppLayout: React.FC = () => {
-  const [collapsed, setCollapsed] = useState(true);
-  const navigate = useNavigate();
+// Tách nội dung của Sider ra một component riêng để tái sử dụng
+const SiderContent: React.FC<{ onMenuClick: MenuProps["onClick"] }> = ({
+  onMenuClick,
+}) => (
+  <>
+    <div
+      style={{
+        height: "48px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: "10px",
+      }}
+    >
+      <Avatar
+        src={logo}
+        shape="square"
+        size="large"
+        style={{ backgroundColor: "transparent" }}
+      />
+      <Title level={5} style={{ color: "white", margin: 0 }}>
+        Nam Việt EMS
+      </Title>
+    </div>
+    <Menu
+      theme="dark"
+      defaultSelectedKeys={["/"]}
+      mode="inline"
+      items={menuItems}
+      onClick={onMenuClick}
+      style={{ fontSize: "16px" }}
+    />
+  </>
+);
 
-  const handleMenuClick: MenuProps["onClick"] = (e) => navigate(e.key);
+const AppLayout: React.FC = () => {
+  const [collapsed, setCollapsed] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false); // State cho menu di động
+  const navigate = useNavigate();
+  const screens = useBreakpoint(); // Lấy thông tin màn hình hiện tại
+  const isMobile = !screens.lg; // Coi là mobile nếu màn hình nhỏ hơn 'lg'
+
+  const handleMenuClick: MenuProps["onClick"] = (e) => {
+    navigate(e.key);
+    if (isMobile) {
+      setMobileMenuOpen(false); // Tự động đóng menu sau khi chọn trên mobile
+    }
+  };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -112,53 +166,81 @@ const AppLayout: React.FC = () => {
   return (
     <ConfigProvider theme={namVietTheme} locale={viVN}>
       <Layout style={{ minHeight: "100vh" }}>
-        <Sider
-          collapsible
-          collapsed={collapsed}
-          onCollapse={(value) => setCollapsed(value)}
-          width={200} // <-- GIẢM CHIỀU RỘNG MENU BAR
-          style={{
-            overflow: "auto",
-            height: "100vh",
-            position: "fixed",
-            left: 0,
-            top: 0,
-            bottom: 0,
-          }}
-        >
-          <div
+        {/* === LOGIC RESPONSIVE BẮT ĐẦU TỪ ĐÂY === */}
+
+        {/* HIỂN THỊ SIDER CỐ ĐỊNH TRÊN DESKTOP */}
+        {!isMobile && (
+          <Sider
+            collapsible
+            collapsed={collapsed}
+            onCollapse={(value) => setCollapsed(value)}
+            width={180}
+            collapsedWidth={50}
             style={{
-              height: "64px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "10px",
+              overflow: "auto",
+              height: "100vh",
+              position: "fixed",
+              left: 0,
+              top: 0,
+              bottom: 0,
             }}
           >
-            <Avatar
-              src={logo}
-              shape="square"
-              size="large"
-              style={{ backgroundColor: "transparent" }}
+            {/* Dùng lại SiderContent nhưng bỏ qua title vì đã có ở trên */}
+            <div
+              style={{
+                height: "48px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "10px",
+              }}
+            >
+              <Avatar
+                src={logo}
+                shape="square"
+                size="large"
+                style={{ backgroundColor: "transparent" }}
+              />
+              {!collapsed && (
+                <Title level={5} style={{ color: "white", margin: 0 }}>
+                  Nam Việt EMS
+                </Title>
+              )}
+            </div>
+            <Menu
+              theme="dark"
+              defaultSelectedKeys={["/"]}
+              mode="inline"
+              items={menuItems}
+              onClick={handleMenuClick}
+              style={{ fontSize: "16px" }}
             />
-            {!collapsed && (
-              <Title level={4} style={{ color: "white", margin: 0 }}>
-                Nam Việt EMS
-              </Title>
-            )}
-          </div>
-          <Menu
-            theme="dark" // <-- SỬA TỪ "light" THÀNH "dark"
-            defaultSelectedKeys={["/"]}
-            mode="inline"
-            items={menuItems}
-            onClick={handleMenuClick}
-            style={{ fontSize: "16px" }} // <-- TĂNG KÍCH THƯỚC ICON & CHỮ TRÊN MENU BAR
-          />
-        </Sider>
+          </Sider>
+        )}
+
+        {/* HIỂN THỊ DRAWER (MENU TRƯỢT) TRÊN MOBILE */}
+        {isMobile && (
+          <Drawer
+            placement="left"
+            onClose={() => setMobileMenuOpen(false)}
+            open={mobileMenuOpen}
+            closable={false}
+            styles={{
+              body: {
+                padding: 0,
+                background: namVietTheme.components.Layout.siderBg,
+              },
+            }}
+            width={200}
+          >
+            <SiderContent onMenuClick={handleMenuClick} />
+          </Drawer>
+        )}
+
         <Layout
           style={{
-            marginLeft: collapsed ? 80 : 180,
+            // Điều chỉnh lề trái tùy theo màn hình desktop hay mobile
+            marginLeft: isMobile ? 0 : collapsed ? 50 : 180,
             transition: "margin-left 0.2s",
           }}
         >
@@ -167,20 +249,28 @@ const AppLayout: React.FC = () => {
               padding: "0 24px",
               background: namVietTheme.components.Layout.headerBg,
               display: "flex",
-              justifyContent: "flex-end",
+              justifyContent: isMobile ? "space-between" : "flex-end",
               alignItems: "center",
-              height: 46, // <-- TĂNG GIẢM CHIỀU CAO HEADER
+              height: 48,
             }}
           >
+            {/* Nút Hamburger chỉ hiển thị trên mobile */}
+            {isMobile && (
+              <Button
+                type="text"
+                icon={<MenuOutlined style={{ fontSize: "20px" }} />}
+                onClick={() => setMobileMenuOpen(true)}
+              />
+            )}
             <Button onClick={handleLogout}>Đăng xuất</Button>
           </Header>
-          <Content style={{ margin: "8px 11px 0", overflow: "initial" }}>
+          <Content style={{ margin: "16px", overflow: "initial" }}>
             <div
               style={{
-                padding: 10,
+                padding: 16,
                 background: "#ffffff",
                 borderRadius: namVietTheme.token.borderRadius,
-                minHeight: "calc(100vh - 128px)", // <-- TÍNH TOÁN CHIỀU CAO VÀ CĂN LỀ
+                minHeight: "calc(100vh - 128px)",
               }}
             >
               <Routes>

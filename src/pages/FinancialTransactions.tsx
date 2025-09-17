@@ -9,7 +9,9 @@ import {
   App as AntApp,
   Form,
   Input,
+  Dropdown,
   Tag,
+  Grid,
   type TableProps,
 } from "antd";
 import {
@@ -17,6 +19,7 @@ import {
   EyeOutlined,
   EditOutlined,
   DeleteOutlined,
+  EllipsisOutlined,
 } from "@ant-design/icons";
 import { supabase } from "../lib/supabaseClient";
 import dayjs from "dayjs";
@@ -26,6 +29,7 @@ import TransactionCreationModal from "../features/finance/components/Transaction
 import TransactionViewModal from "../features/finance/components/TransactionViewModal";
 
 const { Search } = Input;
+const { useBreakpoint } = Grid;
 
 const sanitizeFilename = (filename: string) => {
   return filename
@@ -36,6 +40,7 @@ const sanitizeFilename = (filename: string) => {
 };
 
 const TransactionPageContent: React.FC = () => {
+  const screens = useBreakpoint(); // Lấy thông tin màn hình
   const { notification, modal } = AntApp.useApp();
   const { user } = useAuth();
   const [creationForm] = Form.useForm();
@@ -380,8 +385,14 @@ const TransactionPageContent: React.FC = () => {
       dataIndex: ["funds", "name"],
       key: "fund_name",
       render: (name) => name || "Chưa thực thi",
+      responsive: ["md"],
     },
-    { title: "Người tạo", dataIndex: "created_by", key: "created_by" },
+    {
+      title: "Người tạo",
+      dataIndex: "created_by",
+      key: "created_by",
+      responsive: ["md"],
+    },
     {
       title: "Trạng thái",
       dataIndex: "status",
@@ -391,36 +402,64 @@ const TransactionPageContent: React.FC = () => {
     {
       title: "Hành động",
       key: "action",
-      render: (_: any, record: any) => (
-        <Space>
-          <Button
-            size="small"
-            icon={<EyeOutlined />}
-            onClick={() => {
-              setSelectedTransaction(record);
-              setIsViewModalOpen(true);
-            }}
-          >
-            Xem
-          </Button>
-          {(record.status === "chờ duyệt" ||
-            record.status === "chờ thực thu") && (
-            <>
-              <Button
-                size="small"
-                icon={<EditOutlined />}
-                onClick={() => handleEdit(record)}
-              />
-              <Button
-                size="small"
-                danger
-                icon={<DeleteOutlined />}
-                onClick={() => handleDelete(record.id)}
-              />
-            </>
-          )}
-        </Space>
-      ),
+      render: (_: any, record: any) => {
+        const isEditable =
+          record.status === "chờ duyệt" || record.status === "chờ thực thu";
+        const isMobile = !screens.md; // Coi là mobile nếu màn hình nhỏ hơn medium
+
+        const menuItems = [
+          {
+            key: "edit",
+            label: "Sửa phiếu",
+            icon: <EditOutlined />,
+            onClick: () => handleEdit(record),
+          },
+          {
+            key: "delete",
+            label: "Xóa phiếu",
+            icon: <DeleteOutlined />,
+            danger: true,
+            onClick: () => handleDelete(record.id),
+          },
+        ];
+
+        return (
+          <Space>
+            <Button
+              size="small"
+              icon={<EyeOutlined />}
+              onClick={() => {
+                setSelectedTransaction(record);
+                setIsViewModalOpen(true);
+              }}
+            >
+              Xem
+            </Button>
+
+            {isEditable && isMobile && (
+              <Dropdown menu={{ items: menuItems }}>
+                <Button size="small" icon={<EllipsisOutlined />} />
+              </Dropdown>
+            )}
+
+            {isEditable && !isMobile && (
+              <>
+                <Button
+                  size="small"
+                  icon={<EditOutlined />}
+                  onClick={() => handleEdit(record)}
+                />
+                <Button
+                  size="small"
+                  danger
+                  icon={<DeleteOutlined />}
+                  onClick={() => handleDelete(record.id)}
+                />
+              </>
+            )}
+          </Space>
+        );
+      },
     },
   ];
 
