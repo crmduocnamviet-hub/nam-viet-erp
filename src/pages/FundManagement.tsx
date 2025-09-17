@@ -20,8 +20,9 @@ import { supabase } from "../lib/supabaseClient";
 
 const { Title } = Typography;
 
+// Component con chứa toàn bộ logic và giao diện
 const FundManagementContent: React.FC = () => {
-  const { notification } = AntApp.useApp();
+  const { notification, modal } = AntApp.useApp(); // <-- SỬA LỖI 1: Khai báo lại modal
   const [form] = Form.useForm();
 
   const [funds, setFunds] = useState<any[]>([]);
@@ -30,38 +31,46 @@ const FundManagementContent: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingFund, setEditingFund] = useState<any | null>(null);
 
-  // Lấy cả danh sách quỹ và danh sách ngân hàng khi component được tải
+  // SỬA LỖI 2: Thêm lại hàm fetchData
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const fundsPromise = supabase
+        .from("funds")
+        .select("*, banks(*)")
+        .order("created_at");
+      const banksPromise = supabase.from("banks").select("*");
+
+      const [fundsRes, banksRes] = await Promise.all([
+        fundsPromise,
+        banksPromise,
+      ]);
+
+      if (fundsRes.error) throw fundsRes.error;
+      if (banksRes.error) throw banksRes.error;
+
+      setFunds(fundsRes.data || []);
+
+      const bankList =
+        banksRes.data?.map((b) => ({
+          value: b.short_name,
+          label: `${b.short_name} - ${b.name}`,
+          bin: b.bin,
+        })) || [];
+      setBanks(bankList);
+    } catch (error: any) {
+      notification.error({
+        message: "Lỗi tải dữ liệu",
+        description: error.message,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const fundsPromise = supabase
-          .from("funds")
-          .select("*, banks(*)")
-          .order("created_at");
-        const banksPromise = supabase.from("banks").select("*");
-
-        const [fundsRes, banksRes] = await Promise.all([
-          fundsPromise,
-          banksPromise,
-        ]);
-
-        if (fundsRes.error) throw fundsRes.error;
-        if (banksRes.error) throw banksRes.error;
-
-        setFunds(fundsRes.data || []);
-        setBanks(banksRes.data || []);
-      } catch (error: any) {
-        notification.error({
-          message: "Lỗi tải dữ liệu",
-          description: error.message,
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchData();
-  }, [notification]);
+  }, []);
 
   const handleCancel = () => {
     setIsModalOpen(false);
@@ -72,13 +81,12 @@ const FundManagementContent: React.FC = () => {
   const handleAdd = () => {
     setEditingFund(null);
     form.resetFields();
-    form.setFieldsValue({ type: "cash" }); // Mặc định là tiền mặt
+    form.setFieldsValue({ type: "cash" });
     setIsModalOpen(true);
   };
 
   const handleEdit = (record: any) => {
     setEditingFund(record);
-    // Cần gán bank_id từ object lồng nhau
     form.setFieldsValue({ ...record, bank_id: record.banks?.id });
     setIsModalOpen(true);
   };
@@ -89,13 +97,12 @@ const FundManagementContent: React.FC = () => {
       content: `Quỹ/Tài khoản "${name}" sẽ bị xóa. Hành động này có thể ảnh hưởng đến các giao dịch đã ghi nhận.`,
       okText: "Xóa",
       okType: "danger",
-      cancelText: "Hủy",
       onOk: async () => {
         try {
           const { error } = await supabase.from("funds").delete().eq("id", id);
           if (error) throw error;
           notification.success({ message: "Đã xóa thành công!" });
-          fetchData(); // Tải lại danh sách sau khi xóa
+          fetchData(); // <-- Giờ đây hàm này đã tồn tại
         } catch (error: any) {
           notification.error({
             message: "Lỗi khi xóa",
@@ -108,7 +115,6 @@ const FundManagementContent: React.FC = () => {
 
   const handleFinish = async (values: any) => {
     try {
-      // Dọn dẹp dữ liệu trước khi gửi đi
       const record = {
         name: values.name,
         type: values.type,
@@ -132,12 +138,7 @@ const FundManagementContent: React.FC = () => {
       notification.success({
         message: `Đã ${editingFund ? "cập nhật" : "tạo"} thành công!`,
       });
-      // Tải lại dữ liệu sau khi thành công
-      const { data } = await supabase
-        .from("funds")
-        .select("*, banks(*)")
-        .order("created_at");
-      setFunds(data || []);
+      fetchData();
       handleCancel();
     } catch (error: any) {
       notification.error({
@@ -147,7 +148,6 @@ const FundManagementContent: React.FC = () => {
     }
   };
 
-  // Cập nhật lại cột để hiển thị thông tin ngân hàng
   const columns = [
     {
       title: "Tên Quỹ / Tài khoản",
@@ -270,7 +270,7 @@ const FundManagementContent: React.FC = () => {
                   }
                   options={banks.map((b) => ({
                     value: b.id,
-                    label: `${b.short_name} - ${b.name}`,
+                    label: `${b.label}`,
                   }))}
                 />
               </Form.Item>

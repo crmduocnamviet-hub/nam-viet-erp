@@ -85,6 +85,7 @@ const namVietTheme = {
     Menu: {
       // Tùy chỉnh cho Menu có theme="dark"
       darkItemBg: "#0b4578ff", // Nền item trùng với nền Sider
+      darkSubMenuItemBg: "#0D5EA6", //Nền menu con khi rê chu
       darkItemColor: "rgba(255, 255, 255, 0.75)", // Màu chữ item thường
       darkItemHoverBg: "rgba(255, 255, 255, 0.15)", // Nền item khi rê chuột
       darkItemHoverColor: "#ffffff", // Màu chữ item khi rê chuột
