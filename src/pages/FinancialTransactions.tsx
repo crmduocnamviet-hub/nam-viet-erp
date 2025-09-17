@@ -470,7 +470,7 @@ const TransactionPageContent: React.FC = () => {
           <Typography.Title level={2}>Quản lý Thu - Chi</Typography.Title>
         </Col>
         <Col>
-          <Space>
+          <Space wrap>
             <Button
               type="primary"
               icon={<PlusOutlined />}

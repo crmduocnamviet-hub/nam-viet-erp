@@ -209,7 +209,7 @@ const CashLedgerPageContent: React.FC = () => {
           </Typography.Title>
         </Col>
         <Col>
-          <Space>
+          <Space wrap>
             <RangePicker value={dateRange} onChange={setDateRange} />
             <Button
               icon={<SwapOutlined />}

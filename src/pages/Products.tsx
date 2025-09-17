@@ -538,7 +538,7 @@ const ProductsPageContent: React.FC = () => {
             <Title level={2}>Danh sách sản phẩm</Title>
           </Col>
           <Col>
-            <Space>
+            <Space wrap>
               <Button onClick={handleDownloadTemplate}>Tải file mẫu</Button>
               <Upload
                 customRequest={({ file }) => handleImportExcel(file as File)}

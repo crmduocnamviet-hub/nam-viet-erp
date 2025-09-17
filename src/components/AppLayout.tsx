@@ -35,6 +35,7 @@ import FinancialTransactions from "../pages/FinancialTransactions";
 import CashLedger from "../pages/CashLedger";
 import FundManagement from "../pages/FundManagement";
 import logo from "../assets/logo.png";
+import PurchaseOrders from "../pages/PurchaseOrders";
 
 const { Header, Content, Footer, Sider } = Layout;
 const { Title } = Typography;
@@ -42,7 +43,15 @@ const { useBreakpoint } = Grid; // <-- "Mắt thần" theo dõi kích thước m
 
 const menuItems: MenuProps["items"] = [
   { label: "Tổng quan", key: "/", icon: <PieChartOutlined /> },
-  { label: "Kho - Sản Phẩm", key: "/products", icon: <AppstoreOutlined /> },
+  {
+    label: "Kho - Sản Phẩm",
+    key: "inventory",
+    icon: <AppstoreOutlined />,
+    children: [
+      { label: "Danh sách Sản phẩm", key: "/products" },
+      { label: "Quản lý Đặt hàng", key: "/purchase-orders" },
+    ],
+  },
   {
     label: "Bán Buôn (B2B)",
     key: "b2b",
@@ -287,6 +296,7 @@ const AppLayout: React.FC = () => {
                 />
                 <Route path="/cash-ledger" element={<CashLedger />} />
                 <Route path="/settings/funds" element={<FundManagement />} />
+                <Route path="/purchase-orders" element={<PurchaseOrders />} />
                 <Route path="*" element={<ComingSoon />} />
               </Routes>
             </div>
