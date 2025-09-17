@@ -174,7 +174,7 @@ const AppLayout: React.FC = () => {
             collapsible
             collapsed={collapsed}
             onCollapse={(value) => setCollapsed(value)}
-            width={180}
+            width={200} // Độ rộng Menu Bar bên trái
             collapsedWidth={50}
             style={{
               overflow: "auto",
