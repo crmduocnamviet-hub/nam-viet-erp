@@ -240,7 +240,7 @@ const AppLayout: React.FC = () => {
         <Layout
           style={{
             // Điều chỉnh lề trái tùy theo màn hình desktop hay mobile
-            marginLeft: isMobile ? 0 : collapsed ? 50 : 180,
+            marginLeft: isMobile ? 0 : collapsed ? 50 : 170,
             transition: "margin-left 0.2s",
           }}
         >
