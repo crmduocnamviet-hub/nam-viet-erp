@@ -11,6 +11,7 @@ import {
   Avatar,
   App,
   Upload,
+  TableProps,
 } from "antd";
 import {
   PlusOutlined,
@@ -450,7 +451,7 @@ const Products: React.FC = () => {
     reader.readAsBinaryString(file);
   }; // <-- HÀM handleImportExcel PHẢI KẾT THÚC TẠI ĐÂY
 
-  const columns = useMemo(() => {
+  const columns: TableProps<any>["columns"] = useMemo(() => {
     const baseColumns = [
       {
         title: "Ảnh",

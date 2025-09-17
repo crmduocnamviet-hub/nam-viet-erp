@@ -23,7 +23,6 @@ import isBetween from "dayjs/plugin/isBetween";
 
 dayjs.extend(isBetween);
 
-const { Title } = Typography;
 const { RangePicker } = DatePicker;
 const { Option } = Select;
 
