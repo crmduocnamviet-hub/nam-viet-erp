@@ -263,6 +263,7 @@ const ProductsPageContent: React.FC = () => {
         retail_profit: values.retailProfit,
         wholesale_price: values.wholesalePrice,
         retail_price: values.retailPrice,
+        supplier_id: values.supplier_id,
       };
 
       let productId = editingProduct?.id;

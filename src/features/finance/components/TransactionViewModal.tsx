@@ -43,9 +43,9 @@ const TransactionViewModal: React.FC<TransactionViewModalProps> = ({
   const isIncome = transaction.type === "income";
   const canApprove = transaction.status === "chờ duyệt";
   const canExecute =
-    transaction.status === "Đã duyệt - Chờ chi" ||
-    transaction.status === "đã duyệt" ||
-    transaction.status === "chờ thực thu";
+    transaction.status.toLowerCase() === "đã duyệt - chờ chi" ||
+    transaction.status.toLowerCase() === "đã duyệt" ||
+    transaction.status.toLowerCase() === "chờ thực thu";
 
   return (
     <Modal
@@ -58,6 +58,7 @@ const TransactionViewModal: React.FC<TransactionViewModalProps> = ({
     >
       <Row gutter={24}>
         <Col
+          xs={24}
           span={canExecute && transaction.payment_method === "bank" ? 12 : 24}
         >
           <Descriptions bordered column={1}>
@@ -121,7 +122,7 @@ const TransactionViewModal: React.FC<TransactionViewModalProps> = ({
         </Col>
 
         {canExecute && (
-          <Col span={12}>
+          <Col xs={24} span={12}>
             {/* Chỉ cần đọc qr_code_url từ transaction và hiển thị */}
             {transaction.payment_method === "bank" && !isIncome && (
               <QRCodeDisplay qrUrl={transaction.qr_code_url} />

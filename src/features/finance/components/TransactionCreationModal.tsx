@@ -97,7 +97,7 @@ const TransactionCreationModal: React.FC<TransactionCreationModalProps> = ({
     const info = watchedValues.description || "Thanh toan";
     tempQrUrl = `https://img.vietqr.io/image/${selectedBankObject.bin}-${
       watchedValues.recipient_account
-    }-compact.png?amount=${watchedValues.amount}&addInfo=${encodeURIComponent(
+    }-compact2.png?amount=${watchedValues.amount}&addInfo=${encodeURIComponent(
       info
     )}&accountName=${encodeURIComponent(watchedValues.recipient_name || "")}`;
   }
@@ -131,6 +131,7 @@ const TransactionCreationModal: React.FC<TransactionCreationModalProps> = ({
       >
         <Row gutter={24}>
           <Col
+            xs={24}
             span={
               paymentMethod === "bank" && transactionType === "expense"
                 ? 12
@@ -187,7 +188,7 @@ const TransactionCreationModal: React.FC<TransactionCreationModalProps> = ({
           </Col>
 
           {paymentMethod === "bank" && transactionType === "expense" && (
-            <Col span={12}>
+            <Col xs={24} span={12}>
               <Card title="Thông tin người nhận" size="small" type="inner">
                 <Form.Item
                   name="recipient_bank"

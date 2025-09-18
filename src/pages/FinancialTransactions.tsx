@@ -12,6 +12,8 @@ import {
   Dropdown,
   Tag,
   Grid,
+  List,
+  Avatar,
   type TableProps,
 } from "antd";
 import {
@@ -143,8 +145,28 @@ const TransactionPageContent: React.FC = () => {
   );
 
   useEffect(() => {
+    // 1. Tải dữ liệu ban đầu
     fetchData(pagination.current, pagination.pageSize);
-  }, [fetchData, pagination.current, pagination.pageSize]);
+
+    // 2. Tạo một kênh "lắng nghe" các thay đổi trên bảng transactions
+    const channel = supabase
+      .channel("transactions-channel")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "transactions" },
+        (payload) => {
+          console.log("Change received!", payload);
+          // Tải lại toàn bộ dữ liệu để có thông tin mới nhất
+          fetchData(pagination.current, pagination.pageSize);
+        }
+      )
+      .subscribe();
+
+    // 3. Dọn dẹp: "Tắt kênh" khi người dùng rời khỏi trang
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [supabase, pagination.current, pagination.pageSize, fetchData]);
 
   const handleTableChange: TableProps<any>["onChange"] = (newPagination) => {
     setPagination((prev) => ({
@@ -405,8 +427,9 @@ const TransactionPageContent: React.FC = () => {
       render: (_: any, record: any) => {
         const isEditable =
           record.status === "chờ duyệt" || record.status === "chờ thực thu";
-        const isMobile = !screens.md; // Coi là mobile nếu màn hình nhỏ hơn medium
+        const isMobile = !screens.md; // Dùng lại "mắt thần"
 
+        // Tạo các mục cho menu dropdown
         const menuItems = [
           {
             key: "edit",
@@ -436,12 +459,14 @@ const TransactionPageContent: React.FC = () => {
               Xem
             </Button>
 
+            {/* Nếu là mobile VÀ có thể sửa -> Hiển thị dropdown */}
             {isEditable && isMobile && (
               <Dropdown menu={{ items: menuItems }}>
                 <Button size="small" icon={<EllipsisOutlined />} />
               </Dropdown>
             )}
 
+            {/* Nếu là desktop VÀ có thể sửa -> Hiển thị các nút đầy đủ */}
             {isEditable && !isMobile && (
               <>
                 <Button
@@ -506,12 +531,95 @@ const TransactionPageContent: React.FC = () => {
       </Row>
 
       <Table
+        className="desktop-table"
         columns={columns}
         dataSource={transactions}
         loading={loading}
         rowKey="id"
         pagination={pagination}
         onChange={handleTableChange}
+      />
+
+      {/* GIAO DIỆN MỚI CHO DI ĐỘNG */}
+      <List
+        className="mobile-list" // <-- Tên để CSS nhận diện
+        loading={loading}
+        dataSource={transactions}
+        pagination={{
+          pageSize: 10,
+          current: pagination.current,
+          total: pagination.total,
+          onChange: (page, pageSize) =>
+            setPagination((prev) => ({ ...prev, current: page, pageSize })),
+        }}
+        renderItem={(item) => (
+          <List.Item
+            actions={[
+              // Nút ... cho các hành động Sửa/Xóa trên mobile
+              <Dropdown
+                menu={{
+                  items: [
+                    {
+                      key: "edit",
+                      label: "Sửa",
+                      icon: <EditOutlined />,
+                      onClick: () => handleEdit(item),
+                    },
+                    {
+                      key: "delete",
+                      label: "Xóa",
+                      icon: <DeleteOutlined />,
+                      danger: true,
+                      onClick: () => handleDelete(item.id),
+                    },
+                  ],
+                }}
+              >
+                <Button size="small" icon={<EllipsisOutlined />} />
+              </Dropdown>,
+            ]}
+          >
+            <List.Item.Meta
+              avatar={
+                <Avatar
+                  style={{
+                    backgroundColor:
+                      item.type === "income" ? "#87d068" : "#f50",
+                  }}
+                >
+                  {item.type === "income" ? "T" : "C"}
+                </Avatar>
+              }
+              title={
+                <a
+                  onClick={() => {
+                    setSelectedTransaction(item);
+                    setIsViewModalOpen(true);
+                  }}
+                >
+                  {item.description}
+                </a>
+              }
+              description={
+                <div>
+                  <div>
+                    <Typography.Text
+                      strong
+                      type={item.type === "income" ? "success" : "danger"}
+                    >
+                      {item.type === "income" ? "+" : "-"}
+                      {item.amount.toLocaleString("vi-VN")} đ
+                    </Typography.Text>
+                  </div>
+                  <div>
+                    {dayjs(item.transaction_date).format("DD/MM/YYYY")} -{" "}
+                    {getStatusTag(item.status)}
+                  </div>
+                </div>
+              }
+            />
+          </List.Item>
+        )}
       />
 
       <TransactionCreationModal
@@ -538,6 +646,14 @@ const TransactionPageContent: React.FC = () => {
         banks={banks}
         form={executionForm}
       />
+      <style>{`
+        @media (max-width: 767px) {
+            .desktop-table { display: none !important; }
+        }
+        @media (min-width: 768px) {
+            .mobile-list { display: none !important; }
+        }
+    `}</style>
     </>
   );
 };

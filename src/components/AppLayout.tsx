@@ -36,6 +36,9 @@ import CashLedger from "../pages/CashLedger";
 import FundManagement from "../pages/FundManagement";
 import logo from "../assets/logo.png";
 import PurchaseOrders from "../pages/PurchaseOrders";
+import PurchaseOrderDetail from "../pages/PurchaseOrderDetail";
+import Suppliers from "../pages/Suppliers";
+import ReceivePurchaseOrder from "../pages/ReceivePurchaseOrder";
 
 const { Header, Content, Footer, Sider } = Layout;
 const { Title } = Typography;
@@ -291,12 +294,25 @@ const AppLayout: React.FC = () => {
                 <Route path="/promotions/:id" element={<PromotionDetail />} />
                 <Route path="/vouchers" element={<Vouchers />} />
                 <Route
+                  path="/purchase-orders/new"
+                  element={<PurchaseOrderDetail />}
+                />
+                <Route
+                  path="/purchase-orders/:id"
+                  element={<PurchaseOrderDetail />}
+                />
+                <Route
                   path="/financial-transactions"
                   element={<FinancialTransactions />}
                 />
                 <Route path="/cash-ledger" element={<CashLedger />} />
                 <Route path="/settings/funds" element={<FundManagement />} />
                 <Route path="/purchase-orders" element={<PurchaseOrders />} />
+                <Route path="/suppliers" element={<Suppliers />} />
+                <Route
+                  path="/receive-po/:id"
+                  element={<ReceivePurchaseOrder />}
+                />
                 <Route path="*" element={<ComingSoon />} />
               </Routes>
             </div>
