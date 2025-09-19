@@ -20,7 +20,7 @@ import CashDenominationCounter from "./CashDenominationCounter";
 import { supabase } from "../../../lib/supabaseClient";
 
 const { Option } = Select;
-const { Text, Title } = Typography;
+const { Text } = Typography;
 
 interface TransactionViewModalProps {
   open: boolean;
