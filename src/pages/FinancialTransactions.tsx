@@ -395,7 +395,10 @@ const TransactionPageContent: React.FC = () => {
       dataIndex: "amount",
       key: "amount",
       render: (amount: number, record: any) => (
-        <Typography.Text type={record.type === "income" ? "success" : "danger"}>
+        <Typography.Text
+          type={record.type === "income" ? "success" : "danger"}
+          style={{ fontSize: "16px" }}
+        >
           {record.type === "income" ? "+" : "-"}
           {amount.toLocaleString("vi-VN")} đ
         </Typography.Text>
@@ -602,6 +605,7 @@ const TransactionPageContent: React.FC = () => {
                       <Typography.Text
                         strong
                         type={item.type === "income" ? "success" : "danger"}
+                        style={{ fontSize: "15px" }}
                       >
                         {item.type === "income" ? "+" : "-"}
                         {item.amount.toLocaleString("vi-VN")} đ

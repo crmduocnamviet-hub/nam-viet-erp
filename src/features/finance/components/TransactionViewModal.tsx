@@ -13,7 +13,6 @@ import {
   type FormInstance,
   Input,
   App as AntApp,
-  Divider,
 } from "antd";
 import dayjs from "dayjs";
 import QRCodeDisplay from "./QRCodeDisplay";
@@ -21,7 +20,7 @@ import CashDenominationCounter from "./CashDenominationCounter";
 import { supabase } from "../../../lib/supabaseClient";
 
 const { Option } = Select;
-const { Text, Title } = Typography;
+const { Text } = Typography;
 
 interface TransactionViewModalProps {
   open: boolean;
@@ -46,9 +45,7 @@ const TransactionViewModal: React.FC<TransactionViewModalProps> = ({
 }) => {
   const { modal, notification } = AntApp.useApp();
   // Nâng cấp: State để lưu bảng kê của thủ quỹ
-  const [cashierCounts, setCashierCounts] = useState<Record<number, number>>(
-    {}
-  );
+  const [setCashierCounts] = useState<Record<number, number>>({});
 
   if (!transaction) return null;
 
