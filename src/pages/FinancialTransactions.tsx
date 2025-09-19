@@ -251,22 +251,32 @@ const TransactionPageContent: React.FC = () => {
     }
   };
 
-  const handleExecutionFinish = async (values: any) => {
+  const handleExecutionFinish = async (
+    values: any,
+    denominationCounts?: Record<number, number>
+  ) => {
     if (!selectedTransaction) return;
     try {
+      const updateData: any = {
+        status: selectedTransaction.type === "income" ? "đã thu" : "đã chi",
+        executed_by: user?.user_metadata?.full_name || user?.email,
+        fund_id: values.fund_id,
+      };
+
+      // Nếu có bảng kê của thủ quỹ, thêm vào dữ liệu cập nhật
+      if (denominationCounts && Object.keys(denominationCounts).length > 0) {
+        updateData.executed_denomination_counts = denominationCounts;
+      }
+
       const { error } = await supabase
         .from("transactions")
-        .update({
-          status: selectedTransaction.type === "income" ? "đã thu" : "đã chi",
-          executed_by: user?.user_metadata?.full_name || user?.email,
-          fund_id: values.fund_id,
-        })
+        .update(updateData)
         .eq("id", selectedTransaction.id);
 
       if (error) throw error;
       notification.success({ message: `Đã xác nhận thực thi giao dịch!` });
       setIsViewModalOpen(false);
-      fetchData();
+      // fetchData() sẽ được gọi tự động bởi real-time channel
     } catch (error: any) {
       notification.error({
         message: `Xác nhận thất bại`,

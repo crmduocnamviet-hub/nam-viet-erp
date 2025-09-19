@@ -20,13 +20,12 @@ import CashDenominationCounter from "./CashDenominationCounter";
 import { supabase } from "../../../lib/supabaseClient";
 
 const { Option } = Select;
-const { Text } = Typography;
+const { Text, Title } = Typography;
 
 interface TransactionViewModalProps {
   open: boolean;
   onCancel: () => void;
   onApprove: () => void;
-  // Nâng cấp: onExecute sẽ nhận thêm chi tiết bảng kê của thủ quỹ
   onExecute: (values: any, denominationCounts?: Record<number, number>) => void;
   transaction: any | null;
   funds: any[];
@@ -44,13 +43,13 @@ const TransactionViewModal: React.FC<TransactionViewModalProps> = ({
   form,
 }) => {
   const { modal, notification } = AntApp.useApp();
-  // Nâng cấp: State để lưu bảng kê của thủ quỹ
-  const [setCashierCounts] = useState<Record<number, number>>({});
+  const [cashierCounts, setCashierCounts] = useState<Record<number, number>>(
+    {}
+  );
 
   if (!transaction) return null;
 
   const isIncome = transaction.type === "income";
-
   const canApprove = transaction.status.trim().toLowerCase() === "chờ duyệt";
   const canExecute =
     transaction.status.trim().toLowerCase() === "đã duyệt - chờ chi" ||
@@ -216,7 +215,11 @@ const TransactionViewModal: React.FC<TransactionViewModalProps> = ({
             )}
 
             <Card title="Xác nhận Thực thi" style={{ marginTop: 16 }}>
-              <Form form={form} layout="vertical" onFinish={onExecute}>
+              <Form
+                form={form}
+                layout="vertical"
+                onFinish={(values) => onExecute(values, cashierCounts)}
+              >
                 <Form.Item
                   name="fund_id"
                   label="Chọn Quỹ/Tài khoản để thực hiện"
