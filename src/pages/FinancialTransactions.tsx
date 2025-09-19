@@ -35,6 +35,14 @@ import TransactionCreationModal from "../features/finance/components/Transaction
 import TransactionViewModalWrapper from "../features/finance/components/TransactionViewModal";
 import FilterControls from "../features/finance/components/FilterControls";
 
+const sanitizeFilename = (filename: string) => {
+  return filename
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9.\-_]/g, "_")
+    .replace(/\s+/g, "_");
+};
+
 const { Search } = Input;
 const { useBreakpoint } = Grid;
 
@@ -47,7 +55,7 @@ const TransactionPageContent: React.FC = () => {
 
   const [transactions, setTransactions] = useState<any[]>([]);
   const [funds, setFunds] = useState<any[]>([]);
-  const [banks, setBanks] = useState<any[]>([]);
+  const [banks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCreationModalOpen, setIsCreationModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
@@ -71,7 +79,7 @@ const TransactionPageContent: React.FC = () => {
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
 
   const fetchData = useCallback(
-    async (currentFilters: typeof filters) => {
+    async (currentFilters = filters) => {
       setLoading(true);
       try {
         let query = supabase
