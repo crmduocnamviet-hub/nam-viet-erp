@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Modal,
   Form,
@@ -11,18 +11,24 @@ import {
   Row,
   Col,
   type FormInstance,
+  Input,
+  App as AntApp,
+  Divider,
 } from "antd";
 import dayjs from "dayjs";
 import QRCodeDisplay from "./QRCodeDisplay";
+import CashDenominationCounter from "./CashDenominationCounter";
+import { supabase } from "../../../lib/supabaseClient";
 
 const { Option } = Select;
-const { Text } = Typography;
+const { Text, Title } = Typography;
 
 interface TransactionViewModalProps {
   open: boolean;
   onCancel: () => void;
   onApprove: () => void;
-  onExecute: (values: any) => void;
+  // Nâng cấp: onExecute sẽ nhận thêm chi tiết bảng kê của thủ quỹ
+  onExecute: (values: any, denominationCounts?: Record<number, number>) => void;
   transaction: any | null;
   funds: any[];
   banks: any[];
@@ -38,14 +44,80 @@ const TransactionViewModal: React.FC<TransactionViewModalProps> = ({
   funds,
   form,
 }) => {
+  const { modal, notification } = AntApp.useApp();
+  // Nâng cấp: State để lưu bảng kê của thủ quỹ
+  const [cashierCounts, setCashierCounts] = useState<Record<number, number>>(
+    {}
+  );
+
   if (!transaction) return null;
 
   const isIncome = transaction.type === "income";
-  const canApprove = transaction.status === "chờ duyệt";
+
+  const canApprove = transaction.status.trim().toLowerCase() === "chờ duyệt";
   const canExecute =
-    transaction.status === "Đã duyệt - Chờ chi" ||
-    transaction.status === "đã duyệt" ||
-    transaction.status === "chờ thực thu";
+    transaction.status.trim().toLowerCase() === "đã duyệt - chờ chi" ||
+    transaction.status.trim().toLowerCase() === "đã duyệt" ||
+    transaction.status.trim().toLowerCase() === "chờ thực thu";
+
+  const handleReject = () => {
+    let rejectionReason = "";
+    modal.confirm({
+      title: `Xác nhận Từ chối Phiếu ${isIncome ? "thu" : "chi"}?`,
+      content: (
+        <div>
+          <Text>Bạn có chắc chắn muốn từ chối phiếu này không?</Text>
+          <Input.TextArea
+            style={{ marginTop: 16 }}
+            rows={3}
+            placeholder="Nhập lý do từ chối (không bắt buộc)"
+            onChange={(e) => {
+              rejectionReason = e.target.value;
+            }}
+          />
+        </div>
+      ),
+      okText: "Xác nhận Từ chối",
+      okType: "danger",
+      cancelText: "Hủy",
+      onOk: async () => {
+        try {
+          const { error } = await supabase
+            .from("transactions")
+            .update({
+              status: "Từ chối",
+              description: `${
+                transaction.description
+              }\n\n---LÝ DO TỪ CHỐI---\n${rejectionReason || "Không có lý do"}`,
+            })
+            .eq("id", transaction.id);
+          if (error) throw error;
+          notification.success({ message: "Đã từ chối phiếu thành công." });
+          onCancel();
+        } catch (error: any) {
+          notification.error({
+            message: "Từ chối thất bại",
+            description: error.message,
+          });
+        }
+      },
+    });
+  };
+
+  const handleCashierCounterConfirm = (
+    total: number,
+    counts: Record<number, number>
+  ) => {
+    if (total !== transaction.amount) {
+      modal.warning({
+        title: "Số tiền không khớp!",
+        content:
+          "Tổng tiền Thủ quỹ đếm được khác với số tiền trên phiếu thu. Sếp có muốn tiếp tục không?",
+      });
+    }
+    setCashierCounts(counts);
+    notification.success({ message: "Đã ghi nhận bảng kê của Thủ quỹ." });
+  };
 
   return (
     <Modal
@@ -53,12 +125,22 @@ const TransactionViewModal: React.FC<TransactionViewModalProps> = ({
       open={open}
       onCancel={onCancel}
       footer={null}
-      width={canExecute && transaction.payment_method === "bank" ? 1000 : 600}
+      width={
+        canExecute &&
+        (transaction.payment_method === "bank" ||
+          (transaction.payment_method === "cash" && isIncome))
+          ? 1000
+          : 600
+      }
       destroyOnHidden
     >
       <Row gutter={24}>
         <Col
-          span={canExecute && transaction.payment_method === "bank" ? 12 : 24}
+          span={
+            canExecute && (isIncome || transaction.payment_method === "bank")
+              ? 12
+              : 24
+          }
         >
           <Descriptions bordered column={1}>
             <Descriptions.Item label="Ngày">
@@ -77,7 +159,10 @@ const TransactionViewModal: React.FC<TransactionViewModalProps> = ({
             <Descriptions.Item label="Người tạo">
               {transaction.created_by}
             </Descriptions.Item>
-            <Descriptions.Item label="Diễn giải">
+            <Descriptions.Item
+              label="Diễn giải"
+              style={{ whiteSpace: "pre-wrap" }}
+            >
               {transaction.description}
             </Descriptions.Item>
             {transaction.payment_method === "bank" && !isIncome && (
@@ -109,23 +194,30 @@ const TransactionViewModal: React.FC<TransactionViewModalProps> = ({
                 : "Không có"}
             </Descriptions.Item>
           </Descriptions>
-
           {canApprove && (
             <Space style={{ marginTop: 24 }}>
               <Button type="primary" onClick={onApprove}>
-                Duyệt Chi
+                {isIncome ? "Duyệt Thu" : "Duyệt Chi"}
               </Button>
-              <Button danger>Từ chối</Button>
+              <Button danger onClick={handleReject}>
+                Từ chối
+              </Button>
             </Space>
           )}
         </Col>
 
         {canExecute && (
           <Col span={12}>
-            {/* Chỉ cần đọc qr_code_url từ transaction và hiển thị */}
             {transaction.payment_method === "bank" && !isIncome && (
               <QRCodeDisplay qrUrl={transaction.qr_code_url} />
             )}
+            {transaction.payment_method === "cash" && isIncome && (
+              <CashDenominationCounter
+                targetAmount={transaction.amount}
+                onConfirm={handleCashierCounterConfirm}
+              />
+            )}
+
             <Card title="Xác nhận Thực thi" style={{ marginTop: 16 }}>
               <Form form={form} layout="vertical" onFinish={onExecute}>
                 <Form.Item
@@ -145,6 +237,7 @@ const TransactionViewModal: React.FC<TransactionViewModalProps> = ({
                       ))}
                   </Select>
                 </Form.Item>
+                {/* Sẽ thêm bảng kê cho thủ quỹ ở đây trong bước tiếp theo */}
                 <Button type="primary" htmlType="submit">
                   Xác nhận Đã {isIncome ? "Thu" : "Chi"}
                 </Button>
@@ -157,4 +250,12 @@ const TransactionViewModal: React.FC<TransactionViewModalProps> = ({
   );
 };
 
-export default TransactionViewModal;
+const TransactionViewModalWrapper: React.FC<TransactionViewModalProps> = (
+  props
+) => (
+  <AntApp>
+    <TransactionViewModal {...props} />
+  </AntApp>
+);
+
+export default TransactionViewModalWrapper;

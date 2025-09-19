@@ -1,3 +1,5 @@
+// src/pages/FinancialTransactions.tsx
+
 import React, { useState, useEffect, useCallback } from "react";
 import {
   Button,
@@ -12,35 +14,32 @@ import {
   Dropdown,
   Tag,
   Grid,
+  List,
+  Avatar,
   type TableProps,
+  Drawer,
+  Card,
 } from "antd";
 import {
   PlusOutlined,
-  EyeOutlined,
   EditOutlined,
   DeleteOutlined,
   EllipsisOutlined,
+  FilterOutlined,
+  EyeOutlined,
 } from "@ant-design/icons";
 import { supabase } from "../lib/supabaseClient";
 import dayjs from "dayjs";
 import { useAuth } from "../context/AuthContext";
-import { useDebounce } from "../hooks/useDebounce";
 import TransactionCreationModal from "../features/finance/components/TransactionCreationModal";
-import TransactionViewModal from "../features/finance/components/TransactionViewModal";
+import TransactionViewModalWrapper from "../features/finance/components/TransactionViewModal";
+import FilterControls from "../features/finance/components/FilterControls";
 
 const { Search } = Input;
 const { useBreakpoint } = Grid;
 
-const sanitizeFilename = (filename: string) => {
-  return filename
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-zA-Z0-9.\-_]/g, "_")
-    .replace(/\s+/g, "_");
-};
-
 const TransactionPageContent: React.FC = () => {
-  const screens = useBreakpoint(); // Lấy thông tin màn hình
+  const screens = useBreakpoint();
   const { notification, modal } = AntApp.useApp();
   const { user } = useAuth();
   const [creationForm] = Form.useForm();
@@ -50,10 +49,8 @@ const TransactionPageContent: React.FC = () => {
   const [funds, setFunds] = useState<any[]>([]);
   const [banks, setBanks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-
   const [isCreationModalOpen, setIsCreationModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-
   const [transactionType, setTransactionType] = useState<"income" | "expense">(
     "income"
   );
@@ -62,74 +59,59 @@ const TransactionPageContent: React.FC = () => {
     null
   );
 
-  const [searchTerm, setSearchTerm] = useState("");
-  const debouncedSearchTerm = useDebounce(searchTerm, 500);
-  const [pagination, setPagination] = useState({
-    current: 1,
-    pageSize: 10,
-    total: 0,
-  });
+  const initialFilters = {
+    dateRange: [dayjs().startOf("month"), dayjs().endOf("month")],
+    type: null,
+    status: null,
+    fundId: null,
+    searchTerm: "",
+  };
+
+  const [filters, setFilters] = useState(initialFilters);
+  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
 
   const fetchData = useCallback(
-    async (page = 1, pageSize = 10, search = debouncedSearchTerm) => {
+    async (currentFilters: typeof filters) => {
       setLoading(true);
       try {
-        if (funds.length === 0 || banks.length === 0) {
-          const fundsPromise = supabase.from("funds").select("*, banks(*)");
-          const banksPromise = supabase.from("banks").select("*");
-          const [fundsRes, banksRes] = await Promise.all([
-            fundsPromise,
-            banksPromise,
-          ]);
+        let query = supabase
+          .from("transactions")
+          .select("*, funds(name)")
+          .order("created_at", { ascending: false });
 
-          if (fundsRes.error) throw fundsRes.error;
-          if (banksRes.error) throw banksRes.error;
-
-          setFunds(fundsRes.data || []);
-
-          const bankList =
-            banksRes.data?.map((b) => ({
-              value: b.short_name,
-              label: `${b.short_name} - ${b.name}`,
-              bin: b.bin,
-            })) || [];
-          setBanks(bankList);
+        // Áp dụng bộ lọc
+        if (
+          currentFilters.dateRange &&
+          currentFilters.dateRange[0] &&
+          currentFilters.dateRange[1]
+        ) {
+          query = query.gte(
+            "transaction_date",
+            currentFilters.dateRange[0].format("YYYY-MM-DD")
+          );
+          query = query.lte(
+            "transaction_date",
+            currentFilters.dateRange[1].format("YYYY-MM-DD")
+          );
+        }
+        if (currentFilters.type) {
+          query = query.eq("type", currentFilters.type);
+        }
+        if (currentFilters.status) {
+          query = query.eq("status", currentFilters.status);
+        }
+        if (currentFilters.fundId) {
+          query = query.eq("fund_id", currentFilters.fundId);
+        }
+        if (currentFilters.searchTerm) {
+          query = query.or(
+            `description.ilike.%${currentFilters.searchTerm}%,created_by.ilike.%${currentFilters.searchTerm}%`
+          );
         }
 
-        const from = (page - 1) * pageSize;
-        const to = from + pageSize - 1;
-
-        if (search) {
-          const { data, error, count } = await supabase
-            .rpc(
-              "search_transactions",
-              { search_term: search },
-              { count: "exact" }
-            )
-            .select("*, funds(name)")
-            .range(from, to)
-            .order("created_at", { ascending: false });
-          if (error) throw error;
-          setTransactions(data || []);
-          setPagination((prev) => ({
-            ...prev,
-            total: count || 0,
-            current: page,
-          }));
-        } else {
-          const { data, error, count } = await supabase
-            .from("transactions")
-            .select("*, funds(name)", { count: "exact" })
-            .range(from, to)
-            .order("created_at", { ascending: false });
-          if (error) throw error;
-          setTransactions(data || []);
-          setPagination((prev) => ({
-            ...prev,
-            total: count || 0,
-            current: page,
-          }));
-        }
+        const { data, error } = await query;
+        if (error) throw error;
+        setTransactions(data || []);
       } catch (error: any) {
         notification.error({
           message: "Lỗi tải dữ liệu",
@@ -139,19 +121,50 @@ const TransactionPageContent: React.FC = () => {
         setLoading(false);
       }
     },
-    [debouncedSearchTerm, notification, funds.length, banks.length]
+    [notification]
   );
 
   useEffect(() => {
-    fetchData(pagination.current, pagination.pageSize);
-  }, [fetchData, pagination.current, pagination.pageSize]);
+    const fetchInitialData = async () => {
+      const { data } = await supabase.from("funds").select("*");
+      if (data) setFunds(data);
+      // Fetch data with initial filters
+      fetchData(filters);
+    };
+    fetchInitialData();
 
-  const handleTableChange: TableProps<any>["onChange"] = (newPagination) => {
-    setPagination((prev) => ({
-      ...prev,
-      current: newPagination.current || 1,
-      pageSize: newPagination.pageSize || 10,
-    }));
+    const channel = supabase
+      .channel("transactions-realtime-channel")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "transactions" },
+        (payload) => {
+          console.log("Change received!", payload);
+          fetchData(filters);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchData, filters]);
+
+  const handleFilterChange = (changedFilters: any, reset: boolean = false) => {
+    const newFilters = reset
+      ? changedFilters
+      : { ...filters, ...changedFilters };
+    setFilters(newFilters);
+    // On desktop, filter changes apply instantly
+    if (screens.md && !reset) {
+      fetchData(newFilters);
+    }
+  };
+
+  const handleSearch = (searchTerm: string) => {
+    const newFilters = { ...filters, searchTerm };
+    setFilters(newFilters);
+    fetchData(newFilters);
   };
 
   const handleUpload = async ({ file, onSuccess, onError }: any) => {
@@ -494,25 +507,109 @@ const TransactionPageContent: React.FC = () => {
           </Space>
         </Col>
       </Row>
-      <Row style={{ marginBottom: 16 }} gutter={16}>
-        <Col span={12}>
-          <Search
-            placeholder="Tìm theo người tạo, diễn giải..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            allowClear
-          />
-        </Col>
-      </Row>
 
-      <Table
-        columns={columns}
-        dataSource={transactions}
-        loading={loading}
-        rowKey="id"
-        pagination={pagination}
-        onChange={handleTableChange}
-      />
+      <Card style={{ marginBottom: 16 }}>
+        <Row gutter={16} align="bottom">
+          <Col xs={24} md={8}>
+            <Form layout="vertical">
+              <Row align="bottom" gutter={8}>
+                <Col xs={18} sm={20} md={24}>
+                  <Form.Item label="Tìm kiếm">
+                    <Search
+                      placeholder="Tìm theo diễn giải..."
+                      onSearch={handleSearch}
+                      allowClear
+                    />
+                  </Form.Item>
+                </Col>
+                {!screens.md && (
+                  <Col xs={6} sm={4}>
+                    <Form.Item>
+                      <Button
+                        icon={<FilterOutlined />}
+                        onClick={() => setIsFilterDrawerOpen(true)}
+                        block
+                      >
+                        Lọc
+                      </Button>
+                    </Form.Item>
+                  </Col>
+                )}
+              </Row>
+            </Form>
+          </Col>
+
+          {screens.md && (
+            <Col xs={24} md={16}>
+              <FilterControls
+                filters={filters}
+                onFilterChange={handleFilterChange}
+                funds={funds}
+              />
+            </Col>
+          )}
+        </Row>
+      </Card>
+
+      {screens.md ? (
+        <Table
+          columns={columns}
+          dataSource={transactions}
+          loading={loading}
+          rowKey="id"
+        />
+      ) : (
+        <List
+          loading={loading}
+          dataSource={transactions}
+          renderItem={(item) => (
+            <List.Item
+              actions={[
+                <Button
+                  size="small"
+                  onClick={() => {
+                    setSelectedTransaction(item);
+                    setIsViewModalOpen(true);
+                  }}
+                >
+                  Xem
+                </Button>,
+              ]}
+            >
+              <List.Item.Meta
+                avatar={
+                  <Avatar
+                    style={{
+                      backgroundColor:
+                        item.type === "income" ? "#87d068" : "#f50",
+                    }}
+                  >
+                    {item.type === "income" ? "T" : "C"}
+                  </Avatar>
+                }
+                title={<a>{item.description}</a>}
+                description={
+                  <div>
+                    <div>
+                      <Typography.Text
+                        strong
+                        type={item.type === "income" ? "success" : "danger"}
+                      >
+                        {item.type === "income" ? "+" : "-"}
+                        {item.amount.toLocaleString("vi-VN")} đ
+                      </Typography.Text>
+                    </div>
+                    <div>
+                      {dayjs(item.transaction_date).format("DD/MM/YYYY")} -{" "}
+                      {getStatusTag(item.status)}
+                    </div>
+                  </div>
+                }
+              />
+            </List.Item>
+          )}
+        />
+      )}
 
       <TransactionCreationModal
         open={isCreationModalOpen}
@@ -528,7 +625,7 @@ const TransactionPageContent: React.FC = () => {
         handleUpload={handleUpload}
       />
 
-      <TransactionViewModal
+      <TransactionViewModalWrapper
         open={isViewModalOpen}
         onCancel={() => setIsViewModalOpen(false)}
         onApprove={handleApprove}
@@ -538,6 +635,23 @@ const TransactionPageContent: React.FC = () => {
         banks={banks}
         form={executionForm}
       />
+
+      <Drawer
+        title="Bộ lọc"
+        placement="right"
+        onClose={() => setIsFilterDrawerOpen(false)}
+        open={isFilterDrawerOpen}
+      >
+        <FilterControls
+          filters={filters}
+          onFilterChange={handleFilterChange}
+          funds={funds}
+          onApply={() => {
+            fetchData(filters);
+            setIsFilterDrawerOpen(false);
+          }}
+        />
+      </Drawer>
     </>
   );
 };
