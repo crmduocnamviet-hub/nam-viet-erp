@@ -36,6 +36,8 @@ import CashLedger from "../pages/CashLedger";
 import FundManagement from "../pages/FundManagement";
 import logo from "../assets/logo.png";
 import PurchaseOrders from "../pages/PurchaseOrders";
+import RolesPermissions from "../pages/RolesPermissions";
+import UserManagement from "../pages/UserManagement";
 
 const { Header, Content, Footer, Sider } = Layout;
 const { Title } = Typography;
@@ -86,7 +88,11 @@ const menuItems: MenuProps["items"] = [
     label: "Cấu hình",
     key: "settings",
     icon: <SettingOutlined />,
-    children: [{ label: "Quản lý Quỹ", key: "/settings/funds" }],
+    children: [
+      { label: "Quản lý Quỹ", key: "/settings/funds" },
+      { label: "Phân quyền & Vai trò", key: "/settings/roles" },
+      { label: "Quản lý Người dùng", key: "/settings/users" },
+    ],
   },
 ];
 
@@ -297,6 +303,8 @@ const AppLayout: React.FC = () => {
                 <Route path="/cash-ledger" element={<CashLedger />} />
                 <Route path="/settings/funds" element={<FundManagement />} />
                 <Route path="/purchase-orders" element={<PurchaseOrders />} />
+                <Route path="/settings/roles" element={<RolesPermissions />} />
+                <Route path="/settings/users" element={<UserManagement />} />
                 <Route path="*" element={<ComingSoon />} />
               </Routes>
             </div>

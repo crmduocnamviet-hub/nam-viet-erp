@@ -10,7 +10,7 @@ import {
   Col,
 } from "antd";
 import { supabase } from "../lib/supabaseClient";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 
 const { Title, Text } = Typography;
 
@@ -88,6 +88,10 @@ const LoginPageContent: React.FC = () => {
                 Đăng nhập
               </Button>
             </Form.Item>
+            <div style={{ textAlign: "center" }}>
+              <Text>Chưa là thành viên Dược Nam Việt? </Text>
+              <Link to="/register">Đăng ký ngay</Link>
+            </div>
           </Form>
         </Card>
       </Col>
