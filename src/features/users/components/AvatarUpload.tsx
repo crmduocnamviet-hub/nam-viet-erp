@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { LoadingOutlined, UserOutlined } from "@ant-design/icons";
 import { Upload, App, Avatar } from "antd";
-import type { UploadChangeParam, UploadFile, UploadProps } from "antd";
+import type { UploadProps } from "antd";
 import { supabase } from "../../../lib/supabaseClient";
 
 interface AvatarUploadProps {

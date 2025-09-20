@@ -22,7 +22,7 @@ import { supabase } from "../lib/supabaseClient";
 const { Title, Text } = Typography;
 
 const RolesPermissionsContent: React.FC = () => {
-  const { notification, modal } = AntApp.useApp();
+  const { notification } = AntApp.useApp();
   const [roleForm] = Form.useForm();
 
   const [roles, setRoles] = useState<any[]>([]);
