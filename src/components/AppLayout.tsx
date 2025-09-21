@@ -38,6 +38,7 @@ import logo from "../assets/logo.png";
 import PurchaseOrders from "../pages/PurchaseOrders";
 import RolesPermissions from "../pages/RolesPermissions";
 import UserManagement from "../pages/UserManagement";
+import ReceivePurchaseOrder from "../pages/ReceivePurchaseOrder";
 
 const { Header, Content, Footer, Sider } = Layout;
 const { Title } = Typography;
@@ -303,6 +304,10 @@ const AppLayout: React.FC = () => {
                 <Route path="/cash-ledger" element={<CashLedger />} />
                 <Route path="/settings/funds" element={<FundManagement />} />
                 <Route path="/purchase-orders" element={<PurchaseOrders />} />
+                <Route
+                  path="/receive-po/:id"
+                  element={<ReceivePurchaseOrder />}
+                />
                 <Route path="/settings/roles" element={<RolesPermissions />} />
                 <Route path="/settings/users" element={<UserManagement />} />
                 <Route path="*" element={<ComingSoon />} />
