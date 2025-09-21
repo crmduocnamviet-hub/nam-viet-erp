@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Button, Table, Space, Row, Col, Typography, App, Tag } from "antd";
 import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom"; // Import hook điều hướng
-import { supabase } from "../services/supabase";
+import { deletePromotion, getPromotions } from "@nam-viet-erp/services";
 
 const { Title } = Typography;
 
@@ -15,10 +15,7 @@ const Promotions: React.FC = () => {
   const fetchPromotions = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("promotions")
-        .select("*")
-        .order("created_at", { ascending: false });
+      const { data, error } = await getPromotions();
       if (error) throw error;
       setPromotions(data || []);
     } catch (error: any) {
@@ -44,10 +41,7 @@ const Promotions: React.FC = () => {
       cancelText: "Hủy",
       onOk: async () => {
         try {
-          const { error } = await supabase
-            .from("promotions")
-            .delete()
-            .eq("id", id);
+          const { error } = await deletePromotion(id);
           if (error) throw error;
           notification.success({ message: "Đã xóa thành công!" });
           fetchPromotions(); // Tải lại danh sách

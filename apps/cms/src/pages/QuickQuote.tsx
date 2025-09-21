@@ -11,8 +11,12 @@ import {
   Spin,
   Tag,
 } from "antd";
-import { supabase } from "../services/supabase";
 import { useDebounce } from "../hooks/useDebounce";
+import {
+  getActiveProduct,
+  getActivePromotions,
+  supabase,
+} from "@nam-viet-erp/services";
 
 const { Title, Text, Paragraph } = Typography;
 const { Search } = Input;
@@ -125,14 +129,8 @@ const QuickQuote: React.FC = () => {
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
-        const productsPromise = supabase
-          .from("products")
-          .select("*")
-          .eq("is_active", true);
-        const promotionsPromise = supabase
-          .from("promotions")
-          .select("*")
-          .eq("is_active", true);
+        const productsPromise = getActiveProduct();
+        const promotionsPromise = getActivePromotions();
         const [productsRes, promotionsRes] = await Promise.all([
           productsPromise,
           promotionsPromise,

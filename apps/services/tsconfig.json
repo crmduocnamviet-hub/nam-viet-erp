@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.json", // Extend the root tsconfig for common settings
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "declaration": true, // Generate .d.ts files
+    "declarationMap": true, // Generate source maps for .d.ts files
+    "emitDeclarationOnly": false, // Emit both JS and .d.ts files
+    "composite": true, // Required for project references
+    "tsBuildInfoFile": "./node_modules/.tsbuildinfo/services.tsbuildinfo" // For incremental builds
+  },
+  "include": ["src/**/*.ts", "vite-env.d.ts"],
+  "exclude": ["node_modules", "dist"]
+}

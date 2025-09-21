@@ -23,8 +23,19 @@ import {
 } from "@ant-design/icons";
 import * as XLSX from "xlsx";
 import ProductForm from "../features/products/components/ProductForm";
-import { supabase } from "../services/supabase";
 import { useDebounce } from "../hooks/useDebounce";
+import {
+  createProduct,
+  deleteProduct,
+  deleteProductByIds,
+  getProductWithInventory,
+  getWarehouse,
+  searchProducts,
+  updateProduct,
+  updateProductByIds,
+  upsetInventory,
+  upsetProduct,
+} from "@nam-viet-erp/services";
 
 const { Title, Text } = Typography;
 const { Search } = Input;
@@ -58,24 +69,12 @@ const ProductsPageContent: React.FC = () => {
   ) => {
     setTableLoading(true);
     try {
-      let query = supabase
-        .from("products_with_inventory")
-        .select("*", { count: "exact" });
-      if (search) {
-        query = query.or(
-          `name.ilike.%${search}%,sku.ilike.%${search}%,barcode.ilike.%${search}`
-        );
-      }
-      if (status) {
-        query = query.eq("is_active", status === "active");
-      }
-      const { data, error, count } = await query
-        .order("created_at", { ascending: false })
-        .range(
-          (pagination.current - 1) * pagination.pageSize,
-          pagination.current * pagination.pageSize - 1
-        );
-
+      let { data, error, count } = await searchProducts({
+        search,
+        status,
+        page: pagination.current,
+        pageSize: pagination.pageSize,
+      });
       if (error) throw error;
       setProducts(data || []);
       setPagination((prev) => ({ ...prev, total: count || 0 }));
@@ -91,9 +90,7 @@ const ProductsPageContent: React.FC = () => {
 
   useEffect(() => {
     const fetchWarehouses = async () => {
-      const { data, error } = await supabase
-        .from("warehouses")
-        .select("id, name");
+      const { data, error } = await getWarehouse();
       if (error) {
         notification.error({
           message: "Lỗi tải danh sách kho",
@@ -124,10 +121,7 @@ const ProductsPageContent: React.FC = () => {
       cancelText: "Hủy",
       onOk: async () => {
         try {
-          const { error } = await supabase
-            .from("products")
-            .delete()
-            .eq("id", productId);
+          const { error } = await deleteProduct(productId);
           if (error) throw error;
           notification.success({
             message: "Đã xóa!",
@@ -189,15 +183,9 @@ const ProductsPageContent: React.FC = () => {
         try {
           let error;
           if (isDelete) {
-            ({ error } = await supabase
-              .from("products")
-              .delete()
-              .in("id", selectedRowKeys));
+            ({ error } = await deleteProductByIds(selectedRowKeys));
           } else {
-            ({ error } = await supabase
-              .from("products")
-              .update(updateData)
-              .in("id", selectedRowKeys));
+            ({ error } = await updateProductByIds(selectedRowKeys, updateData));
           }
           if (error) throw error;
           notification.success({
@@ -234,7 +222,7 @@ const ProductsPageContent: React.FC = () => {
     setFormLoading(true);
     try {
       // 1. Chuẩn bị dữ liệu sản phẩm để gửi lên CSDL
-      const productData = {
+      const productData: Partial<IProduct> = {
         name: values.name,
         sku: values.sku,
         image_url: values.image_url,
@@ -271,19 +259,15 @@ const ProductsPageContent: React.FC = () => {
       // 2. Kiểm tra xem đây là Sửa hay Thêm mới
       if (editingProduct) {
         // --- CẬP NHẬT SẢN PHẨM ---
-        const { error } = await supabase
-          .from("products")
-          .update(productData)
-          .eq("id", editingProduct.id);
+        const { error } = await updateProduct(
+          editingProduct.id,
+          editingProduct
+        );
         if (error) throw error;
         successMessage = `Đã cập nhật sản phẩm "${values.name}" thành công.`;
       } else {
         // --- THÊM MỚI SẢN PHẨM ---
-        const { data, error } = await supabase
-          .from("products")
-          .insert(productData)
-          .select()
-          .single();
+        const { data, error } = await createProduct(productData);
         if (error) throw error;
         productId = data.id; // Lấy ID của sản phẩm vừa được tạo
         successMessage = `Đã thêm sản phẩm "${values.name}" thành công.`;
@@ -302,11 +286,7 @@ const ProductsPageContent: React.FC = () => {
 
         if (inventoryRecords.length > 0) {
           // Dùng "upsert" để tự động cập nhật nếu đã có, hoặc thêm mới nếu chưa có
-          const { error } = await supabase
-            .from("inventory")
-            .upsert(inventoryRecords, {
-              onConflict: "product_id, warehouse_id",
-            });
+          const { error } = await upsetInventory(inventoryRecords);
           if (error) throw error;
         }
       }
@@ -365,10 +345,7 @@ const ProductsPageContent: React.FC = () => {
     try {
       setTableLoading(true);
       // Lấy tất cả sản phẩm, không chỉ trang hiện tại
-      const { data, error } = await supabase
-        .from("products_with_inventory")
-        .select("*")
-        .order("name", { ascending: true });
+      const { data, error } = await getProductWithInventory();
       if (error) throw error;
 
       // Chuyển đổi dữ liệu sang định dạng thân thiện với người dùng
@@ -436,9 +413,7 @@ const ProductsPageContent: React.FC = () => {
         }));
 
         // Dùng upsert để vừa thêm mới vừa cập nhật (dựa vào cột sku)
-        const { error } = await supabase
-          .from("products")
-          .upsert(dataToUpsert, { onConflict: "sku" });
+        const { error } = await upsetProduct(dataToUpsert);
 
         if (error) throw error;
 

@@ -52,11 +52,11 @@ interface IPromotion {
 
 interface IVoucher {
   id: number;
-  created_at: string;
+  created_at?: string;
   code: string;
   promotion_id: number;
   usage_limit: number;
-  times_used: number;
+  times_used?: number;
   is_active: boolean;
 }
 
@@ -122,21 +122,21 @@ interface ITransaction {
   amount: number;
   description: string;
   created_by: string;
-  created_at: string;
+  created_at?: string;
   transaction_date: string;
   status: string;
   category: string | null;
-  attachments: string | null;
-  approved_by: string | null;
-  executed_by: string | null;
+  attachments?: string[] | string | null;
+  approved_by?: string | null;
+  executed_by?: string | null;
   transfer_pair_id: string;
-  payment_method: string | null;
-  recipient_bank: string | null;
-  recipient_account: string | null;
-  recipient_name: string | null;
+  payment_method?: string | null;
+  recipient_bank?: string | null;
+  recipient_account?: string | null;
+  recipient_name?: string | null;
   qr_code_url: string | null;
-  initial_denomination_counts: any | null;
-  executed_denomination_counts: any | null;
+  initial_denomination_counts?: any | null;
+  executed_denomination_counts?: any | null;
 }
 
 interface ISupplier {
@@ -173,8 +173,8 @@ interface IBank {
 }
 
 interface IInventory {
-  id: number;
-  created_at: string;
+  id?: number;
+  created_at?: string;
   product_id: number;
   warehouse_id: number;
   quantity: number;

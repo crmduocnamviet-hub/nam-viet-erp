@@ -5,7 +5,7 @@ import {
   useEffect,
   type ReactNode,
 } from "react";
-import { supabase } from "../services/supabase";
+import { supabase } from "@nam-viet-erp/services";
 import type { Session, User } from "@supabase/supabase-js";
 
 // Định nghĩa "hình dạng" của context

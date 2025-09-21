@@ -16,8 +16,8 @@ import {
 } from "antd";
 import { UploadOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
-import { supabase } from "../../../services/supabase";
 import QRCodeDisplay from "./QRCodeDisplay";
+import { getBanks } from "@nam-viet-erp/services";
 
 interface BankOption {
   value: string;
@@ -53,9 +53,7 @@ const TransactionCreationModal: React.FC<TransactionCreationModalProps> = ({
   useEffect(() => {
     if (open) {
       const fetchBanks = async () => {
-        const { data } = await supabase
-          .from("banks")
-          .select("bin, short_name, name");
+        const { data } = await getBanks()
         if (data) {
           const bankList = data.map((b) => ({
             value: b.short_name,

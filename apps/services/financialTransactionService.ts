@@ -30,7 +30,7 @@ export const getTransactions = async (page: number, pageSize: number) => {
 
   if (error) throw error;
 
-  return { data: data || [], count: count || 0 };
+  return { data: data || [], count: count || 0, error };
 };
 
 export const searchTransactions = async (
@@ -49,25 +49,28 @@ export const searchTransactions = async (
 
   if (error) throw error;
 
-  return { data: data || [], count: count || 0 };
+  return { data: data || [], count: count || 0, error };
 };
 
 export const createTransaction = async (record: Partial<ITransaction>) => {
-  const { error } = await supabase.from("transactions").insert([record]);
-  if (error) throw error;
+  const response = await supabase.from("transactions").insert([record]);
+  return response;
 };
 
-export const updateTransaction = async (id: number, updates: Partial<ITransaction>) => {
-  const { error } = await supabase
+export const updateTransaction = async (
+  id: number,
+  updates: Partial<ITransaction>
+) => {
+  const response = await supabase
     .from("transactions")
     .update(updates)
     .eq("id", id);
-  if (error) throw error;
+  return response;
 };
 
 export const deleteTransaction = async (id: number) => {
-  const { error } = await supabase.from("transactions").delete().eq("id", id);
-  if (error) throw error;
+  const response = await supabase.from("transactions").delete().eq("id", id);
+  return response;
 };
 
 const sanitizeFilename = (filename: string) => {
@@ -82,15 +85,24 @@ export const uploadAttachment = async (file: File) => {
   const cleanFileName = sanitizeFilename(file.name);
   const fileName = `${Date.now()}_${cleanFileName}`;
 
-  const { error } = await supabase.storage
-    .from("transaction-attachments")
-    .upload(fileName, file, { contentType: file.type });
+  const { error } = await uploadTransactionAttachments(fileName, file);
 
   if (error) throw error;
 
-  const { data: { publicUrl } } = supabase.storage
-    .from("transaction-attachments")
-    .getPublicUrl(fileName);
+  const {
+    data: { publicUrl },
+  } = supabase.storage.from("transaction-attachments").getPublicUrl(fileName);
 
   return publicUrl;
+};
+
+export const uploadTransactionAttachments = async (
+  fileName: string,
+  file: File
+) => {
+  const response = await supabase.storage
+    .from("transaction-attachments")
+    .upload(fileName, file, { contentType: file.type });
+
+  return response;
 };

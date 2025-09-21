@@ -16,7 +16,13 @@ import {
   Tag,
 } from "antd";
 import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
-import { supabase } from "../services/supabase";
+import {
+  createVoucher,
+  deleteVoucher,
+  getActivePromotions,
+  getVouchersWithPromotion,
+  updateVoucher,
+} from "@nam-viet-erp/services";
 
 const { Title } = Typography;
 
@@ -34,10 +40,7 @@ const Vouchers: React.FC = () => {
   const fetchVouchers = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("vouchers")
-        .select("*, promotions(name)")
-        .order("created_at", { ascending: false });
+      const { data, error } = await getVouchersWithPromotion();
       if (error) throw error;
       setVouchers(data || []);
     } catch (error: any) {
@@ -52,10 +55,7 @@ const Vouchers: React.FC = () => {
 
   useEffect(() => {
     const fetchPromotions = async () => {
-      const { data, error } = await supabase
-        .from("promotions")
-        .select("id, name")
-        .eq("is_active", true);
+      const { data, error } = await getActivePromotions();
       if (error) console.error(error);
       else {
         setPromotions(data.map((p) => ({ value: p.id, label: p.name })));
@@ -91,7 +91,7 @@ const Vouchers: React.FC = () => {
       okText: "Xóa",
       okType: "danger",
       onOk: async () => {
-        const { error } = await supabase.from("vouchers").delete().eq("id", id);
+        const { error } = await deleteVoucher(id);
         if (error) {
           notification.error({
             message: "Lỗi khi xóa",
@@ -107,7 +107,7 @@ const Vouchers: React.FC = () => {
 
   const handleFinish = async (values: any) => {
     try {
-      const record = {
+      const record: Omit<IVoucher, "id"> = {
         code: values.code,
         promotion_id: values.promotion_id,
         usage_limit: values.usage_limit,
@@ -116,12 +116,9 @@ const Vouchers: React.FC = () => {
 
       let error;
       if (editingVoucher) {
-        ({ error } = await supabase
-          .from("vouchers")
-          .update(record)
-          .eq("id", editingVoucher.id));
+        ({ error } = await updateVoucher(editingVoucher.id, record));
       } else {
-        ({ error } = await supabase.from("vouchers").insert([record]));
+        ({ error } = await createVoucher(record));
       }
 
       if (error) throw error;

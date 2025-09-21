@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { PlusOutlined } from "@ant-design/icons";
 import { Modal, Upload, App } from "antd";
 import type { UploadFile, UploadProps } from "antd";
-import { supabase } from "../../../services/supabase";
+import { getProductImageUrl, uploadProductImage } from "@nam-viet-erp/services";
 
 const getBase64 = (file: File): Promise<string> =>
   new Promise((resolve, reject) => {
@@ -64,17 +64,16 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ value, onChange }) => {
     const filePath = `${fileName}`;
 
     try {
-      const { error: uploadError } = await supabase.storage
-        .from("product-images")
-        .upload(filePath, file);
+      const { error: uploadError } = await uploadProductImage(
+        filePath,
+        file as File
+      );
 
       if (uploadError) {
         throw uploadError;
       }
 
-      const { data } = supabase.storage
-        .from("product-images")
-        .getPublicUrl(filePath);
+      const { data } = await getProductImageUrl(filePath);
 
       onChange?.(data.publicUrl); // Gửi public URL về cho Form
       onSuccess?.("Ok");

@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    // Existing compiler options (ensure these are present or similar)
+    "target": "ES2020", // Or higher
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "allowSyntheticDefaultImports": true,
+    "isolatedModules": true,
+    "noEmit": true, // The root tsconfig typically doesn't emit JS itself
+    "composite": true, // Enable project references for the monorepo
+    "baseUrl": ".",
+    "paths": {
+      "@nam-viet-erp/*": ["./packages/*/src", "./apps/*/src"]
+    }
+  }
+}

@@ -24,7 +24,7 @@ import {
   Drawer,
 } from "antd";
 import viVN from "antd/locale/vi_VN";
-import { supabase } from "../services/supabase";
+import { signOut, supabase } from "@nam-viet-erp/services";
 
 // Import tất cả các trang của bạn ở đây
 import Dashboard from "../pages/Dashboard";
@@ -46,7 +46,6 @@ import CampaignDetail from "../pages/marketing/CampaignDetail";
 import CustomerSegments from "../pages/marketing/CustomerSegments";
 import ContentLibrary from "../pages/marketing/ContentLibrary";
 import ChatbotManagement from "../pages/marketing/ChatbotManagement";
-
 
 const { Header, Content, Footer, Sider } = Layout;
 const { Title } = Typography;
@@ -192,7 +191,7 @@ const AppLayout: React.FC = () => {
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await signOut();
     navigate("/login");
   };
 
@@ -323,13 +322,28 @@ const AppLayout: React.FC = () => {
                 <Route path="/purchase-orders" element={<PurchaseOrders />} />
 
                 {/* --- THÊM ROUTE CHO MODULE MARKETING --- */}
-                <Route path="/marketing/dashboard" element={<MarketingDashboard />} />
+                <Route
+                  path="/marketing/dashboard"
+                  element={<MarketingDashboard />}
+                />
                 <Route path="/marketing/campaigns" element={<Campaigns />} />
-                <Route path="/marketing/campaigns/new" element={<CampaignDetail />} />
-                <Route path="/marketing/campaigns/:id" element={<CampaignDetail />} />
-                <Route path="/marketing/segments" element={<CustomerSegments />} />
+                <Route
+                  path="/marketing/campaigns/new"
+                  element={<CampaignDetail />}
+                />
+                <Route
+                  path="/marketing/campaigns/:id"
+                  element={<CampaignDetail />}
+                />
+                <Route
+                  path="/marketing/segments"
+                  element={<CustomerSegments />}
+                />
                 <Route path="/marketing/library" element={<ContentLibrary />} />
-                <Route path="/marketing/chatbot" element={<ChatbotManagement />} />
+                <Route
+                  path="/marketing/chatbot"
+                  element={<ChatbotManagement />}
+                />
 
                 <Route path="*" element={<ComingSoon />} />
               </Routes>

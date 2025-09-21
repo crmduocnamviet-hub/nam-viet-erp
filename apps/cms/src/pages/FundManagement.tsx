@@ -16,7 +16,12 @@ import {
   Avatar,
 } from "antd";
 import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
-import { supabase } from "../services/supabase";
+import {
+  createFund,
+  deleteFund,
+  getFunds,
+  updateFund,
+} from "@nam-viet-erp/services";
 
 const { Title } = Typography;
 
@@ -35,29 +40,9 @@ const FundManagementContent: React.FC = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const fundsPromise = supabase
-        .from("funds")
-        .select("*, banks(*)")
-        .order("created_at");
-      const banksPromise = supabase.from("banks").select("*");
-
-      const [fundsRes, banksRes] = await Promise.all([
-        fundsPromise,
-        banksPromise,
-      ]);
-
-      if (fundsRes.error) throw fundsRes.error;
-      if (banksRes.error) throw banksRes.error;
-
-      setFunds(fundsRes.data || []);
-
-      const bankList =
-        banksRes.data?.map((b) => ({
-          value: b.short_name,
-          label: `${b.short_name} - ${b.name}`,
-          bin: b.bin,
-        })) || [];
-      setBanks(bankList);
+      const { funds, banks } = await getFunds();
+      setFunds(funds || []);
+      setBanks(banks);
     } catch (error: any) {
       notification.error({
         message: "Lỗi tải dữ liệu",
@@ -99,7 +84,7 @@ const FundManagementContent: React.FC = () => {
       okType: "danger",
       onOk: async () => {
         try {
-          const { error } = await supabase.from("funds").delete().eq("id", id);
+          const { error } = await deleteFund(id);
           if (error) throw error;
           notification.success({ message: "Đã xóa thành công!" });
           fetchData(); // <-- Giờ đây hàm này đã tồn tại
@@ -127,12 +112,9 @@ const FundManagementContent: React.FC = () => {
 
       let error;
       if (editingFund) {
-        ({ error } = await supabase
-          .from("funds")
-          .update(record)
-          .eq("id", editingFund.id));
+        ({ error } = await updateFund(editingFund.id, record));
       } else {
-        ({ error } = await supabase.from("funds").insert([record]));
+        ({ error } = await createFund(record));
       }
       if (error) throw error;
       notification.success({

@@ -12,8 +12,8 @@ import {
   Input,
 } from "antd";
 import { PlusOutlined, RobotOutlined } from "@ant-design/icons";
-import { supabase } from "../services/supabase";
 import dayjs from "dayjs";
+import { getPurchaseOrder } from "@nam-viet-erp/services";
 
 const { Title } = Typography;
 const { Search } = Input;
@@ -28,10 +28,7 @@ const PurchaseOrdersContent: React.FC = () => {
       setLoading(true);
       try {
         // Chúng ta cần join với bảng suppliers để lấy tên Nhà Cung Cấp
-        const { data, error } = await supabase
-          .from("purchase_orders")
-          .select("*, suppliers(name)")
-          .order("created_at", { ascending: false });
+        const { data, error } = await getPurchaseOrder();
         if (error) throw error;
         setPurchaseOrders(data || []);
       } catch (error: any) {

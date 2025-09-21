@@ -1,3 +1,4 @@
+import { PostgrestSingleResponse } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
 
 export const createInternalTransfer = async (values: any) => {
@@ -35,16 +36,18 @@ export const getFunds = async () => {
 };
 
 export const deleteFund = async (id: number) => {
-  const { error } = await supabase.from("funds").delete().eq("id", id);
-  if (error) throw error;
+  const response = await supabase.from("funds").delete().eq("id", id);
+  return response;
 };
 
 export const updateFund = async (id: number, record: any) => {
-  const { error } = await supabase.from("funds").update(record).eq("id", id);
-  if (error) throw error;
+  const response = await supabase.from("funds").update(record).eq("id", id);
+  return response;
 };
 
-export const createFund = async (record: any) => {
-  const { error } = await supabase.from("funds").insert([record]);
-  if (error) throw error;
+export const createFund = async (record: Partial<IFund>) => {
+  const response: PostgrestSingleResponse<IFund | null> = await supabase
+    .from("funds")
+    .insert([record]);
+  return response;
 };

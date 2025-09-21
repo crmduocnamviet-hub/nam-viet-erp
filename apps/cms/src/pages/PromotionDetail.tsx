@@ -25,7 +25,13 @@ import {
 } from "@ant-design/icons";
 import { useParams, useNavigate } from "react-router-dom";
 import dayjs from "dayjs";
-import { supabase } from "../services/supabase";
+import {
+  createPromotion,
+  createVoucher,
+  getPromotionDetail,
+  supabase,
+  updatePromotion,
+} from "@nam-viet-erp/services";
 
 const { Title } = Typography;
 const { RangePicker } = DatePicker;
@@ -83,10 +89,9 @@ const PromotionDetail: React.FC = () => {
   const isCreating = !params.id;
 
   const fetchVouchers = async (promoId: string) => {
-    const { data: voucherData, error: voucherError } = await supabase
-      .from("vouchers")
-      .select("*")
-      .eq("promotion_id", promoId);
+    const { data: voucherData, error: voucherError } = await getPromotionDetail(
+      promoId
+    );
     if (voucherError) {
       notification.error({
         message: "Lỗi tải danh sách voucher",
@@ -101,11 +106,9 @@ const PromotionDetail: React.FC = () => {
     if (!isCreating) {
       const fetchPromotionDetail = async () => {
         setLoading(true);
-        const { data: promoData, error: promoError } = await supabase
-          .from("promotions")
-          .select("*")
-          .eq("id", params.id)
-          .single();
+        const { data: promoData, error: promoError } = await getPromotionDetail(
+          params.id!
+        );
 
         if (promoData) {
           setPromotion(promoData);
@@ -146,19 +149,12 @@ const PromotionDetail: React.FC = () => {
       };
 
       if (isCreating) {
-        const { data, error } = await supabase
-          .from("promotions")
-          .insert(record)
-          .select()
-          .single();
+        const { data, error } = await createPromotion(record);
         if (error) throw error;
         notification.success({ message: "Tạo khuyến mại thành công!" });
         navigate(`/promotions/${data.id}`); // Chuyển đến trang sửa để thêm voucher
       } else {
-        const { error } = await supabase
-          .from("promotions")
-          .update(record)
-          .eq("id", params.id);
+        const { error } = await updatePromotion(params.id!, record);
         if (error) throw error;
         notification.success({ message: "Cập nhật thành công!" });
       }
@@ -174,12 +170,10 @@ const PromotionDetail: React.FC = () => {
 
   const handleVoucherFinish = async (values: any) => {
     try {
-      const { error } = await supabase.from("vouchers").insert([
-        {
-          ...values,
-          promotion_id: params.id,
-        },
-      ]);
+      const { error } = await createVoucher({
+        ...values,
+        promotion_id: params.id,
+      });
       if (error) throw error;
       notification.success({ message: "Tạo mã giảm giá thành công!" });
       fetchVouchers(params.id!); // Tải lại danh sách voucher

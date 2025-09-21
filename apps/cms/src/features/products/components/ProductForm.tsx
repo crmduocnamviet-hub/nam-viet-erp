@@ -23,7 +23,11 @@ import {
   HomeOutlined,
 } from "@ant-design/icons";
 import ImageUpload from "./ImageUpload";
-import { supabase } from "../../../services/supabase";
+import {
+  enrichProductData,
+  extractFromPdf,
+  getWarehouse,
+} from "@nam-viet-erp/services";
 import PdfUpload from "./PdfUpload";
 
 const { Title } = Typography; // <-- Khai báo Title để sử dụng
@@ -88,19 +92,16 @@ const ProductForm: React.FC<ProductFormProps> = ({
   ) => {
     setPdfLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke(
-        "extract-from-pdf",
-        {
-          body: { fileContent, mimeType },
-        }
-      );
+      const { data, error } = await extractFromPdf(fileContent, mimeType);
 
       if (error) throw error;
+
+      if (!data) throw "Data not found";
 
       // Nâng cấp để điền tất cả các trường mới từ AI
       form.setFieldsValue({
         name: data.name,
-        registrationNumber: data.registrationNumber,
+        registrationNumber: (data as any).registrationNumber,
         category: data.category,
         packaging: data.packaging,
         description: data.description,
@@ -110,10 +111,10 @@ const ProductForm: React.FC<ProductFormProps> = ({
         hdsd_6_18: data.hdsd_6_18,
         hdsd_over_18: data.hdsd_over_18,
         disease: data.disease,
-        isChronic: data.isChronic,
-        wholesaleUnit: data.wholesaleUnit,
-        retailUnit: data.retailUnit,
-        conversionRate: data.conversionRate,
+        isChronic: (data as any).isChronic,
+        wholesaleUnit: (data as any).wholesaleUnit,
+        retailUnit: (data as any).retailUnit,
+        conversionRate: (data as any).conversionRate,
         manufacturer: data.manufacturer,
         distributor: data.distributor,
         tags: data.tags,
@@ -146,12 +147,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
     setAiLoading(true);
     try {
       // Gọi đến "Người Phục vụ AI" trên Supabase
-      const { data, error } = await supabase.functions.invoke(
-        "enrich-product-data",
-        {
-          body: { productName },
-        }
-      );
+      const { data, error } = await enrichProductData(productName);
 
       if (error) throw error;
 
@@ -177,9 +173,8 @@ const ProductForm: React.FC<ProductFormProps> = ({
 
   const fetchWarehouses = async () => {
     setLoadingWarehouses(true);
-    const { data, error } = await supabase
-      .from("warehouses")
-      .select("id, name");
+    const { data, error } = await getWarehouse();
+    
     if (error) {
       console.error("Lỗi tải danh sách kho:", error);
     } else {

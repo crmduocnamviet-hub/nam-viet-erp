@@ -22,24 +22,23 @@ import {
   EllipsisOutlined,
 } from "@ant-design/icons";
 
-import { deleteTransaction } from '../services/financialTransactionService';
+import {
+  createTransaction,
+  deleteTransaction,
+  getTransactions,
+  searchTransactions,
+  updateTransaction,
+  uploadAttachment,
+} from "@nam-viet-erp/services/financialTransactionService";
 import dayjs from "dayjs";
 import { useAuth } from "../context/AuthContext";
 import { useDebounce } from "../hooks/useDebounce";
 import TransactionCreationModal from "../features/finance/components/TransactionCreationModal";
 import TransactionViewModal from "../features/finance/components/TransactionViewModal";
-import { supabase } from "../services/supabase";
+import { getFunds } from "@nam-viet-erp/services";
 
 const { Search } = Input;
 const { useBreakpoint } = Grid;
-
-const sanitizeFilename = (filename: string) => {
-  return filename
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-zA-Z0-9.\-_]/g, "_")
-    .replace(/\s+/g, "_");
-};
 
 const TransactionPageContent: React.FC = () => {
   const screens = useBreakpoint(); // Lấy thông tin màn hình
@@ -77,40 +76,20 @@ const TransactionPageContent: React.FC = () => {
       setLoading(true);
       try {
         if (funds.length === 0 || banks.length === 0) {
-          const fundsPromise = supabase.from("funds").select("*, banks(*)");
-          const banksPromise = supabase.from("banks").select("*");
-          const [fundsRes, banksRes] = await Promise.all([
-            fundsPromise,
-            banksPromise,
-          ]);
-
-          if (fundsRes.error) throw fundsRes.error;
-          if (banksRes.error) throw banksRes.error;
-
-          setFunds(fundsRes.data || []);
-
-          const bankList =
-            banksRes.data?.map((b) => ({
-              value: b.short_name,
-              label: `${b.short_name} - ${b.name}`,
-              bin: b.bin,
-            })) || [];
-          setBanks(bankList);
+          const { funds, banks } = await getFunds();
+          setFunds(funds || []);
+          setBanks(banks);
         }
 
         const from = (page - 1) * pageSize;
         const to = from + pageSize - 1;
 
         if (search) {
-          const { data, error, count } = await supabase
-            .rpc(
-              "search_transactions",
-              { search_term: search },
-              { count: "exact" }
-            )
-            .select("*, funds(name)")
-            .range(from, to)
-            .order("created_at", { ascending: false });
+          const { data, error, count } = await searchTransactions(
+            search,
+            page,
+            pageSize
+          );
           if (error) throw error;
           setTransactions(data || []);
           setPagination((prev) => ({
@@ -119,11 +98,7 @@ const TransactionPageContent: React.FC = () => {
             current: page,
           }));
         } else {
-          const { data, error, count } = await supabase
-            .from("transactions")
-            .select("*, funds(name)", { count: "exact" })
-            .range(from, to)
-            .order("created_at", { ascending: false });
+          const { data, error, count } = await getTransactions(page, pageSize);
           if (error) throw error;
           setTransactions(data || []);
           setPagination((prev) => ({
@@ -157,18 +132,8 @@ const TransactionPageContent: React.FC = () => {
   };
 
   const handleUpload = async ({ file, onSuccess, onError }: any) => {
-    const cleanFileName = sanitizeFilename(file.name);
-    const fileName = `${Date.now()}_${cleanFileName}`;
     try {
-      const { error } = await supabase.storage
-        .from("transaction-attachments")
-        .upload(fileName, file, { contentType: file.type });
-      if (error) throw error;
-      const {
-        data: { publicUrl },
-      } = supabase.storage
-        .from("transaction-attachments")
-        .getPublicUrl(fileName);
+      const publicUrl = await uploadAttachment(file);
       const newFile = {
         uid: file.uid,
         name: file.name,
@@ -203,8 +168,8 @@ const TransactionPageContent: React.FC = () => {
         }
       }
 
-      const attachmentUrls = fileList.map((f) => f.url);
-      const record = {
+      const attachmentUrls: string[] = fileList.map((f) => f.url);
+      const record: Partial<ITransaction> = {
         type: transactionType,
         amount: values.amount,
         description: values.description,
@@ -219,7 +184,7 @@ const TransactionPageContent: React.FC = () => {
         attachments: attachmentUrls.length > 0 ? attachmentUrls : null,
         status: transactionType === "income" ? "chờ thực thu" : "chờ duyệt",
       };
-      const { error } = await supabase.from("transactions").insert([record]);
+      const { error } = await createTransaction(record);
       if (error) throw error;
       notification.success({ message: `Đã tạo phiếu và gửi đi thành công!` });
       setIsCreationModalOpen(false);
@@ -235,14 +200,12 @@ const TransactionPageContent: React.FC = () => {
   const handleExecutionFinish = async (values: any) => {
     if (!selectedTransaction) return;
     try {
-      const { error } = await supabase
-        .from("transactions")
-        .update({
-          status: selectedTransaction.type === "income" ? "đã thu" : "đã chi",
-          executed_by: user?.user_metadata?.full_name || user?.email,
-          fund_id: values.fund_id,
-        })
-        .eq("id", selectedTransaction.id);
+      const record = {
+        status: selectedTransaction.type === "income" ? "đã thu" : "đã chi",
+        executed_by: user?.user_metadata?.full_name || user?.email,
+        fund_id: values.fund_id,
+      };
+      const { error } = await updateTransaction(selectedTransaction.id, record);
 
       if (error) throw error;
       notification.success({ message: `Đã xác nhận thực thi giao dịch!` });
@@ -265,13 +228,14 @@ const TransactionPageContent: React.FC = () => {
       cancelText: "Hủy",
       onOk: async () => {
         try {
-          const { error } = await supabase
-            .from("transactions")
-            .update({
-              status: "đã duyệt - chờ chi",
-              approved_by: user?.user_metadata?.full_name || user?.email,
-            })
-            .eq("id", selectedTransaction.id);
+          const record = {
+            status: "đã duyệt - chờ chi",
+            approved_by: user?.user_metadata?.full_name || user?.email,
+          };
+          const { error } = await updateTransaction(
+            selectedTransaction.id,
+            record
+          );
           if (error) throw error;
           notification.success({ message: `Duyệt chi thành công!` });
           setIsViewModalOpen(false);

@@ -9,8 +9,8 @@ import {
   Row,
   Col,
 } from "antd";
-import { supabase } from "../services/supabase";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@nam-viet-erp/services";
 
 const { Title, Text } = Typography;
 

@@ -1,0 +1,121 @@
+import { supabase } from "./supabase";
+
+export const extractFromPdf = async (fileContent: string, mimeType: string) => {
+  const response = await supabase.functions.invoke<IProduct>(
+    "extract-from-pdf",
+    {
+      body: { fileContent, mimeType },
+    }
+  );
+  return response;
+};
+
+export const enrichProductData = async (productName: string) => {
+  const response = await supabase.functions.invoke("enrich-product-data", {
+    body: { productName },
+  });
+
+  return response;
+};
+
+export const uploadProductImage = async (filePath: string, file: File) => {
+  const response = await supabase.storage
+    .from("product-images")
+    .upload(filePath, file);
+
+  return response;
+};
+
+export const getProductImageUrl = async (filePath: string) => {
+  const response = supabase.storage
+    .from("product-images")
+    .getPublicUrl(filePath);
+
+  return response;
+};
+
+export const searchProducts = async ({
+  search,
+  page = 1,
+  pageSize = 10,
+  status,
+}: {
+  search?: string;
+  page?: number;
+  pageSize?: number;
+  status?: string | null;
+}) => {
+  try {
+    let query = supabase
+      .from("products_with_inventory")
+      .select("*", { count: "exact" });
+    if (search) {
+      query = query.or(
+        `name.ilike.%${search}%,sku.ilike.%${search}%,barcode.ilike.%${search}`
+      );
+    }
+    if (status) {
+      query = query.eq("is_active", status === "active");
+    }
+    const response = await query
+      .order("created_at", { ascending: false })
+      .range((page - 1) * pageSize, page * pageSize - 1);
+
+    return response;
+  } catch (error: any) {
+    throw error;
+  }
+};
+
+export const getProductWithInventory = async () => {
+  const response = await supabase
+    .from("products_with_inventory")
+    .select("*")
+    .order("name", { ascending: true });
+  return response;
+};
+
+export const deleteProduct = async (id: any) => {
+  const response = await supabase.from("products").delete().eq("id", id);
+  return response;
+};
+
+export const deleteProductByIds = async (ids: any) => {
+  const respoponse = await supabase.from("products").delete().in("id", ids);
+  return respoponse;
+};
+
+export const updateProductByIds = async (ids: any, record: any) => {
+  const response = await supabase.from("products").update(record).in("id", ids);
+  return response;
+};
+
+export const updateProduct = async (id: any, record: Partial<IProduct>) => {
+  const response = await supabase.from("products").update(record).eq("id", id);
+  return response;
+};
+
+export const createProduct = async (record: Partial<IProduct>) => {
+  const response = await supabase
+    .from("products")
+    .insert(record)
+    .select()
+    .single();
+  return response;
+};
+
+export const upsetProduct = async (record: Partial<IProduct>[]) => {
+  const response = await supabase
+    .from("products")
+    .upsert(record, { onConflict: "sku" });
+  return response;
+};
+
+export const getActiveProduct = async () => {
+  const response = await supabase
+    .from("products")
+    .select("*")
+    .eq("is_active", true);
+
+  return response;
+};
