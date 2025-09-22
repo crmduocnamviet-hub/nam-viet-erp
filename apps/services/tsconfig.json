@@ -9,6 +9,6 @@
     "composite": true, // Required for project references
     "tsBuildInfoFile": "./node_modules/.tsbuildinfo/services.tsbuildinfo" // For incremental builds
   },
-  "include": ["src/**/*.ts", "vite-env.d.ts"],
+  "include": ["src/**/*.ts", "vite-env.d.ts", "posService.ts"],
   "exclude": ["node_modules", "dist"]
 }

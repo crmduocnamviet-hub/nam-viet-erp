@@ -1,8 +1,31 @@
+import React from "react";
+import { Routes, Route } from "react-router-dom";
+import AppLayout from "./components/AppLayout";
+import Login from "./pages/Login";
+import { useAuth } from "./hooks/useAuth";
+import { Spin, Row } from "antd";
 import PosPage from './pages/POS/PosPage';
-import './App.css';
 
-function App() {
-  return <PosPage />;
-}
+const App: React.FC = () => {
+  const { session, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <Row justify="center" align="middle" style={{ minHeight: "100vh" }}>
+        <Spin size="large" />
+      </Row>
+    );
+  }
+
+  return (
+    <Routes>
+      <Route path="/login" element={<Login />} />
+      <Route
+        path="/*"
+        element={session ? <AppLayout><PosPage /></AppLayout> : <Login />}
+      />
+    </Routes>
+  );
+};
 
 export default App;

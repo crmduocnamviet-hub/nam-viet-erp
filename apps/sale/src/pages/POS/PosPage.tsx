@@ -284,7 +284,7 @@ const PosPage: React.FC = () => {
         </Header>
         <Content style={{ padding: '12px' }}>
           <Row gutter={12} style={{ height: '100%' }}>
-            <Col span={8}>
+            <Col xs={24} sm={24} md={12} lg={8} xl={8}>
               <Card title="Thông tin Khách hàng" style={{ marginBottom: 12 }}>
                 <Search
                   placeholder="Tìm khách hàng (SĐT)..."
@@ -304,7 +304,7 @@ const PosPage: React.FC = () => {
               </Card>
               <Card
                 title="Tìm kiếm Sản phẩm"
-                style={{ height: 'calc(100vh - 280px)', display: 'flex', flexDirection: 'column' }}
+                style={{ display: 'flex', flexDirection: 'column' }}
                 bodyStyle={{ flex: 1, overflowY: 'auto' }}
               >
                 <Search
@@ -338,10 +338,10 @@ const PosPage: React.FC = () => {
               </Card>
             </Col>
 
-            <Col span={10}>
+            <Col xs={24} sm={24} md={12} lg={10} xl={10}>
               <Card
                 title="Giỏ hàng"
-                style={{ height: 'calc(100vh - 100px)', display: 'flex', flexDirection: 'column' }}
+                style={{ display: 'flex', flexDirection: 'column' }}
                 bodyStyle={{ flex: 1, overflowY: 'auto' }}
               >
                 <List
@@ -399,8 +399,8 @@ const PosPage: React.FC = () => {
               </Card>
             </Col>
 
-            <Col span={6}>
-              <Card style={{ height: 'calc(100vh - 100px)' }}>
+            <Col xs={24} sm={24} md={24} lg={6} xl={6}>
+              <Card>
                 <Title level={4}>Tổng cộng</Title>
                 <Statistic value={cartDetails.itemTotal} suffix="VNĐ" />
                 {cartDetails.totalDiscount > 0 && (
