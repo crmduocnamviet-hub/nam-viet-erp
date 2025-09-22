@@ -46,6 +46,7 @@ import CampaignDetail from "../pages/marketing/CampaignDetail";
 import CustomerSegments from "../pages/marketing/CustomerSegments";
 import ContentLibrary from "../pages/marketing/ContentLibrary";
 import ChatbotManagement from "../pages/marketing/ChatbotManagement";
+import MissingDocumentationWarning from "./MissingDocumentationWarning";
 
 const { Header, Content, Footer, Sider } = Layout;
 const { Title } = Typography;
@@ -109,7 +110,10 @@ const menuItems: MenuProps["items"] = [
     label: "Cấu hình",
     key: "settings",
     icon: <SettingOutlined />,
-    children: [{ label: "Quản lý Quỹ", key: "/settings/funds" }],
+    children: [
+      { label: "Quản lý Quỹ", key: "/settings/funds" },
+      { label: "Cảnh báo Thiếu Tài liệu", key: "/missing-documentation" },
+    ],
   },
 ];
 
@@ -344,6 +348,7 @@ const AppLayout: React.FC = () => {
                   path="/marketing/chatbot"
                   element={<ChatbotManagement />}
                 />
+                <Route path="/missing-documentation" element={<MissingDocumentationWarning />} />
 
                 <Route path="*" element={<ComingSoon />} />
               </Routes>
