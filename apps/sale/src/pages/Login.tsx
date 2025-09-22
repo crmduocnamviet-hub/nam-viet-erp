@@ -50,7 +50,7 @@ const LoginPageContent: React.FC = () => {
       <Col xs={22} sm={16} md={12} lg={8} xl={6}>
         <Card>
           <div style={{ textAlign: "center", marginBottom: 24 }}>
-            <Title level={2}>Nam Việt Sale</Title>
+            <Title level={2}>Nam Việt EMS</Title>
             <Text>Chào mừng trở lại! Vui lòng đăng nhập.</Text>
           </div>
           <Form

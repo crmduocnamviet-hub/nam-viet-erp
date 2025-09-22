@@ -1,9 +1,9 @@
 import React, { useState } from "react";
 import { Button, Row, Col, Typography, App as AntApp } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
-import SchedulingDashboard from "../../features/scheduling/SchedulingDashboard";
-import AppointmentCreationModal from "../../features/scheduling/components/AppointmentCreationModal";
-import PatientCrmModal from "../../features/scheduling/components/PatientCrmModal";
+import AppointmentCreationModal from "../features/scheduling/components/AppointmentCreationModal";
+import PatientCrmModal from "../features/scheduling/components/PatientCrmModal";
+import SchedulingDashboard from "../features/scheduling/SchedulingDashboard";
 
 const { Title } = Typography;
 

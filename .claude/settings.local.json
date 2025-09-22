@@ -8,7 +8,8 @@
       "Bash(./node_modules/.bin/eslint:*)",
       "Bash(npx eslint:*)",
       "Bash(yarn type-check)",
-      "Bash(yarn tsc:*)"
+      "Bash(yarn tsc:*)",
+      "Bash(cp:*)"
     ],
     "deny": [],
     "ask": []

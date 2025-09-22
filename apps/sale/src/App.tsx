@@ -4,7 +4,6 @@ import AppLayout from "./components/AppLayout";
 import Login from "./pages/Login";
 import { useAuth } from "./hooks/useAuth";
 import { Spin, Row } from "antd";
-import PosPage from './pages/POS/PosPage';
 
 const App: React.FC = () => {
   const { session, loading } = useAuth();
@@ -20,10 +19,7 @@ const App: React.FC = () => {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
-      <Route
-        path="/*"
-        element={session ? <AppLayout><PosPage /></AppLayout> : <Login />}
-      />
+      <Route path="/*" element={session ? <AppLayout /> : <Login />} />
     </Routes>
   );
 };
