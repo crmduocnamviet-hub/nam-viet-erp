@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, Table, Space, Row, Col, Typography, Input } from 'antd';
+import { Button, Table, Space, Row, Col, Typography } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 
 const { Title } = Typography;

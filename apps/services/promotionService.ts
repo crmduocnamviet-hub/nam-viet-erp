@@ -1,4 +1,4 @@
-import { PostgrestSingleResponse } from "@supabase/supabase-js";
+import type { PostgrestSingleResponse } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
 
 export const getPromotionFilterOptions = async () => {
@@ -56,7 +56,7 @@ export const getPromotions = async () => {
   return response;
 };
 
-export const createPromotion = async (record: any) => {
+export const createPromotion = async (record: Record<string, any>) => {
   const response = await supabase
     .from("promotions")
     .insert(record)
@@ -66,7 +66,7 @@ export const createPromotion = async (record: any) => {
   return response;
 };
 
-export const updatePromotion = async (id: string, record: any) => {
+export const updatePromotion = async (id: string, record: Record<string, any>) => {
   const response = await supabase
     .from("promotions")
     .update(record)

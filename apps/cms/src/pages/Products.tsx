@@ -69,7 +69,7 @@ const ProductsPageContent: React.FC = () => {
   ) => {
     setTableLoading(true);
     try {
-      let { data, error, count } = await searchProducts({
+      const { data, error, count } = await searchProducts({
         search,
         status,
         page: pagination.current,

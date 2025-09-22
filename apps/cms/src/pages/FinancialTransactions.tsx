@@ -31,7 +31,7 @@ import {
   uploadAttachment,
 } from "@nam-viet-erp/services/financialTransactionService";
 import dayjs from "dayjs";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../hooks/useAuth";
 import { useDebounce } from "../hooks/useDebounce";
 import TransactionCreationModal from "../features/finance/components/TransactionCreationModal";
 import TransactionViewModal from "../features/finance/components/TransactionViewModal";
@@ -81,8 +81,8 @@ const TransactionPageContent: React.FC = () => {
           setBanks(banks);
         }
 
-        const from = (page - 1) * pageSize;
-        const to = from + pageSize - 1;
+        // const from = (page - 1) * pageSize;
+        // const to = from + pageSize - 1;
 
         if (search) {
           const { data, error, count } = await searchTransactions(

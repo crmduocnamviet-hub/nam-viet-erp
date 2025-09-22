@@ -1,4 +1,4 @@
-import { PostgrestSingleResponse } from "@supabase/supabase-js";
+import type { PostgrestSingleResponse } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
 
 export const getBanks = async () => {

@@ -2,7 +2,7 @@ import React from "react";
 import { Routes, Route } from "react-router-dom";
 import AppLayout from "./components/AppLayout"; // <-- Chúng ta sẽ tách Layout ra file riêng
 import Login from "./pages/Login";
-import { useAuth } from "./context/AuthContext";
+import { useAuth } from "./hooks/useAuth";
 import { Spin, Row } from "antd";
 
 const App: React.FC = () => {

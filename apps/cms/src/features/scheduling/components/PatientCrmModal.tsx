@@ -16,18 +16,32 @@ import {
   Tag,
   Descriptions,
 } from 'antd';
-import { UserOutlined, SaveOutlined } from '@ant-design/icons';
+import { UserOutlined, SaveOutlined, CalendarOutlined, HistoryOutlined, EditOutlined } from '@ant-design/icons';
 import {
   getProfileById,
   updateProfileNotes,
   getAppointmentsByPatientId,
+  getServiceHistoryByPatientId,
 } from '@nam-viet-erp/services';
 import dayjs from 'dayjs';
 import { useDebounce } from '../../../hooks/useDebounce';
+import { getErrorMessage } from '../../../types/error';
 
 const { Title, Text, Paragraph } = Typography;
 const { TabPane } = Tabs;
 const { TextArea } = Input;
+
+const getStatusColor = (status: string) => {
+  const colorMap: Record<string, string> = {
+    'Chưa xác nhận': 'default',
+    'Đã xác nhận': 'blue',
+    'Đã check-in': 'green',
+    'Đang khám': 'gold',
+    'Đã hoàn tất/Chờ thanh toán': 'purple',
+    'Hủy/Không đến': 'red',
+  };
+  return colorMap[status] || 'default';
+};
 
 interface PatientCrmModalProps {
   open: boolean;
@@ -43,6 +57,7 @@ const PatientCrmModal: React.FC<PatientCrmModalProps> = ({
   const { notification } = App.useApp();
   const [profile, setProfile] = useState<any | null>(null);
   const [appointments, setAppointments] = useState<any[]>([]);
+  const [serviceHistory, setServiceHistory] = useState<any[]>([]);
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -54,21 +69,24 @@ const PatientCrmModal: React.FC<PatientCrmModalProps> = ({
       const fetchData = async () => {
         setLoading(true);
         try {
-          const [profileRes, appointmentsRes] = await Promise.all([
+          const [profileRes, appointmentsRes, serviceHistoryRes] = await Promise.all([
             getProfileById(patientId),
             getAppointmentsByPatientId(patientId),
+            getServiceHistoryByPatientId(patientId),
           ]);
 
           if (profileRes.error) throw profileRes.error;
           if (appointmentsRes.error) throw appointmentsRes.error;
+          if (serviceHistoryRes.error) throw serviceHistoryRes.error;
 
           setProfile(profileRes.data);
           setAppointments(appointmentsRes.data || []);
+          setServiceHistory(serviceHistoryRes.data || []);
           setNotes(profileRes.data?.receptionist_notes || '');
-        } catch (error: any) {
+        } catch (error: unknown) {
           notification.error({
             message: 'Lỗi tải dữ liệu bệnh nhân',
-            description: error.message,
+            description: getErrorMessage(error),
           });
         } finally {
           setLoading(false);
@@ -79,6 +97,7 @@ const PatientCrmModal: React.FC<PatientCrmModalProps> = ({
       // Reset state when modal is closed
       setProfile(null);
       setAppointments([]);
+      setServiceHistory([]);
       setNotes('');
     }
   }, [open, patientId, notification]);
@@ -90,10 +109,10 @@ const PatientCrmModal: React.FC<PatientCrmModalProps> = ({
       const { error } = await updateProfileNotes(patientId, debouncedNotes);
       if (error) throw error;
       notification.success({ message: 'Đã lưu ghi chú!' });
-    } catch (error: any) {
+    } catch (error: unknown) {
       notification.error({
         message: 'Lỗi lưu ghi chú',
-        description: error.message,
+        description: getErrorMessage(error),
       });
     } finally {
       setIsSaving(false);
@@ -140,43 +159,127 @@ const PatientCrmModal: React.FC<PatientCrmModalProps> = ({
             </Col>
             <Col span={16}>
               <Tabs defaultActiveKey="1">
-                <TabPane tab="Lịch sử Hẹn" key="1">
+                <TabPane
+                  tab={<><CalendarOutlined /> Lịch sử Hẹn</>}
+                  key="1"
+                >
                   <List
                     dataSource={appointments}
                     renderItem={(item) => (
-                      <List.Item>
+                      <List.Item
+                        style={{
+                          border: '1px solid #f0f0f0',
+                          borderRadius: 8,
+                          marginBottom: 8,
+                          padding: 16
+                        }}
+                      >
                         <List.Item.Meta
-                          title={`Lịch hẹn ngày ${dayjs(
-                            item.appointment_time
-                          ).format('DD/MM/YYYY HH:mm')}`}
-                          description={`Dịch vụ: ${item.service || 'N/A'}`}
+                          avatar={<CalendarOutlined style={{ fontSize: 16, color: '#1890ff' }} />}
+                          title={
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <span>{dayjs(item.appointment_time).format('DD/MM/YYYY HH:mm')}</span>
+                              <Tag color={getStatusColor(item.status)}>{item.status}</Tag>
+                            </div>
+                          }
+                          description={
+                            <div>
+                              <div><strong>Dịch vụ:</strong> {item.service || 'N/A'}</div>
+                              {item.note && (
+                                <div style={{ marginTop: 8, padding: 8, backgroundColor: '#f6f6f6', borderRadius: 4 }}>
+                                  <strong>Ghi chú:</strong> {item.note}
+                                </div>
+                              )}
+                            </div>
+                          }
                         />
-                        <Tag>{item.status}</Tag>
                       </List.Item>
                     )}
                   />
                 </TabPane>
-                <TabPane tab="Ghi chú Lễ tân" key="2">
-                  <Paragraph>
-                    Ghi lại các thông tin phi y tế quan trọng (ví dụ: sở thích,
-                    lưu ý khi giao tiếp, người nhà cần liên hệ...).
-                  </Paragraph>
+                <TabPane
+                  tab={<><HistoryOutlined /> Lịch sử Sử dụng Dịch vụ</>}
+                  key="2"
+                >
+                  <List
+                    dataSource={serviceHistory}
+                    renderItem={(item) => (
+                      <List.Item
+                        style={{
+                          border: '1px solid #f0f0f0',
+                          borderRadius: 8,
+                          marginBottom: 8,
+                          padding: 16
+                        }}
+                      >
+                        <List.Item.Meta
+                          avatar={<HistoryOutlined style={{ fontSize: 16, color: '#52c41a' }} />}
+                          title={
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <span>{item.services?.name || 'Dịch vụ không xác định'}</span>
+                              {item.services?.price && (
+                                <Text strong style={{ color: '#52c41a' }}>
+                                  {new Intl.NumberFormat('vi-VN', {
+                                    style: 'currency',
+                                    currency: 'VND'
+                                  }).format(item.services.price)}
+                                </Text>
+                              )}
+                            </div>
+                          }
+                          description={
+                            <div>
+                              <div>
+                                <strong>Ngày sử dụng:</strong> {
+                                  item.appointments?.appointment_time
+                                    ? dayjs(item.appointments.appointment_time).format('DD/MM/YYYY HH:mm')
+                                    : dayjs(item.created_at).format('DD/MM/YYYY HH:mm')
+                                }
+                              </div>
+                              {item.quantity && <div><strong>Số lượng:</strong> {item.quantity}</div>}
+                              {item.notes && (
+                                <div style={{ marginTop: 8, padding: 8, backgroundColor: '#f6f6f6', borderRadius: 4 }}>
+                                  <strong>Ghi chú:</strong> {item.notes}
+                                </div>
+                              )}
+                            </div>
+                          }
+                        />
+                      </List.Item>
+                    )}
+                  />
+                </TabPane>
+                <TabPane
+                  tab={<><EditOutlined /> Ghi chú Lễ tân</>}
+                  key="3"
+                >
+                  <div style={{ background: '#f9f9f9', padding: 16, borderRadius: 8, marginBottom: 16 }}>
+                    <Paragraph style={{ margin: 0, color: '#666' }}>
+                      📝 Ghi lại các thông tin phi y tế quan trọng (ví dụ: sở thích,
+                      lưu ý khi giao tiếp, người nhà cần liên hệ...).
+                    </Paragraph>
+                  </div>
                   <TextArea
-                    rows={10}
+                    rows={12}
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
-                    placeholder="Nhập ghi chú..."
+                    placeholder="Nhập ghi chú về bệnh nhân..."
+                    style={{ borderRadius: 8 }}
                   />
-                  <Button
-                    type="primary"
-                    icon={<SaveOutlined />}
-                    loading={isSaving}
-                    onClick={handleSaveNotes}
-                    style={{ marginTop: 16 }}
-                    disabled={notes === (profile.receptionist_notes || '')}
-                  >
-                    Lưu ghi chú
-                  </Button>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 16 }}>
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      Ghi chú sẽ được tự động lưu sau 500ms
+                    </Text>
+                    <Button
+                      type="primary"
+                      icon={<SaveOutlined />}
+                      loading={isSaving}
+                      onClick={handleSaveNotes}
+                      disabled={notes === (profile?.receptionist_notes || '')}
+                    >
+                      Lưu ghi chú
+                    </Button>
+                  </div>
                 </TabPane>
               </Tabs>
             </Col>

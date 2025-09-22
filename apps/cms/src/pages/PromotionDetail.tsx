@@ -32,6 +32,7 @@ import {
   supabase,
   updatePromotion,
 } from "@nam-viet-erp/services";
+import { getErrorMessage } from "../types/error";
 
 const { Title } = Typography;
 const { RangePicker } = DatePicker;
@@ -158,10 +159,10 @@ const PromotionDetail: React.FC = () => {
         if (error) throw error;
         notification.success({ message: "Cập nhật thành công!" });
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       notification.error({
         message: "Lưu thất bại",
-        description: error.message,
+        description: getErrorMessage(error),
       });
     } finally {
       setLoading(false);
@@ -179,10 +180,10 @@ const PromotionDetail: React.FC = () => {
       fetchVouchers(params.id!); // Tải lại danh sách voucher
       setIsVoucherModalOpen(false);
       voucherForm.resetFields();
-    } catch (error: any) {
+    } catch (error: unknown) {
       notification.error({
         message: "Tạo mã thất bại",
-        description: error.message,
+        description: getErrorMessage(error),
       });
     }
   };

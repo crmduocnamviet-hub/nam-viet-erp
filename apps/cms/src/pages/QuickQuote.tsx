@@ -12,17 +12,14 @@ import {
   Tag,
 } from "antd";
 import { useDebounce } from "../hooks/useDebounce";
-import {
-  getActiveProduct,
-  getActivePromotions,
-  supabase,
-} from "@nam-viet-erp/services";
+import { getActiveProduct, getActivePromotions } from "@nam-viet-erp/services";
+import { getErrorMessage } from "../types/error";
 
 const { Title, Text, Paragraph } = Typography;
 const { Search } = Input;
 
 // === "BỘ NÃO" TÍNH GIÁ ĐÃ ĐƯỢC NÂNG CẤP TOÀN DIỆN ===
-const calculateBestPrice = (product: any, promotions: any[]) => {
+const calculateBestPrice = (product: IProduct, promotions: IPromotion[]) => {
   let bestPrice = product.wholesale_price;
   let appliedPromotionName: string | null = null;
 
@@ -36,23 +33,31 @@ const calculateBestPrice = (product: any, promotions: any[]) => {
 
     // Kiểm tra các điều kiện chung (hãng, loại sản phẩm...)
     if (conditions) {
+      // Check price groups
+      const priceGroups = conditions.price_groups;
       if (
-        conditions.price_groups &&
-        !conditions.price_groups.includes("Bán buôn")
+        typeof priceGroups === 'string' &&
+        priceGroups !== 'Bán buôn'
       )
         isApplicable = false;
+
+      // Check manufacturers
+      const manufacturers = conditions.manufacturers;
       if (
         isApplicable &&
-        conditions.manufacturers &&
-        conditions.manufacturers.length > 0 &&
-        !conditions.manufacturers.includes(product.manufacturer)
+        typeof manufacturers === 'string' &&
+        product.manufacturer &&
+        manufacturers !== product.manufacturer
       )
         isApplicable = false;
+
+      // Check product categories
+      const productCategories = conditions.product_categories;
       if (
         isApplicable &&
-        conditions.product_categories &&
-        conditions.product_categories.length > 0 &&
-        !conditions.product_categories.includes(product.category)
+        typeof productCategories === 'string' &&
+        product.category &&
+        productCategories !== product.category
       )
         isApplicable = false;
     }
@@ -62,17 +67,21 @@ const calculateBestPrice = (product: any, promotions: any[]) => {
       let calculated = false;
 
       // Xử lý các loại khuyến mại trên SẢN PHẨM
-      if (promo.type === "percentage") {
+      if (promo.type === "percentage" && product.wholesale_price !== null && promo.value !== undefined) {
         currentPrice = product.wholesale_price * (1 - promo.value / 100);
         calculated = true;
-      } else if (promo.type === "fixed_amount") {
+      } else if (promo.type === "fixed_amount" && product.wholesale_price !== null && promo.value !== undefined) {
         currentPrice = product.wholesale_price - promo.value;
         calculated = true;
       }
       // === LOGIC MỚI: Xử lý khuyến mại trên ĐƠN HÀNG ===
       else if (
         promo.type === "order_discount" &&
-        conditions?.min_order_value > 0
+        conditions &&
+        typeof conditions.min_order_value === 'number' &&
+        conditions.min_order_value > 0 &&
+        product.wholesale_price !== null &&
+        promo.value !== undefined
       ) {
         const minOrderValue = conditions.min_order_value;
         const discountValue = promo.value;
@@ -92,7 +101,7 @@ const calculateBestPrice = (product: any, promotions: any[]) => {
         }
       }
 
-      if (calculated && currentPrice < bestPrice) {
+      if (calculated && currentPrice !== null && bestPrice !== null && currentPrice < bestPrice) {
         bestPrice = currentPrice;
         appliedPromotionName = promo.name;
       }
@@ -100,17 +109,17 @@ const calculateBestPrice = (product: any, promotions: any[]) => {
   }
 
   return {
-    finalPrice: Math.round(bestPrice), // Làm tròn giá cuối cùng
-    originalPrice: product.wholesale_price,
+    finalPrice: Math.round(bestPrice || 0), // Làm tròn giá cuối cùng
+    originalPrice: product.wholesale_price || 0,
     promotionApplied: appliedPromotionName,
   };
 };
 
 const QuickQuote: React.FC = () => {
   const { notification } = App.useApp();
-  const [products, setProducts] = useState<any[]>([]);
+  const [products, setProducts] = useState<IProduct[]>([]);
   const [loading, setLoading] = useState(true);
-  const [promotions, setPromotions] = useState<any[]>([]);
+  const [promotions, setPromotions] = useState<IPromotion[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedManufacturer, setSelectedManufacturer] = useState<
     string | null
@@ -164,10 +173,10 @@ const QuickQuote: React.FC = () => {
           ),
         ];
         setRoutes(uniqueRoutes.map((r) => ({ value: r, label: r })));
-      } catch (error: any) {
+      } catch (error: unknown) {
         notification.error({
           message: "Lỗi tải dữ liệu",
-          description: error.message,
+          description: getErrorMessage(error),
         });
       } finally {
         setLoading(false);
@@ -321,7 +330,7 @@ const QuickQuote: React.FC = () => {
                     </Text>
                     {priceInfo.promotionApplied && (
                       <Text delete type="secondary" style={{ marginLeft: 8 }}>
-                        {priceInfo.originalPrice.toLocaleString("vi-VN")} đ
+                        {(priceInfo.originalPrice || 0).toLocaleString("vi-VN")} đ
                       </Text>
                     )}
                     {priceInfo.promotionApplied && (

@@ -1,24 +1,9 @@
-import {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  type ReactNode,
-} from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import { supabase } from "@nam-viet-erp/services";
 import type { Session, User } from "@supabase/supabase-js";
+import { AuthContext } from "./AuthContextDefinition";
 
-// Định nghĩa "hình dạng" của context
-interface AuthContextType {
-  session: Session | null;
-  user: User | null;
-  loading: boolean;
-}
-
-// Tạo Context
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-// Tạo Provider - "Người quản lý" trạng thái đăng nhập
+// AuthProvider component - "Người quản lý" trạng thái đăng nhập
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
@@ -49,11 +34,5 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-// Tạo một hook tùy chỉnh để dễ dàng sử dụng context ở các component khác
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-  return context;
-};
+// The useAuth hook has been moved to src/hooks/useAuth.ts
+// to comply with react-refresh/only-export-components rule

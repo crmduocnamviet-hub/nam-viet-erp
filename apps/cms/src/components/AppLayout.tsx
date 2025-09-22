@@ -9,7 +9,6 @@ import {
   UsergroupAddOutlined,
   MenuOutlined,
   RocketOutlined, // <-- IMPORT ICON MỚI
-  RobotOutlined, // <-- IMPORT ICON MỚI
 } from "@ant-design/icons";
 import type { MenuProps } from "antd";
 import { Routes, Route, useNavigate } from "react-router-dom";
@@ -24,7 +23,7 @@ import {
   Drawer,
 } from "antd";
 import viVN from "antd/locale/vi_VN";
-import { signOut, supabase } from "@nam-viet-erp/services";
+import { signOut } from "@nam-viet-erp/services";
 
 // Import tất cả các trang của bạn ở đây
 import Dashboard from "../pages/Dashboard";

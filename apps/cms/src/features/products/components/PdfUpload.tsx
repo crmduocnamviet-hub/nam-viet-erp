@@ -32,7 +32,7 @@ const PdfUpload: React.FC<PdfUploadProps> = ({ onFileReady, loading }) => {
     try {
       const fileContent = await getBase64(file);
       onFileReady(fileContent, file.type);
-    } catch (error) {
+    } catch {
       notification.error({ message: "Lỗi xử lý file" });
     }
   };

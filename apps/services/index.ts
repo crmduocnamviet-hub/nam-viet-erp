@@ -8,5 +8,5 @@ export * from "./productService";
 export * from "./warehouse";
 export * from "./bankServices";
 export * from "./purchaseOrderService";
-export * from "./posService";
 export * from "./appointmentService";
+export * from "./posService";

@@ -22,6 +22,7 @@ import {
   getFunds,
   updateFund,
 } from "@nam-viet-erp/services";
+import { getErrorMessage } from "../types/error";
 
 const { Title } = Typography;
 
@@ -122,10 +123,10 @@ const FundManagementContent: React.FC = () => {
       });
       fetchData();
       handleCancel();
-    } catch (error: any) {
+    } catch (error: unknown) {
       notification.error({
         message: "Thao tác thất bại",
-        description: error.message,
+        description: getErrorMessage(error),
       });
     }
   };

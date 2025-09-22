@@ -1,5 +1,5 @@
-import { supabase } from './supabase';
-import { upsetInventory } from './warehouse';
+import { supabase } from "./supabase";
+import { upsetInventory } from "./warehouse";
 
 interface IProcessSale {
   cart: any[];
@@ -30,25 +30,27 @@ export const processSaleTransaction = async ({
 }: IProcessSale) => {
   // Step 1: Create the financial transaction record.
   const transactionRecord = {
-    type: 'income',
+    type: "income",
     amount: total,
     description: `POS Sale - Warehouse ID ${warehouseId}`,
     payment_method: paymentMethod,
-    status: 'đã thu', // POS transactions are considered completed immediately.
+    status: "đã thu", // POS transactions are considered completed immediately.
     transaction_date: new Date().toISOString(),
     created_by: createdBy,
     fund_id: fundId,
   };
 
   const { data: transactionData, error: transactionError } = await supabase
-    .from('transactions')
+    .from("transactions")
     .insert(transactionRecord)
     .select()
     .single();
 
   if (transactionError) {
-    console.error('Transaction Creation Error:', transactionError);
-    throw new Error(`Failed to create transaction: ${transactionError.message}`);
+    console.error("Transaction Creation Error:", transactionError);
+    throw new Error(
+      `Failed to create transaction: ${transactionError.message}`
+    );
   }
 
   // Step 2: Prepare and execute inventory updates.
@@ -57,7 +59,9 @@ export const processSaleTransaction = async ({
       (inv: any) => inv.warehouse_id === warehouseId
     );
 
-    const currentQuantity = warehouseInventory ? warehouseInventory.quantity : 0;
+    const currentQuantity = warehouseInventory
+      ? warehouseInventory.quantity
+      : 0;
     const newQuantity = currentQuantity - item.quantity;
 
     return {
@@ -76,8 +80,8 @@ export const processSaleTransaction = async ({
     if (inventoryError) {
       // If inventory update fails, we should try to roll back the financial transaction
       // to avoid data inconsistency.
-      console.error('Inventory Update Error:', inventoryError);
-      await supabase.from('transactions').delete().eq('id', transactionData.id);
+      console.error("Inventory Update Error:", inventoryError);
+      await supabase.from("transactions").delete().eq("id", transactionData.id);
       throw new Error(`Failed to update inventory: ${inventoryError.message}`);
     }
   }

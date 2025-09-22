@@ -147,12 +147,12 @@ const AppointmentCreationModal: React.FC<AppointmentCreationModalProps> = ({ ope
       bookedTimes.forEach(time => {
         // Assuming 15-minute slots, if all 4 slots in an hour are booked, disable the hour
         const startOfHour = time.startOf('hour');
-        const slotsInHour = [
-          startOfHour,
-          startOfHour.add(15, 'minutes'),
-          startOfHour.add(30, 'minutes'),
-          startOfHour.add(45, 'minutes'),
-        ];
+        // const slotsInHour = [
+        //   startOfHour,
+        //   startOfHour.add(15, 'minutes'),
+        //   startOfHour.add(30, 'minutes'),
+        //   startOfHour.add(45, 'minutes'),
+        // ];
         const bookedSlotsInHour = bookedTimes.filter(bt => bt.isSame(startOfHour, 'hour'));
         if (bookedSlotsInHour.length >= 4) {
             hours.add(time.hour());
@@ -261,7 +261,7 @@ const AppointmentCreationModal: React.FC<AppointmentCreationModalProps> = ({ ope
     try {
       await form.validateFields();
       setCurrentStep(currentStep + 1);
-    } catch (error) {
+    } catch {
       // Errors will be displayed on the form fields
     }
   };
@@ -271,7 +271,7 @@ const AppointmentCreationModal: React.FC<AppointmentCreationModalProps> = ({ ope
   };
 
   const handleFormFinish = () => {
-    form.validateFields().then(values => {
+    form.validateFields().then(() => {
         const allValues = { ...form.getFieldsValue(true), patientId: selectedPatient?.id };
         onFinish(allValues);
         form.resetFields();

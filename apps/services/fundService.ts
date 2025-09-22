@@ -1,7 +1,7 @@
-import { PostgrestSingleResponse } from "@supabase/supabase-js";
+import type { PostgrestSingleResponse } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
 
-export const createInternalTransfer = async (values: any) => {
+export const createInternalTransfer = async (values: Record<string, any>) => {
   const { error } = await supabase.rpc("create_internal_transfer", {
     from_fund_id: values.from_fund_id,
     to_fund_id: values.to_fund_id,
@@ -40,7 +40,7 @@ export const deleteFund = async (id: number) => {
   return response;
 };
 
-export const updateFund = async (id: number, record: any) => {
+export const updateFund = async (id: number, record: Record<string, any>) => {
   const response = await supabase.from("funds").update(record).eq("id", id);
   return response;
 };

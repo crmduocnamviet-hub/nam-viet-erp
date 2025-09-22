@@ -1,8 +1,8 @@
 import React from 'react';
-import { Card, Form, Row, Col, Select, InputNumber, DatePicker, Button, Space, Typography, Statistic } from 'antd';
+import { Card, Form, Row, Col, Select, InputNumber, Button, Space, Typography, Statistic } from 'antd';
 import { PlusOutlined, DeleteOutlined, SaveOutlined, RobotOutlined } from '@ant-design/icons';
 
-const { Title, Text } = Typography;
+const { Title } = Typography;
 
 const SegmentBuilder: React.FC<{ onSave?: () => void }> = ({ onSave }) => {
   return (

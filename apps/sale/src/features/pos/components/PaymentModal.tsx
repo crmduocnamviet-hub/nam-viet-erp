@@ -8,6 +8,8 @@ import {
   Col,
   Typography,
 } from "antd";
+import type { ButtonProps } from "antd";
+import type { PaymentValues } from '../../../types';
 
 const { Text } = Typography;
 
@@ -16,8 +18,8 @@ interface PaymentModalProps {
   paymentMethod: "cash" | "card" | "qr";
   cartTotal: number;
   onCancel: () => void;
-  onFinish: (values: any) => void;
-  okButtonProps?: any;
+  onFinish: (values: PaymentValues) => void;
+  okButtonProps?: ButtonProps;
 }
 
 const PaymentModal: React.FC<PaymentModalProps> = ({
@@ -103,7 +105,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                 `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ".")
               }
               parser={(value) => Number(value!.replace(/\./g, ""))}
-              onChange={(value) => setCustomerCash(value || 0)}
+              onChange={(value) => setCustomerCash(Number(value) || 0)}
               autoFocus
             />
           </Form.Item>

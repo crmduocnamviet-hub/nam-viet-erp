@@ -3,6 +3,7 @@ import { PlusOutlined } from "@ant-design/icons";
 import { Modal, Upload, App } from "antd";
 import type { UploadFile, UploadProps } from "antd";
 import { getProductImageUrl, uploadProductImage } from "@nam-viet-erp/services";
+import { getErrorMessage } from "../../../types/error";
 
 const getBase64 = (file: File): Promise<string> =>
   new Promise((resolve, reject) => {
@@ -77,10 +78,10 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ value, onChange }) => {
 
       onChange?.(data.publicUrl); // Gửi public URL về cho Form
       onSuccess?.("Ok");
-    } catch (error: any) {
+    } catch (error: unknown) {
       notification.error({
         message: "Lỗi tải ảnh",
-        description: error.message,
+        description: getErrorMessage(error),
       });
       onError?.(error);
     }

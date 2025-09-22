@@ -30,6 +30,12 @@ import {
   getActivePromotions,
 } from '@nam-viet-erp/services';
 import PaymentModal from '../../features/pos/components/PaymentModal';
+import type {
+  CartItem,
+  CartDetails,
+  PriceInfo,
+} from '../../types';
+import { getErrorMessage } from '../../types';
 
 const { Header, Content } = Layout;
 const { Title, Text } = Typography;
@@ -45,15 +51,15 @@ const PosPage: React.FC = () => {
   const { notification } = App.useApp();
 
   // State
-  const [cart, setCart] = useState<any[]>([]);
+  const [cart, setCart] = useState<CartItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchResults, setSearchResults] = useState<IProduct[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'qr'>('cash');
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState('dh1');
-  const [promotions, setPromotions] = useState<any[]>([]);
+  const [promotions, setPromotions] = useState<IPromotion[]>([]);
 
   const { warehouseId, fundId } = WAREHOUSE_MAP[selectedLocation];
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
@@ -67,16 +73,16 @@ const PosPage: React.FC = () => {
           description: error.message,
         });
       } else {
-        setPromotions(data || []);
+        setPromotions((data as IPromotion[]) || []);
       }
     };
     fetchPromos();
   }, [notification]);
 
   // --- PROMOTION LOGIC START ---
-  const calculateBestPrice = (product: any, promotions: any[]) => {
+  const calculateBestPrice = (product: IProduct, promotions: IPromotion[]): PriceInfo => {
     let bestPrice = product.retail_price;
-    let appliedPromotion: any = null;
+    let appliedPromotion: IPromotion | null = null;
 
     if (bestPrice === null || bestPrice === undefined || bestPrice <= 0) {
       return { finalPrice: 0, originalPrice: 0, appliedPromotion: null };
@@ -88,18 +94,23 @@ const PosPage: React.FC = () => {
 
       // Condition checks
       if (conditions) {
+        // Check manufacturers
+        const manufacturers = conditions.manufacturers;
         if (
-          conditions.manufacturers &&
-          conditions.manufacturers.length > 0 &&
-          !conditions.manufacturers.includes(product.manufacturer)
+          typeof manufacturers === 'string' &&
+          product.manufacturer &&
+          manufacturers !== product.manufacturer
         ) {
           isApplicable = false;
         }
+
+        // Check product categories
+        const productCategories = conditions.product_categories;
         if (
           isApplicable &&
-          conditions.product_categories &&
-          conditions.product_categories.length > 0 &&
-          !conditions.product_categories.includes(product.category)
+          typeof productCategories === 'string' &&
+          product.category &&
+          productCategories !== product.category
         ) {
           isApplicable = false;
         }
@@ -109,15 +120,15 @@ const PosPage: React.FC = () => {
         let currentPrice = product.retail_price;
         let calculated = false;
 
-        if (promo.type === 'percentage') {
+        if (promo.type === 'percentage' && product.retail_price !== null && promo.value !== undefined) {
           currentPrice = product.retail_price * (1 - promo.value / 100);
           calculated = true;
-        } else if (promo.type === 'fixed_amount') {
+        } else if (promo.type === 'fixed_amount' && product.retail_price !== null && promo.value !== undefined) {
           currentPrice = product.retail_price - promo.value;
           calculated = true;
         }
 
-        if (calculated && currentPrice < bestPrice) {
+        if (calculated && currentPrice !== null && bestPrice !== null && currentPrice < bestPrice) {
           bestPrice = currentPrice;
           appliedPromotion = promo;
         }
@@ -125,8 +136,8 @@ const PosPage: React.FC = () => {
     }
 
     return {
-      finalPrice: Math.round(bestPrice),
-      originalPrice: product.retail_price,
+      finalPrice: Math.round(bestPrice || 0),
+      originalPrice: product.retail_price || 0,
       appliedPromotion,
     };
   };
@@ -152,7 +163,7 @@ const PosPage: React.FC = () => {
   }, [debouncedSearchTerm, notification]);
 
   // Cart Handlers
-  const handleAddToCart = (product: any) => {
+  const handleAddToCart = (product: IProduct) => {
     setCart((prevCart) => {
       const existingItem = prevCart.find((item) => item.id === product.id);
       if (existingItem) {
@@ -162,7 +173,8 @@ const PosPage: React.FC = () => {
             : item
         );
       } else {
-        return [...prevCart, { ...product, quantity: 1 }];
+        const priceInfo = calculateBestPrice(product, promotions);
+        return [...prevCart, { ...product, quantity: 1, ...priceInfo }];
       }
     });
     setSearchTerm('');
@@ -185,7 +197,7 @@ const PosPage: React.FC = () => {
     }
   };
 
-  const cartDetails = useMemo(() => {
+  const cartDetails = useMemo((): CartDetails => {
     const items = cart.map((item) => {
       const priceInfo = calculateBestPrice(item, promotions);
       return {
@@ -221,7 +233,7 @@ const PosPage: React.FC = () => {
     setIsPaymentModalOpen(true);
   };
 
-  const handleFinishPayment = async (values: any) => {
+  const handleFinishPayment = async () => {
     setIsProcessingPayment(true);
     try {
       await processSaleTransaction({
@@ -240,8 +252,8 @@ const PosPage: React.FC = () => {
 
       setCart([]);
       setIsPaymentModalOpen(false);
-    } catch (error: any) {
-      notification.error({ message: 'Thanh toán thất bại', description: error.message });
+    } catch (error: unknown) {
+      notification.error({ message: 'Thanh toán thất bại', description: getErrorMessage(error) });
     } finally {
       setIsProcessingPayment(false);
     }

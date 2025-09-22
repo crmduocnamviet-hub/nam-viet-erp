@@ -12,13 +12,13 @@ const ConversionFunnel: React.FC = () => {
         { stage: 'Thanh toán', number: 1500 },
     ];
 
-    const config = {
-        data: data,
-        xField: 'stage',
-        yField: 'number',
-        legend: false,
-        conversionTag: {},
-    };
+    // const config = {
+    //     data: data,
+    //     xField: 'stage',
+    //     yField: 'number',
+    //     legend: false,
+    //     conversionTag: {},
+    // };
 
     return (
         <Card>

@@ -45,9 +45,7 @@ interface IPromotion {
   start_date?: string;
   end_date?: string;
   is_active?: boolean;
-  conditions?: {
-    min_order_value: number;
-  };
+  conditions?: Record<string, number | string>;
 }
 
 interface IVoucher {

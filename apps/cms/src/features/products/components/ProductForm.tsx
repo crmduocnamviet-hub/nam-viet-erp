@@ -28,6 +28,7 @@ import {
   extractFromPdf,
   getWarehouse,
 } from "@nam-viet-erp/services";
+import { getErrorMessage } from "../../../types/error";
 import PdfUpload from "./PdfUpload";
 
 const { Title } = Typography; // <-- Khai báo Title để sử dụng
@@ -123,10 +124,10 @@ const ProductForm: React.FC<ProductFormProps> = ({
         message: "Thành công!",
         description: "Đã trích xuất và điền dữ liệu từ PDF.",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       notification.error({
         message: "Lỗi Trích xuất PDF",
-        description: error.message,
+        description: getErrorMessage(error),
       });
     } finally {
       setPdfLoading(false);
@@ -161,8 +162,8 @@ const ProductForm: React.FC<ProductFormProps> = ({
         message: "Thành công!",
         description: "Dữ liệu đã được AI làm giàu.",
       });
-    } catch (error: any) {
-      notification.error({ message: "Lỗi AI", description: error.message });
+    } catch (error: unknown) {
+      notification.error({ message: "Lỗi AI", description: getErrorMessage(error) });
     } finally {
       setAiLoading(false);
     }

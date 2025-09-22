@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from "react";
 import { Button, Table, Space, Row, Col, Typography, App, Tag } from "antd";
 import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
-import { useNavigate } from "react-router-dom"; // Import hook điều hướng
+import { useNavigate } from "react-router-dom";
 import { deletePromotion, getPromotions } from "@nam-viet-erp/services";
+import { getErrorMessage } from "../types/error";
 
 const { Title } = Typography;
 
 const Promotions: React.FC = () => {
   const { notification, modal } = App.useApp();
   const navigate = useNavigate(); // Khởi tạo công cụ điều hướng
-  const [promotions, setPromotions] = useState<any[]>([]);
+  const [promotions, setPromotions] = useState<IPromotion[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchPromotions = async () => {
@@ -18,10 +19,10 @@ const Promotions: React.FC = () => {
       const { data, error } = await getPromotions();
       if (error) throw error;
       setPromotions(data || []);
-    } catch (error: any) {
+    } catch (error: unknown) {
       notification.error({
         message: "Lỗi tải dữ liệu",
-        description: error.message,
+        description: getErrorMessage(error),
       });
     } finally {
       setLoading(false);
@@ -45,10 +46,10 @@ const Promotions: React.FC = () => {
           if (error) throw error;
           notification.success({ message: "Đã xóa thành công!" });
           fetchPromotions(); // Tải lại danh sách
-        } catch (error: any) {
+        } catch (error: unknown) {
           notification.error({
             message: "Lỗi khi xóa",
-            description: error.message,
+            description: getErrorMessage(error),
           });
         }
       },
@@ -71,7 +72,7 @@ const Promotions: React.FC = () => {
       title: "Hành động",
       key: "action",
       // Nút Sửa giờ đây sẽ điều hướng đến trang chi tiết
-      render: (_: any, record: any) => (
+      render: (_: unknown, record: IPromotion) => (
         <Space>
           <Button
             icon={<EditOutlined />}

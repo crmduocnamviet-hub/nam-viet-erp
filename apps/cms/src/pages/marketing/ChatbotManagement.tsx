@@ -2,7 +2,7 @@ import React from 'react';
 import { Card, Typography, List, Avatar, Input, Button, Space } from 'antd';
 import { RobotOutlined, UserOutlined, SendOutlined } from '@ant-design/icons';
 
-const { Title, Text } = Typography;
+const { Title } = Typography;
 
 const ChatbotManagement: React.FC = () => {
     const chatHistory = [

@@ -43,3 +43,18 @@ export const getAppointmentsByPatientId = async (patientId: string) => {
 
   return { data, error };
 };
+
+export const getServiceHistoryByPatientId = async (patientId: string) => {
+  const { data, error } = await supabase
+    .from("service_records")
+    .select("*, appointments(appointment_time), services(name, price)")
+    .eq("patient_id", patientId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Error fetching service history by patient:", error);
+    throw error;
+  }
+
+  return { data, error };
+};

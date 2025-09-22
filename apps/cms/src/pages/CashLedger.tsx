@@ -105,6 +105,7 @@ const FundCard: React.FC<{
 
 import { getFundsAndTransactions } from "@nam-viet-erp/services/cashLedgerService";
 import { createInternalTransfer } from "@nam-viet-erp/services/fundService";
+import { getErrorMessage } from "../types/error";
 
 const CashLedgerPageContent: React.FC = () => {
   const { notification } = AntApp.useApp();
@@ -127,10 +128,10 @@ const CashLedgerPageContent: React.FC = () => {
       setFunds(funds);
       setTransactions(transactions);
       setInternalTransfers(internalTransfers);
-    } catch (error: any) {
+    } catch (error: unknown) {
       notification.error({
         message: "Lỗi tải dữ liệu",
-        description: error.message,
+        description: getErrorMessage(error),
       });
     } finally {
       setLoading(false);
@@ -171,10 +172,10 @@ const CashLedgerPageContent: React.FC = () => {
       notification.success({ message: "Chuyển tiền nội bộ thành công!" });
       handleTransferCancel();
       fetchData();
-    } catch (error: any) {
+    } catch (error: unknown) {
       notification.error({
         message: "Chuyển tiền thất bại",
-        description: error.message,
+        description: getErrorMessage(error),
       });
     } finally {
       setLoading(false);

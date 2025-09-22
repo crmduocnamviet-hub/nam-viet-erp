@@ -9,6 +9,7 @@ interface Appointment {
   patientName: string;
   time: string;
   type: 'new' | 'follow-up';
+  status: string;
   patientId: string;
 }
 

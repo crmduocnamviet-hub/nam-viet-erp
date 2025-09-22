@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button, Table, Space, Row, Col, Typography, Tag, Dropdown, Menu } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, CopyOutlined, BarChartOutlined, MoreOutlined } from '@ant-design/icons';
+import { PlusOutlined, DeleteOutlined, CopyOutlined, BarChartOutlined, MoreOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 
 const { Title } = Typography;
