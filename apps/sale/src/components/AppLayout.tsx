@@ -21,6 +21,8 @@ import { signOut } from "@nam-viet-erp/services";
 
 import PosPage from "../pages/POS/PosPage";
 import SchedulingPage from "../pages/SchedulingPage";
+import PatientsPage from "../pages/PatientsPage";
+import MedicalRecordsPage from "../pages/MedicalRecordsPage";
 import logo from "../assets/logo.png";
 
 const { Header, Content, Footer, Sider } = Layout;
@@ -28,8 +30,17 @@ const { Title } = Typography;
 const { useBreakpoint } = Grid;
 
 const menuItems: MenuProps["items"] = [
-  { label: "Bán hàng (POS)", key: "/", icon: <ShoppingCartOutlined /> },
-  { label: "Đặt lịch hẹn", key: "/scheduling", icon: <CalendarOutlined /> },
+  { label: "💰 Bán hàng (POS)", key: "/", icon: <ShoppingCartOutlined /> },
+  {
+    label: "📅 Đặt lịch & Khám bệnh",
+    key: "scheduling",
+    icon: <CalendarOutlined />,
+    children: [
+      { label: "Lịch hẹn hôm nay", key: "/scheduling" },
+      { label: "Quản lý bệnh nhân", key: "/patients" },
+      { label: "Hồ sơ y tế", key: "/medical-records" },
+    ],
+  },
 ];
 
 const namVietTheme = {
@@ -217,6 +228,8 @@ const AppLayout: React.FC = () => {
               <Routes>
                 <Route path="/" element={<PosPage />} />
                 <Route path="/scheduling" element={<SchedulingPage />} />
+                <Route path="/patients" element={<PatientsPage />} />
+                <Route path="/medical-records" element={<MedicalRecordsPage />} />
                 <Route path="*" element={<ComingSoon />} />
               </Routes>
             </div>

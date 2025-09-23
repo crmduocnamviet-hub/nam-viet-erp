@@ -10,6 +10,8 @@ export interface CartItem extends IProduct {
   finalPrice: number;
   originalPrice: number;
   appliedPromotion: IPromotion | null;
+  prescriptionNote?: string;
+  stock_quantity?: number;
 }
 
 // Price calculation result

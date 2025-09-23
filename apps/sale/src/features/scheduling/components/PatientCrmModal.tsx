@@ -21,7 +21,7 @@ import {
   getProfileById,
   updateProfileNotes,
   getAppointmentsByPatientId,
-  getServiceHistoryByPatientId,
+  getPatientMedicalHistory,
 } from '@nam-viet-erp/services';
 import dayjs from 'dayjs';
 import { useDebounce } from '../../../hooks/useDebounce';
@@ -72,7 +72,7 @@ const PatientCrmModal: React.FC<PatientCrmModalProps> = ({
           const [profileRes, appointmentsRes, serviceHistoryRes] = await Promise.all([
             getProfileById(patientId),
             getAppointmentsByPatientId(patientId),
-            getServiceHistoryByPatientId(patientId),
+            getPatientMedicalHistory(patientId),
           ]);
 
           if (profileRes.error) throw profileRes.error;

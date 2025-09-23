@@ -1,54 +1,143 @@
-import React, { useState } from "react";
-import { Button, Row, Col, Typography, App as AntApp } from 'antd';
-import { PlusOutlined } from '@ant-design/icons';
+import React, { useState, useEffect } from "react";
+import { Button, Row, Col, Typography, App as AntApp, Spin } from 'antd';
+import { PlusOutlined, CalendarOutlined } from '@ant-design/icons';
+import {
+  getDoctors,
+  createAppointment,
+  initializeDefaultStatuses
+} from "@nam-viet-erp/services";
 import AppointmentCreationModal from "../features/scheduling/components/AppointmentCreationModal";
 import PatientCrmModal from "../features/scheduling/components/PatientCrmModal";
 import SchedulingDashboard from "../features/scheduling/SchedulingDashboard";
 
 const { Title } = Typography;
 
-// Mock data for resources, as it's needed by the modal.
-// Ideally, this would come from a shared service or context.
-const resources = [
-  { id: 'doc1', name: 'BS. Nguyễn Văn Minh' },
-  { id: 'doc2', name: 'BS. Trần Thị Lan' },
-  { id: 'room1', name: 'Phòng Tiêm Chủng' },
-  { id: 'room2', name: 'Phòng Siêu Âm' },
-];
-
 const SchedulingPageContent: React.FC = () => {
   const { notification } = AntApp.useApp();
   const [isCreationModalOpen, setIsCreationModalOpen] = useState(false);
   const [isCrmModalOpen, setIsCrmModalOpen] = useState(false);
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
+  const [resources, setResources] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const handleFinishCreation = (values: any) => {
-    console.log('New Appointment Values:', values);
-    // In a real app, you would now add the new appointment to your state
-    // and call a service to persist it.
-    notification.success({
-      message: 'Tạo lịch hẹn thành công!',
-      description: `Đã tạo lịch hẹn cho ${values.patientName} vào lúc ${values.appointmentTime.format('HH:mm')} ngày ${values.appointmentDate.format('DD/MM/YYYY')}.`,
-    });
-    setIsCreationModalOpen(false);
+  useEffect(() => {
+    const initializeData = async () => {
+      try {
+        // Initialize default appointment statuses
+        await initializeDefaultStatuses();
+
+        // Load doctors as resources
+        const { data: doctors, error } = await getDoctors();
+        if (error) {
+          notification.error({
+            message: 'Lỗi tải dữ liệu',
+            description: 'Không thể tải danh sách bác sĩ'
+          });
+        } else {
+          const doctorResources = doctors?.map(doctor => ({
+            id: doctor.employee_id,
+            name: doctor.full_name,
+            type: 'doctor'
+          })) || [];
+
+          // Add fixed service rooms
+          const serviceRooms = [
+            { id: 'room1', name: 'Phòng Tiêm Chủng', type: 'room' },
+            { id: 'room2', name: 'Phòng Siêu Âm', type: 'room' },
+          ];
+
+          setResources([...doctorResources, ...serviceRooms]);
+        }
+      } catch (error) {
+        notification.error({
+          message: 'Lỗi khởi tạo',
+          description: 'Không thể khởi tạo dữ liệu hệ thống'
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initializeData();
+  }, [notification]);
+
+  const handleFinishCreation = async (values: any) => {
+    try {
+      const appointmentData: Omit<IAppointment, "appointment_id" | "created_at"> = {
+        patient_id: values.patient_id,
+        service_type: values.service_type,
+        scheduled_datetime: `${values.appointmentDate.format('YYYY-MM-DD')}T${values.appointmentTime.format('HH:mm:ss')}`,
+        doctor_id: values.resource_id?.startsWith('doc') ? values.resource_id : null,
+        receptionist_id: null, // Would be filled with current logged in user
+        current_status: "SCHEDULED",
+        reason_for_visit: values.reason_for_visit,
+        check_in_time: null,
+        is_confirmed_by_zalo: false,
+        receptionist_notes: values.notes || null
+      };
+
+      const { data, error } = await createAppointment(appointmentData);
+
+      if (error) {
+        notification.error({
+          message: 'Lỗi tạo lịch hẹn',
+          description: error.message
+        });
+      } else {
+        notification.success({
+          message: 'Tạo lịch hẹn thành công!',
+          description: `Đã tạo lịch hẹn vào lúc ${values.appointmentTime.format('HH:mm')} ngày ${values.appointmentDate.format('DD/MM/YYYY')}.`,
+        });
+        setIsCreationModalOpen(false);
+        // Refresh the dashboard
+        window.location.reload(); // Simple refresh - could be optimized
+      }
+    } catch (error) {
+      notification.error({
+        message: 'Lỗi hệ thống',
+        description: 'Không thể tạo lịch hẹn'
+      });
+    }
   };
 
-  const handleAppointmentClick = (patientId: string) => {
-    setSelectedPatientId(patientId);
+  const handleAppointmentClick = (appointmentId: string) => {
+    setSelectedPatientId(appointmentId);
     setIsCrmModalOpen(true);
   };
 
+  if (loading) {
+    return (
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        minHeight: '400px'
+      }}>
+        <Spin size="large" />
+      </div>
+    );
+  }
+
   return (
     <>
-      <Row justify="space-between" align="middle" style={{ marginBottom: 24, padding: '0 24px' }}>
+      <Row justify="space-between" align="middle" style={{ marginBottom: 24 }}>
         <Col>
-          <Title level={2}>Lịch làm việc</Title>
+          <Title level={2} style={{ margin: 0 }}>
+            <CalendarOutlined style={{ marginRight: 8 }} />
+            Lịch Hẹn & Đặt Lịch
+          </Title>
         </Col>
         <Col>
           <Button
             type="primary"
+            size="large"
             icon={<PlusOutlined />}
             onClick={() => setIsCreationModalOpen(true)}
+            style={{
+              background: 'linear-gradient(45deg, #1890ff, #40a9ff)',
+              border: 'none',
+              boxShadow: '0 4px 15px 0 rgba(24, 144, 255, 0.4)'
+            }}
           >
             Tạo lịch hẹn mới
           </Button>

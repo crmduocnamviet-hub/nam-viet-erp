@@ -26,7 +26,7 @@ const ResourceColumn: React.FC<ResourceColumnProps> = ({ resource, appointments,
   return (
     <Card
       style={{ height: '100%', backgroundColor: '#f7f7f7' }}
-      bodyStyle={{ padding: 8, height: '100%', overflowY: 'auto' }}
+      styles={{ body: { padding: 8, height: '100%', overflowY: 'auto' } }}
     >
       <Title level={5} style={{ textAlign: 'center', marginBottom: 16 }}>
         {resource.name}

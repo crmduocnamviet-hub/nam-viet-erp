@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Modal, Steps, Button, Form, Input, AutoComplete, Select, DatePicker, Row, Col, Result, Typography, TimePicker, Space, Card, List, Spin, Checkbox } from 'antd';
 import { UserOutlined, SolutionOutlined, ClockCircleOutlined, CheckCircleOutlined, PlusCircleOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { searchProfiles, getAppointments } from '@nam-viet-erp/services';
+import { getPatients, getAppointments } from '@nam-viet-erp/services';
 import { useDebounce } from '../../../hooks/useDebounce';
 
 const { Step } = Steps;
@@ -64,18 +64,21 @@ const AppointmentCreationModal: React.FC<AppointmentCreationModalProps> = ({ ope
     const performSearch = async () => {
         if (debouncedSearchTerm) {
             setSearching(true);
-            const { data, error } = await searchProfiles(debouncedSearchTerm);
+            const { data, error } = await getPatients({
+              search: debouncedSearchTerm,
+              limit: 10
+            });
             if (error) {
                 // Handle error, maybe show a notification
                 setPatientOptions([]);
             } else {
-                const options: PatientOption[] = data.map((p: any) => ({
-                    value: p.id,
+                const options: PatientOption[] = data?.map((p: any) => ({
+                    value: p.patient_id,
                     label: (
                         <div>
                             <Text strong>{p.full_name}</Text>
                             <br />
-                            <Text type="secondary">{p.phone}</Text>
+                            <Text type="secondary">{p.phone_number}</Text>
                         </div>
                     ),
                     patient: p,
@@ -105,7 +108,7 @@ const AppointmentCreationModal: React.FC<AppointmentCreationModalProps> = ({ ope
   React.useEffect(() => {
     if (selectedResourceId && open) {
       setLoadingAppointments(true);
-      getAppointments({ resourceId: selectedResourceId })
+      getAppointments({ doctorId: selectedResourceId })
         .then(({ data }) => {
           setAppointments(data || []);
         })
@@ -129,7 +132,7 @@ const AppointmentCreationModal: React.FC<AppointmentCreationModalProps> = ({ ope
       const patient = option.patient;
       if (patient) {
           setSelectedPatient(patient);
-          form.setFieldsValue({ patientName: patient.full_name, patientPhone: patient.phone });
+          form.setFieldsValue({ patientName: patient.full_name, patientPhone: patient.phone_number });
       }
   }
 
@@ -259,10 +262,21 @@ const AppointmentCreationModal: React.FC<AppointmentCreationModalProps> = ({ ope
 
   const handleNext = async () => {
     try {
-      await form.validateFields();
+      // Define fields to validate for each step
+      const fieldsToValidate = [
+        ['patientName', 'patientPhone'], // Step 0: Patient info
+        ['service', 'resourceId'],       // Step 1: Service info
+        ['appointmentDate', 'appointmentTime'], // Step 2: Time info
+        [] // Step 3: Confirmation (no new fields to validate)
+      ];
+
+      if (currentStep < fieldsToValidate.length) {
+        await form.validateFields(fieldsToValidate[currentStep]);
+      }
       setCurrentStep(currentStep + 1);
-    } catch {
+    } catch (error) {
       // Errors will be displayed on the form fields
+      console.log('Validation failed:', error);
     }
   };
 
@@ -288,7 +302,6 @@ const AppointmentCreationModal: React.FC<AppointmentCreationModalProps> = ({ ope
       title="Tạo Lịch hẹn mới (4 bước Siêu tốc)"
       onCancel={onClose}
       width={800}
-      destroyOnClose
       footer={
         <Space>
           <Button onClick={onClose}>Hủy</Button>
@@ -324,20 +337,42 @@ const AppointmentCreationModal: React.FC<AppointmentCreationModalProps> = ({ ope
   );
 };
 
+// Define interface for form values
+interface AppointmentFormValues {
+    patientName?: string;
+    patientPhone?: string;
+    service?: string;
+    resourceId?: string;
+    appointmentDate?: any;
+    appointmentTime?: any;
+    notes?: string;
+    sendConfirmation?: boolean;
+}
+
 // Confirmation Step Component
 const ConfirmationStep = ({ form, resources }: { form: any, resources: any[] }) => {
-    const values = Form.useWatch([], form);
-    if (!values) return null;
+    const values = Form.useWatch([], form) as AppointmentFormValues || {};
 
-    const resourceName = resources.find(r => r.id === values.resourceId)?.name || 'N/A';
+    // Service name mapping
+    const getServiceName = (serviceValue?: string) => {
+        const serviceMap: { [key: string]: string } = {
+            'general': 'Khám tổng quát',
+            'specialist': 'Khám chuyên khoa',
+            'vaccine': 'Tiêm chủng',
+            'ultrasound': 'Siêu âm'
+        };
+        return serviceValue ? (serviceMap[serviceValue] || serviceValue) : 'Chưa chọn';
+    };
+
+    const resourceName = resources.find(r => r.id === values.resourceId)?.name || 'Chưa chọn';
     const appointmentDateTime = values.appointmentDate && values.appointmentTime
         ? `${values.appointmentDate.format('DD/MM/YYYY')} lúc ${values.appointmentTime.format('HH:mm')}`
         : 'Chưa chọn';
 
     const items = [
-        { label: 'Bệnh nhân', value: values.patientName },
-        { label: 'Số điện thoại', value: values.patientPhone },
-        { label: 'Dịch vụ', value: values.service },
+        { label: 'Bệnh nhân', value: values.patientName || 'Chưa nhập' },
+        { label: 'Số điện thoại', value: values.patientPhone || 'Chưa nhập' },
+        { label: 'Dịch vụ', value: getServiceName(values.service) },
         { label: 'Bác sĩ/Phòng', value: resourceName },
         { label: 'Thời gian', value: appointmentDateTime },
     ];
@@ -353,16 +388,28 @@ const ConfirmationStep = ({ form, resources }: { form: any, resources: any[] }) 
                     dataSource={items}
                     renderItem={item => (
                         <List.Item>
-                            <List.Item.Meta title={item.label} description={item.value} />
+                            <List.Item.Meta
+                                title={<Text strong>{item.label}</Text>}
+                                description={
+                                    <Text style={{
+                                        color: item.value === 'Chưa chọn' || item.value === 'Chưa nhập' ? '#ff4d4f' : '#000',
+                                        fontSize: '14px'
+                                    }}>
+                                        {item.value || 'Chưa nhập'}
+                                    </Text>
+                                }
+                            />
                         </List.Item>
                     )}
                 />
-                 <Form.Item name="notes" label="Ghi chú">
-                    <Input.TextArea rows={3} placeholder="Thêm ghi chú cho cuộc hẹn..." />
-                </Form.Item>
-                <Form.Item name="sendConfirmation" valuePropName="checked">
-                    <Checkbox>Gửi SMS/Zalo xác nhận cho khách hàng</Checkbox>
-                </Form.Item>
+                <div style={{ marginTop: 16 }}>
+                    <Form.Item name="notes" label="Ghi chú">
+                        <Input.TextArea rows={3} placeholder="Thêm ghi chú cho cuộc hẹn..." />
+                    </Form.Item>
+                    <Form.Item name="sendConfirmation" valuePropName="checked">
+                        <Checkbox>Gửi SMS/Zalo xác nhận cho khách hàng</Checkbox>
+                    </Form.Item>
+                </div>
             </Result>
         </Card>
     );

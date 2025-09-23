@@ -8,7 +8,8 @@ import {
   SettingOutlined,
   UsergroupAddOutlined,
   MenuOutlined,
-  RocketOutlined, // <-- IMPORT ICON MỚI
+  RocketOutlined,
+  UserOutlined, // <-- IMPORT ICON MỚI
 } from "@ant-design/icons";
 import type { MenuProps } from "antd";
 import { Routes, Route, useNavigate } from "react-router-dom";
@@ -46,6 +47,7 @@ import CustomerSegments from "../pages/marketing/CustomerSegments";
 import ContentLibrary from "../pages/marketing/ContentLibrary";
 import ChatbotManagement from "../pages/marketing/ChatbotManagement";
 import MissingDocumentationWarning from "./MissingDocumentationWarning";
+import EmployeesPage from "../pages/EmployeesPage";
 
 const { Header, Content, Footer, Sider } = Layout;
 const { Title } = Typography;
@@ -95,6 +97,14 @@ const menuItems: MenuProps["items"] = [
     key: "partners",
     icon: <UsergroupAddOutlined />,
     children: [{ label: "Nhà Cung Cấp", key: "/suppliers" }],
+  },
+  {
+    label: "Nhân sự",
+    key: "hr",
+    icon: <UserOutlined />,
+    children: [
+      { label: "Quản lý Nhân viên", key: "/employees" },
+    ],
   },
   {
     label: "Tài chính",
@@ -323,6 +333,9 @@ const AppLayout: React.FC = () => {
                 <Route path="/cash-ledger" element={<CashLedger />} />
                 <Route path="/settings/funds" element={<FundManagement />} />
                 <Route path="/purchase-orders" element={<PurchaseOrders />} />
+
+                {/* --- ROUTE CHO MODULE NHÂN SỰ --- */}
+                <Route path="/employees" element={<EmployeesPage />} />
 
                 {/* --- THÊM ROUTE CHO MODULE MARKETING --- */}
                 <Route

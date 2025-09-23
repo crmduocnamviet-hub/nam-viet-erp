@@ -9,7 +9,9 @@
       "Bash(npx eslint:*)",
       "Bash(yarn type-check)",
       "Bash(yarn tsc:*)",
-      "Bash(cp:*)"
+      "Bash(cp:*)",
+      "Bash(npm run typecheck:cms:*)",
+      "Bash(npm run build:*)"
     ],
     "deny": [],
     "ask": []

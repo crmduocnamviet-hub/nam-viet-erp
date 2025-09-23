@@ -7,14 +7,6 @@ import PatientCrmModal from "../features/scheduling/components/PatientCrmModal";
 
 const { Title } = Typography;
 
-// Mock data for resources, as it's needed by the modal.
-// Ideally, this would come from a shared service or context.
-const resources = [
-  { id: 'doc1', name: 'BS. Nguyễn Văn Minh' },
-  { id: 'doc2', name: 'BS. Trần Thị Lan' },
-  { id: 'room1', name: 'Phòng Tiêm Chủng' },
-  { id: 'room2', name: 'Phòng Siêu Âm' },
-];
 
 const DashboardPageContent: React.FC = () => {
   const { notification } = AntApp.useApp();
@@ -59,7 +51,6 @@ const DashboardPageContent: React.FC = () => {
         open={isCreationModalOpen}
         onClose={() => setIsCreationModalOpen(false)}
         onFinish={handleFinishCreation}
-        resources={resources}
       />
       <PatientCrmModal
         open={isCrmModalOpen}

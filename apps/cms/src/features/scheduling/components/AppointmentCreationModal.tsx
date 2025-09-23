@@ -2,7 +2,18 @@ import React, { useState } from 'react';
 import { Modal, Steps, Button, Form, Input, AutoComplete, Select, DatePicker, Row, Col, Result, Typography, TimePicker, Space, Card, List, Spin, Checkbox } from 'antd';
 import { UserOutlined, SolutionOutlined, ClockCircleOutlined, CheckCircleOutlined, PlusCircleOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { searchProfiles, getAppointments } from '@nam-viet-erp/services';
+import { getPatients, getAppointments, getEmployees } from '@nam-viet-erp/services';
+
+interface AppointmentFormValues {
+  patientName?: string;
+  patientPhone?: string;
+  service?: string;
+  resourceId?: string;
+  appointmentDate?: any;
+  appointmentTime?: any;
+  notes?: string;
+  sendConfirmation?: boolean;
+}
 import { useDebounce } from '../../../hooks/useDebounce';
 
 const { Step } = Steps;
@@ -12,7 +23,6 @@ interface AppointmentCreationModalProps {
   open: boolean;
   onClose: () => void;
   onFinish: (values: any) => void;
-  resources: any[]; // Pass resources from dashboard
 }
 
 // This is the option type for the AutoComplete
@@ -23,48 +33,72 @@ interface PatientOption {
 }
 
 
-const AppointmentCreationModal: React.FC<AppointmentCreationModalProps> = ({ open, onClose, onFinish, resources }) => {
+const AppointmentCreationModal: React.FC<AppointmentCreationModalProps> = ({ open, onClose, onFinish }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [form] = Form.useForm();
   const [patientOptions, setPatientOptions] = useState<PatientOption[]>([]);
   const [searching, setSearching] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPatient, setSelectedPatient] = useState<any | null>(null);
-  const [availableResources, setAvailableResources] = useState<any[]>(resources);
+  const [doctors, setDoctors] = useState<IEmployee[]>([]);
+  const [availableResources, setAvailableResources] = useState<IEmployee[]>([]);
   const [appointments, setAppointments] = useState<any[]>([]);
   const [loadingAppointments, setLoadingAppointments] = useState(false);
+  const [loadingDoctors, setLoadingDoctors] = useState(false);
 
   const debouncedSearchTerm = useDebounce(searchTerm, 500);
   const selectedService = Form.useWatch('service', form);
   const selectedResourceId = Form.useWatch('resourceId', form);
   const selectedDate = Form.useWatch('appointmentDate', form);
 
+  // Load doctors when modal opens
   React.useEffect(() => {
-    // In a real app, this mapping would come from a database or a config file.
-    const serviceResourceMap: { [key: string]: string[] } = {
-      'general': ['doc1', 'doc2'],
-      'specialist': ['doc1', 'doc2'],
-      'vaccine': ['room1'],
-      'ultrasound': ['room2'],
-    };
+    if (open) {
+      const loadDoctors = async () => {
+        try {
+          setLoadingDoctors(true);
+          const { data, error } = await getEmployees({
+            roleName: 'BacSi', // Only load doctors
+            limit: 50
+          });
+          if (error) {
+            console.error('Error loading doctors:', error);
+          } else {
+            setDoctors(data || []);
+            setAvailableResources(data || []);
+          }
+        } catch (error) {
+          console.error('Error loading doctors:', error);
+        } finally {
+          setLoadingDoctors(false);
+        }
+      };
+      loadDoctors();
+    }
+  }, [open]);
 
+  React.useEffect(() => {
+    // For now, all doctors can handle all services
+    // In a real app, you might filter doctors based on their specialization
     if (selectedService) {
-        const resourceIds = serviceResourceMap[selectedService] || [];
-        const filtered = resources.filter(r => resourceIds.includes(r.id));
-        setAvailableResources(filtered);
+        // All doctors can handle all services for now
+        setAvailableResources(doctors);
         // Reset the selected resource when the service changes to avoid inconsistency.
         form.setFieldsValue({ resourceId: undefined });
     } else {
-        setAvailableResources(resources);
+        setAvailableResources(doctors);
     }
-  }, [selectedService, resources, form]);
+  }, [selectedService, doctors, form]);
 
 
   React.useEffect(() => {
     const performSearch = async () => {
         if (debouncedSearchTerm) {
             setSearching(true);
-            const { data, error } = await searchProfiles(debouncedSearchTerm);
+            const { data, error } = await getPatients({
+                search: debouncedSearchTerm,
+                limit: 10
+            });
             if (error) {
                 // Handle error, maybe show a notification
                 setPatientOptions([]);
@@ -105,7 +139,7 @@ const AppointmentCreationModal: React.FC<AppointmentCreationModalProps> = ({ ope
   React.useEffect(() => {
     if (selectedResourceId && open) {
       setLoadingAppointments(true);
-      getAppointments({ resourceId: selectedResourceId })
+      getAppointments({ doctorId: selectedResourceId })
         .then(({ data }) => {
           setAppointments(data || []);
         })
@@ -223,8 +257,8 @@ const AppointmentCreationModal: React.FC<AppointmentCreationModalProps> = ({ ope
             </Select>
           </Form.Item>
           <Form.Item name="resourceId" label="Chọn bác sĩ/phòng" rules={[{ required: true, message: 'Vui lòng chọn nguồn lực' }]}>
-            <Select placeholder="Chọn bác sĩ hoặc phòng khám" disabled={!selectedService}>
-              {availableResources.map(r => <Select.Option key={r.id} value={r.id}>{r.name}</Select.Option>)}
+            <Select placeholder="Chọn bác sĩ hoặc phòng khám" disabled={!selectedService || loadingDoctors}>
+              {availableResources.map(r => <Select.Option key={r.employee_id} value={r.employee_id}>{r.full_name}</Select.Option>)}
             </Select>
           </Form.Item>
         </>
@@ -252,7 +286,7 @@ const AppointmentCreationModal: React.FC<AppointmentCreationModalProps> = ({ ope
       title: 'Xác nhận & Ghi chú',
       icon: <CheckCircleOutlined />,
       content: (
-        <ConfirmationStep form={form} resources={resources} />
+        <ConfirmationStep form={form} resources={availableResources} />
       ),
     },
   ];
@@ -288,7 +322,7 @@ const AppointmentCreationModal: React.FC<AppointmentCreationModalProps> = ({ ope
       title="Tạo Lịch hẹn mới (4 bước Siêu tốc)"
       onCancel={onClose}
       width={800}
-      destroyOnClose
+      destroyOnClose={true}
       footer={
         <Space>
           <Button onClick={onClose}>Hủy</Button>
@@ -325,19 +359,28 @@ const AppointmentCreationModal: React.FC<AppointmentCreationModalProps> = ({ ope
 };
 
 // Confirmation Step Component
-const ConfirmationStep = ({ form, resources }: { form: any, resources: any[] }) => {
-    const values = Form.useWatch([], form);
-    if (!values) return null;
+const ConfirmationStep = ({ form, resources }: { form: any, resources: IEmployee[] }) => {
+    const values: AppointmentFormValues = Form.useWatch([], form) || {};
 
-    const resourceName = resources.find(r => r.id === values.resourceId)?.name || 'N/A';
+    const resourceName = resources.find(r => r.employee_id === values.resourceId)?.full_name || 'N/A';
     const appointmentDateTime = values.appointmentDate && values.appointmentTime
         ? `${values.appointmentDate.format('DD/MM/YYYY')} lúc ${values.appointmentTime.format('HH:mm')}`
         : 'Chưa chọn';
 
+    const getServiceName = (service?: string) => {
+        switch (service) {
+            case 'general': return 'Khám tổng quát';
+            case 'specialist': return 'Khám chuyên khoa';
+            case 'vaccine': return 'Tiêm chủng';
+            case 'ultrasound': return 'Siêu âm';
+            default: return service || 'Chưa chọn';
+        }
+    };
+
     const items = [
-        { label: 'Bệnh nhân', value: values.patientName },
-        { label: 'Số điện thoại', value: values.patientPhone },
-        { label: 'Dịch vụ', value: values.service },
+        { label: 'Bệnh nhân', value: values.patientName || 'Chưa nhập' },
+        { label: 'Số điện thoại', value: values.patientPhone || 'Chưa nhập' },
+        { label: 'Dịch vụ', value: getServiceName(values.service) },
         { label: 'Bác sĩ/Phòng', value: resourceName },
         { label: 'Thời gian', value: appointmentDateTime },
     ];

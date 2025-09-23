@@ -33,6 +33,7 @@ interface IProduct {
   route: string | null;
   supplier_id: number | null;
   shelf_location: string | null;
+  stock_quantity?: number;
 }
 
 interface IPromotion {
@@ -210,4 +211,114 @@ interface IPurchaseWithInventory {
   hdsd_2_6: string;
   hdsd_6_18: string;
   hdsd_over_18: string;
+}
+
+// === SCHEDULING & MEDICAL MODULE INTERFACES ===
+
+// Patient/Customer Management - Quản lý Khách hàng/Bệnh nhân
+interface IPatient {
+  patient_id: string;
+  full_name: string;
+  phone_number: string | null;
+  date_of_birth: string | null;
+  gender: string | null;
+  is_b2b_customer: boolean; // Phân biệt Khách lẻ/Bệnh nhân và Khách buôn
+  loyalty_points: number;
+  allergy_notes: string | null; // Dị ứng đã biết
+  chronic_diseases: string | null; // Bệnh nền/Bệnh mãn tính
+  created_at: string;
+}
+
+// Employee Management - Quản lý Nhân sự (Bác sĩ, Dược sĩ, Lễ tân)
+interface IEmployee {
+  employee_id: string;
+  full_name: string;
+  employee_code: string | null;
+  role_name: string; // 'BacSi', 'DuocSi', 'LeTan'
+  is_active: boolean;
+}
+
+// Appointment Status Lookup - Bảng tra cứu Trạng thái Lịch hẹn
+interface IAppointmentStatus {
+  status_code: string;
+  status_name_vn: string;
+  color_code: string | null; // Mã hóa màu sắc trên Dashboard
+}
+
+// Appointment Details - Chi tiết các Lịch hẹn
+interface IAppointment {
+  appointment_id: string;
+  patient_id: string;
+  service_type: string | null; // Khám Bệnh | Tiêm Chủng | Siêu âm
+  scheduled_datetime: string;
+  doctor_id: string | null; // Bác sĩ/Tài nguyên được đặt lịch
+  receptionist_id: string | null; // Lễ tân tạo lịch
+  current_status: string; // Xám, Xanh Lá, Tím, v.v.
+  reason_for_visit: string | null;
+  check_in_time: string | null; // Thời gian Lễ tân Check-in
+  is_confirmed_by_zalo: boolean; // Đã gửi SMS/Zalo xác nhận
+  receptionist_notes: string | null; // Ghi chú Lễ tân: "Bệnh nhân VIP", "Thường xuyên đến trễ"
+  created_at: string;
+}
+
+// Medical Visit Records - Hồ sơ lần Khám Bệnh (EMR) theo mô hình SOAP
+interface IMedicalVisit {
+  visit_id: string;
+  appointment_id: string | null; // Liên kết với lịch hẹn
+  patient_id: string;
+  doctor_id: string;
+  visit_date: string;
+  subjective_notes: string | null; // Phần S: Bệnh sử
+  objective_notes: string | null; // Phần O: Thăm khám thực thể
+  vital_signs: Record<string, any> | null; // Dấu hiệu sinh tồn (Nhiệt độ, HA, Mạch)
+  assessment_diagnosis_icd10: string | null; // Phần A: Mã ICD-10
+  plan_notes: string | null; // Phần P: Kế hoạch xử trí chung
+  is_signed_off: boolean; // Đã Hoàn tất & Ký số
+  signed_off_at: string | null;
+}
+
+// Laboratory Orders - Chỉ định Cận lâm sàng/Xét nghiệm
+interface ILabOrder {
+  order_id: string;
+  visit_id: string;
+  service_name: string; // Tên dịch vụ: X-Quang, Công thức máu
+  preliminary_diagnosis: string | null; // Chẩn đoán sơ bộ (quan trọng cho phòng ban khác)
+  is_executed: boolean; // Đã thực hiện
+  result_received_at: string | null; // Thời gian nhận kết quả (để gửi vào Hộp thư Kết quả)
+}
+
+// Electronic Prescription - Chi tiết Đơn thuốc điện tử
+interface IPrescription {
+  prescription_item_id: string;
+  visit_id: string;
+  product_id: string; // Thuốc được kê
+  quantity_ordered: number;
+  dosage_instruction: string | null; // Hướng dẫn sử dụng: 'Ngày 2 lần, mỗi lần 1 viên sau ăn'
+  ai_interaction_warning: string | null; // Cảnh báo Tương tác Thuốc từ AI
+}
+
+// Sales Order - Đơn hàng bán lẻ/POS tích hợp với phòng khám
+interface ISalesOrder {
+  order_id: string;
+  patient_id: string | null; // Khách hàng mua
+  medical_visit_id: string | null; // Đơn hàng được tạo từ lần khám
+  order_type: string; // 'POS', 'B2B', 'TMDT'
+  created_by_employee_id: string | null;
+  order_datetime: string;
+  total_value: number;
+  payment_method: string | null; // Tiền mặt, Thẻ, Chuyển khoản
+  payment_status: string | null; // Đã thanh toán, Thanh toán thiếu, Chờ thanh toán
+  operational_status: string; // Hoàn tất, Đã hủy
+  is_ai_checked: boolean; // Đã được AI Kiểm tra tương tác thuốc/tính ngày dùng thuốc
+}
+
+// Sales Order Items - Chi tiết sản phẩm trong đơn hàng
+interface ISalesOrderItem {
+  item_id: string;
+  order_id: string;
+  product_id: number;
+  quantity: number;
+  unit_price: number;
+  is_service: boolean; // Phân biệt sản phẩm vật lý và phí dịch vụ (Phí khám)
+  dosage_printed: string | null; // Hướng dẫn sử dụng in ra bill K80
 }

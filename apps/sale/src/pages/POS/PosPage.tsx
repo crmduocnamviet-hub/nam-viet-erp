@@ -17,6 +17,9 @@ import {
   Tag,
   Badge,
   Tooltip,
+  Modal,
+  Form,
+  DatePicker,
 } from 'antd';
 import {
   UserOutlined,
@@ -28,12 +31,17 @@ import {
   CreditCardOutlined,
   QrcodeOutlined,
   DollarOutlined,
+  WarningOutlined,
 } from '@ant-design/icons';
 import { useDebounce } from '../../hooks/useDebounce';
 import {
   processSaleTransaction,
   searchProducts,
   getActivePromotions,
+  getPatients,
+  createPatient,
+  getPrescriptionsByVisitId,
+  getMedicalVisits,
 } from '@nam-viet-erp/services';
 import PaymentModal from '../../features/pos/components/PaymentModal';
 import type {
@@ -66,8 +74,28 @@ const PosPage: React.FC = () => {
   const [selectedLocation, setSelectedLocation] = useState('dh1');
   const [promotions, setPromotions] = useState<IPromotion[]>([]);
 
+  // Customer management
+  const [selectedCustomer, setSelectedCustomer] = useState<IPatient | null>(null);
+  const [customerSearchTerm, setCustomerSearchTerm] = useState('');
+  const [customerSearchResults, setCustomerSearchResults] = useState<IPatient[]>([]);
+  const [isSearchingCustomers, setIsSearchingCustomers] = useState(false);
+  const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
+
+  // Prescription integration
+  const [prescriptionMode, setPrescriptionMode] = useState(false);
+  const [patientVisits, setPatientVisits] = useState<any[]>([]);
+  const [selectedVisit, setSelectedVisit] = useState<any>(null);
+  const [availablePrescriptions, setAvailablePrescriptions] = useState<any[]>([]);
+  const [loadingPrescriptions, setLoadingPrescriptions] = useState(false);
+
+  // Create customer modal
+  const [isCreateCustomerModalOpen, setIsCreateCustomerModalOpen] = useState(false);
+  const [createCustomerForm] = Form.useForm();
+  const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
+
   const { warehouseId, fundId } = WAREHOUSE_MAP[selectedLocation];
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
+  const debouncedCustomerSearchTerm = useDebounce(customerSearchTerm, 300);
 
   useEffect(() => {
     const fetchPromos = async () => {
@@ -167,6 +195,76 @@ const PosPage: React.FC = () => {
     }
   }, [debouncedSearchTerm, notification]);
 
+  useEffect(() => {
+    if (debouncedCustomerSearchTerm) {
+      setIsSearchingCustomers(true);
+      getPatients({ search: debouncedCustomerSearchTerm, limit: 10 })
+        .then(({ data, error }) => {
+          if (error) {
+            notification.error({ message: 'Lỗi tìm kiếm khách hàng', description: error.message });
+            setCustomerSearchResults([]);
+          } else {
+            setCustomerSearchResults(data || []);
+            setShowCustomerDropdown(true);
+          }
+        })
+        .finally(() => setIsSearchingCustomers(false));
+    } else {
+      setCustomerSearchResults([]);
+      setShowCustomerDropdown(false);
+    }
+  }, [debouncedCustomerSearchTerm, notification]);
+
+  // Load patient visits when customer is selected
+  useEffect(() => {
+    if (selectedCustomer && prescriptionMode) {
+      const loadPatientVisits = async () => {
+        try {
+          const { data, error } = await getMedicalVisits({
+            patientId: selectedCustomer.patient_id,
+            limit: 10
+          });
+          if (error) {
+            notification.error({ message: 'Lỗi tải lịch sử khám', description: error.message });
+          } else {
+            setPatientVisits(data || []);
+          }
+        } catch (error) {
+          notification.error({ message: 'Lỗi hệ thống', description: 'Không thể tải lịch sử khám bệnh' });
+        }
+      };
+      loadPatientVisits();
+    } else {
+      setPatientVisits([]);
+      setSelectedVisit(null);
+      setAvailablePrescriptions([]);
+    }
+  }, [selectedCustomer, prescriptionMode, notification]);
+
+  // Load prescriptions when visit is selected
+  useEffect(() => {
+    if (selectedVisit) {
+      const loadPrescriptions = async () => {
+        try {
+          setLoadingPrescriptions(true);
+          const { data, error } = await getPrescriptionsByVisitId(selectedVisit.visit_id);
+          if (error) {
+            notification.error({ message: 'Lỗi tải đơn thuốc', description: error.message });
+          } else {
+            setAvailablePrescriptions(data || []);
+          }
+        } catch (error) {
+          notification.error({ message: 'Lỗi hệ thống', description: 'Không thể tải đơn thuốc' });
+        } finally {
+          setLoadingPrescriptions(false);
+        }
+      };
+      loadPrescriptions();
+    } else {
+      setAvailablePrescriptions([]);
+    }
+  }, [selectedVisit, notification]);
+
   // Cart Handlers
   const handleAddToCart = (product: IProduct) => {
     setCart((prevCart) => {
@@ -184,6 +282,82 @@ const PosPage: React.FC = () => {
     });
     setSearchTerm('');
     setSearchResults([]);
+  };
+
+  const handleAddPrescriptionToCart = (prescription: any) => {
+    const product = prescription.products;
+    if (!product) return;
+
+    setCart((prevCart) => {
+      const existingItem = prevCart.find((item) => item.id === product.id);
+      const prescribedQuantity = prescription.quantity_ordered;
+
+      if (existingItem) {
+        return prevCart.map((item) =>
+          item.id === product.id
+            ? { ...item, quantity: item.quantity + prescribedQuantity }
+            : item
+        );
+      } else {
+        const priceInfo = calculateBestPrice(product, promotions);
+        return [...prevCart, {
+          ...product,
+          quantity: prescribedQuantity,
+          ...priceInfo,
+          prescriptionNote: prescription.dosage_instruction
+        }];
+      }
+    });
+  };
+
+  const handleTogglePrescriptionMode = () => {
+    setPrescriptionMode(!prescriptionMode);
+    if (!prescriptionMode) {
+      // Entering prescription mode
+      if (!selectedCustomer) {
+        notification.info({ message: 'Vui lòng chọn bệnh nhân trước khi sử dụng chế độ đơn thuốc' });
+      }
+    }
+  };
+
+  const handleCreateCustomer = async (values: any) => {
+    try {
+      setIsCreatingCustomer(true);
+      const customerData: Omit<IPatient, "patient_id" | "created_at"> = {
+        full_name: values.full_name,
+        phone_number: values.phone_number,
+        date_of_birth: values.date_of_birth?.format('YYYY-MM-DD') || null,
+        gender: values.gender || null,
+        is_b2b_customer: values.is_b2b_customer || false,
+        loyalty_points: 0,
+        allergy_notes: values.allergy_notes || null,
+        chronic_diseases: values.chronic_diseases || null,
+      };
+
+      const { data, error } = await createPatient(customerData);
+
+      if (error) {
+        notification.error({
+          message: 'Lỗi tạo khách hàng',
+          description: error.message,
+        });
+      } else {
+        notification.success({
+          message: 'Tạo khách hàng thành công!',
+          description: `Đã tạo khách hàng ${values.full_name}`,
+        });
+        setSelectedCustomer(data);
+        setIsCreateCustomerModalOpen(false);
+        createCustomerForm.resetFields();
+      }
+    } catch (error) {
+      notification.error({
+        message: 'Lỗi hệ thống',
+        description: 'Không thể tạo khách hàng mới',
+      });
+    } finally {
+      setIsCreatingCustomer(false);
+    }
   };
 
   const handleRemoveFromCart = (productId: number) => {
@@ -269,20 +443,34 @@ const PosPage: React.FC = () => {
       <Row style={{ marginBottom: 16 }}>
         <Col span={12}>
           <Title level={2} style={{ margin: 0 }}>
-            POS Bán Lẻ
+POS Bán Lẻ & Thống kê
           </Title>
         </Col>
         <Col span={12} style={{ textAlign: 'right' }}>
-          <Select
-            value={selectedLocation}
-            onChange={setSelectedLocation}
-            size="large"
-            style={{ width: 200 }}
-            placeholder="Chọn cửa hàng"
-          >
-            <Select.Option value="dh1">🏪 Nhà thuốc DH1</Select.Option>
-            <Select.Option value="dh2">🏪 Nhà thuốc DH2</Select.Option>
-          </Select>
+          <Space>
+            <Button
+              type="default"
+              onClick={() => {
+                notification.info({
+                  message: 'Thống kê bán hàng',
+                  description: `Tổng đơn hàng hôm nay: ${cart.length} | Tổng doanh thu: ${cartDetails.itemTotal.toLocaleString()}đ`,
+                  duration: 5
+                });
+              }}
+            >
+              📊 Thống kê
+            </Button>
+            <Select
+              value={selectedLocation}
+              onChange={setSelectedLocation}
+              size="large"
+              style={{ width: 200 }}
+              placeholder="Chọn cửa hàng"
+            >
+              <Select.Option value="dh1">🏪 Nhà thuốc DH1</Select.Option>
+              <Select.Option value="dh2">🏪 Nhà thuốc DH2</Select.Option>
+            </Select>
+          </Space>
         </Col>
       </Row>
 
@@ -299,19 +487,93 @@ const PosPage: React.FC = () => {
               size="small"
               style={{ borderRadius: 8 }}
             >
-              <Search
-                placeholder="Tìm khách hàng (SĐT)..."
-                enterButton={<SearchOutlined />}
-                style={{ marginBottom: 16 }}
-              />
+              <div style={{ position: 'relative' }}>
+                <Search
+                  placeholder="Tìm khách hàng (SĐT hoặc tên)..."
+                  enterButton={<SearchOutlined />}
+                  style={{ marginBottom: 16 }}
+                  value={customerSearchTerm}
+                  onChange={(e) => setCustomerSearchTerm(e.target.value)}
+                  loading={isSearchingCustomers}
+                />
+                {showCustomerDropdown && customerSearchResults.length > 0 && (
+                  <Card
+                    size="small"
+                    style={{
+                      position: 'absolute',
+                      top: '100%',
+                      left: 0,
+                      right: 0,
+                      zIndex: 1000,
+                      maxHeight: 200,
+                      overflow: 'auto'
+                    }}
+                  >
+                    <List
+                      size="small"
+                      dataSource={customerSearchResults}
+                      renderItem={(customer) => (
+                        <List.Item
+                          style={{ cursor: 'pointer', padding: '8px 12px' }}
+                          onClick={() => {
+                            setSelectedCustomer(customer);
+                            setCustomerSearchTerm('');
+                            setShowCustomerDropdown(false);
+                          }}
+                        >
+                          <div>
+                            <Text strong>{customer.full_name}</Text>
+                            <br />
+                            <Text type="secondary">{customer.phone_number}</Text>
+                            {customer.loyalty_points > 0 && (
+                              <Tag color="gold" style={{ marginLeft: 8 }}>
+                                {customer.loyalty_points} điểm
+                              </Tag>
+                            )}
+                          </div>
+                        </List.Item>
+                      )}
+                    />
+                  </Card>
+                )}
+              </div>
               <Space align="center">
-                <Avatar size={48} icon={<UserOutlined />} style={{ backgroundColor: '#1890ff' }} />
+                <Avatar
+                  size={48}
+                  icon={<UserOutlined />}
+                  style={{
+                    backgroundColor: selectedCustomer ? '#52c41a' : '#1890ff'
+                  }}
+                />
                 <div>
-                  <Text strong style={{ fontSize: 16 }}>Khách vãng lai</Text>
+                  <Text strong style={{ fontSize: 16 }}>
+                    {selectedCustomer ? selectedCustomer.full_name : 'Khách vãng lai'}
+                  </Text>
                   <br />
-                  <Button type="link" style={{ padding: 0, height: 'auto' }}>
-                    + Tạo khách hàng mới
-                  </Button>
+                  {selectedCustomer ? (
+                    <Space>
+                      <Text type="secondary">{selectedCustomer.phone_number}</Text>
+                      {selectedCustomer.loyalty_points > 0 && (
+                        <Tag color="gold">{selectedCustomer.loyalty_points} điểm</Tag>
+                      )}
+                      <Button
+                        type="link"
+                        size="small"
+                        style={{ padding: 0, height: 'auto' }}
+                        onClick={() => setSelectedCustomer(null)}
+                      >
+                        Bỏ chọn
+                      </Button>
+                    </Space>
+                  ) : (
+                    <Button
+                      type="link"
+                      style={{ padding: 0, height: 'auto' }}
+                      onClick={() => setIsCreateCustomerModalOpen(true)}
+                    >
+                      + Tạo khách hàng mới
+                    </Button>
+                  )}
                 </div>
               </Space>
             </Card>
@@ -319,8 +581,15 @@ const PosPage: React.FC = () => {
             <Card
               title={
                 <Space>
-                  <SearchOutlined />
-                  <span>Tìm kiếm Sản phẩm</span>
+                  {prescriptionMode ? <Tag color="green">Đơn thuốc</Tag> : <SearchOutlined />}
+                  <span>{prescriptionMode ? 'Đơn thuốc' : 'Tìm kiếm Sản phẩm'}</span>
+                  <Button
+                    size="small"
+                    type={prescriptionMode ? 'primary' : 'default'}
+                    onClick={handleTogglePrescriptionMode}
+                  >
+                    {prescriptionMode ? 'Thoát' : 'Đơn thuốc'}
+                  </Button>
                 </Space>
               }
               size="small"
@@ -333,52 +602,158 @@ const PosPage: React.FC = () => {
               }}
               styles={{ body: { flex: 1, padding: 16, overflow: 'hidden' } }}
             >
-              <Search
-                placeholder="Quét mã vạch hoặc tìm tên thuốc..."
-                size="large"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                loading={isSearching}
-                style={{ marginBottom: 16 }}
-              />
-              <div style={{ flex: 1, overflow: 'auto' }}>
-                <List
-                  loading={isSearching}
-                  dataSource={searchResults}
-                  locale={{ emptyText: searchTerm ? 'Không tìm thấy sản phẩm' : 'Nhập từ khóa để tìm kiếm' }}
-                  renderItem={(product) => (
-                    <List.Item
-                      style={{
-                        padding: '12px 0',
-                        borderRadius: 8,
-                        marginBottom: 8,
-                        backgroundColor: '#fafafa',
-                        paddingLeft: 12,
-                        paddingRight: 12
-                      }}
-                      actions={[
-                        <Tooltip title="Thêm vào giỏ hàng">
-                          <Button
-                            type="primary"
-                            shape="circle"
-                            icon={<PlusOutlined />}
-                            onClick={() => handleAddToCart(product)}
+              {!prescriptionMode ? (
+                <>
+                  <Search
+                    placeholder="Quét mã vạch hoặc tìm tên thuốc..."
+                    size="large"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    loading={isSearching}
+                    style={{ marginBottom: 16 }}
+                  />
+                  <div style={{ flex: 1, overflow: 'auto' }}>
+                    <List
+                      loading={isSearching}
+                      dataSource={searchResults}
+                      locale={{ emptyText: searchTerm ? 'Không tìm thấy sản phẩm' : 'Nhập từ khóa để tìm kiếm' }}
+                      renderItem={(product) => (
+                        <List.Item
+                          style={{
+                            padding: '12px 0',
+                            borderRadius: 8,
+                            marginBottom: 8,
+                            backgroundColor: '#fafafa',
+                            paddingLeft: 12,
+                            paddingRight: 12
+                          }}
+                          actions={[
+                            <Tooltip title="Thêm vào giỏ hàng">
+                              <Button
+                                type="primary"
+                                shape="circle"
+                                icon={<PlusOutlined />}
+                                onClick={() => handleAddToCart(product)}
+                                disabled={product.stock_quantity === 0}
+                              />
+                            </Tooltip>,
+                          ]}
+                        >
+                          <List.Item.Meta
+                            title={
+                              <Space>
+                                <Text strong>{product.name}</Text>
+                                {product.stock_quantity !== undefined && product.stock_quantity <= 5 && (
+                                  <Tag color={product.stock_quantity === 0 ? 'red' : 'orange'}>
+                                    {product.stock_quantity === 0 ? 'Hết hàng' : `Còn ${product.stock_quantity}`}
+                                  </Tag>
+                                )}
+                              </Space>
+                            }
+                            description={
+                              <Space direction="vertical" size={0}>
+                                <Text style={{ color: '#52c41a', fontWeight: 500 }}>
+                                  {(product.retail_price || 0).toLocaleString()}đ
+                                </Text>
+                                {product.stock_quantity !== undefined && (
+                                  <Text type="secondary" style={{ fontSize: '12px' }}>
+                                    📦 Tồn kho: {product.stock_quantity}
+                                  </Text>
+                                )}
+                              </Space>
+                            }
                           />
-                        </Tooltip>,
-                      ]}
-                    >
-                      <List.Item.Meta
-                        title={<Text strong>{product.name}</Text>}
-                        description={
-                          <Text style={{ color: '#52c41a', fontWeight: 500 }}>
-                            {(product.retail_price || 0).toLocaleString()}đ
-                          </Text>
-                        }
+                        </List.Item>
+                      )}
+                    />
+                  </div>
+                </>
+              ) : (
+                <div style={{ flex: 1, overflow: 'auto' }}>
+                  {!selectedCustomer ? (
+                    <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>
+                      <Text>Vui lòng chọn bệnh nhân để xem đơn thuốc</Text>
+                    </div>
+                  ) : patientVisits.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>
+                      <Text>Không có lịch sử khám bệnh</Text>
+                    </div>
+                  ) : (
+                    <>
+                      <Select
+                        placeholder="Chọn lần khám"
+                        style={{ width: '100%', marginBottom: 16 }}
+                        value={selectedVisit?.visit_id}
+                        onChange={(visitId) => {
+                          const visit = patientVisits.find(v => v.visit_id === visitId);
+                          setSelectedVisit(visit);
+                        }}
+                      >
+                        {patientVisits.map(visit => (
+                          <Select.Option key={visit.visit_id} value={visit.visit_id}>
+                            {new Date(visit.visit_date).toLocaleDateString('vi-VN')} - {visit.assessment_diagnosis_icd10 || 'Khám tổng quát'}
+                          </Select.Option>
+                        ))}
+                      </Select>
+
+                      <List
+                        loading={loadingPrescriptions}
+                        dataSource={availablePrescriptions}
+                        locale={{ emptyText: 'Không có đơn thuốc' }}
+                        renderItem={(prescription) => (
+                          <List.Item
+                            style={{
+                              padding: '12px 0',
+                              borderRadius: 8,
+                              marginBottom: 8,
+                              backgroundColor: '#f0f9ff',
+                              paddingLeft: 12,
+                              paddingRight: 12,
+                              border: '1px solid #bae7ff'
+                            }}
+                            actions={[
+                              <Tooltip title="Thêm vào giỏ hàng">
+                                <Button
+                                  type="primary"
+                                  shape="circle"
+                                  icon={<PlusOutlined />}
+                                  onClick={() => handleAddPrescriptionToCart(prescription)}
+                                />
+                              </Tooltip>,
+                            ]}
+                          >
+                            <List.Item.Meta
+                              title={
+                                <Space>
+                                  <Text strong>{prescription.products?.name}</Text>
+                                  <Tag color="blue">x{prescription.quantity_ordered}</Tag>
+                                </Space>
+                              }
+                              description={
+                                <Space direction="vertical" size={0}>
+                                  <Text style={{ color: '#52c41a', fontWeight: 500 }}>
+                                    {(prescription.products?.retail_price || 0).toLocaleString()}đ
+                                  </Text>
+                                  {prescription.dosage_instruction && (
+                                    <Text type="secondary" style={{ fontSize: '12px' }}>
+                                      {prescription.dosage_instruction}
+                                    </Text>
+                                  )}
+                                  {prescription.ai_interaction_warning && (
+                                    <Tag color="orange" style={{ fontSize: '11px' }}>
+                                      ⚠️ {prescription.ai_interaction_warning}
+                                    </Tag>
+                                  )}
+                                </Space>
+                              }
+                            />
+                          </List.Item>
+                        )}
                       />
-                    </List.Item>
+                    </>
                   )}
-                />
-              </div>
+                </div>
+              )}
             </Card>
           </Space>
         </Col>
@@ -465,6 +840,19 @@ const PosPage: React.FC = () => {
                               <Tag icon={<TagOutlined />} color="success">
                                 {item.appliedPromotion.name}
                               </Tag>
+                            )}
+                            {item.prescriptionNote && (
+                              <Text type="secondary" style={{ fontSize: '11px', fontStyle: 'italic' }}>
+                                📝 {item.prescriptionNote}
+                              </Text>
+                            )}
+                            {item.stock_quantity !== undefined && item.quantity > item.stock_quantity && (
+                              <Space>
+                                <WarningOutlined style={{ color: '#ff4d4f' }} />
+                                <Text type="danger" style={{ fontSize: '11px' }}>
+                                  Vượt tồn kho ({item.stock_quantity} có sẵn)
+                                </Text>
+                              </Space>
                             )}
                           </Space>
                         }
@@ -575,10 +963,100 @@ const PosPage: React.FC = () => {
         open={isPaymentModalOpen}
         paymentMethod={paymentMethod}
         cartTotal={cartDetails.itemTotal}
+        cartItems={cartDetails.items}
+        customerInfo={selectedCustomer}
         onCancel={() => setIsPaymentModalOpen(false)}
         onFinish={handleFinishPayment}
         okButtonProps={{ loading: isProcessingPayment }}
+        onPrintReceipt={() => {
+          notification.success({ message: 'Đang in hóa đơn...' });
+        }}
       />
+
+      <Modal
+        title="Tạo khách hàng mới"
+        open={isCreateCustomerModalOpen}
+        onCancel={() => {
+          setIsCreateCustomerModalOpen(false);
+          createCustomerForm.resetFields();
+        }}
+        onOk={createCustomerForm.submit}
+        confirmLoading={isCreatingCustomer}
+        width={600}
+      >
+        <Form
+          form={createCustomerForm}
+          layout="vertical"
+          onFinish={handleCreateCustomer}
+          style={{ marginTop: 16 }}
+        >
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="full_name"
+                label="Họ và tên"
+                rules={[{ required: true, message: 'Vui lòng nhập họ và tên' }]}
+              >
+                <Input placeholder="Nhập họ và tên" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="phone_number"
+                label="Số điện thoại"
+                rules={[
+                  { required: true, message: 'Vui lòng nhập số điện thoại' },
+                  { pattern: /^[0-9]{10,11}$/, message: 'Số điện thoại không hợp lệ' }
+                ]}
+              >
+                <Input placeholder="Nhập số điện thoại" />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="date_of_birth" label="Ngày sinh">
+                <DatePicker
+                  style={{ width: '100%' }}
+                  placeholder="Chọn ngày sinh"
+                  format="DD/MM/YYYY"
+                />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="gender" label="Giới tính">
+                <Select placeholder="Chọn giới tính">
+                  <Select.Option value="Nam">Nam</Select.Option>
+                  <Select.Option value="Nữ">Nữ</Select.Option>
+                  <Select.Option value="Khác">Khác</Select.Option>
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Form.Item name="allergy_notes" label="Dị ứng đã biết">
+            <Input.TextArea
+              rows={2}
+              placeholder="Ghi chú về tình trạng dị ứng (nếu có)..."
+            />
+          </Form.Item>
+
+          <Form.Item name="chronic_diseases" label="Bệnh mãn tính">
+            <Input.TextArea
+              rows={2}
+              placeholder="Ghi chú về bệnh mãn tính (nếu có)..."
+            />
+          </Form.Item>
+
+          <Form.Item name="is_b2b_customer" valuePropName="checked">
+            <Space>
+              <input type="checkbox" />
+              <Typography.Text>Đánh dấu là khách hàng B2B</Typography.Text>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 };
