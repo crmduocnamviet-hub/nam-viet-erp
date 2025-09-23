@@ -2,7 +2,7 @@ import type { PostgrestSingleResponse } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
 
 // Sales Order interface
-interface ISalesOrder {
+export interface ISalesOrder {
   order_id: string;
   patient_id: string;
   medical_visit_id?: string | null;
@@ -363,8 +363,8 @@ export const getTopCustomers = async (limit: number = 10, startDate?: string, en
     if (!acc[patientId]) {
       acc[patientId] = {
         patient_id: patientId,
-        full_name: order.patients?.full_name,
-        phone_number: order.patients?.phone_number,
+        full_name: order.patients?.[0].full_name,
+        phone_number: order.patients?.[0].phone_number,
         total_spent: 0,
         order_count: 0
       };

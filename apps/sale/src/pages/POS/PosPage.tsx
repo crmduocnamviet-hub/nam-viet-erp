@@ -15,7 +15,6 @@ import {
   App,
   InputNumber,
   Tag,
-  Badge,
   Tooltip,
   Modal,
   Form,
@@ -46,6 +45,7 @@ import {
 import PaymentModal from "../../features/pos/components/PaymentModal";
 import type { CartItem, CartDetails, PriceInfo } from "../../types";
 import { getErrorMessage } from "../../types";
+import { useEmployee } from "../../context/EmployeeContext";
 
 const { Title, Text } = Typography;
 const { Search } = Input;
@@ -60,6 +60,7 @@ const WAREHOUSE_MAP: {
 
 const PosPage: React.FC = () => {
   const { notification } = App.useApp();
+  const { employee } = useEmployee();
 
   // State
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -472,7 +473,8 @@ const PosPage: React.FC = () => {
         paymentMethod,
         warehouseId,
         fundId,
-        createdBy: "POS User", // TODO: Replace with actual logged-in user
+        createdBy: employee?.employee_id || "00000000-0000-0000-0000-000000000001", // Use actual employee ID or fallback
+        customerId: selectedCustomer?.patient_id,
       });
 
       notification.success({
@@ -897,9 +899,6 @@ const PosPage: React.FC = () => {
           <Card
             title={
               <Space>
-                <Badge count={cart.length} showZero>
-                  <ShoppingCartOutlined />
-                </Badge>
                 <span>Giỏ hàng</span>
               </Space>
             }

@@ -57,6 +57,29 @@ export const getEmployeeByCode = async (employeeCode: string): Promise<Postgrest
   return response;
 };
 
+// Get employee by user ID (for current authenticated user)
+export const getEmployeeByUserId = async (userId: string): Promise<PostgrestSingleResponse<IEmployee | null>> => {
+  const response = await supabase
+    .from("employees")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("is_active", true)
+    .single();
+
+  return response;
+};
+
+// Get current employee (uses current authenticated user)
+export const getCurrentEmployee = async (): Promise<PostgrestSingleResponse<IEmployee | null>> => {
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { data: null, error: { message: "No authenticated user", details: null, hint: null, code: "UNAUTHENTICATED" } };
+  }
+
+  return getEmployeeByUserId(user.id);
+};
+
 // Create new employee
 export const createEmployee = async (employee: Omit<IEmployee, "employee_id">): Promise<PostgrestSingleResponse<IEmployee | null>> => {
   const response = await supabase

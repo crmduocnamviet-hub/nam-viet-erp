@@ -1,5 +1,7 @@
 import { supabase } from "./supabase";
 import { upsetInventory } from "./warehouse";
+import { createSalesOrder } from "./salesOrderService";
+import { createMultipleSalesOrderItems } from "./salesOrderItemService";
 
 interface IProcessSale {
   cart: any[];
@@ -11,12 +13,15 @@ interface IProcessSale {
   createdBy: string;
   // This should be determined by business logic, e.g., which fund to use for a given warehouse.
   fundId: number;
+  // Customer information for sales order
+  customerId?: string;
 }
 
 /**
  * Processes a Point of Sale transaction.
- * 1. Creates a new financial transaction record.
- * 2. Updates the inventory for each item sold.
+ * 1. Creates a sales order and sales order items.
+ * 2. Creates a new financial transaction record.
+ * 3. Updates the inventory for each item sold.
  * NOTE: This function is not atomic. A database RPC function would be a better approach
  * to ensure data consistency, but this is a good starting point for the prototype.
  */
@@ -27,12 +32,56 @@ export const processSaleTransaction = async ({
   warehouseId,
   createdBy,
   fundId,
+  customerId,
 }: IProcessSale) => {
-  // Step 1: Create the financial transaction record.
+  // Step 1: Create the sales order record.
+  const salesOrder = {
+    patient_id: customerId || "00000000-0000-0000-0000-000000000000", // Default patient ID for walk-in customers
+    order_type: "pos",
+    total_value: total,
+    payment_method: paymentMethod,
+    payment_status: "paid",
+    operational_status: "completed",
+    is_ai_checked: false,
+    created_by_employee_id: createdBy.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)
+      ? createdBy
+      : "00000000-0000-0000-0000-000000000001", // Default system employee ID for POS transactions
+  };
+
+  const { data: orderData, error: orderError } = await createSalesOrder(salesOrder);
+
+  if (orderError || !orderData) {
+    console.error("Sales Order Creation Error:", orderError);
+    throw new Error(
+      `Failed to create sales order: ${orderError?.message || "Unknown error"}`
+    );
+  }
+
+  // Step 2: Create sales order items.
+  const orderItems = cart.map(item => ({
+    product_id: item.id,
+    quantity: item.quantity,
+    unit_price: item.finalPrice || item.retail_price || 0,
+    is_service: false,
+  }));
+
+  const { error: itemsError } = await createMultipleSalesOrderItems(
+    orderData.order_id,
+    orderItems
+  );
+
+  if (itemsError) {
+    console.error("Sales Order Items Creation Error:", itemsError);
+    // Try to rollback the sales order
+    await supabase.from("sales_orders").delete().eq("order_id", orderData.order_id);
+    throw new Error(`Failed to create sales order items: ${itemsError.message}`);
+  }
+
+  // Step 3: Create the financial transaction record.
   const transactionRecord = {
     type: "income",
     amount: total,
-    description: `POS Sale - Warehouse ID ${warehouseId}`,
+    description: `POS Sale - Order ${orderData.order_id} - Warehouse ID ${warehouseId}`,
     payment_method: paymentMethod,
     status: "đã thu", // POS transactions are considered completed immediately.
     transaction_date: new Date().toISOString(),
@@ -48,12 +97,14 @@ export const processSaleTransaction = async ({
 
   if (transactionError) {
     console.error("Transaction Creation Error:", transactionError);
+    // Rollback sales order and items
+    await supabase.from("sales_orders").delete().eq("order_id", orderData.order_id);
     throw new Error(
       `Failed to create transaction: ${transactionError.message}`
     );
   }
 
-  // Step 2: Prepare and execute inventory updates.
+  // Step 4: Prepare and execute inventory updates.
   const inventoryUpdates = cart.map((item) => {
     const warehouseInventory = item.inventory_data.find(
       (inv: any) => inv.warehouse_id === warehouseId
@@ -78,13 +129,14 @@ export const processSaleTransaction = async ({
     const { error: inventoryError } = await upsetInventory(inventoryUpdates);
 
     if (inventoryError) {
-      // If inventory update fails, we should try to roll back the financial transaction
+      // If inventory update fails, we should try to roll back the financial transaction and sales order
       // to avoid data inconsistency.
       console.error("Inventory Update Error:", inventoryError);
       await supabase.from("transactions").delete().eq("id", transactionData.id);
+      await supabase.from("sales_orders").delete().eq("order_id", orderData.order_id);
       throw new Error(`Failed to update inventory: ${inventoryError.message}`);
     }
   }
 
-  return { transactionData };
+  return { transactionData, orderData };
 };

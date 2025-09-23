@@ -1,6 +1,6 @@
 #!/usr/bin/env ts-node
 
-import { seedEmployees, seedDoctors, clearEmployees, getAllDoctors } from "./seedDoctors";
+import { seedEmployees, seedDoctors, clearEmployees, getAllDoctors } from "../seedDoctors";
 
 // CLI interface for seeding
 const main = async () => {

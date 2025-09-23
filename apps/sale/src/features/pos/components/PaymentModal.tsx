@@ -172,7 +172,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
       onCancel={onCancel}
       onOk={() => form.submit()}
       okText="Xác nhận Thanh toán"
-      destroyOnClose
+      destroyOnHidden
       okButtonProps={showReceipt ? { style: { display: 'none' } } : okButtonProps}
       cancelButtonProps={showReceipt ? { style: { display: 'none' } } : undefined}
     >

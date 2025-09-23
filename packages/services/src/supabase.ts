@@ -3,7 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 let supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 let supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-export const setupEVN = (env: ImportMetaEnv) => {
+export const setupEVN = (env: Record<string, string>) => {
   supabaseUrl = env.VITE_SUPABASE_URL;
   supabaseAnonKey = env.VITE_SUPABASE_ANON_KEY;
 };

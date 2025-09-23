@@ -238,6 +238,7 @@ interface IEmployee {
   employee_code: string | null;
   role_name: string; // 'BacSi', 'DuocSi', 'LeTan'
   is_active: boolean;
+  user_id?: string;
 }
 
 // Appointment Status Lookup - Bảng tra cứu Trạng thái Lịch hẹn

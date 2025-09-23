@@ -1,5 +1,6 @@
 import { supabase } from "./supabase";
 
+
 export const getFundsAndTransactions = async () => {
   const fundsPromise = supabase.from("funds").select("*, banks(*)");
   const transPromise = supabase.from("transactions").select("*");

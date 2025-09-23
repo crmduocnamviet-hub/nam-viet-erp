@@ -231,6 +231,7 @@ const AppLayout: React.FC = () => {
             >
               <Routes>
                 <Route path="/" element={<PosPage />} />
+                <Route path="/store-channel" element={<StoreChannelPage />} />
                 <Route path="/scheduling" element={<SchedulingPage />} />
                 <Route path="/patients" element={<PatientsPage />} />
                 <Route path="/patients/:patientId" element={<PatientDetailPage />} />

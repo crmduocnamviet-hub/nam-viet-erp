@@ -46,7 +46,7 @@ interface Order {
   order_id: string;
   patient_id: string;
   total_value: number;
-  payment_method?: string;
+  payment_method?: string | null;
   payment_status: string;
   operational_status: string;
   order_type: string;
