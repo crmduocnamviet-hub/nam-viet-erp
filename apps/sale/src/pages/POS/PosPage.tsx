@@ -33,7 +33,7 @@ import {
   DollarOutlined,
   WarningOutlined,
 } from '@ant-design/icons';
-import { useDebounce } from '../../hooks/useDebounce';
+import { useDebounce } from '@nam-viet-erp/shared-components';
 import {
   processSaleTransaction,
   searchProducts,

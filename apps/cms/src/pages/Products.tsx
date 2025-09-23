@@ -23,7 +23,7 @@ import {
 } from "@ant-design/icons";
 import * as XLSX from "xlsx";
 import ProductForm from "../features/products/components/ProductForm";
-import { useDebounce } from "../hooks/useDebounce";
+import { useDebounce } from '@nam-viet-erp/shared-components';
 import {
   createProduct,
   deleteProduct,

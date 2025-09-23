@@ -5,10 +5,10 @@
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "skipLibCheck": true,
+    "noEmitOnError": false,
 
     /* Bundler mode */
     "moduleResolution": "bundler",
-    "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": false,
@@ -16,12 +16,18 @@
     "outDir": "./dist",
     "jsx": "react-jsx",
 
+    /* Path Aliases */
+    "paths": {
+      "@nam-viet-erp/types": ["../../types"]
+    },
+
     /* Linting */
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src"],
+  "include": ["src", "../../types"],
+  "exclude": ["../services/**/*"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

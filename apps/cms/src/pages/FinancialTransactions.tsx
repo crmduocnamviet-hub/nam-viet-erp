@@ -32,7 +32,7 @@ import {
 } from "@nam-viet-erp/services";
 import dayjs from "dayjs";
 import { useAuth } from "../hooks/useAuth";
-import { useDebounce } from "../hooks/useDebounce";
+import { useDebounce } from '@nam-viet-erp/shared-components';
 import TransactionCreationModal from "../features/finance/components/TransactionCreationModal";
 import TransactionViewModal from "../features/finance/components/TransactionViewModal";
 import { getFunds } from "@nam-viet-erp/services";

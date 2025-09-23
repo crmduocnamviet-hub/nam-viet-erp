@@ -17,4 +17,11 @@ export default defineConfig({
       },
     }),
   ],
+  server: {
+    host: true, // Enable network access
+    port: 5173,
+    hmr: {
+      port: 5173,
+    },
+  },
 });

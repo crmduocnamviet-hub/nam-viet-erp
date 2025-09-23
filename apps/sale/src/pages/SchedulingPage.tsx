@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { Button, Row, Col, Typography, App as AntApp, Spin } from 'antd';
-import { PlusOutlined, CalendarOutlined } from '@ant-design/icons';
+import { Button, Row, Col, Typography, App as AntApp, Spin } from "antd";
+import { PlusOutlined, CalendarOutlined } from "@ant-design/icons";
 import {
-  getDoctors,
+  getEmployees,
   createAppointment,
-  initializeDefaultStatuses
+  initializeDefaultStatuses,
 } from "@nam-viet-erp/services";
-import AppointmentCreationModal from "../features/scheduling/components/AppointmentCreationModal";
+import { AppointmentCreationModal } from "@nam-viet-erp/shared-components";
 import PatientCrmModal from "../features/scheduling/components/PatientCrmModal";
 import SchedulingDashboard from "../features/scheduling/SchedulingDashboard";
 
@@ -16,8 +16,10 @@ const SchedulingPageContent: React.FC = () => {
   const { notification } = AntApp.useApp();
   const [isCreationModalOpen, setIsCreationModalOpen] = useState(false);
   const [isCrmModalOpen, setIsCrmModalOpen] = useState(false);
-  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
-  const [resources, setResources] = useState<any[]>([]);
+  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(
+    null
+  );
+  const [resources, setResources] = useState<IEmployee[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -27,31 +29,22 @@ const SchedulingPageContent: React.FC = () => {
         await initializeDefaultStatuses();
 
         // Load doctors as resources
-        const { data: doctors, error } = await getDoctors();
+        const { data: employees, error } = await getEmployees({
+          roleName: 'BacSi',
+          limit: 50
+        });
         if (error) {
           notification.error({
-            message: 'Lỗi tải dữ liệu',
-            description: 'Không thể tải danh sách bác sĩ'
+            message: "Lỗi tải dữ liệu",
+            description: "Không thể tải danh sách bác sĩ",
           });
         } else {
-          const doctorResources = doctors?.map(doctor => ({
-            id: doctor.employee_id,
-            name: doctor.full_name,
-            type: 'doctor'
-          })) || [];
-
-          // Add fixed service rooms
-          const serviceRooms = [
-            { id: 'room1', name: 'Phòng Tiêm Chủng', type: 'room' },
-            { id: 'room2', name: 'Phòng Siêu Âm', type: 'room' },
-          ];
-
-          setResources([...doctorResources, ...serviceRooms]);
+          setResources(employees || []);
         }
       } catch (error) {
         notification.error({
-          message: 'Lỗi khởi tạo',
-          description: 'Không thể khởi tạo dữ liệu hệ thống'
+          message: "Lỗi khởi tạo",
+          description: "Không thể khởi tạo dữ liệu hệ thống",
         });
       } finally {
         setLoading(false);
@@ -63,30 +56,39 @@ const SchedulingPageContent: React.FC = () => {
 
   const handleFinishCreation = async (values: any) => {
     try {
-      const appointmentData: Omit<IAppointment, "appointment_id" | "created_at"> = {
+      const appointmentData: Omit<
+        IAppointment,
+        "appointment_id" | "created_at"
+      > = {
         patient_id: values.patient_id,
         service_type: values.service_type,
-        scheduled_datetime: `${values.appointmentDate.format('YYYY-MM-DD')}T${values.appointmentTime.format('HH:mm:ss')}`,
-        doctor_id: values.resource_id?.startsWith('doc') ? values.resource_id : null,
+        scheduled_datetime: `${values.appointmentDate.format(
+          "YYYY-MM-DD"
+        )}T${values.appointmentTime.format("HH:mm:ss")}`,
+        doctor_id: values.resource_id?.startsWith("doc")
+          ? values.resource_id
+          : null,
         receptionist_id: null, // Would be filled with current logged in user
         current_status: "SCHEDULED",
         reason_for_visit: values.reason_for_visit,
         check_in_time: null,
         is_confirmed_by_zalo: false,
-        receptionist_notes: values.notes || null
+        receptionist_notes: values.notes || null,
       };
 
       const { data, error } = await createAppointment(appointmentData);
 
       if (error) {
         notification.error({
-          message: 'Lỗi tạo lịch hẹn',
-          description: error.message
+          message: "Lỗi tạo lịch hẹn",
+          description: error.message,
         });
       } else {
         notification.success({
-          message: 'Tạo lịch hẹn thành công!',
-          description: `Đã tạo lịch hẹn vào lúc ${values.appointmentTime.format('HH:mm')} ngày ${values.appointmentDate.format('DD/MM/YYYY')}.`,
+          message: "Tạo lịch hẹn thành công!",
+          description: `Đã tạo lịch hẹn vào lúc ${values.appointmentTime.format(
+            "HH:mm"
+          )} ngày ${values.appointmentDate.format("DD/MM/YYYY")}.`,
         });
         setIsCreationModalOpen(false);
         // Refresh the dashboard
@@ -94,8 +96,8 @@ const SchedulingPageContent: React.FC = () => {
       }
     } catch (error) {
       notification.error({
-        message: 'Lỗi hệ thống',
-        description: 'Không thể tạo lịch hẹn'
+        message: "Lỗi hệ thống",
+        description: "Không thể tạo lịch hẹn",
       });
     }
   };
@@ -107,12 +109,14 @@ const SchedulingPageContent: React.FC = () => {
 
   if (loading) {
     return (
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        minHeight: '400px'
-      }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: "400px",
+        }}
+      >
         <Spin size="large" />
       </div>
     );
@@ -134,9 +138,9 @@ const SchedulingPageContent: React.FC = () => {
             icon={<PlusOutlined />}
             onClick={() => setIsCreationModalOpen(true)}
             style={{
-              background: 'linear-gradient(45deg, #1890ff, #40a9ff)',
-              border: 'none',
-              boxShadow: '0 4px 15px 0 rgba(24, 144, 255, 0.4)'
+              background: "linear-gradient(45deg, #1890ff, #40a9ff)",
+              border: "none",
+              boxShadow: "0 4px 15px 0 rgba(24, 144, 255, 0.4)",
             }}
           >
             Tạo lịch hẹn mới
@@ -160,9 +164,9 @@ const SchedulingPageContent: React.FC = () => {
 };
 
 const SchedulingPage: React.FC = () => (
-    <AntApp>
-        <SchedulingPageContent />
-    </AntApp>
+  <AntApp>
+    <SchedulingPageContent />
+  </AntApp>
 );
 
 export default SchedulingPage;

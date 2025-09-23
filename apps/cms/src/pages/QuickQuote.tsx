@@ -11,7 +11,7 @@ import {
   Spin,
   Tag,
 } from "antd";
-import { useDebounce } from "../hooks/useDebounce";
+import { useDebounce } from '@nam-viet-erp/shared-components';
 import { getActiveProduct, getActivePromotions } from "@nam-viet-erp/services";
 import { getErrorMessage } from "../types/error";
 

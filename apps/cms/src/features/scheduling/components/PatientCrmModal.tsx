@@ -24,7 +24,7 @@ import {
   getPatientMedicalHistory,
 } from '@nam-viet-erp/services';
 import dayjs from 'dayjs';
-import { useDebounce } from '../../../hooks/useDebounce';
+import { useDebounce } from '@nam-viet-erp/shared-components';
 import { getErrorMessage } from '../../../types/error';
 
 const { Title, Text, Paragraph } = Typography;

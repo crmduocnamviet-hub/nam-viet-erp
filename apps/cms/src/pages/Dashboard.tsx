@@ -1,9 +1,11 @@
-import React, { useState } from "react";
-import { Button, Row, Col, Typography, App as AntApp } from 'antd';
+import React, { useState, useEffect } from "react";
+import { Button, Row, Col, Typography, App as AntApp, Spin } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import SchedulingDashboard from "../features/scheduling/SchedulingDashboard";
-import AppointmentCreationModal from "../features/scheduling/components/AppointmentCreationModal";
+import { AppointmentCreationModal } from '@nam-viet-erp/shared-components';
 import PatientCrmModal from "../features/scheduling/components/PatientCrmModal";
+import { getEmployees } from '@nam-viet-erp/services';
+
 
 const { Title } = Typography;
 
@@ -13,6 +15,38 @@ const DashboardPageContent: React.FC = () => {
   const [isCreationModalOpen, setIsCreationModalOpen] = useState(false);
   const [isCrmModalOpen, setIsCrmModalOpen] = useState(false);
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
+  const [resources, setResources] = useState<IEmployee[]>([]);
+  const [loadingResources, setLoadingResources] = useState(true);
+
+  useEffect(() => {
+    const fetchResources = async () => {
+      try {
+        setLoadingResources(true);
+        const { data, error } = await getEmployees({
+          roleName: 'BacSi',
+          limit: 50
+        });
+        if (error) {
+          console.error('Error loading doctors:', error);
+          notification.error({
+            message: 'Lỗi tải dữ liệu',
+            description: 'Không thể tải danh sách bác sĩ'
+          });
+        } else {
+          setResources(data || []);
+        }
+      } catch (error) {
+        console.error('Error loading doctors:', error);
+        notification.error({
+          message: 'Lỗi tải dữ liệu',
+          description: 'Không thể tải danh sách bác sĩ'
+        });
+      } finally {
+        setLoadingResources(false);
+      }
+    };
+    fetchResources();
+  }, [notification]);
 
   const handleFinishCreation = (values: any) => {
     console.log('New Appointment Values:', values);
@@ -29,6 +63,19 @@ const DashboardPageContent: React.FC = () => {
     setSelectedPatientId(patientId);
     setIsCrmModalOpen(true);
   };
+
+  if (loadingResources) {
+    return (
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        minHeight: '400px'
+      }}>
+        <Spin size="large" />
+      </div>
+    );
+  }
 
   return (
     <>
@@ -51,6 +98,7 @@ const DashboardPageContent: React.FC = () => {
         open={isCreationModalOpen}
         onClose={() => setIsCreationModalOpen(false)}
         onFinish={handleFinishCreation}
+        resources={resources}
       />
       <PatientCrmModal
         open={isCrmModalOpen}
