@@ -103,9 +103,8 @@ const FundCard: React.FC<{
   );
 };
 
-import { getFundsAndTransactions } from "@nam-viet-erp/services/cashLedgerService";
-import { createInternalTransfer } from "@nam-viet-erp/services/fundService";
 import { getErrorMessage } from "../types/error";
+import { createInternalTransfer, getFundsAndTransactions } from "@nam-viet-erp/services";
 
 const CashLedgerPageContent: React.FC = () => {
   const { notification } = AntApp.useApp();

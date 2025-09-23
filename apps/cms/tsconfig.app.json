@@ -24,5 +24,5 @@
     "types": ["vite-plugin-pwa/client"],
     "noUncheckedSideEffectImports": true
   },
-  "include": ["src", "../services/cashLedgerService.ts", "../services/financialTransactionService.ts", "../services/fundService.ts", "../services/promotionService.ts", "../services/voucherService.ts", "../../types"]
+  "include": ["src", "../packages/shared-components/services/cashLedgerService.ts", "../packages/shared-components/services/financialTransactionService.ts", "../packages/shared-components/services/fundService.ts", "../packages/shared-components/services/promotionService.ts", "../packages/shared-components/services/voucherService.ts", "../../types"]
 }

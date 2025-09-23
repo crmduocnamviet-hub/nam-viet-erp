@@ -29,7 +29,7 @@ import {
   searchTransactions,
   updateTransaction,
   uploadAttachment,
-} from "@nam-viet-erp/services/financialTransactionService";
+} from "@nam-viet-erp/services";
 import dayjs from "dayjs";
 import { useAuth } from "../hooks/useAuth";
 import { useDebounce } from "../hooks/useDebounce";

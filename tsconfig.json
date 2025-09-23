@@ -16,7 +16,7 @@
     "composite": true, // Enable project references for the monorepo
     "baseUrl": ".",
     "paths": {
-      "@nam-viet-erp/*": ["./packages/*/src", "./apps/*/src"]
+      "@nam-viet-erp/*": ["apps/packages/*/src", "./apps/*/src"]
     }
   }
 }
