@@ -1,6 +1,21 @@
 import type { PostgrestSingleResponse } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
 
+// Sales Order interface
+interface ISalesOrder {
+  order_id: string;
+  patient_id: string;
+  medical_visit_id?: string | null;
+  order_type: string;
+  total_value: number;
+  payment_method?: string | null;
+  payment_status: string;
+  operational_status: string;
+  is_ai_checked: boolean;
+  created_by_employee_id: string;
+  order_datetime: string;
+}
+
 // Get all sales orders with optional filtering and relations
 export const getSalesOrders = async (filters?: {
   patientId?: string;
@@ -364,4 +379,92 @@ export const getTopCustomers = async (limit: number = 10, startDate?: string, en
     .slice(0, limit);
 
   return { data: sortedCustomers, error: null };
+};
+
+// Search orders for store channel with keyword filtering
+export const searchOrdersForStoreChannel = async (filters?: {
+  keyword?: string;
+  paymentStatus?: string;
+  operationalStatus?: string;
+  orderType?: string;
+  startDate?: string;
+  endDate?: string;
+  limit?: number;
+  offset?: number;
+}) => {
+  let query = supabase
+    .from("sales_orders")
+    .select(`
+      *,
+      patients!inner(full_name, phone_number),
+      medical_visits(visit_date, assessment_diagnosis_icd10),
+      created_by:employees!created_by_employee_id(full_name, role_name),
+      sales_order_items(*, products!inner(name, manufacturer))
+    `);
+
+  // Keyword search across patient name, phone, order ID
+  if (filters?.keyword) {
+    query = query.or(`
+      order_id.ilike.%${filters.keyword}%,
+      patients.full_name.ilike.%${filters.keyword}%,
+      patients.phone_number.ilike.%${filters.keyword}%
+    `);
+  }
+
+  // Status filters
+  if (filters?.paymentStatus) {
+    query = query.eq("payment_status", filters.paymentStatus);
+  }
+
+  if (filters?.operationalStatus) {
+    query = query.eq("operational_status", filters.operationalStatus);
+  }
+
+  if (filters?.orderType) {
+    query = query.eq("order_type", filters.orderType);
+  }
+
+  // Date range
+  if (filters?.startDate) {
+    query = query.gte("order_datetime", filters.startDate);
+  }
+
+  if (filters?.endDate) {
+    query = query.lte("order_datetime", filters.endDate);
+  }
+
+  // Pagination
+  if (filters?.limit) {
+    query = query.limit(filters.limit);
+  }
+
+  if (filters?.offset) {
+    query = query.range(filters.offset, (filters.offset + (filters.limit || 20)) - 1);
+  }
+
+  const response = await query.order("order_datetime", { ascending: false });
+  return response;
+};
+
+// Get available order statuses for filtering
+export const getOrderStatuses = () => {
+  return {
+    paymentStatuses: [
+      "Chờ thanh toán",
+      "Đã thanh toán",
+      "Thanh toán thiếu",
+      "Hoàn tiền"
+    ],
+    operationalStatuses: [
+      "Đang xử lý",
+      "Hoàn tất",
+      "Đã hủy",
+      "Chờ xác nhận"
+    ],
+    orderTypes: [
+      "POS",
+      "Online",
+      "Prescription"
+    ]
+  };
 };

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Typography,
   Row,
@@ -20,7 +20,7 @@ import {
   Modal,
   Form,
   DatePicker,
-} from 'antd';
+} from "antd";
 import {
   UserOutlined,
   DeleteOutlined,
@@ -32,8 +32,8 @@ import {
   QrcodeOutlined,
   DollarOutlined,
   WarningOutlined,
-} from '@ant-design/icons';
-import { useDebounce } from '@nam-viet-erp/shared-components';
+} from "@ant-design/icons";
+import { useDebounce } from "@nam-viet-erp/shared-components";
 import {
   processSaleTransaction,
   searchProducts,
@@ -42,20 +42,18 @@ import {
   createPatient,
   getPrescriptionsByVisitId,
   getMedicalVisits,
-} from '@nam-viet-erp/services';
-import PaymentModal from '../../features/pos/components/PaymentModal';
-import type {
-  CartItem,
-  CartDetails,
-  PriceInfo,
-} from '../../types';
-import { getErrorMessage } from '../../types';
+} from "@nam-viet-erp/services";
+import PaymentModal from "../../features/pos/components/PaymentModal";
+import type { CartItem, CartDetails, PriceInfo } from "../../types";
+import { getErrorMessage } from "../../types";
 
 const { Title, Text } = Typography;
 const { Search } = Input;
 
 // Map UI selection to warehouse and fund IDs
-const WAREHOUSE_MAP: { [key: string]: { warehouseId: number; fundId: number } } = {
+const WAREHOUSE_MAP: {
+  [key: string]: { warehouseId: number; fundId: number };
+} = {
   dh1: { warehouseId: 1, fundId: 1 }, // Assuming DH1 is warehouse 1 and uses fund 1
   dh2: { warehouseId: 2, fundId: 2 }, // Assuming DH2 is warehouse 2 and uses fund 2
 };
@@ -65,19 +63,25 @@ const PosPage: React.FC = () => {
 
   // State
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<IProduct[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'qr'>('cash');
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "card" | "qr">(
+    "cash"
+  );
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
-  const [selectedLocation, setSelectedLocation] = useState('dh1');
+  const [selectedLocation, setSelectedLocation] = useState("dh1");
   const [promotions, setPromotions] = useState<IPromotion[]>([]);
 
   // Customer management
-  const [selectedCustomer, setSelectedCustomer] = useState<IPatient | null>(null);
-  const [customerSearchTerm, setCustomerSearchTerm] = useState('');
-  const [customerSearchResults, setCustomerSearchResults] = useState<IPatient[]>([]);
+  const [selectedCustomer, setSelectedCustomer] = useState<IPatient | null>(
+    null
+  );
+  const [customerSearchTerm, setCustomerSearchTerm] = useState("");
+  const [customerSearchResults, setCustomerSearchResults] = useState<
+    IPatient[]
+  >([]);
   const [isSearchingCustomers, setIsSearchingCustomers] = useState(false);
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
 
@@ -85,11 +89,14 @@ const PosPage: React.FC = () => {
   const [prescriptionMode, setPrescriptionMode] = useState(false);
   const [patientVisits, setPatientVisits] = useState<any[]>([]);
   const [selectedVisit, setSelectedVisit] = useState<any>(null);
-  const [availablePrescriptions, setAvailablePrescriptions] = useState<any[]>([]);
+  const [availablePrescriptions, setAvailablePrescriptions] = useState<any[]>(
+    []
+  );
   const [loadingPrescriptions, setLoadingPrescriptions] = useState(false);
 
   // Create customer modal
-  const [isCreateCustomerModalOpen, setIsCreateCustomerModalOpen] = useState(false);
+  const [isCreateCustomerModalOpen, setIsCreateCustomerModalOpen] =
+    useState(false);
   const [createCustomerForm] = Form.useForm();
   const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
 
@@ -102,7 +109,7 @@ const PosPage: React.FC = () => {
       const { data, error } = await getActivePromotions();
       if (error) {
         notification.error({
-          message: 'Lỗi tải khuyến mãi',
+          message: "Lỗi tải khuyến mãi",
           description: error.message,
         });
       } else {
@@ -113,7 +120,10 @@ const PosPage: React.FC = () => {
   }, [notification]);
 
   // --- PROMOTION LOGIC START ---
-  const calculateBestPrice = (product: IProduct, promotions: IPromotion[]): PriceInfo => {
+  const calculateBestPrice = (
+    product: IProduct,
+    promotions: IPromotion[]
+  ): PriceInfo => {
     let bestPrice = product.retail_price;
     let appliedPromotion: IPromotion | null = null;
 
@@ -130,7 +140,7 @@ const PosPage: React.FC = () => {
         // Check manufacturers
         const manufacturers = conditions.manufacturers;
         if (
-          typeof manufacturers === 'string' &&
+          typeof manufacturers === "string" &&
           product.manufacturer &&
           manufacturers !== product.manufacturer
         ) {
@@ -141,7 +151,7 @@ const PosPage: React.FC = () => {
         const productCategories = conditions.product_categories;
         if (
           isApplicable &&
-          typeof productCategories === 'string' &&
+          typeof productCategories === "string" &&
           product.category &&
           productCategories !== product.category
         ) {
@@ -153,15 +163,28 @@ const PosPage: React.FC = () => {
         let currentPrice = product.retail_price;
         let calculated = false;
 
-        if (promo.type === 'percentage' && product.retail_price !== null && promo.value !== undefined) {
+        if (
+          promo.type === "percentage" &&
+          product.retail_price !== null &&
+          promo.value !== undefined
+        ) {
           currentPrice = product.retail_price * (1 - promo.value / 100);
           calculated = true;
-        } else if (promo.type === 'fixed_amount' && product.retail_price !== null && promo.value !== undefined) {
+        } else if (
+          promo.type === "fixed_amount" &&
+          product.retail_price !== null &&
+          promo.value !== undefined
+        ) {
           currentPrice = product.retail_price - promo.value;
           calculated = true;
         }
 
-        if (calculated && currentPrice !== null && bestPrice !== null && currentPrice < bestPrice) {
+        if (
+          calculated &&
+          currentPrice !== null &&
+          bestPrice !== null &&
+          currentPrice < bestPrice
+        ) {
           bestPrice = currentPrice;
           appliedPromotion = promo;
         }
@@ -176,14 +199,20 @@ const PosPage: React.FC = () => {
   };
   // --- PROMOTION LOGIC END ---
 
-
   useEffect(() => {
     if (debouncedSearchTerm) {
       setIsSearching(true);
-      searchProducts({ search: debouncedSearchTerm, pageSize: 10, status: 'active' })
+      searchProducts({
+        search: debouncedSearchTerm,
+        pageSize: 10,
+        status: "active",
+      })
         .then(({ data, error }) => {
           if (error) {
-            notification.error({ message: 'Lỗi tìm kiếm', description: error.message });
+            notification.error({
+              message: "Lỗi tìm kiếm",
+              description: error.message,
+            });
             setSearchResults([]);
           } else {
             setSearchResults(data || []);
@@ -201,7 +230,10 @@ const PosPage: React.FC = () => {
       getPatients({ search: debouncedCustomerSearchTerm, limit: 10 })
         .then(({ data, error }) => {
           if (error) {
-            notification.error({ message: 'Lỗi tìm kiếm khách hàng', description: error.message });
+            notification.error({
+              message: "Lỗi tìm kiếm khách hàng",
+              description: error.message,
+            });
             setCustomerSearchResults([]);
           } else {
             setCustomerSearchResults(data || []);
@@ -222,15 +254,21 @@ const PosPage: React.FC = () => {
         try {
           const { data, error } = await getMedicalVisits({
             patientId: selectedCustomer.patient_id,
-            limit: 10
+            limit: 10,
           });
           if (error) {
-            notification.error({ message: 'Lỗi tải lịch sử khám', description: error.message });
+            notification.error({
+              message: "Lỗi tải lịch sử khám",
+              description: error.message,
+            });
           } else {
             setPatientVisits(data || []);
           }
         } catch (error) {
-          notification.error({ message: 'Lỗi hệ thống', description: 'Không thể tải lịch sử khám bệnh' });
+          notification.error({
+            message: "Lỗi hệ thống",
+            description: "Không thể tải lịch sử khám bệnh",
+          });
         }
       };
       loadPatientVisits();
@@ -247,14 +285,22 @@ const PosPage: React.FC = () => {
       const loadPrescriptions = async () => {
         try {
           setLoadingPrescriptions(true);
-          const { data, error } = await getPrescriptionsByVisitId(selectedVisit.visit_id);
+          const { data, error } = await getPrescriptionsByVisitId(
+            selectedVisit.visit_id
+          );
           if (error) {
-            notification.error({ message: 'Lỗi tải đơn thuốc', description: error.message });
+            notification.error({
+              message: "Lỗi tải đơn thuốc",
+              description: error.message,
+            });
           } else {
             setAvailablePrescriptions(data || []);
           }
         } catch (error) {
-          notification.error({ message: 'Lỗi hệ thống', description: 'Không thể tải đơn thuốc' });
+          notification.error({
+            message: "Lỗi hệ thống",
+            description: "Không thể tải đơn thuốc",
+          });
         } finally {
           setLoadingPrescriptions(false);
         }
@@ -280,7 +326,7 @@ const PosPage: React.FC = () => {
         return [...prevCart, { ...product, quantity: 1, ...priceInfo }];
       }
     });
-    setSearchTerm('');
+    setSearchTerm("");
     setSearchResults([]);
   };
 
@@ -300,12 +346,15 @@ const PosPage: React.FC = () => {
         );
       } else {
         const priceInfo = calculateBestPrice(product, promotions);
-        return [...prevCart, {
-          ...product,
-          quantity: prescribedQuantity,
-          ...priceInfo,
-          prescriptionNote: prescription.dosage_instruction
-        }];
+        return [
+          ...prevCart,
+          {
+            ...product,
+            quantity: prescribedQuantity,
+            ...priceInfo,
+            prescriptionNote: prescription.dosage_instruction,
+          },
+        ];
       }
     });
   };
@@ -315,7 +364,9 @@ const PosPage: React.FC = () => {
     if (!prescriptionMode) {
       // Entering prescription mode
       if (!selectedCustomer) {
-        notification.info({ message: 'Vui lòng chọn bệnh nhân trước khi sử dụng chế độ đơn thuốc' });
+        notification.info({
+          message: "Vui lòng chọn bệnh nhân trước khi sử dụng chế độ đơn thuốc",
+        });
       }
     }
   };
@@ -326,7 +377,7 @@ const PosPage: React.FC = () => {
       const customerData: Omit<IPatient, "patient_id" | "created_at"> = {
         full_name: values.full_name,
         phone_number: values.phone_number,
-        date_of_birth: values.date_of_birth?.format('YYYY-MM-DD') || null,
+        date_of_birth: values.date_of_birth?.format("YYYY-MM-DD") || null,
         gender: values.gender || null,
         is_b2b_customer: values.is_b2b_customer || false,
         loyalty_points: 0,
@@ -338,12 +389,12 @@ const PosPage: React.FC = () => {
 
       if (error) {
         notification.error({
-          message: 'Lỗi tạo khách hàng',
+          message: "Lỗi tạo khách hàng",
           description: error.message,
         });
       } else {
         notification.success({
-          message: 'Tạo khách hàng thành công!',
+          message: "Tạo khách hàng thành công!",
           description: `Đã tạo khách hàng ${values.full_name}`,
         });
         setSelectedCustomer(data);
@@ -352,8 +403,8 @@ const PosPage: React.FC = () => {
       }
     } catch (error) {
       notification.error({
-        message: 'Lỗi hệ thống',
-        description: 'Không thể tạo khách hàng mới',
+        message: "Lỗi hệ thống",
+        description: "Không thể tạo khách hàng mới",
       });
     } finally {
       setIsCreatingCustomer(false);
@@ -403,9 +454,9 @@ const PosPage: React.FC = () => {
   }, [cart, promotions]);
 
   // Payment Handlers
-  const handleOpenPaymentModal = (method: 'cash' | 'card' | 'qr') => {
+  const handleOpenPaymentModal = (method: "cash" | "card" | "qr") => {
     if (cart.length === 0) {
-      notification.warning({ message: 'Giỏ hàng đang trống!' });
+      notification.warning({ message: "Giỏ hàng đang trống!" });
       return;
     }
     setPaymentMethod(method);
@@ -421,40 +472,45 @@ const PosPage: React.FC = () => {
         paymentMethod,
         warehouseId,
         fundId,
-        createdBy: 'POS User', // TODO: Replace with actual logged-in user
+        createdBy: "POS User", // TODO: Replace with actual logged-in user
       });
 
-      notification.success({ 
-          message: 'Thanh toán thành công!',
-          description: `Đã ghi nhận hóa đơn ${cartDetails.itemTotal.toLocaleString()}đ.`
+      notification.success({
+        message: "Thanh toán thành công!",
+        description: `Đã ghi nhận hóa đơn ${cartDetails.itemTotal.toLocaleString()}đ.`,
       });
 
       setCart([]);
       setIsPaymentModalOpen(false);
     } catch (error: unknown) {
-      notification.error({ message: 'Thanh toán thất bại', description: getErrorMessage(error) });
+      notification.error({
+        message: "Thanh toán thất bại",
+        description: getErrorMessage(error),
+      });
     } finally {
       setIsProcessingPayment(false);
     }
   };
 
   return (
-    <div style={{ height: '100%' }}>
+    <div style={{ height: "100%" }}>
       <Row style={{ marginBottom: 16 }}>
         <Col span={12}>
           <Title level={2} style={{ margin: 0 }}>
-POS Bán Lẻ & Thống kê
+            POS Bán Lẻ & Thống kê
           </Title>
         </Col>
-        <Col span={12} style={{ textAlign: 'right' }}>
+        <Col span={12} style={{ textAlign: "right" }}>
           <Space>
             <Button
               type="default"
               onClick={() => {
                 notification.info({
-                  message: 'Thống kê bán hàng',
-                  description: `Tổng đơn hàng hôm nay: ${cart.length} | Tổng doanh thu: ${cartDetails.itemTotal.toLocaleString()}đ`,
-                  duration: 5
+                  message: "Thống kê bán hàng",
+                  description: `Tổng đơn hàng hôm nay: ${
+                    cart.length
+                  } | Tổng doanh thu: ${cartDetails.itemTotal.toLocaleString()}đ`,
+                  duration: 5,
                 });
               }}
             >
@@ -474,9 +530,13 @@ POS Bán Lẻ & Thống kê
         </Col>
       </Row>
 
-      <Row gutter={[16, 16]} style={{ height: 'calc(100vh - 200px)' }}>
+      <Row gutter={[16, 16]} style={{ height: "calc(100vh - 200px)" }}>
         <Col xs={24} lg={8}>
-          <Space direction="vertical" size={16} style={{ width: '100%', height: '100%' }}>
+          <Space
+            direction="vertical"
+            size={16}
+            style={{ width: "100%", height: "100%" }}
+          >
             <Card
               title={
                 <Space>
@@ -487,7 +547,7 @@ POS Bán Lẻ & Thống kê
               size="small"
               style={{ borderRadius: 8 }}
             >
-              <div style={{ position: 'relative' }}>
+              <div style={{ position: "relative" }}>
                 <Search
                   placeholder="Tìm khách hàng (SĐT hoặc tên)..."
                   enterButton={<SearchOutlined />}
@@ -500,13 +560,13 @@ POS Bán Lẻ & Thống kê
                   <Card
                     size="small"
                     style={{
-                      position: 'absolute',
-                      top: '100%',
+                      position: "absolute",
+                      top: "100%",
                       left: 0,
                       right: 0,
                       zIndex: 1000,
                       maxHeight: 200,
-                      overflow: 'auto'
+                      overflow: "auto",
                     }}
                   >
                     <List
@@ -514,17 +574,19 @@ POS Bán Lẻ & Thống kê
                       dataSource={customerSearchResults}
                       renderItem={(customer) => (
                         <List.Item
-                          style={{ cursor: 'pointer', padding: '8px 12px' }}
+                          style={{ cursor: "pointer", padding: "8px 12px" }}
                           onClick={() => {
                             setSelectedCustomer(customer);
-                            setCustomerSearchTerm('');
+                            setCustomerSearchTerm("");
                             setShowCustomerDropdown(false);
                           }}
                         >
                           <div>
                             <Text strong>{customer.full_name}</Text>
                             <br />
-                            <Text type="secondary">{customer.phone_number}</Text>
+                            <Text type="secondary">
+                              {customer.phone_number}
+                            </Text>
                             {customer.loyalty_points > 0 && (
                               <Tag color="gold" style={{ marginLeft: 8 }}>
                                 {customer.loyalty_points} điểm
@@ -542,24 +604,30 @@ POS Bán Lẻ & Thống kê
                   size={48}
                   icon={<UserOutlined />}
                   style={{
-                    backgroundColor: selectedCustomer ? '#52c41a' : '#1890ff'
+                    backgroundColor: selectedCustomer ? "#52c41a" : "#1890ff",
                   }}
                 />
                 <div>
                   <Text strong style={{ fontSize: 16 }}>
-                    {selectedCustomer ? selectedCustomer.full_name : 'Khách vãng lai'}
+                    {selectedCustomer
+                      ? selectedCustomer.full_name
+                      : "Khách vãng lai"}
                   </Text>
                   <br />
                   {selectedCustomer ? (
                     <Space>
-                      <Text type="secondary">{selectedCustomer.phone_number}</Text>
+                      <Text type="secondary">
+                        {selectedCustomer.phone_number}
+                      </Text>
                       {selectedCustomer.loyalty_points > 0 && (
-                        <Tag color="gold">{selectedCustomer.loyalty_points} điểm</Tag>
+                        <Tag color="gold">
+                          {selectedCustomer.loyalty_points} điểm
+                        </Tag>
                       )}
                       <Button
                         type="link"
                         size="small"
-                        style={{ padding: 0, height: 'auto' }}
+                        style={{ padding: 0, height: "auto" }}
                         onClick={() => setSelectedCustomer(null)}
                       >
                         Bỏ chọn
@@ -568,7 +636,7 @@ POS Bán Lẻ & Thống kê
                   ) : (
                     <Button
                       type="link"
-                      style={{ padding: 0, height: 'auto' }}
+                      style={{ padding: 0, height: "auto" }}
                       onClick={() => setIsCreateCustomerModalOpen(true)}
                     >
                       + Tạo khách hàng mới
@@ -581,26 +649,32 @@ POS Bán Lẻ & Thống kê
             <Card
               title={
                 <Space>
-                  {prescriptionMode ? <Tag color="green">Đơn thuốc</Tag> : <SearchOutlined />}
-                  <span>{prescriptionMode ? 'Đơn thuốc' : 'Tìm kiếm Sản phẩm'}</span>
+                  {prescriptionMode ? (
+                    <Tag color="green">Đơn thuốc</Tag>
+                  ) : (
+                    <SearchOutlined />
+                  )}
+                  <span>
+                    {prescriptionMode ? "Đơn thuốc" : "Tìm kiếm Sản phẩm"}
+                  </span>
                   <Button
                     size="small"
-                    type={prescriptionMode ? 'primary' : 'default'}
+                    type={prescriptionMode ? "primary" : "default"}
                     onClick={handleTogglePrescriptionMode}
                   >
-                    {prescriptionMode ? 'Thoát' : 'Đơn thuốc'}
+                    {prescriptionMode ? "Thoát" : "Đơn thuốc"}
                   </Button>
                 </Space>
               }
               size="small"
               style={{
                 flex: 1,
-                display: 'flex',
-                flexDirection: 'column',
+                display: "flex",
+                flexDirection: "column",
                 borderRadius: 8,
-                overflow: 'hidden'
+                overflow: "hidden",
               }}
-              styles={{ body: { flex: 1, padding: 16, overflow: 'hidden' } }}
+              styles={{ body: { flex: 1, padding: 16, overflow: "hidden" } }}
             >
               {!prescriptionMode ? (
                 <>
@@ -612,20 +686,24 @@ POS Bán Lẻ & Thống kê
                     loading={isSearching}
                     style={{ marginBottom: 16 }}
                   />
-                  <div style={{ flex: 1, overflow: 'auto' }}>
+                  <div style={{ flex: 1, overflow: "auto" }}>
                     <List
                       loading={isSearching}
                       dataSource={searchResults}
-                      locale={{ emptyText: searchTerm ? 'Không tìm thấy sản phẩm' : 'Nhập từ khóa để tìm kiếm' }}
+                      locale={{
+                        emptyText: searchTerm
+                          ? "Không tìm thấy sản phẩm"
+                          : "Nhập từ khóa để tìm kiếm",
+                      }}
                       renderItem={(product) => (
                         <List.Item
                           style={{
-                            padding: '12px 0',
+                            padding: "12px 0",
                             borderRadius: 8,
                             marginBottom: 8,
-                            backgroundColor: '#fafafa',
+                            backgroundColor: "#fafafa",
                             paddingLeft: 12,
-                            paddingRight: 12
+                            paddingRight: 12,
                           }}
                           actions={[
                             <Tooltip title="Thêm vào giỏ hàng">
@@ -643,20 +721,35 @@ POS Bán Lẻ & Thống kê
                             title={
                               <Space>
                                 <Text strong>{product.name}</Text>
-                                {product.stock_quantity !== undefined && product.stock_quantity <= 5 && (
-                                  <Tag color={product.stock_quantity === 0 ? 'red' : 'orange'}>
-                                    {product.stock_quantity === 0 ? 'Hết hàng' : `Còn ${product.stock_quantity}`}
-                                  </Tag>
-                                )}
+                                {product.stock_quantity !== undefined &&
+                                  product.stock_quantity <= 5 && (
+                                    <Tag
+                                      color={
+                                        product.stock_quantity === 0
+                                          ? "red"
+                                          : "orange"
+                                      }
+                                    >
+                                      {product.stock_quantity === 0
+                                        ? "Hết hàng"
+                                        : `Còn ${product.stock_quantity}`}
+                                    </Tag>
+                                  )}
                               </Space>
                             }
                             description={
                               <Space direction="vertical" size={0}>
-                                <Text style={{ color: '#52c41a', fontWeight: 500 }}>
-                                  {(product.retail_price || 0).toLocaleString()}đ
+                                <Text
+                                  style={{ color: "#52c41a", fontWeight: 500 }}
+                                >
+                                  {(product.retail_price || 0).toLocaleString()}
+                                  đ
                                 </Text>
                                 {product.stock_quantity !== undefined && (
-                                  <Text type="secondary" style={{ fontSize: '12px' }}>
+                                  <Text
+                                    type="secondary"
+                                    style={{ fontSize: "12px" }}
+                                  >
                                     📦 Tồn kho: {product.stock_quantity}
                                   </Text>
                                 )}
@@ -669,29 +762,51 @@ POS Bán Lẻ & Thống kê
                   </div>
                 </>
               ) : (
-                <div style={{ flex: 1, overflow: 'auto' }}>
+                <div style={{ flex: 1, overflow: "auto" }}>
                   {!selectedCustomer ? (
-                    <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>
+                    <div
+                      style={{
+                        textAlign: "center",
+                        padding: "40px 0",
+                        color: "#999",
+                      }}
+                    >
                       <Text>Vui lòng chọn bệnh nhân để xem đơn thuốc</Text>
                     </div>
                   ) : patientVisits.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>
+                    <div
+                      style={{
+                        textAlign: "center",
+                        padding: "40px 0",
+                        color: "#999",
+                      }}
+                    >
                       <Text>Không có lịch sử khám bệnh</Text>
                     </div>
                   ) : (
                     <>
                       <Select
                         placeholder="Chọn lần khám"
-                        style={{ width: '100%', marginBottom: 16 }}
+                        style={{ width: "100%", marginBottom: 16 }}
                         value={selectedVisit?.visit_id}
                         onChange={(visitId) => {
-                          const visit = patientVisits.find(v => v.visit_id === visitId);
+                          const visit = patientVisits.find(
+                            (v) => v.visit_id === visitId
+                          );
                           setSelectedVisit(visit);
                         }}
                       >
-                        {patientVisits.map(visit => (
-                          <Select.Option key={visit.visit_id} value={visit.visit_id}>
-                            {new Date(visit.visit_date).toLocaleDateString('vi-VN')} - {visit.assessment_diagnosis_icd10 || 'Khám tổng quát'}
+                        {patientVisits.map((visit) => (
+                          <Select.Option
+                            key={visit.visit_id}
+                            value={visit.visit_id}
+                          >
+                            {new Date(visit.visit_date).toLocaleDateString(
+                              "vi-VN"
+                            )}{" "}
+                            -{" "}
+                            {visit.assessment_diagnosis_icd10 ||
+                              "Khám tổng quát"}
                           </Select.Option>
                         ))}
                       </Select>
@@ -699,17 +814,17 @@ POS Bán Lẻ & Thống kê
                       <List
                         loading={loadingPrescriptions}
                         dataSource={availablePrescriptions}
-                        locale={{ emptyText: 'Không có đơn thuốc' }}
+                        locale={{ emptyText: "Không có đơn thuốc" }}
                         renderItem={(prescription) => (
                           <List.Item
                             style={{
-                              padding: '12px 0',
+                              padding: "12px 0",
                               borderRadius: 8,
                               marginBottom: 8,
-                              backgroundColor: '#f0f9ff',
+                              backgroundColor: "#f0f9ff",
                               paddingLeft: 12,
                               paddingRight: 12,
-                              border: '1px solid #bae7ff'
+                              border: "1px solid #bae7ff",
                             }}
                             actions={[
                               <Tooltip title="Thêm vào giỏ hàng">
@@ -717,7 +832,9 @@ POS Bán Lẻ & Thống kê
                                   type="primary"
                                   shape="circle"
                                   icon={<PlusOutlined />}
-                                  onClick={() => handleAddPrescriptionToCart(prescription)}
+                                  onClick={() =>
+                                    handleAddPrescriptionToCart(prescription)
+                                  }
                                 />
                               </Tooltip>,
                             ]}
@@ -725,22 +842,40 @@ POS Bán Lẻ & Thống kê
                             <List.Item.Meta
                               title={
                                 <Space>
-                                  <Text strong>{prescription.products?.name}</Text>
-                                  <Tag color="blue">x{prescription.quantity_ordered}</Tag>
+                                  <Text strong>
+                                    {prescription.products?.name}
+                                  </Text>
+                                  <Tag color="blue">
+                                    x{prescription.quantity_ordered}
+                                  </Tag>
                                 </Space>
                               }
                               description={
                                 <Space direction="vertical" size={0}>
-                                  <Text style={{ color: '#52c41a', fontWeight: 500 }}>
-                                    {(prescription.products?.retail_price || 0).toLocaleString()}đ
+                                  <Text
+                                    style={{
+                                      color: "#52c41a",
+                                      fontWeight: 500,
+                                    }}
+                                  >
+                                    {(
+                                      prescription.products?.retail_price || 0
+                                    ).toLocaleString()}
+                                    đ
                                   </Text>
                                   {prescription.dosage_instruction && (
-                                    <Text type="secondary" style={{ fontSize: '12px' }}>
+                                    <Text
+                                      type="secondary"
+                                      style={{ fontSize: "12px" }}
+                                    >
                                       {prescription.dosage_instruction}
                                     </Text>
                                   )}
                                   {prescription.ai_interaction_warning && (
-                                    <Tag color="orange" style={{ fontSize: '11px' }}>
+                                    <Tag
+                                      color="orange"
+                                      style={{ fontSize: "11px" }}
+                                    >
                                       ⚠️ {prescription.ai_interaction_warning}
                                     </Tag>
                                   )}
@@ -770,22 +905,26 @@ POS Bán Lẻ & Thống kê
             }
             size="small"
             style={{
-              height: '100%',
-              display: 'flex',
-              flexDirection: 'column',
+              height: "100%",
+              display: "flex",
+              flexDirection: "column",
               borderRadius: 8,
-              overflow: 'hidden'
+              overflow: "hidden",
             }}
-            styles={{ body: { flex: 1, padding: 16, overflow: 'hidden' } }}
+            styles={{ body: { flex: 1, padding: 16, overflow: "hidden" } }}
           >
-            <div style={{ flex: 1, overflow: 'auto' }}>
+            <div style={{ flex: 1, overflow: "auto" }}>
               {cart.length === 0 ? (
-                <div style={{
-                  textAlign: 'center',
-                  padding: '40px 0',
-                  color: '#999'
-                }}>
-                  <ShoppingCartOutlined style={{ fontSize: 48, marginBottom: 16 }} />
+                <div
+                  style={{
+                    textAlign: "center",
+                    padding: "40px 0",
+                    color: "#999",
+                  }}
+                >
+                  <ShoppingCartOutlined
+                    style={{ fontSize: 48, marginBottom: 16 }}
+                  />
                   <div>Giỏ hàng trống</div>
                 </div>
               ) : (
@@ -795,12 +934,12 @@ POS Bán Lẻ & Thống kê
                   renderItem={(item) => (
                     <List.Item
                       style={{
-                        padding: '12px 0',
+                        padding: "12px 0",
                         borderRadius: 8,
                         marginBottom: 8,
-                        backgroundColor: '#f8f9fa',
+                        backgroundColor: "#f8f9fa",
                         paddingLeft: 12,
-                        paddingRight: 12
+                        paddingRight: 12,
                       }}
                       actions={[
                         <Tooltip title="Xóa khỏi giỏ hàng">
@@ -818,21 +957,27 @@ POS Bán Lẻ & Thống kê
                         avatar={<Avatar src={item.image_url} size={48} />}
                         title={<Text strong>{item.name}</Text>}
                         description={
-                          <Space direction="vertical" size={4} style={{ width: '100%' }}>
+                          <Space
+                            direction="vertical"
+                            size={4}
+                            style={{ width: "100%" }}
+                          >
                             <Space align="center">
                               {item.appliedPromotion && (
-                                <Text delete style={{ color: '#999' }}>
+                                <Text delete style={{ color: "#999" }}>
                                   {item.originalPrice.toLocaleString()}đ
                                 </Text>
                               )}
-                              <Text strong style={{ color: '#52c41a' }}>
+                              <Text strong style={{ color: "#52c41a" }}>
                                 {item.finalPrice.toLocaleString()}đ
                               </Text>
                               <InputNumber
                                 size="small"
                                 min={1}
                                 value={item.quantity}
-                                onChange={(val) => handleUpdateQuantity(item.id, val!)}
+                                onChange={(val) =>
+                                  handleUpdateQuantity(item.id, val!)
+                                }
                                 style={{ width: 60 }}
                               />
                             </Space>
@@ -842,22 +987,34 @@ POS Bán Lẻ & Thống kê
                               </Tag>
                             )}
                             {item.prescriptionNote && (
-                              <Text type="secondary" style={{ fontSize: '11px', fontStyle: 'italic' }}>
+                              <Text
+                                type="secondary"
+                                style={{
+                                  fontSize: "11px",
+                                  fontStyle: "italic",
+                                }}
+                              >
                                 📝 {item.prescriptionNote}
                               </Text>
                             )}
-                            {item.stock_quantity !== undefined && item.quantity > item.stock_quantity && (
-                              <Space>
-                                <WarningOutlined style={{ color: '#ff4d4f' }} />
-                                <Text type="danger" style={{ fontSize: '11px' }}>
-                                  Vượt tồn kho ({item.stock_quantity} có sẵn)
-                                </Text>
-                              </Space>
-                            )}
+                            {item.stock_quantity !== undefined &&
+                              item.quantity > item.stock_quantity && (
+                                <Space>
+                                  <WarningOutlined
+                                    style={{ color: "#ff4d4f" }}
+                                  />
+                                  <Text
+                                    type="danger"
+                                    style={{ fontSize: "11px" }}
+                                  >
+                                    Vượt tồn kho ({item.stock_quantity} có sẵn)
+                                  </Text>
+                                </Space>
+                              )}
                           </Space>
                         }
                       />
-                      <div style={{ textAlign: 'right' }}>
+                      <div style={{ textAlign: "right" }}>
                         <Text strong style={{ fontSize: 16 }}>
                           {(item.finalPrice * item.quantity).toLocaleString()}đ
                         </Text>
@@ -875,22 +1032,22 @@ POS Bán Lẻ & Thống kê
             title="💰 Thanh toán"
             size="small"
             style={{
-              height: '100%',
+              height: "100%",
               borderRadius: 8,
-              border: '2px solid #1890ff'
+              border: "2px solid #1890ff",
             }}
           >
-            <Space direction="vertical" size={16} style={{ width: '100%' }}>
-              <div style={{ textAlign: 'center' }}>
+            <Space direction="vertical" size={16} style={{ width: "100%" }}>
+              <div style={{ textAlign: "center" }}>
                 <Statistic
                   title="Tổng cộng"
                   value={cartDetails.itemTotal}
                   suffix="VNĐ"
-                  valueStyle={{ color: '#1890ff', fontSize: '1.8rem' }}
+                  valueStyle={{ color: "#1890ff", fontSize: "1.8rem" }}
                 />
                 {cartDetails.totalDiscount > 0 && (
                   <>
-                    <Text delete style={{ color: '#999' }}>
+                    <Text delete style={{ color: "#999" }}>
                       {cartDetails.originalTotal.toLocaleString()}đ
                     </Text>
                     <br />
@@ -898,20 +1055,20 @@ POS Bán Lẻ & Thống kê
                       title="🎉 Tiết kiệm"
                       value={cartDetails.totalDiscount}
                       suffix="VNĐ"
-                      valueStyle={{ color: '#52c41a', fontSize: '1.2rem' }}
+                      valueStyle={{ color: "#52c41a", fontSize: "1.2rem" }}
                     />
                   </>
                 )}
               </div>
 
-              <Divider style={{ margin: '8px 0' }} />
+              <Divider style={{ margin: "8px 0" }} />
 
-              <Space direction="vertical" size={8} style={{ width: '100%' }}>
+              <Space direction="vertical" size={8} style={{ width: "100%" }}>
                 <Button
                   block
                   size="large"
                   icon={<DollarOutlined />}
-                  onClick={() => handleOpenPaymentModal('cash')}
+                  onClick={() => handleOpenPaymentModal("cash")}
                   style={{ height: 48 }}
                 >
                   Tiền mặt
@@ -920,7 +1077,7 @@ POS Bán Lẻ & Thống kê
                   block
                   size="large"
                   icon={<CreditCardOutlined />}
-                  onClick={() => handleOpenPaymentModal('card')}
+                  onClick={() => handleOpenPaymentModal("card")}
                   style={{ height: 48 }}
                 >
                   Thẻ
@@ -929,7 +1086,7 @@ POS Bán Lẻ & Thống kê
                   block
                   size="large"
                   icon={<QrcodeOutlined />}
-                  onClick={() => handleOpenPaymentModal('qr')}
+                  onClick={() => handleOpenPaymentModal("qr")}
                   style={{ height: 48 }}
                 >
                   Chuyển khoản (QR)
@@ -942,15 +1099,15 @@ POS Bán Lẻ & Thống kê
                 size="large"
                 style={{
                   height: 64,
-                  fontSize: '1.2rem',
-                  fontWeight: 'bold',
-                  background: 'linear-gradient(45deg, #1890ff, #40a9ff)',
-                  border: 'none',
-                  boxShadow: '0 4px 15px 0 rgba(24, 144, 255, 0.4)'
+                  fontSize: "1.2rem",
+                  fontWeight: "bold",
+                  background: "linear-gradient(45deg, #1890ff, #40a9ff)",
+                  border: "none",
+                  boxShadow: "0 4px 15px 0 rgba(24, 144, 255, 0.4)",
                 }}
                 disabled={cart.length === 0}
                 loading={isProcessingPayment}
-                onClick={() => handleOpenPaymentModal('cash')}
+                onClick={() => handleOpenPaymentModal("cash")}
               >
                 🚀 Thanh Toán Ngay
               </Button>
@@ -969,7 +1126,7 @@ POS Bán Lẻ & Thống kê
         onFinish={handleFinishPayment}
         okButtonProps={{ loading: isProcessingPayment }}
         onPrintReceipt={() => {
-          notification.success({ message: 'Đang in hóa đơn...' });
+          notification.success({ message: "Đang in hóa đơn..." });
         }}
       />
 
@@ -995,7 +1152,7 @@ POS Bán Lẻ & Thống kê
               <Form.Item
                 name="full_name"
                 label="Họ và tên"
-                rules={[{ required: true, message: 'Vui lòng nhập họ và tên' }]}
+                rules={[{ required: true, message: "Vui lòng nhập họ và tên" }]}
               >
                 <Input placeholder="Nhập họ và tên" />
               </Form.Item>
@@ -1005,8 +1162,11 @@ POS Bán Lẻ & Thống kê
                 name="phone_number"
                 label="Số điện thoại"
                 rules={[
-                  { required: true, message: 'Vui lòng nhập số điện thoại' },
-                  { pattern: /^[0-9]{10,11}$/, message: 'Số điện thoại không hợp lệ' }
+                  { required: true, message: "Vui lòng nhập số điện thoại" },
+                  {
+                    pattern: /^[0-9]{10,11}$/,
+                    message: "Số điện thoại không hợp lệ",
+                  },
                 ]}
               >
                 <Input placeholder="Nhập số điện thoại" />
@@ -1018,7 +1178,7 @@ POS Bán Lẻ & Thống kê
             <Col span={12}>
               <Form.Item name="date_of_birth" label="Ngày sinh">
                 <DatePicker
-                  style={{ width: '100%' }}
+                  style={{ width: "100%" }}
                   placeholder="Chọn ngày sinh"
                   format="DD/MM/YYYY"
                 />

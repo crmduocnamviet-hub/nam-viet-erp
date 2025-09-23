@@ -30,8 +30,8 @@ const SchedulingPageContent: React.FC = () => {
 
         // Load doctors as resources
         const { data: employees, error } = await getEmployees({
-          roleName: 'BacSi',
-          limit: 50
+          roleName: "BacSi",
+          limit: 50,
         });
         if (error) {
           notification.error({
@@ -61,16 +61,14 @@ const SchedulingPageContent: React.FC = () => {
         "appointment_id" | "created_at"
       > = {
         patient_id: values.patient_id,
-        service_type: values.service_type,
+        service_type: (values.service || values.service_type) as any,
         scheduled_datetime: `${values.appointmentDate.format(
           "YYYY-MM-DD"
         )}T${values.appointmentTime.format("HH:mm:ss")}`,
-        doctor_id: values.resource_id?.startsWith("doc")
-          ? values.resource_id
-          : null,
+        doctor_id: values.resourceId as any, // Use resourceId directly as it's now a real employee_id
         receptionist_id: null, // Would be filled with current logged in user
         current_status: "SCHEDULED",
-        reason_for_visit: values.reason_for_visit,
+        reason_for_visit: values.notes || values.reason_for_visit,
         check_in_time: null,
         is_confirmed_by_zalo: false,
         receptionist_notes: values.notes || null,

@@ -133,3 +133,19 @@ export const getPatientsWithConditions = async (condition: string) => {
 
   return response;
 };
+
+// Update patient notes (receptionist notes)
+export const updatePatientNotes = async (
+  patientId: string,
+  notes: string
+) => {
+  const response = await supabase
+    .from("patients")
+    .update({ receptionist_notes: notes })
+    .eq("patient_id", patientId);
+  return response;
+};
+
+// Alias functions for backward compatibility with existing code
+export const getProfileById = getPatientById;
+export const updateProfileNotes = updatePatientNotes;

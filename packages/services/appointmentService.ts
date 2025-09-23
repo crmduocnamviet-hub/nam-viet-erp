@@ -1,11 +1,27 @@
 import type { PostgrestSingleResponse } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
 
+// Basic appointment interface
+interface IAppointment {
+  appointment_id: string;
+  patient_id: string;
+  doctor_id?: string | null;
+  receptionist_id?: string | null;
+  scheduled_datetime: string;
+  service_type?: string | null;
+  current_status: string;
+  notes?: string | null;
+  room_id?: string | null; // Added room field
+  created_at: string;
+  updated_at?: string;
+}
+
 // Get all appointments with optional filtering and relations
 export const getAppointments = async (filters?: {
   patientId?: string;
   doctorId?: string;
   receptionistId?: string;
+  roomId?: string;
   status?: string;
   serviceType?: string;
   startDate?: string;
@@ -20,7 +36,8 @@ export const getAppointments = async (filters?: {
       patients!inner(full_name, phone_number),
       doctor:employees!doctor_id(full_name, role_name),
       receptionist:employees!receptionist_id(full_name, role_name),
-      appointment_statuses!inner(status_name_vn, color_code)
+      appointment_statuses!inner(status_name_vn, color_code),
+      room:rooms(room_id, name)
     `);
 
   if (filters?.patientId) {
@@ -33,6 +50,10 @@ export const getAppointments = async (filters?: {
 
   if (filters?.receptionistId) {
     query = query.eq("receptionist_id", filters.receptionistId);
+  }
+
+  if (filters?.roomId) {
+    query = query.eq("room_id", filters.roomId);
   }
 
   if (filters?.status) {

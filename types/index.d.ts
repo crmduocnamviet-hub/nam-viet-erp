@@ -227,6 +227,8 @@ interface IPatient {
   allergy_notes: string | null; // Dị ứng đã biết
   chronic_diseases: string | null; // Bệnh nền/Bệnh mãn tính
   created_at: string;
+  receptionist_notes?: string;
+  address?: string;
 }
 
 // Employee Management - Quản lý Nhân sự (Bác sĩ, Dược sĩ, Lễ tân)
@@ -251,7 +253,7 @@ interface IAppointment {
   patient_id: string;
   service_type: string | null; // Khám Bệnh | Tiêm Chủng | Siêu âm
   scheduled_datetime: string;
-  doctor_id: string | null; // Bác sĩ/Tài nguyên được đặt lịch
+  doctor_id?: string | null; // Bác sĩ/Tài nguyên được đặt lịch
   receptionist_id: string | null; // Lễ tân tạo lịch
   current_status: string; // Xám, Xanh Lá, Tím, v.v.
   reason_for_visit: string | null;

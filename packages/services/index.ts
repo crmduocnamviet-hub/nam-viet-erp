@@ -21,5 +21,8 @@ export * from "./prescriptionService";
 export * from "./salesOrderService";
 export * from "./salesOrderItemService";
 
+// Room Management Services
+export * from "./roomService";
+
 // Seeding Services
 export * from "./seedDoctors";

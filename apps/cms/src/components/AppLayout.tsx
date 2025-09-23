@@ -48,6 +48,8 @@ import ContentLibrary from "../pages/marketing/ContentLibrary";
 import ChatbotManagement from "../pages/marketing/ChatbotManagement";
 import MissingDocumentationWarning from "./MissingDocumentationWarning";
 import EmployeesPage from "../pages/EmployeesPage";
+import PatientDetailPage from "../pages/PatientDetailPage";
+import RoomManagementPage from "../pages/RoomManagementPage";
 
 const { Header, Content, Footer, Sider } = Layout;
 const { Title } = Typography;
@@ -120,6 +122,7 @@ const menuItems: MenuProps["items"] = [
     key: "settings",
     icon: <SettingOutlined />,
     children: [
+      { label: "Quản lý Phòng", key: "/rooms" },
       { label: "Quản lý Quỹ", key: "/settings/funds" },
       { label: "Cảnh báo Thiếu Tài liệu", key: "/missing-documentation" },
     ],
@@ -336,6 +339,12 @@ const AppLayout: React.FC = () => {
 
                 {/* --- ROUTE CHO MODULE NHÂN SỰ --- */}
                 <Route path="/employees" element={<EmployeesPage />} />
+
+                {/* --- ROUTE CHO MODULE BỆNH NHÂN --- */}
+                <Route path="/patients/:patientId" element={<PatientDetailPage />} />
+
+                {/* --- ROUTE CHO MODULE QUẢN LÝ PHÒNG --- */}
+                <Route path="/rooms" element={<RoomManagementPage />} />
 
                 {/* --- THÊM ROUTE CHO MODULE MARKETING --- */}
                 <Route

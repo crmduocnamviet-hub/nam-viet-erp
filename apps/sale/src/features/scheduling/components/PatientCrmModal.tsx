@@ -26,6 +26,7 @@ import {
 import dayjs from 'dayjs';
 import { useDebounce } from '@nam-viet-erp/shared-components';
 import { getErrorMessage } from '../../../types';
+import { useNavigate } from 'react-router-dom';
 
 const { Title, Text, Paragraph } = Typography;
 const { TabPane } = Tabs;
@@ -55,6 +56,7 @@ const PatientCrmModal: React.FC<PatientCrmModalProps> = ({
   patientId,
 }) => {
   const { notification } = App.useApp();
+  const navigate = useNavigate();
   const [profile, setProfile] = useState<any | null>(null);
   const [appointments, setAppointments] = useState<any[]>([]);
   const [serviceHistory, setServiceHistory] = useState<any[]>([]);
@@ -119,6 +121,13 @@ const PatientCrmModal: React.FC<PatientCrmModalProps> = ({
     }
   };
 
+  const handleEditPatient = () => {
+    if (patientId) {
+      onClose(); // Close the patient profile modal
+      navigate(`/patients/${patientId}`); // Navigate to patient detail page
+    }
+  };
+
   return (
     <Modal
       open={open}
@@ -141,21 +150,71 @@ const PatientCrmModal: React.FC<PatientCrmModalProps> = ({
                 <Title level={4} style={{ marginTop: 8 }}>
                   {profile.full_name}
                 </Title>
-                <Text type="secondary">{profile.phone}</Text>
+                <Text type="secondary">{profile.phone_number}</Text>
+                <div style={{ marginTop: 16 }}>
+                  <Button
+                    type="primary"
+                    icon={<EditOutlined />}
+                    onClick={handleEditPatient}
+                    size="small"
+                    style={{ width: '100%' }}
+                  >
+                    Chỉnh sửa thông tin
+                  </Button>
+                </div>
               </div>
-              <Descriptions bordered column={1} style={{ marginTop: 16 }}>
-                <Descriptions.Item label="Ngày sinh">
-                  {profile.date_of_birth
-                    ? dayjs(profile.date_of_birth).format('DD/MM/YYYY')
-                    : 'N/A'}
-                </Descriptions.Item>
-                <Descriptions.Item label="Giới tính">
-                  {profile.gender || 'N/A'}
-                </Descriptions.Item>
-                <Descriptions.Item label="Địa chỉ">
-                  {profile.address || 'N/A'}
-                </Descriptions.Item>
-              </Descriptions>
+
+              <div style={{ marginTop: 16 }}>
+                <Descriptions
+                  bordered
+                  column={1}
+                  size="small"
+                  style={{
+                    backgroundColor: '#fafafa',
+                    border: '1px solid #f0f0f0',
+                    borderRadius: 8
+                  }}
+                >
+                  <Descriptions.Item label="📅 Ngày sinh">
+                    <Text strong>
+                      {profile.date_of_birth
+                        ? dayjs(profile.date_of_birth).format('DD/MM/YYYY')
+                        : <Text type="secondary">Chưa cập nhật</Text>}
+                    </Text>
+                  </Descriptions.Item>
+                  <Descriptions.Item label="👤 Giới tính">
+                    <Text strong>
+                      {profile.gender ? (
+                        profile.gender === 'Nam' ? '👨 Nam' :
+                        profile.gender === 'Nữ' ? '👩 Nữ' : '🤷 Khác'
+                      ) : <Text type="secondary">Chưa cập nhật</Text>}
+                    </Text>
+                  </Descriptions.Item>
+                  <Descriptions.Item label="🏠 Địa chỉ">
+                    <Text>
+                      {profile.address || <Text type="secondary">Chưa cập nhật</Text>}
+                    </Text>
+                  </Descriptions.Item>
+                  <Descriptions.Item label="⚠️ Dị ứng">
+                    <Text>
+                      {profile.allergy_notes ? (
+                        <Text style={{ color: '#ff4d4f' }}>{profile.allergy_notes}</Text>
+                      ) : (
+                        <Text type="secondary">Không có</Text>
+                      )}
+                    </Text>
+                  </Descriptions.Item>
+                  <Descriptions.Item label="🏥 Bệnh mãn tính">
+                    <Text>
+                      {profile.chronic_diseases ? (
+                        <Text style={{ color: '#faad14' }}>{profile.chronic_diseases}</Text>
+                      ) : (
+                        <Text type="secondary">Không có</Text>
+                      )}
+                    </Text>
+                  </Descriptions.Item>
+                </Descriptions>
+              </div>
             </Col>
             <Col span={16}>
               <Tabs defaultActiveKey="1">
