@@ -3,7 +3,22 @@ import { Button, Table, Space, Row, Col, Typography, App, Tag } from "antd";
 import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { deletePromotion, getPromotions } from "@nam-viet-erp/services";
-import { getErrorMessage } from "../types/error";
+// Helper function to safely get error message
+const getErrorMessage = (error: unknown): string => {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  if (typeof error === 'string') {
+    return error;
+  }
+
+  if (typeof error === 'object' && error !== null && 'message' in error) {
+    return (error as any).message;
+  }
+
+  return 'An unknown error occurred';
+};
 
 const { Title } = Typography;
 

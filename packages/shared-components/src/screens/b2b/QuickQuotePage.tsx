@@ -13,7 +13,22 @@ import {
 } from "antd";
 import { useDebounce } from '@nam-viet-erp/shared-components';
 import { getActiveProduct, getActivePromotions } from "@nam-viet-erp/services";
-import { getErrorMessage } from "../types/error";
+// Helper function to safely get error message
+const getErrorMessage = (error: unknown): string => {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  if (typeof error === 'string') {
+    return error;
+  }
+
+  if (typeof error === 'object' && error !== null && 'message' in error) {
+    return (error as any).message;
+  }
+
+  return 'An unknown error occurred';
+};
 
 const { Title, Text, Paragraph } = Typography;
 const { Search } = Input;

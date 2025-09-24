@@ -31,6 +31,7 @@ import {
   getPatients,
   getAppointments,
   getEmployees,
+  createPatient,
 } from "@nam-viet-erp/services";
 import { useDebounce } from "./hooks/useDebounce";
 
@@ -79,6 +80,8 @@ const AppointmentCreationModal: React.FC<AppointmentCreationModalProps> = ({
     useState<IEmployee[]>(resources); // Use passed resources
   const [appointments, setAppointments] = useState<any[]>([]);
   const [loadingAppointments, setLoadingAppointments] = useState(false);
+  const [showNewPatientForm, setShowNewPatientForm] = useState(false);
+  const [creatingPatient, setCreatingPatient] = useState(false);
 
   const debouncedSearchTerm = useDebounce(searchTerm, 500);
   const selectedService = Form.useWatch("service", form);
@@ -186,10 +189,7 @@ const AppointmentCreationModal: React.FC<AppointmentCreationModalProps> = ({
 
   const onPatientSelect = (value: string, option: PatientOption) => {
     if (value === "__CREATE_NEW__") {
-      // Handle opening a new patient creation modal or form
-      // For now, we can just log it.
-      console.log("Create new patient selected");
-      // You might want to clear the search input here
+      setShowNewPatientForm(true);
       setSearchTerm("");
       return;
     }
@@ -202,6 +202,50 @@ const AppointmentCreationModal: React.FC<AppointmentCreationModalProps> = ({
         patientPhone: patient.phone_number,
         patient_id: patient.patient_id,
       });
+    }
+  };
+
+  const handleCreateNewPatient = async () => {
+    try {
+      setCreatingPatient(true);
+      const patientName = form.getFieldValue('patientName');
+      const patientPhone = form.getFieldValue('patientPhone');
+
+      if (!patientName || !patientPhone) {
+        console.error('Patient name and phone are required');
+        return;
+      }
+
+      const newPatientData = {
+        full_name: patientName,
+        phone_number: patientPhone,
+        date_of_birth: null,
+        gender: null,
+        is_b2b_customer: false,
+        loyalty_points: 0,
+        allergy_notes: null,
+        chronic_diseases: null,
+      };
+
+      const { data: newPatient, error } = await createPatient(newPatientData);
+
+      if (error) {
+        console.error('Error creating patient:', error);
+        return;
+      }
+
+      if (newPatient) {
+        setSelectedPatient(newPatient);
+        form.setFieldsValue({
+          patient_id: newPatient.patient_id,
+        });
+        setShowNewPatientForm(false);
+        console.log('New patient created:', newPatient);
+      }
+    } catch (error) {
+      console.error('Error creating patient:', error);
+    } finally {
+      setCreatingPatient(false);
     }
   };
 
@@ -265,41 +309,122 @@ const AppointmentCreationModal: React.FC<AppointmentCreationModalProps> = ({
           <Form.Item name="patient_id" hidden>
             <Input />
           </Form.Item>
-          <Form.Item label="Tìm kiếm bệnh nhân (SĐT hoặc Tên)">
-            <AutoComplete
-              options={patientOptions}
-              onSelect={onPatientSelect}
-              onSearch={setSearchTerm}
-              placeholder="Nhập để tìm..."
-              notFoundContent={searching ? <Spin size="small" /> : null}
+          {!showNewPatientForm ? (
+            <Form.Item label="Tìm kiếm bệnh nhân (SĐT hoặc Tên)">
+              <AutoComplete
+                options={patientOptions}
+                onSelect={onPatientSelect}
+                onSearch={setSearchTerm}
+                placeholder="Nhập để tìm..."
+                notFoundContent={searching ? <Spin size="small" /> : null}
+                disabled={selectedPatient}
+              >
+                <Input />
+              </AutoComplete>
+            </Form.Item>
+          ) : (
+            <Card
+              title="Tạo bệnh nhân mới"
+              extra={
+                <Button
+                  type="link"
+                  onClick={() => {
+                    setShowNewPatientForm(false);
+                    form.setFieldsValue({ patientName: '', patientPhone: '' });
+                  }}
+                >
+                  Hủy
+                </Button>
+              }
+              style={{ marginBottom: 16 }}
             >
-              <Input />
-            </AutoComplete>
-          </Form.Item>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="patientName"
-                label="Họ và Tên"
-                rules={[
-                  { required: true, message: "Vui lòng nhập tên bệnh nhân" },
-                ]}
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item
+                    name="patientName"
+                    label="Họ và Tên"
+                    rules={[
+                      { required: true, message: "Vui lòng nhập tên bệnh nhân" },
+                    ]}
+                  >
+                    <Input placeholder="Nhập họ và tên" />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item
+                    name="patientPhone"
+                    label="Số điện thoại"
+                    rules={[
+                      { required: true, message: "Vui lòng nhập số điện thoại" },
+                      { pattern: /^[0-9]{10,11}$/, message: "Số điện thoại không hợp lệ" },
+                    ]}
+                  >
+                    <Input placeholder="Nhập số điện thoại" />
+                  </Form.Item>
+                </Col>
+              </Row>
+              <Button
+                type="primary"
+                onClick={handleCreateNewPatient}
+                loading={creatingPatient}
+                style={{ width: '100%' }}
               >
-                <Input />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="patientPhone"
-                label="Số điện thoại"
-                rules={[
-                  { required: true, message: "Vui lòng nhập số điện thoại" },
-                ]}
+                Tạo bệnh nhân và tiếp tục
+              </Button>
+            </Card>
+          )}
+
+          {selectedPatient && !showNewPatientForm && (
+            <Card title="Thông tin bệnh nhân đã chọn" style={{ marginBottom: 16 }}>
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Text strong>Họ và Tên: </Text>
+                  <Text>{selectedPatient.full_name}</Text>
+                </Col>
+                <Col span={12}>
+                  <Text strong>Số điện thoại: </Text>
+                  <Text>{selectedPatient.phone_number}</Text>
+                </Col>
+              </Row>
+              <Button
+                type="link"
+                onClick={() => {
+                  setSelectedPatient(null);
+                  form.setFieldsValue({ patientName: '', patientPhone: '', patient_id: '' });
+                }}
+                style={{ paddingLeft: 0 }}
               >
-                <Input />
-              </Form.Item>
-            </Col>
-          </Row>
+                Chọn bệnh nhân khác
+              </Button>
+            </Card>
+          )}
+
+          {!selectedPatient && !showNewPatientForm && (
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item
+                  name="patientName"
+                  label="Họ và Tên"
+                  rules={[
+                    { required: true, message: "Vui lòng nhập tên bệnh nhân" },
+                  ]}
+                >
+                  <Input disabled placeholder="Chọn từ danh sách hoặc tạo mới" />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item
+                  name="patientPhone"
+                  label="Số điện thoại"
+                  rules={[
+                    { required: true, message: "Vui lòng nhập số điện thoại" },
+                  ]}
+                >
+                  <Input disabled placeholder="Chọn từ danh sách hoặc tạo mới" />
+                </Form.Item>
+              </Col>
+            </Row>
+          )}
         </>
       ),
     },
@@ -403,28 +528,40 @@ const AppointmentCreationModal: React.FC<AppointmentCreationModalProps> = ({
       .then(() => {
         const allValues = {
           ...form.getFieldsValue(true),
-          patientId: selectedPatient?.id,
+          patientId: selectedPatient?.patient_id || selectedPatient?.id,
         };
         onFinish(allValues);
-        form.resetFields();
-        setCurrentStep(0);
-        setSelectedPatient(null);
+        handleReset();
       })
       .catch((info) => {
         console.log("Validate Failed:", info);
       });
   };
 
+  const handleReset = () => {
+    form.resetFields();
+    setCurrentStep(0);
+    setSelectedPatient(null);
+    setShowNewPatientForm(false);
+    setSearchTerm("");
+    setPatientOptions([]);
+  };
+
+  const handleClose = () => {
+    handleReset();
+    onClose();
+  };
+
   return (
     <Modal
       open={open}
       title="Tạo Lịch hẹn mới (4 bước Siêu tốc)"
-      onCancel={onClose}
+      onCancel={handleClose}
       width={800}
       destroyOnClose={true}
       footer={
         <Space>
-          <Button onClick={onClose}>Hủy</Button>
+          <Button onClick={handleClose}>Hủy</Button>
           {currentStep > 0 && <Button onClick={handlePrev}>Quay lại</Button>}
           {currentStep < steps.length - 1 && (
             <Button type="primary" onClick={handleNext}>

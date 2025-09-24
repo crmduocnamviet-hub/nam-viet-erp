@@ -25,31 +25,9 @@ import {
 } from "antd";
 import viVN from "antd/locale/vi_VN";
 import { signOut } from "@nam-viet-erp/services";
-
-// Import tất cả các trang của bạn ở đây
-import Dashboard from "../pages/Dashboard";
-import Products from "../pages/Products";
-import QuickQuote from "../pages/QuickQuote";
-import Promotions from "../pages/Promotions";
-import Vouchers from "../pages/Vouchers";
-import PromotionDetail from "../pages/PromotionDetail";
-import FinancialTransactions from "../pages/FinancialTransactions";
-import CashLedger from "../pages/CashLedger";
-import FundManagement from "../pages/FundManagement";
+import { Screen } from "@nam-viet-erp/shared-components";
 import logo from "../assets/logo.png";
-import PurchaseOrders from "../pages/PurchaseOrders";
-
-// IMPORT CÁC TRANG MARKETING MỚI
-import MarketingDashboard from "../pages/marketing/MarketingDashboard";
-import Campaigns from "../pages/marketing/Campaigns";
-import CampaignDetail from "../pages/marketing/CampaignDetail";
-import CustomerSegments from "../pages/marketing/CustomerSegments";
-import ContentLibrary from "../pages/marketing/ContentLibrary";
-import ChatbotManagement from "../pages/marketing/ChatbotManagement";
 import MissingDocumentationWarning from "./MissingDocumentationWarning";
-import EmployeesPage from "../pages/EmployeesPage";
-import PatientDetailPage from "../pages/PatientDetailPage";
-import RoomManagementPage from "../pages/RoomManagementPage";
 
 const { Header, Content, Footer, Sider } = Layout;
 const { Title } = Typography;
@@ -70,7 +48,10 @@ const menuItems: MenuProps["items"] = [
     label: "Bán Buôn (B2B)",
     key: "b2b",
     icon: <ShopOutlined />,
-    children: [{ label: "Xem Nhanh Báo Giá", key: "/quick-quote" }],
+    children: [
+      { label: "Quản lý Đơn hàng B2B", key: "/b2b-orders" },
+      { label: "Xem Nhanh Báo Giá", key: "/quick-quote" },
+    ],
   },
   // --- MENU MARKETING ĐƯỢC NÂNG CẤP ---
   {
@@ -322,53 +303,36 @@ const AppLayout: React.FC = () => {
               }}
             >
               <Routes>
-                <Route path="/" element={<Dashboard />} />
-                <Route path="/products" element={<Products />} />
-                <Route path="/quick-quote" element={<QuickQuote />} />
-                <Route path="/promotions" element={<Promotions />} />
-                <Route path="/promotions/new" element={<PromotionDetail />} />
-                <Route path="/promotions/:id" element={<PromotionDetail />} />
-                <Route path="/vouchers" element={<Vouchers />} />
-                <Route
-                  path="/financial-transactions"
-                  element={<FinancialTransactions />}
-                />
-                <Route path="/cash-ledger" element={<CashLedger />} />
-                <Route path="/settings/funds" element={<FundManagement />} />
-                <Route path="/purchase-orders" element={<PurchaseOrders />} />
+                <Route path="/" element={<Screen screenKey="management.dashboard" />} />
+                <Route path="/products" element={<Screen screenKey="inventory.products" />} />
+                <Route path="/b2b-orders" element={<Screen screenKey="b2b.orders" />} />
+                <Route path="/quick-quote" element={<Screen screenKey="b2b.quick-quote" />} />
+                <Route path="/promotions" element={<Screen screenKey="marketing.promotions" />} />
+                <Route path="/promotions/new" element={<Screen screenKey="marketing.promotion-detail" />} />
+                <Route path="/promotions/:id" element={<Screen screenKey="marketing.promotion-detail" />} />
+                <Route path="/vouchers" element={<Screen screenKey="marketing.vouchers" />} />
+                <Route path="/financial-transactions" element={<Screen screenKey="financial.transactions" />} />
+                <Route path="/cash-ledger" element={<Screen screenKey="financial.ledger" />} />
+                <Route path="/settings/funds" element={<Screen screenKey="financial.funds" />} />
+                <Route path="/purchase-orders" element={<Screen screenKey="inventory.purchase-orders" />} />
 
                 {/* --- ROUTE CHO MODULE NHÂN SỰ --- */}
-                <Route path="/employees" element={<EmployeesPage />} />
+                <Route path="/employees" element={<Screen screenKey="management.employees" />} />
 
                 {/* --- ROUTE CHO MODULE BỆNH NHÂN --- */}
-                <Route path="/patients/:patientId" element={<PatientDetailPage />} />
+                <Route path="/patients/:patientId" element={<Screen screenKey="medical.patient-detail" />} />
 
                 {/* --- ROUTE CHO MODULE QUẢN LÝ PHÒNG --- */}
-                <Route path="/rooms" element={<RoomManagementPage />} />
+                <Route path="/rooms" element={<Screen screenKey="management.rooms" />} />
 
                 {/* --- THÊM ROUTE CHO MODULE MARKETING --- */}
-                <Route
-                  path="/marketing/dashboard"
-                  element={<MarketingDashboard />}
-                />
-                <Route path="/marketing/campaigns" element={<Campaigns />} />
-                <Route
-                  path="/marketing/campaigns/new"
-                  element={<CampaignDetail />}
-                />
-                <Route
-                  path="/marketing/campaigns/:id"
-                  element={<CampaignDetail />}
-                />
-                <Route
-                  path="/marketing/segments"
-                  element={<CustomerSegments />}
-                />
-                <Route path="/marketing/library" element={<ContentLibrary />} />
-                <Route
-                  path="/marketing/chatbot"
-                  element={<ChatbotManagement />}
-                />
+                <Route path="/marketing/dashboard" element={<Screen screenKey="marketing.dashboard" />} />
+                <Route path="/marketing/campaigns" element={<Screen screenKey="marketing.campaigns" />} />
+                <Route path="/marketing/campaigns/new" element={<Screen screenKey="marketing.campaign-detail" />} />
+                <Route path="/marketing/campaigns/:id" element={<Screen screenKey="marketing.campaign-detail" />} />
+                <Route path="/marketing/segments" element={<Screen screenKey="marketing.customer-segments" />} />
+                <Route path="/marketing/library" element={<Screen screenKey="marketing.content-library" />} />
+                <Route path="/marketing/chatbot" element={<Screen screenKey="marketing.chatbot" />} />
                 <Route path="/missing-documentation" element={<MissingDocumentationWarning />} />
 
                 <Route path="*" element={<ComingSoon />} />

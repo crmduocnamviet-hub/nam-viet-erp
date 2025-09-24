@@ -20,6 +20,7 @@ export * from "./src/labOrderService";
 export * from "./src/prescriptionService";
 export * from "./src/salesOrderService";
 export * from "./src/salesOrderItemService";
+export * from "./src/b2bQuoteService";
 
 // Room Management Services
 export * from "./src/roomService";

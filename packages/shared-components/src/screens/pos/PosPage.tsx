@@ -45,7 +45,8 @@ import {
 import PaymentModal from "../../features/pos/components/PaymentModal";
 import type { CartItem, CartDetails, PriceInfo } from "../../types";
 import { getErrorMessage } from "../../types";
-import { useEmployee } from "../../context/EmployeeContext";
+// Context will be passed via props from the app
+// import { useEmployee } from "../../context/EmployeeContext";
 
 const { Title, Text } = Typography;
 const { Search } = Input;
@@ -58,9 +59,23 @@ const WAREHOUSE_MAP: {
   dh2: { warehouseId: 2, fundId: 2 }, // Assuming DH2 is warehouse 2 and uses fund 2
 };
 
-const PosPage: React.FC = () => {
+// Extended prescription type that includes joined product data
+interface PrescriptionWithProduct extends IPrescription {
+  products?: {
+    name: string;
+    manufacturer: string;
+    route: string;
+    retail_price: number;
+  };
+}
+
+interface PosPageProps {
+  employee?: any;
+  [key: string]: any;
+}
+
+const PosPage: React.FC<PosPageProps> = ({ employee }) => {
   const { notification } = App.useApp();
-  const { employee } = useEmployee();
 
   // State
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -90,7 +105,7 @@ const PosPage: React.FC = () => {
   const [prescriptionMode, setPrescriptionMode] = useState(false);
   const [patientVisits, setPatientVisits] = useState<any[]>([]);
   const [selectedVisit, setSelectedVisit] = useState<any>(null);
-  const [availablePrescriptions, setAvailablePrescriptions] = useState<any[]>(
+  const [availablePrescriptions, setAvailablePrescriptions] = useState<PrescriptionWithProduct[]>(
     []
   );
   const [loadingPrescriptions, setLoadingPrescriptions] = useState(false);
@@ -574,7 +589,7 @@ const PosPage: React.FC = () => {
                     <List
                       size="small"
                       dataSource={customerSearchResults}
-                      renderItem={(customer) => (
+                      renderItem={(customer: IPatient) => (
                         <List.Item
                           style={{ cursor: "pointer", padding: "8px 12px" }}
                           onClick={() => {
@@ -697,7 +712,7 @@ const PosPage: React.FC = () => {
                           ? "Không tìm thấy sản phẩm"
                           : "Nhập từ khóa để tìm kiếm",
                       }}
-                      renderItem={(product) => (
+                      renderItem={(product: IProduct) => (
                         <List.Item
                           style={{
                             padding: "12px 0",
@@ -817,7 +832,7 @@ const PosPage: React.FC = () => {
                         loading={loadingPrescriptions}
                         dataSource={availablePrescriptions}
                         locale={{ emptyText: "Không có đơn thuốc" }}
-                        renderItem={(prescription) => (
+                        renderItem={(prescription: PrescriptionWithProduct) => (
                           <List.Item
                             style={{
                               padding: "12px 0",
@@ -930,7 +945,7 @@ const PosPage: React.FC = () => {
                 <List
                   itemLayout="horizontal"
                   dataSource={cartDetails.items}
-                  renderItem={(item) => (
+                  renderItem={(item: CartItem) => (
                     <List.Item
                       style={{
                         padding: "12px 0",

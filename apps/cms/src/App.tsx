@@ -3,6 +3,7 @@ import { Routes, Route } from "react-router-dom";
 import AppLayout from "./components/AppLayout"; // <-- Chúng ta sẽ tách Layout ra file riêng
 import Login from "./pages/Login";
 import { useAuth } from "./hooks/useAuth";
+import { ScreenProvider, ROLE_PERMISSIONS } from "@nam-viet-erp/shared-components";
 import { Spin, Row } from "antd";
 
 const App: React.FC = () => {
@@ -17,13 +18,25 @@ const App: React.FC = () => {
     );
   }
 
+  // Create user object for permissions (placeholder - would typically come from auth)
+  const user = session ? {
+    id: 'current-user',
+    name: 'Current User',
+    permissions: ROLE_PERMISSIONS['admin'], // Use admin permissions for cms app
+    role: 'admin'
+  } : null;
+
   return (
     <Routes>
       {/* Nếu chưa đăng nhập, chỉ có thể truy cập trang Login */}
       <Route path="/login" element={<Login />} />
 
       {/* Nếu đã đăng nhập, có thể truy cập các trang bên trong AppLayout */}
-      <Route path="/*" element={session ? <AppLayout /> : <Login />} />
+      <Route path="/*" element={session && user ? (
+        <ScreenProvider user={user}>
+          <AppLayout />
+        </ScreenProvider>
+      ) : <Login />} />
     </Routes>
   );
 };

@@ -19,13 +19,8 @@ import {
 } from "antd";
 import viVN from "antd/locale/vi_VN";
 import { signOut } from "@nam-viet-erp/services";
-
-import PosPage from "../pages/POS/PosPage";
-import SchedulingPage from "../pages/SchedulingPage";
-import PatientsPage from "../pages/PatientsPage";
-import MedicalRecordsPage from "../pages/MedicalRecordsPage";
-import PatientDetailPage from "../pages/PatientDetailPage";
-import StoreChannelPage from "../pages/StoreChannelPage";
+import { ScreenProvider, Screen, ROLE_PERMISSIONS } from "@nam-viet-erp/shared-components";
+import { useEmployee } from "../context/EmployeeContext";
 import logo from "../assets/logo.png";
 
 const { Header, Content, Footer, Sider } = Layout;
@@ -34,7 +29,7 @@ const { useBreakpoint } = Grid;
 
 const menuItems: MenuProps["items"] = [
   { label: "💰 Bán hàng (POS)", key: "/", icon: <ShoppingCartOutlined /> },
-  { label: "🏪 Kênh cửa hàng", key: "/store-channel", icon: <ShopOutlined /> },
+  { label: "📋 Quản lý Đơn hàng B2B", key: "/store-channel", icon: <ShopOutlined /> },
   {
     label: "📅 Đặt lịch & Khám bệnh",
     key: "scheduling",
@@ -110,6 +105,7 @@ const SiderContent: React.FC<{ onMenuClick: MenuProps["onClick"] }> = ({
 const AppLayout: React.FC = () => {
   const [collapsed, setCollapsed] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { employee } = useEmployee();
   const navigate = useNavigate();
   const screens = useBreakpoint();
   const isMobile = !screens.lg;
@@ -230,12 +226,12 @@ const AppLayout: React.FC = () => {
               }}
             >
               <Routes>
-                <Route path="/" element={<PosPage />} />
-                <Route path="/store-channel" element={<StoreChannelPage />} />
-                <Route path="/scheduling" element={<SchedulingPage />} />
-                <Route path="/patients" element={<PatientsPage />} />
-                <Route path="/patients/:patientId" element={<PatientDetailPage />} />
-                <Route path="/medical-records" element={<MedicalRecordsPage />} />
+                <Route path="/" element={<Screen screenKey="pos.main" employee={employee} />} />
+                <Route path="/store-channel" element={<Screen screenKey="b2b.orders" employee={employee} />} />
+                <Route path="/scheduling" element={<Screen screenKey="medical.scheduling" />} />
+                <Route path="/patients" element={<Screen screenKey="medical.patients" />} />
+                <Route path="/patients/:patientId" element={<Screen screenKey="medical.patient-detail" />} />
+                <Route path="/medical-records" element={<Screen screenKey="medical.records" />} />
                 <Route path="*" element={<ComingSoon />} />
               </Routes>
             </div>
