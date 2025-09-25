@@ -10,7 +10,7 @@ import {
   RocketOutlined,
   SettingOutlined,
 } from '@ant-design/icons';
-import { SCREEN_REGISTRY, hasScreenPermission } from '../screens';
+import { hasScreenPermission } from '../screens';
 
 export interface MenuItemConfig {
   key: string;

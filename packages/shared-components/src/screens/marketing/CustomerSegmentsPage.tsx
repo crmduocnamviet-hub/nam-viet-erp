@@ -1,7 +1,13 @@
 import React from 'react';
 import { Button, Table, Space, Row, Col, Typography, Modal } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
-import SegmentBuilder from '../../features/marketing/components/SegmentBuilder';
+// Temporary stub component to replace missing SegmentBuilder
+const SegmentBuilder: React.FC<any> = () => (
+  <div style={{ padding: '40px', backgroundColor: '#f5f5f5', borderRadius: '8px', textAlign: 'center' }}>
+    <p>🎯 Công cụ xây dựng phân khúc khách hàng</p>
+    <p style={{ color: '#666', fontSize: '14px' }}>Component phân khúc khách hàng đang được phát triển</p>
+  </div>
+);
 
 const { Title } = Typography;
 

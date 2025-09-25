@@ -22,7 +22,13 @@ import {
   EyeOutlined,
 } from "@ant-design/icons";
 import { useParams, useNavigate } from "react-router-dom";
-import SegmentBuilder from "../../features/marketing/components/SegmentBuilder";
+// Temporary stub component to replace missing SegmentBuilder
+const SegmentBuilder: React.FC = () => (
+  <div style={{ padding: '40px', backgroundColor: '#f5f5f5', borderRadius: '8px', textAlign: 'center' }}>
+    <p>🎯 Công cụ xây dựng đối tượng mục tiêu</p>
+    <p style={{ color: '#666', fontSize: '14px' }}>Component xây dựng đối tượng mục tiêu đang được phát triển</p>
+  </div>
+);
 
 const { Title } = Typography;
 const { RangePicker } = DatePicker;

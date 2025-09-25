@@ -20,8 +20,26 @@ import { SwapOutlined } from "@ant-design/icons";
 
 import dayjs from "dayjs";
 import isBetween from "dayjs/plugin/isBetween";
+import { createInternalTransfer, getFundsAndTransactions } from "@nam-viet-erp/services";
 
 dayjs.extend(isBetween);
+
+// Helper function to safely get error message
+const getErrorMessage = (error: unknown): string => {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  if (typeof error === 'string') {
+    return error;
+  }
+
+  if (typeof error === 'object' && error !== null && 'message' in error) {
+    return (error as any).message;
+  }
+
+  return 'An unknown error occurred';
+};
 
 const { RangePicker } = DatePicker;
 const { Option } = Select;
@@ -102,9 +120,6 @@ const FundCard: React.FC<{
     </Col>
   );
 };
-
-import { getErrorMessage } from "../types/error";
-import { createInternalTransfer, getFundsAndTransactions } from "@nam-viet-erp/services";
 
 const CashLedgerPageContent: React.FC = () => {
   const { notification } = AntApp.useApp();

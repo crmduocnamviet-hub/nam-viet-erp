@@ -11,6 +11,7 @@ import {
   Button,
   Spin,
   App,
+  Modal,
   Tag,
   Descriptions,
   Form,
@@ -38,11 +39,12 @@ import {
 } from '@nam-viet-erp/services';
 import dayjs from 'dayjs';
 import { useDebounce } from '@nam-viet-erp/shared-components';
-import { getErrorMessage } from '../types';
+const getErrorMessage = (error: any): string => {
+  return error?.message || 'Đã xảy ra lỗi không xác định';
+};
 import { useParams, useNavigate } from 'react-router-dom';
 
 const { Title, Text, Paragraph } = Typography;
-const { TabPane } = Tabs;
 const { TextArea } = Input;
 
 const getStatusColor = (status: string) => {
@@ -166,7 +168,7 @@ const PatientDetailPage: React.FC = () => {
 
   const handleCancelEdit = () => {
     if (hasUnsavedChanges) {
-      App.Modal.confirm({
+      Modal.confirm({
         title: 'Bỏ các thay đổi?',
         content: 'Bạn có thay đổi chưa lưu. Bạn có chắc muốn bỏ các thay đổi này?',
         okText: 'Bỏ thay đổi',
@@ -425,132 +427,138 @@ const PatientDetailPage: React.FC = () => {
         {/* Right Column - Appointments & History */}
         <Col xs={24} lg={16}>
           <Card>
-            <Tabs defaultActiveKey="1">
-              <TabPane
-                tab={<><CalendarOutlined /> Lịch sử Hẹn ({appointments.length})</>}
-                key="1"
-              >
-                <List
-                  dataSource={appointments}
-                  renderItem={(item) => (
-                    <List.Item
-                      style={{
-                        border: '1px solid #f0f0f0',
-                        borderRadius: 8,
-                        marginBottom: 8,
-                        padding: 16
-                      }}
-                    >
-                      <List.Item.Meta
-                        avatar={<CalendarOutlined style={{ fontSize: 16, color: '#1890ff' }} />}
-                        title={
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span>{dayjs(item.appointment_time).format('DD/MM/YYYY HH:mm')}</span>
-                            <Tag color={getStatusColor(item.status)}>{item.status}</Tag>
-                          </div>
-                        }
-                        description={
-                          <div>
-                            <div><strong>Dịch vụ:</strong> {item.service || 'N/A'}</div>
-                            {item.note && (
-                              <div style={{ marginTop: 8, padding: 8, backgroundColor: '#f6f6f6', borderRadius: 4 }}>
-                                <strong>Ghi chú:</strong> {item.note}
+            <Tabs
+              defaultActiveKey="1"
+              items={[
+                {
+                  key: "1",
+                  label: <><CalendarOutlined /> Lịch sử Hẹn ({appointments.length})</>,
+                  children: (
+                    <List
+                      dataSource={appointments}
+                      renderItem={(item) => (
+                        <List.Item
+                          style={{
+                            border: '1px solid #f0f0f0',
+                            borderRadius: 8,
+                            marginBottom: 8,
+                            padding: 16
+                          }}
+                        >
+                          <List.Item.Meta
+                            avatar={<CalendarOutlined style={{ fontSize: 16, color: '#1890ff' }} />}
+                            title={
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span>{dayjs(item.appointment_time).format('DD/MM/YYYY HH:mm')}</span>
+                                <Tag color={getStatusColor(item.status)}>{item.status}</Tag>
                               </div>
-                            )}
-                          </div>
-                        }
-                      />
-                    </List.Item>
-                  )}
-                />
-              </TabPane>
-
-              <TabPane
-                tab={<><HistoryOutlined /> Lịch sử Sử dụng Dịch vụ ({serviceHistory.length})</>}
-                key="2"
-              >
-                <List
-                  dataSource={serviceHistory}
-                  renderItem={(item) => (
-                    <List.Item
-                      style={{
-                        border: '1px solid #f0f0f0',
-                        borderRadius: 8,
-                        marginBottom: 8,
-                        padding: 16
-                      }}
-                    >
-                      <List.Item.Meta
-                        avatar={<HistoryOutlined style={{ fontSize: 16, color: '#52c41a' }} />}
-                        title={
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span>{item.services?.name || 'Dịch vụ không xác định'}</span>
-                            {item.services?.price && (
-                              <Text strong style={{ color: '#52c41a' }}>
-                                {new Intl.NumberFormat('vi-VN', {
-                                  style: 'currency',
-                                  currency: 'VND'
-                                }).format(item.services.price)}
-                              </Text>
-                            )}
-                          </div>
-                        }
-                        description={
-                          <div>
-                            <div>
-                              <strong>Ngày sử dụng:</strong> {
-                                item.appointments?.appointment_time
-                                  ? dayjs(item.appointments.appointment_time).format('DD/MM/YYYY HH:mm')
-                                  : dayjs(item.created_at).format('DD/MM/YYYY HH:mm')
-                              }
-                            </div>
-                            {item.quantity && <div><strong>Số lượng:</strong> {item.quantity}</div>}
-                            {item.notes && (
-                              <div style={{ marginTop: 8, padding: 8, backgroundColor: '#f6f6f6', borderRadius: 4 }}>
-                                <strong>Ghi chú:</strong> {item.notes}
+                            }
+                            description={
+                              <div>
+                                <div><strong>Dịch vụ:</strong> {item.service || 'N/A'}</div>
+                                {item.note && (
+                                  <div style={{ marginTop: 8, padding: 8, backgroundColor: '#f6f6f6', borderRadius: 4 }}>
+                                    <strong>Ghi chú:</strong> {item.note}
+                                  </div>
+                                )}
                               </div>
-                            )}
-                          </div>
-                        }
+                            }
+                          />
+                        </List.Item>
+                      )}
+                    />
+                  )
+                },
+                {
+                  key: "2",
+                  label: <><HistoryOutlined /> Lịch sử Sử dụng Dịch vụ ({serviceHistory.length})</>,
+                  children: (
+                    <List
+                      dataSource={serviceHistory}
+                      renderItem={(item) => (
+                        <List.Item
+                          style={{
+                            border: '1px solid #f0f0f0',
+                            borderRadius: 8,
+                            marginBottom: 8,
+                            padding: 16
+                          }}
+                        >
+                          <List.Item.Meta
+                            avatar={<HistoryOutlined style={{ fontSize: 16, color: '#52c41a' }} />}
+                            title={
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span>{item.services?.name || 'Dịch vụ không xác định'}</span>
+                                {item.services?.price && (
+                                  <Text strong style={{ color: '#52c41a' }}>
+                                    {new Intl.NumberFormat('vi-VN', {
+                                      style: 'currency',
+                                      currency: 'VND'
+                                    }).format(item.services.price)}
+                                  </Text>
+                                )}
+                              </div>
+                            }
+                            description={
+                              <div>
+                                <div>
+                                  <strong>Ngày sử dụng:</strong> {
+                                    item.appointments?.appointment_time
+                                      ? dayjs(item.appointments.appointment_time).format('DD/MM/YYYY HH:mm')
+                                      : dayjs(item.created_at).format('DD/MM/YYYY HH:mm')
+                                  }
+                                </div>
+                                {item.quantity && <div><strong>Số lượng:</strong> {item.quantity}</div>}
+                                {item.notes && (
+                                  <div style={{ marginTop: 8, padding: 8, backgroundColor: '#f6f6f6', borderRadius: 4 }}>
+                                    <strong>Ghi chú:</strong> {item.notes}
+                                  </div>
+                                )}
+                              </div>
+                            }
+                          />
+                        </List.Item>
+                      )}
+                    />
+                  )
+                },
+                {
+                  key: "3",
+                  label: <><EditOutlined /> Ghi chú Lễ tân</>,
+                  children: (
+                    <>
+                      <div style={{ background: '#f9f9f9', padding: 16, borderRadius: 8, marginBottom: 16 }}>
+                        <Paragraph style={{ margin: 0, color: '#666' }}>
+                          📝 Ghi lại các thông tin phi y tế quan trọng (ví dụ: sở thích,
+                          lưu ý khi giao tiếp, người nhà cần liên hệ...).
+                        </Paragraph>
+                      </div>
+                      <TextArea
+                        rows={12}
+                        value={notes}
+                        onChange={(e) => setNotes(e.target.value)}
+                        placeholder="Nhập ghi chú về bệnh nhân..."
+                        style={{ borderRadius: 8 }}
                       />
-                    </List.Item>
-                  )}
-                />
-              </TabPane>
-
-              <TabPane
-                tab={<><EditOutlined /> Ghi chú Lễ tân</>}
-                key="3"
-              >
-                <div style={{ background: '#f9f9f9', padding: 16, borderRadius: 8, marginBottom: 16 }}>
-                  <Paragraph style={{ margin: 0, color: '#666' }}>
-                    📝 Ghi lại các thông tin phi y tế quan trọng (ví dụ: sở thích,
-                    lưu ý khi giao tiếp, người nhà cần liên hệ...).
-                  </Paragraph>
-                </div>
-                <TextArea
-                  rows={12}
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Nhập ghi chú về bệnh nhân..."
-                  style={{ borderRadius: 8 }}
-                />
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 16 }}>
-                  <Text type="secondary" style={{ fontSize: 12 }}>
-                    Ghi chú sẽ được tự động lưu sau 500ms
-                  </Text>
-                  <Button
-                    type="primary"
-                    icon={<SaveOutlined />}
-                    loading={isSaving}
-                    onClick={handleSaveNotes}
-                    disabled={notes === (profile?.receptionist_notes || '')}
-                  >
-                    Lưu ghi chú
-                  </Button>
-                </div>
-              </TabPane>
-            </Tabs>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 16 }}>
+                        <Text type="secondary" style={{ fontSize: 12 }}>
+                          Ghi chú sẽ được tự động lưu sau 500ms
+                        </Text>
+                        <Button
+                          type="primary"
+                          icon={<SaveOutlined />}
+                          loading={isSaving}
+                          onClick={handleSaveNotes}
+                          disabled={notes === (profile?.receptionist_notes || '')}
+                        >
+                          Lưu ghi chú
+                        </Button>
+                      </div>
+                    </>
+                  )
+                }
+              ]}
+            />
           </Card>
         </Col>
       </Row>

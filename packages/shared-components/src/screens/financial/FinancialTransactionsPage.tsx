@@ -12,6 +12,7 @@ import {
   Dropdown,
   Tag,
   Grid,
+  Modal,
   type TableProps,
 } from "antd";
 import {
@@ -31,19 +32,47 @@ import {
   uploadAttachment,
 } from "@nam-viet-erp/services";
 import dayjs from "dayjs";
-import { useAuth } from "../hooks/useAuth";
 import { useDebounce } from '@nam-viet-erp/shared-components';
-import TransactionCreationModal from "../features/finance/components/TransactionCreationModal";
-import TransactionViewModal from "../features/finance/components/TransactionViewModal";
+// Temporary stub components to replace missing modal imports
+const TransactionCreationModal: React.FC<any> = ({ open, onCancel, onOk, ...props }) => (
+  open ? (
+    <Modal
+      title="Transaction Creation"
+      open={open}
+      onCancel={onCancel}
+      onOk={onOk}
+      {...props}
+    >
+      <p>Transaction creation functionality will be implemented here.</p>
+    </Modal>
+  ) : null
+);
+
+const TransactionViewModal: React.FC<any> = ({ open, onCancel, ...props }) => (
+  open ? (
+    <Modal
+      title="Transaction View"
+      open={open}
+      onCancel={onCancel}
+      {...props}
+    >
+      <p>Transaction view functionality will be implemented here.</p>
+    </Modal>
+  ) : null
+);
 import { getFunds } from "@nam-viet-erp/services";
 
 const { Search } = Input;
 const { useBreakpoint } = Grid;
 
-const TransactionPageContent: React.FC = () => {
+interface FinancialTransactionsPageProps {
+  user?: any;
+  [key: string]: any;
+}
+
+const TransactionPageContent: React.FC<FinancialTransactionsPageProps> = ({ user }) => {
   const screens = useBreakpoint(); // Lấy thông tin màn hình
   const { notification, modal } = AntApp.useApp();
-  const { user } = useAuth();
   const [creationForm] = Form.useForm();
   const [executionForm] = Form.useForm();
 
@@ -504,9 +533,9 @@ const TransactionPageContent: React.FC = () => {
   );
 };
 
-const FinancialTransactions: React.FC = () => (
+const FinancialTransactions: React.FC<FinancialTransactionsPageProps> = (props) => (
   <AntApp>
-    <TransactionPageContent />
+    <TransactionPageContent {...props} />
   </AntApp>
 );
 

@@ -99,7 +99,7 @@ const PatientsPage: React.FC = () => {
         chronic_diseases: values.chronic_diseases || null,
       };
 
-      const { data, error } = await createPatient(patientData);
+      const { error } = await createPatient(patientData);
 
       if (error) {
         notification.error({

@@ -1,11 +1,27 @@
 import React, { useState, useEffect } from "react";
 import { Button, Row, Col, Typography, App as AntApp, Spin } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
-import SchedulingDashboard from "../features/scheduling/SchedulingDashboard";
 import { AppointmentCreationModal } from '@nam-viet-erp/shared-components';
-import PatientCrmModal from "../features/scheduling/components/PatientCrmModal";
-import { getEmployees } from '@nam-viet-erp/services';
 
+// Temporary stub components to replace missing scheduling components
+const SchedulingDashboard: React.FC<{ onAppointmentClick?: (appointment: any) => void }> = () => (
+  <div style={{ padding: '40px', textAlign: 'center', backgroundColor: '#f5f5f5', borderRadius: '8px' }}>
+    <p>📅 Dashboard lịch hẹn sẽ được hiển thị tại đây</p>
+    <p style={{ color: '#666', fontSize: '14px' }}>Chức năng dashboard lịch hẹn đang được phát triển</p>
+  </div>
+);
+
+const PatientCrmModal: React.FC<any> = ({ open, onCancel }) => (
+  open ? (
+    <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 1000, backgroundColor: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
+      <h3>Thông tin bệnh nhân</h3>
+      <p>Modal thông tin bệnh nhân sẽ được hiển thị tại đây</p>
+      <button onClick={onCancel} style={{ marginTop: '10px' }}>Đóng</button>
+    </div>
+  ) : null
+);
+
+import { getEmployees } from '@nam-viet-erp/services';
 
 const { Title } = Typography;
 

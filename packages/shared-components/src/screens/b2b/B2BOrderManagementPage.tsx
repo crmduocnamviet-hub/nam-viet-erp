@@ -45,7 +45,6 @@ import {
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
 const { Step } = Steps;
-const { TabPane } = Tabs;
 
 // B2B Quote interface matching the service
 interface B2BQuote {
@@ -454,162 +453,178 @@ const B2BOrderManagementPage: React.FC<B2BOrderManagementPageProps> = ({ employe
         </Col>
       </Row>
 
-      <Tabs activeKey={currentTab} onChange={setCurrentTab} style={{ marginBottom: 24 }}>
-        <TabPane tab="Tổng quan" key="overview">
-          {/* Statistics Cards */}
-          {statistics && (
-            <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-              <Col xs={24} sm={12} lg={6}>
-                <Card>
-                  <Statistic
-                    title="Tổng báo giá"
-                    value={statistics.total}
-                    prefix={<ShopOutlined />}
-                    valueStyle={{ color: '#1890ff' }}
-                  />
-                </Card>
-              </Col>
-              <Col xs={24} sm={12} lg={6}>
-                <Card>
-                  <Statistic
-                    title="Tổng giá trị"
-                    value={statistics.totalRevenue}
-                    prefix={<DollarOutlined />}
-                    formatter={(value) => formatCurrency(Number(value))}
-                    valueStyle={{ color: '#52c41a' }}
-                  />
-                </Card>
-              </Col>
-              <Col xs={24} sm={12} lg={6}>
-                <Card>
-                  <Statistic
-                    title="Báo giá nháp"
-                    value={statistics.draftQuotes}
-                    prefix={<FileTextOutlined />}
-                    valueStyle={{ color: '#8c8c8c' }}
-                  />
-                </Card>
-              </Col>
-              <Col xs={24} sm={12} lg={6}>
-                <Card>
-                  <Statistic
-                    title="Đã chấp nhận"
-                    value={statistics.acceptedQuotes}
-                    prefix={<CheckCircleOutlined />}
-                    valueStyle={{ color: '#52c41a' }}
-                  />
-                </Card>
-              </Col>
-            </Row>
-          )}
+      <Tabs
+        activeKey={currentTab}
+        onChange={setCurrentTab}
+        style={{ marginBottom: 24 }}
+        items={[
+          {
+            key: "overview",
+            label: "Tổng quan",
+            children: (
+              <>
+                {/* Statistics Cards */}
+                {statistics && (
+                  <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+                    <Col xs={24} sm={12} lg={6}>
+                      <Card>
+                        <Statistic
+                          title="Tổng báo giá"
+                          value={statistics.total}
+                          prefix={<ShopOutlined />}
+                          valueStyle={{ color: '#1890ff' }}
+                        />
+                      </Card>
+                    </Col>
+                    <Col xs={24} sm={12} lg={6}>
+                      <Card>
+                        <Statistic
+                          title="Tổng giá trị"
+                          value={statistics.totalRevenue}
+                          prefix={<DollarOutlined />}
+                          formatter={(value) => formatCurrency(Number(value))}
+                          valueStyle={{ color: '#52c41a' }}
+                        />
+                      </Card>
+                    </Col>
+                    <Col xs={24} sm={12} lg={6}>
+                      <Card>
+                        <Statistic
+                          title="Báo giá nháp"
+                          value={statistics.draftQuotes}
+                          prefix={<FileTextOutlined />}
+                          valueStyle={{ color: '#8c8c8c' }}
+                        />
+                      </Card>
+                    </Col>
+                    <Col xs={24} sm={12} lg={6}>
+                      <Card>
+                        <Statistic
+                          title="Đã chấp nhận"
+                          value={statistics.acceptedQuotes}
+                          prefix={<CheckCircleOutlined />}
+                          valueStyle={{ color: '#52c41a' }}
+                        />
+                      </Card>
+                    </Col>
+                  </Row>
+                )}
 
-          {/* Workflow Progress */}
-          <Card title="Vòng đời Báo giá B2B - 6 Giai đoạn" style={{ marginBottom: 24 }}>
-            <div style={{ marginBottom: 16 }}>
-              <Text type="secondary">
-                <strong>Giai đoạn 1 - Nháp:</strong> Báo giá đã gửi cho khách hàng, đang chờ họ ra quyết định
-              </Text>
-            </div>
-            <Steps direction="horizontal" size="small">
-              {B2B_ORDER_STAGES.slice(0, 4).map((stage) => (
-                <Step
-                  key={stage.key}
-                  title={stage.title}
-                  description={
-                    <div style={{ textAlign: 'center' }}>
-                      <div style={{ fontSize: '12px', color: '#666' }}>
-                        {stage.description}
+                {/* Workflow Progress */}
+                <Card title="Vòng đời Báo giá B2B - 6 Giai đoạn" style={{ marginBottom: 24 }}>
+                  <div style={{ marginBottom: 16 }}>
+                    <Text type="secondary">
+                      <strong>Giai đoạn 1 - Nháp:</strong> Báo giá đã gửi cho khách hàng, đang chờ họ ra quyết định
+                    </Text>
+                  </div>
+                  <Steps direction="horizontal" size="small">
+                    {B2B_ORDER_STAGES.slice(0, 4).map((stage) => (
+                      <Step
+                        key={stage.key}
+                        title={stage.title}
+                        description={
+                          <div style={{ textAlign: 'center' }}>
+                            <div style={{ fontSize: '12px', color: '#666' }}>
+                              {stage.description}
+                            </div>
+                            <div style={{ fontSize: '14px', fontWeight: 'bold', color: stage.color === 'default' ? '#666' : stage.color }}>
+                              {statistics?.byStage?.[stage.key] || 0} báo giá
+                            </div>
+                          </div>
+                        }
+                        icon={stage.icon}
+                        status={stage.status as any}
+                      />
+                    ))}
+                  </Steps>
+
+                  {/* Rejected and Expired quotes separate */}
+                  <Row gutter={16} style={{ marginTop: 24 }}>
+                    <Col span={12}>
+                      <div style={{ padding: '16px', backgroundColor: '#fff2f0', borderRadius: '6px', border: '1px solid #ffccc7' }}>
+                        <Space>
+                          <WarningOutlined style={{ color: '#ff4d4f' }} />
+                          <Text strong>Báo giá từ chối:</Text>
+                          <Text style={{ color: '#ff4d4f' }}>{statistics?.byStage?.rejected || 0} báo giá</Text>
+                        </Space>
                       </div>
-                      <div style={{ fontSize: '14px', fontWeight: 'bold', color: stage.color === 'default' ? '#666' : stage.color }}>
-                        {statistics?.byStage?.[stage.key] || 0} báo giá
+                    </Col>
+                    <Col span={12}>
+                      <div style={{ padding: '16px', backgroundColor: '#fff7e6', borderRadius: '6px', border: '1px solid #ffd591' }}>
+                        <Space>
+                          <WarningOutlined style={{ color: '#fa8c16' }} />
+                          <Text strong>Báo giá hết hạn:</Text>
+                          <Text style={{ color: '#fa8c16' }}>{statistics?.byStage?.expired || 0} báo giá</Text>
+                        </Space>
                       </div>
-                    </div>
-                  }
-                  icon={stage.icon}
-                  status={stage.status as any}
-                />
-              ))}
-            </Steps>
+                    </Col>
+                  </Row>
+                </Card>
+              </>
+            )
+          },
+          {
+            key: "orders",
+            label: "Danh sách báo giá",
+            children: (
+              <>
+                {/* Search and Filter Bar */}
+                <Card style={{ marginBottom: 16 }}>
+                  <Row gutter={16} align="middle">
+                    <Col flex="auto">
+                      <Input.Search
+                        placeholder="Tìm theo mã báo giá, tên khách hàng, mã khách hàng..."
+                        value={searchKeyword}
+                        onChange={(e) => setSearchKeyword(e.target.value)}
+                        onSearch={handleSearch}
+                        style={{ width: '100%' }}
+                        size="large"
+                      />
+                    </Col>
+                    <Col>
+                      <Space>
+                        <Button
+                          icon={<FilterOutlined />}
+                          onClick={() => setFilterDrawerOpen(true)}
+                        >
+                          Bộ lọc
+                        </Button>
+                        <Button type="primary" icon={<PlusOutlined />} onClick={handleCreateQuote}>
+                          Tạo báo giá
+                        </Button>
+                      </Space>
+                    </Col>
+                  </Row>
+                </Card>
 
-            {/* Rejected and Expired quotes separate */}
-            <Row gutter={16} style={{ marginTop: 24 }}>
-              <Col span={12}>
-                <div style={{ padding: '16px', backgroundColor: '#fff2f0', borderRadius: '6px', border: '1px solid #ffccc7' }}>
-                  <Space>
-                    <WarningOutlined style={{ color: '#ff4d4f' }} />
-                    <Text strong>Báo giá từ chối:</Text>
-                    <Text style={{ color: '#ff4d4f' }}>{statistics?.byStage?.rejected || 0} báo giá</Text>
-                  </Space>
-                </div>
-              </Col>
-              <Col span={12}>
-                <div style={{ padding: '16px', backgroundColor: '#fff7e6', borderRadius: '6px', border: '1px solid #ffd591' }}>
-                  <Space>
-                    <WarningOutlined style={{ color: '#fa8c16' }} />
-                    <Text strong>Báo giá hết hạn:</Text>
-                    <Text style={{ color: '#fa8c16' }}>{statistics?.byStage?.expired || 0} báo giá</Text>
-                  </Space>
-                </div>
-              </Col>
-            </Row>
-          </Card>
-        </TabPane>
-
-        <TabPane tab="Danh sách báo giá" key="orders">
-          {/* Search and Filter Bar */}
-          <Card style={{ marginBottom: 16 }}>
-            <Row gutter={16} align="middle">
-              <Col flex="auto">
-                <Input.Search
-                  placeholder="Tìm theo mã báo giá, tên khách hàng, mã khách hàng..."
-                  value={searchKeyword}
-                  onChange={(e) => setSearchKeyword(e.target.value)}
-                  onSearch={handleSearch}
-                  style={{ width: '100%' }}
-                  size="large"
-                />
-              </Col>
-              <Col>
-                <Space>
-                  <Button
-                    icon={<FilterOutlined />}
-                    onClick={() => setFilterDrawerOpen(true)}
-                  >
-                    Bộ lọc
-                  </Button>
-                  <Button type="primary" icon={<PlusOutlined />} onClick={handleCreateQuote}>
-                    Tạo báo giá
-                  </Button>
-                </Space>
-              </Col>
-            </Row>
-          </Card>
-
-          {/* Orders Table */}
-          <Card>
-            <Table
-              columns={columns}
-              dataSource={orders}
-              rowKey="quote_id"
-              loading={loading}
-              pagination={{
-                current: currentPage,
-                pageSize: pageSize,
-                total: total,
-                showSizeChanger: true,
-                showQuickJumper: true,
-                showTotal: (total, range) =>
-                  `${range[0]}-${range[1]} của ${total} báo giá`,
-                onChange: (page, size) => {
-                  setCurrent(page);
-                  setPageSize(size || 20);
-                },
-              }}
-              scroll={{ x: 1200 }}
-            />
-          </Card>
-        </TabPane>
-      </Tabs>
+                {/* Orders Table */}
+                <Card>
+                  <Table
+                    columns={columns}
+                    dataSource={orders}
+                    rowKey="quote_id"
+                    loading={loading}
+                    pagination={{
+                      current: currentPage,
+                      pageSize: pageSize,
+                      total: total,
+                      showSizeChanger: true,
+                      showQuickJumper: true,
+                      showTotal: (total, range) =>
+                        `${range[0]}-${range[1]} của ${total} báo giá`,
+                      onChange: (page, size) => {
+                        setCurrent(page);
+                        setPageSize(size || 20);
+                      },
+                    }}
+                    scroll={{ x: 1200 }}
+                  />
+                </Card>
+              </>
+            )
+          }
+        ]}
+      />
 
       {/* Filter Drawer */}
       <Drawer

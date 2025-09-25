@@ -38,7 +38,6 @@ import {
   type CreateRoomData,
   type UpdateRoomData,
 } from '@nam-viet-erp/services';
-import '../utils/testRooms';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;

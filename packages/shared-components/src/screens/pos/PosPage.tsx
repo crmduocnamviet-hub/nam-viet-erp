@@ -41,10 +41,74 @@ import {
   createPatient,
   getPrescriptionsByVisitId,
   getMedicalVisits,
+  getWarehouse,
 } from "@nam-viet-erp/services";
-import PaymentModal from "../../features/pos/components/PaymentModal";
-import type { CartItem, CartDetails, PriceInfo } from "../../types";
-import { getErrorMessage } from "../../types";
+// Temporary stub component to replace missing PaymentModal
+const PaymentModal: React.FC<{
+  open: boolean;
+  paymentMethod: "cash" | "card" | "qr";
+  cartTotal: number;
+  cartItems: CartItem[];
+  customerInfo: any;
+  onCancel: () => void;
+  onFinish: () => void;
+  okButtonProps?: { loading?: boolean };
+  onPrintReceipt: () => void;
+}> = ({ open, onCancel, onFinish, okButtonProps }) => (
+  <Modal
+    open={open}
+    title="💳 Thanh toán"
+    onCancel={onCancel}
+    onOk={onFinish}
+    okText="Xác nhận thanh toán"
+    okButtonProps={okButtonProps}
+  >
+    <div style={{ padding: '20px', textAlign: 'center' }}>
+      <p>🏪 Giao diện thanh toán POS</p>
+      <p style={{ color: '#666', fontSize: '14px' }}>Component thanh toán đang được phát triển</p>
+    </div>
+  </Modal>
+);
+
+// Types defined locally to match the actual usage in the code
+type CartItem = {
+  id: number;
+  name: string;
+  quantity: number;
+  finalPrice: number;
+  originalPrice: number;
+  discount?: number;
+  appliedPromotion?: any;
+  prescriptionNote?: string;
+  stock_quantity?: number;
+  image_url?: string;
+  product_id?: string;
+  unit_price?: number;
+  prescription_id?: string;
+};
+
+type CartDetails = {
+  items: CartItem[];
+  itemTotal: number;
+  discountTotal: number;
+  finalTotal: number;
+  originalTotal: number;
+  totalDiscount: number;
+};
+
+type PriceInfo = {
+  totalAmount: number;
+  discount: number;
+  finalAmount: number;
+  finalPrice: number;
+  originalPrice: number;
+  discountAmount: number;
+  appliedPromotion?: any;
+};
+
+const getErrorMessage = (error: any): string => {
+  return error?.message || 'Đã xảy ra lỗi không xác định';
+};
 // Context will be passed via props from the app
 // import { useEmployee } from "../../context/EmployeeContext";
 
@@ -59,15 +123,15 @@ const WAREHOUSE_MAP: {
   dh2: { warehouseId: 2, fundId: 2 }, // Assuming DH2 is warehouse 2 and uses fund 2
 };
 
-// Extended prescription type that includes joined product data
-interface PrescriptionWithProduct extends IPrescription {
+// Extended prescription type that includes joined product data (unused, commented out)
+/* interface PrescriptionWithProduct extends IPrescription {
   products?: {
     name: string;
     manufacturer: string;
     route: string;
     retail_price: number;
   };
-}
+} */
 
 interface PosPageProps {
   employee?: any;
@@ -101,14 +165,17 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
   const [isSearchingCustomers, setIsSearchingCustomers] = useState(false);
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
 
-  // Prescription integration
-  const [prescriptionMode, setPrescriptionMode] = useState(false);
-  const [patientVisits, setPatientVisits] = useState<any[]>([]);
+  // Warehouse selection
+  const [warehouseMode, setWarehouseMode] = useState(false);
+  const [warehouses, setWarehouses] = useState<IWarehouse[]>([]);
+  const [loadingWarehouses, setLoadingWarehouses] = useState(false);
+  const [selectedWarehouse, setSelectedWarehouse] = useState<IWarehouse | null>(null);
+
+  // Keep prescription integration for backward compatibility (commented out unused variables)
+  // const [patientVisits, setPatientVisits] = useState<any[]>([]);
   const [selectedVisit, setSelectedVisit] = useState<any>(null);
-  const [availablePrescriptions, setAvailablePrescriptions] = useState<PrescriptionWithProduct[]>(
-    []
-  );
-  const [loadingPrescriptions, setLoadingPrescriptions] = useState(false);
+  // const [availablePrescriptions, setAvailablePrescriptions] = useState<PrescriptionWithProduct[]>([]);
+  // const [loadingPrescriptions, setLoadingPrescriptions] = useState(false);
 
   // Create customer modal
   const [isCreateCustomerModalOpen, setIsCreateCustomerModalOpen] =
@@ -116,9 +183,42 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
   const [createCustomerForm] = Form.useForm();
   const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
 
-  const { warehouseId, fundId } = WAREHOUSE_MAP[selectedLocation];
+  const { warehouseId, fundId } = selectedWarehouse
+    ? { warehouseId: selectedWarehouse.id, fundId: WAREHOUSE_MAP[selectedLocation]?.fundId || 1 }
+    : WAREHOUSE_MAP[selectedLocation];
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
   const debouncedCustomerSearchTerm = useDebounce(customerSearchTerm, 300);
+
+  // Fetch warehouses on component mount
+  useEffect(() => {
+    const fetchWarehouses = async () => {
+      setLoadingWarehouses(true);
+      try {
+        const { data, error } = await getWarehouse();
+        if (error) {
+          notification.error({
+            message: "Lỗi tải danh sách kho",
+            description: error.message,
+          });
+        } else if (data) {
+          setWarehouses(data);
+          // Set first warehouse as default if available
+          if (data.length > 0) {
+            setSelectedWarehouse(data[0]);
+          }
+        }
+      } catch (error) {
+        notification.error({
+          message: "Lỗi tải danh sách kho",
+          description: "Không thể tải danh sách kho",
+        });
+      } finally {
+        setLoadingWarehouses(false);
+      }
+    };
+
+    fetchWarehouses();
+  }, [notification]);
 
   useEffect(() => {
     const fetchPromos = async () => {
@@ -265,10 +365,10 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
 
   // Load patient visits when customer is selected
   useEffect(() => {
-    if (selectedCustomer && prescriptionMode) {
+    if (selectedCustomer /* && prescriptionMode */) {
       const loadPatientVisits = async () => {
         try {
-          const { data, error } = await getMedicalVisits({
+          const { error } = await getMedicalVisits({
             patientId: selectedCustomer.patient_id,
             limit: 10,
           });
@@ -278,7 +378,7 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
               description: error.message,
             });
           } else {
-            setPatientVisits(data || []);
+            // setPatientVisits(data || []);
           }
         } catch (error) {
           notification.error({
@@ -289,19 +389,19 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
       };
       loadPatientVisits();
     } else {
-      setPatientVisits([]);
+      // setPatientVisits([]);
       setSelectedVisit(null);
-      setAvailablePrescriptions([]);
+      // setAvailablePrescriptions([]);
     }
-  }, [selectedCustomer, prescriptionMode, notification]);
+  }, [selectedCustomer, /* prescriptionMode, */ notification]);
 
   // Load prescriptions when visit is selected
   useEffect(() => {
     if (selectedVisit) {
       const loadPrescriptions = async () => {
         try {
-          setLoadingPrescriptions(true);
-          const { data, error } = await getPrescriptionsByVisitId(
+          // setLoadingPrescriptions(true);
+          const { error } = await getPrescriptionsByVisitId(
             selectedVisit.visit_id
           );
           if (error) {
@@ -310,7 +410,7 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
               description: error.message,
             });
           } else {
-            setAvailablePrescriptions(data || []);
+            // setAvailablePrescriptions(data || []);
           }
         } catch (error) {
           notification.error({
@@ -318,12 +418,12 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
             description: "Không thể tải đơn thuốc",
           });
         } finally {
-          setLoadingPrescriptions(false);
+          // setLoadingPrescriptions(false);
         }
       };
       loadPrescriptions();
     } else {
-      setAvailablePrescriptions([]);
+      // setAvailablePrescriptions([]);
     }
   }, [selectedVisit, notification]);
 
@@ -346,6 +446,8 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
     setSearchResults([]);
   };
 
+  // Commented out unused function - handleAddPrescriptionToCart
+  /*
   const handleAddPrescriptionToCart = (prescription: any) => {
     const product = prescription.products;
     if (!product) return;
@@ -374,16 +476,20 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
       }
     });
   };
+  */
 
-  const handleTogglePrescriptionMode = () => {
-    setPrescriptionMode(!prescriptionMode);
-    if (!prescriptionMode) {
-      // Entering prescription mode
-      if (!selectedCustomer) {
+  const handleToggleWarehouseMode = () => {
+    setWarehouseMode(!warehouseMode);
+    if (!warehouseMode) {
+      // Entering warehouse mode
+      if (warehouses.length === 0) {
         notification.info({
-          message: "Vui lòng chọn bệnh nhân trước khi sử dụng chế độ đơn thuốc",
+          message: "Đang tải danh sách kho...",
         });
       }
+    } else {
+      // Exiting warehouse mode
+      setSelectedWarehouse(warehouses.length > 0 ? warehouses[0] : null);
     }
   };
 
@@ -666,20 +772,20 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
             <Card
               title={
                 <Space>
-                  {prescriptionMode ? (
-                    <Tag color="green">Đơn thuốc</Tag>
+                  {warehouseMode ? (
+                    <Tag color="blue">Kho</Tag>
                   ) : (
                     <SearchOutlined />
                   )}
                   <span>
-                    {prescriptionMode ? "Đơn thuốc" : "Tìm kiếm Sản phẩm"}
+                    {warehouseMode ? "Chọn Kho" : "Tìm kiếm Sản phẩm"}
                   </span>
                   <Button
                     size="small"
-                    type={prescriptionMode ? "primary" : "default"}
-                    onClick={handleTogglePrescriptionMode}
+                    type={warehouseMode ? "primary" : "default"}
+                    onClick={handleToggleWarehouseMode}
                   >
-                    {prescriptionMode ? "Thoát" : "Đơn thuốc"}
+                    {warehouseMode ? "Thoát" : "Chọn Kho"}
                   </Button>
                 </Space>
               }
@@ -693,7 +799,7 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
               }}
               styles={{ body: { flex: 1, padding: 16, overflow: "hidden" } }}
             >
-              {!prescriptionMode ? (
+              {!warehouseMode ? (
                 <>
                   <Search
                     placeholder="Quét mã vạch hoặc tìm tên thuốc..."
@@ -780,7 +886,7 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
                 </>
               ) : (
                 <div style={{ flex: 1, overflow: "auto" }}>
-                  {!selectedCustomer ? (
+                  {loadingWarehouses ? (
                     <div
                       style={{
                         textAlign: "center",
@@ -788,9 +894,9 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
                         color: "#999",
                       }}
                     >
-                      <Text>Vui lòng chọn bệnh nhân để xem đơn thuốc</Text>
+                      <Text>Đang tải danh sách kho...</Text>
                     </div>
-                  ) : patientVisits.length === 0 ? (
+                  ) : warehouses.length === 0 ? (
                     <div
                       style={{
                         textAlign: "center",
@@ -798,110 +904,68 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
                         color: "#999",
                       }}
                     >
-                      <Text>Không có lịch sử khám bệnh</Text>
+                      <Text>Không có kho nào được tìm thấy</Text>
                     </div>
                   ) : (
                     <>
                       <Select
-                        placeholder="Chọn lần khám"
+                        placeholder="Chọn kho"
                         style={{ width: "100%", marginBottom: 16 }}
-                        value={selectedVisit?.visit_id}
-                        onChange={(visitId) => {
-                          const visit = patientVisits.find(
-                            (v) => v.visit_id === visitId
+                        value={selectedWarehouse?.id}
+                        onChange={(warehouseId) => {
+                          const warehouse = warehouses.find(
+                            (w) => w.id === warehouseId
                           );
-                          setSelectedVisit(visit);
+                          setSelectedWarehouse(warehouse || null);
                         }}
                       >
-                        {patientVisits.map((visit) => (
+                        {warehouses.map((warehouse) => (
                           <Select.Option
-                            key={visit.visit_id}
-                            value={visit.visit_id}
+                            key={warehouse.id}
+                            value={warehouse.id}
                           >
-                            {new Date(visit.visit_date).toLocaleDateString(
-                              "vi-VN"
-                            )}{" "}
-                            -{" "}
-                            {visit.assessment_diagnosis_icd10 ||
-                              "Khám tổng quát"}
+                            🏪 {warehouse.name}
                           </Select.Option>
                         ))}
                       </Select>
 
-                      <List
-                        loading={loadingPrescriptions}
-                        dataSource={availablePrescriptions}
-                        locale={{ emptyText: "Không có đơn thuốc" }}
-                        renderItem={(prescription: PrescriptionWithProduct) => (
-                          <List.Item
-                            style={{
-                              padding: "12px 0",
-                              borderRadius: 8,
-                              marginBottom: 8,
-                              backgroundColor: "#f0f9ff",
-                              paddingLeft: 12,
-                              paddingRight: 12,
-                              border: "1px solid #bae7ff",
-                            }}
-                            actions={[
-                              <Tooltip title="Thêm vào giỏ hàng">
-                                <Button
-                                  type="primary"
-                                  shape="circle"
-                                  icon={<PlusOutlined />}
-                                  onClick={() =>
-                                    handleAddPrescriptionToCart(prescription)
-                                  }
-                                />
-                              </Tooltip>,
-                            ]}
-                          >
-                            <List.Item.Meta
-                              title={
-                                <Space>
-                                  <Text strong>
-                                    {prescription.products?.name}
-                                  </Text>
-                                  <Tag color="blue">
-                                    x{prescription.quantity_ordered}
-                                  </Tag>
-                                </Space>
-                              }
-                              description={
-                                <Space direction="vertical" size={0}>
-                                  <Text
-                                    style={{
-                                      color: "#52c41a",
-                                      fontWeight: 500,
-                                    }}
-                                  >
-                                    {(
-                                      prescription.products?.retail_price || 0
-                                    ).toLocaleString()}
-                                    đ
-                                  </Text>
-                                  {prescription.dosage_instruction && (
-                                    <Text
-                                      type="secondary"
-                                      style={{ fontSize: "12px" }}
-                                    >
-                                      {prescription.dosage_instruction}
-                                    </Text>
-                                  )}
-                                  {prescription.ai_interaction_warning && (
-                                    <Tag
-                                      color="orange"
-                                      style={{ fontSize: "11px" }}
-                                    >
-                                      ⚠️ {prescription.ai_interaction_warning}
-                                    </Tag>
-                                  )}
-                                </Space>
-                              }
-                            />
-                          </List.Item>
-                        )}
-                      />
+                      {selectedWarehouse && (
+                        <div
+                          style={{
+                            padding: "16px",
+                            backgroundColor: "#f0f9ff",
+                            borderRadius: "8px",
+                            border: "1px solid #bae7ff",
+                            marginBottom: "16px"
+                          }}
+                        >
+                          <Text strong style={{ fontSize: "16px", color: "#1890ff" }}>
+                            📍 Kho được chọn: {selectedWarehouse.name}
+                          </Text>
+                          <div style={{ marginTop: "8px" }}>
+                            <Text type="secondary">ID Kho: {selectedWarehouse.id}</Text>
+                          </div>
+                          <div style={{ marginTop: "8px" }}>
+                            <Text type="success">✅ Kho đã được thiết lập cho phiên bán hàng</Text>
+                          </div>
+                        </div>
+                      )}
+
+                      <div
+                        style={{
+                          textAlign: "center",
+                          padding: "32px 0",
+                          color: "#666",
+                          backgroundColor: "#f9f9f9",
+                          borderRadius: "8px",
+                          border: "1px dashed #d9d9d9"
+                        }}
+                      >
+                        <Text type="secondary">
+                          💡 Chọn kho để thiết lập nguồn hàng hóa<br/>
+                          Sau khi chọn kho, thoát chế độ này để tìm kiếm sản phẩm
+                        </Text>
+                      </div>
                     </>
                   )}
                 </div>

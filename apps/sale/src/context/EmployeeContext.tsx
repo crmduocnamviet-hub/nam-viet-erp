@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { getCurrentUser } from '@nam-viet-erp/services';
+import React, { createContext, useContext, useState, useEffect } from "react";
+import { getCurrentUser } from "@nam-viet-erp/services";
 
 interface Employee {
   employee_id: string;
@@ -16,21 +16,25 @@ interface EmployeeContextType {
   refreshEmployee: () => Promise<void>;
 }
 
-const EmployeeContext = createContext<EmployeeContextType | undefined>(undefined);
+const EmployeeContext = createContext<EmployeeContextType | undefined>(
+  undefined
+);
 
 export const useEmployee = () => {
   const context = useContext(EmployeeContext);
   if (context === undefined) {
-    throw new Error('useEmployee must be used within an EmployeeProvider');
+    throw new Error("useEmployee must be used within an EmployeeProvider");
   }
   return context;
 };
 
 interface EmployeeProviderProps {
-  children: ReactNode;
+  children: React.ReactNode;
 }
 
-export const EmployeeProvider: React.FC<EmployeeProviderProps> = ({ children }) => {
+export const EmployeeProvider: React.FC<EmployeeProviderProps> = ({
+  children,
+}) => {
   const [employee, setEmployee] = useState<Employee | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -40,7 +44,7 @@ export const EmployeeProvider: React.FC<EmployeeProviderProps> = ({ children }) 
       const { data, error } = await getCurrentUser();
 
       if (error) {
-        console.error('Error fetching employee:', error);
+        console.error("Error fetching employee:", error);
         setEmployee(null);
       } else if (data?.employee) {
         setEmployee(data.employee);
@@ -48,7 +52,7 @@ export const EmployeeProvider: React.FC<EmployeeProviderProps> = ({ children }) 
         setEmployee(null);
       }
     } catch (error) {
-      console.error('Error in refreshEmployee:', error);
+      console.error("Error in refreshEmployee:", error);
       setEmployee(null);
     } finally {
       setLoading(false);

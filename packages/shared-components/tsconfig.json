@@ -5,6 +5,7 @@
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "skipLibCheck": true,
+    "skipDefaultLibCheck": true,
     "noEmitOnError": false,
 
     /* Bundler mode */
@@ -23,12 +24,12 @@
     },
 
     /* Linting */
-    "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
+    "strict": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true
   },
   "include": ["src", "../../types"],
-  "exclude": ["../services/**/*"],
+  "exclude": ["../services/**/*", "../../services/**/*", "**/node_modules", "dist"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

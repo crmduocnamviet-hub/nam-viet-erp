@@ -19,7 +19,7 @@ import {
 } from "antd";
 import viVN from "antd/locale/vi_VN";
 import { signOut } from "@nam-viet-erp/services";
-import { ScreenProvider, Screen, ROLE_PERMISSIONS } from "@nam-viet-erp/shared-components";
+import { Screen } from "@nam-viet-erp/shared-components";
 import { useEmployee } from "../context/EmployeeContext";
 import logo from "../assets/logo.png";
 
@@ -29,7 +29,11 @@ const { useBreakpoint } = Grid;
 
 const menuItems: MenuProps["items"] = [
   { label: "💰 Bán hàng (POS)", key: "/", icon: <ShoppingCartOutlined /> },
-  { label: "📋 Quản lý Đơn hàng B2B", key: "/store-channel", icon: <ShopOutlined /> },
+  {
+    label: "📋 Quản lý Đơn hàng B2B",
+    key: "/store-channel",
+    icon: <ShopOutlined />,
+  },
   {
     label: "📅 Đặt lịch & Khám bệnh",
     key: "scheduling",
@@ -226,12 +230,32 @@ const AppLayout: React.FC = () => {
               }}
             >
               <Routes>
-                <Route path="/" element={<Screen screenKey="pos.main" employee={employee} />} />
-                <Route path="/store-channel" element={<Screen screenKey="b2b.orders" employee={employee} />} />
-                <Route path="/scheduling" element={<Screen screenKey="medical.scheduling" />} />
-                <Route path="/patients" element={<Screen screenKey="medical.patients" />} />
-                <Route path="/patients/:patientId" element={<Screen screenKey="medical.patient-detail" />} />
-                <Route path="/medical-records" element={<Screen screenKey="medical.records" />} />
+                <Route
+                  path="/"
+                  element={<Screen screenKey="pos.main" props={{ employee }} />}
+                />
+                <Route
+                  path="/store-channel"
+                  element={
+                    <Screen screenKey="b2b.orders" props={{ employee }} />
+                  }
+                />
+                <Route
+                  path="/scheduling"
+                  element={<Screen screenKey="medical.scheduling" />}
+                />
+                <Route
+                  path="/patients"
+                  element={<Screen screenKey="medical.patients" />}
+                />
+                <Route
+                  path="/patients/:patientId"
+                  element={<Screen screenKey="medical.patient-detail" />}
+                />
+                <Route
+                  path="/medical-records"
+                  element={<Screen screenKey="medical.records" />}
+                />
                 <Route path="*" element={<ComingSoon />} />
               </Routes>
             </div>

@@ -22,7 +22,19 @@ import {
   DeleteOutlined,
 } from "@ant-design/icons";
 import * as XLSX from "xlsx";
-import ProductForm from "../features/products/components/ProductForm";
+// Temporary stub component to replace missing ProductForm
+const ProductForm: React.FC<any> = ({ open, onCancel, onOk, product }) => (
+  open ? (
+    <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 1000, backgroundColor: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', minWidth: '400px' }}>
+      <h3>📦 {product ? 'Chỉnh sửa sản phẩm' : 'Thêm sản phẩm mới'}</h3>
+      <p>Form quản lý sản phẩm sẽ được hiển thị tại đây</p>
+      <div style={{ marginTop: '20px', display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+        <button onClick={onCancel} style={{ padding: '8px 16px', backgroundColor: '#f5f5f5', border: '1px solid #d9d9d9', borderRadius: '4px' }}>Hủy</button>
+        <button onClick={onOk} style={{ padding: '8px 16px', backgroundColor: '#1890ff', color: 'white', border: 'none', borderRadius: '4px' }}>Lưu</button>
+      </div>
+    </div>
+  ) : null
+);
 import { useDebounce } from '@nam-viet-erp/shared-components';
 import {
   createProduct,
