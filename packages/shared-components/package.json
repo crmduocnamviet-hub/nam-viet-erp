@@ -1,18 +1,20 @@
 {
   "name": "@nam-viet-erp/shared-components",
   "version": "1.0.0",
-  "main": "dist/index.js",
-  "module": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "src/index.ts",
+  "module": "src/index.ts",
+  "types": "src/index.ts",
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "require": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "import": "./src/index.ts",
+      "require": "./src/index.ts",
+      "types": "./src/index.ts"
     }
   },
   "scripts": {
-    "build": "tsc --noEmit false --noEmitOnError false || true && echo 'Build completed with warnings' && mkdir -p dist && cp -r src/* dist/"
+    "build": "tsc --noEmit false --noEmitOnError false || true && echo 'Build completed with warnings' && mkdir -p dist && cp -r src/* dist/",
+    "build:prod": "tsc && cp -r src/* dist/",
+    "dev": "echo 'Development mode: Apps will import directly from src/ - no build needed'"
   },
   "dependencies": {
     "react": "^19.1.1",

@@ -199,13 +199,8 @@ const PatientsPage: React.FC = () => {
         <Col span={12} style={{ textAlign: "right" }}>
           <Button
             type="primary"
-            size="large"
             icon={<PlusOutlined />}
             onClick={() => setIsCreateModalOpen(true)}
-            style={{
-              background: "linear-gradient(45deg, #52c41a, #73d13d)",
-              border: "none",
-            }}
           >
             Thêm bệnh nhân mới
           </Button>

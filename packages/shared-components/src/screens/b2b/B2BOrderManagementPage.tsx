@@ -1,29 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import {
   Card,
-  Table,
   Button,
   Space,
   Typography,
   Input,
-  Select,
   DatePicker,
-  Tag,
-  Modal,
   Form,
+  Modal,
   App,
   Row,
   Col,
   Statistic,
-  Drawer,
-  Tabs,
   Steps,
-  Descriptions,
 } from 'antd';
 import {
-  FilterOutlined,
-  EyeOutlined,
-  EditOutlined,
   DollarOutlined,
   ShopOutlined,
   ReloadOutlined,
@@ -33,17 +24,14 @@ import {
   ClockCircleOutlined,
   WarningOutlined,
 } from '@ant-design/icons';
-import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 // Employee context will be passed as props
 import {
-  getB2BQuotes,
   getQuoteStatistics,
   createB2BQuote,
 } from '@nam-viet-erp/services';
 
 const { Title, Text } = Typography;
-const { RangePicker } = DatePicker;
 const { Step } = Steps;
 
 // B2B Quote interface matching the service
@@ -57,6 +45,8 @@ interface B2BQuote {
   customer_email?: string | null;
   customer_address?: string | null;
   quote_stage: 'draft' | 'sent' | 'negotiating' | 'accepted' | 'rejected' | 'expired';
+  operation_status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+  payment_status: 'unpaid' | 'partial' | 'paid' | 'overdue';
   total_value: number;
   subtotal: number;
   discount_percent: number;
@@ -141,51 +131,18 @@ interface B2BOrderManagementPageProps {
 
 const B2BOrderManagementPage: React.FC<B2BOrderManagementPageProps> = ({ employee }) => {
   const { notification } = App.useApp();
-  const [form] = Form.useForm();
-  const [createQuoteForm] = Form.useForm();
-
-  const [orders, setOrders] = useState<B2BQuote[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [total, setTotal] = useState(0);
-  const [currentPage, setCurrent] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
-  const [searchKeyword, setSearchKeyword] = useState('');
-  const [filters, setFilters] = useState<any>({});
-  const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
-  const [orderDetailModalOpen, setOrderDetailModalOpen] = useState(false);
-  const [createQuoteModalOpen, setCreateQuoteModalOpen] = useState(false);
-  const [selectedOrder, setSelectedOrder] = useState<B2BQuote | null>(null);
   const [statistics, setStatistics] = useState<any>(null);
-  const [currentTab, setCurrentTab] = useState('overview');
+  const [createQuoteForm] = Form.useForm();
+  const [createQuoteModalOpen, setCreateQuoteModalOpen] = useState(false);
 
-  // Load B2B quotes and statistics
-  const loadOrders = async () => {
-    setLoading(true);
+  // Load B2B statistics for dashboard
+  const loadStatistics = async () => {
     try {
-      const searchFilters = {
-        keyword: searchKeyword || undefined,
-        stage: filters.quoteStage,
+      const statsResponse = await getQuoteStatistics({
         employeeId: employee?.employee_id,
-        startDate: filters.startDate,
-        endDate: filters.endDate,
-        limit: pageSize,
-        offset: (currentPage - 1) * pageSize,
-      };
+      });
 
-      const [quotesResponse, statsResponse] = await Promise.all([
-        getB2BQuotes(searchFilters),
-        getQuoteStatistics({
-          employeeId: employee?.employee_id,
-          startDate: filters.startDate,
-          endDate: filters.endDate,
-        }),
-      ]);
-
-      if (quotesResponse.error) throw quotesResponse.error;
       if (statsResponse.error) throw statsResponse.error;
-
-      setOrders(quotesResponse.data || []);
-      setTotal(quotesResponse.data?.length || 0);
 
       // Set statistics
       const stats = {
@@ -201,54 +158,17 @@ const B2BOrderManagementPage: React.FC<B2BOrderManagementPageProps> = ({ employe
     } catch (error: any) {
       notification.error({
         message: 'Lỗi tải dữ liệu',
-        description: error.message || 'Không thể tải danh sách báo giá B2B',
+        description: error.message || 'Không thể tải thống kê B2B',
       });
-    } finally {
-      setLoading(false);
     }
   };
 
   useEffect(() => {
     if (employee?.employee_id) {
-      loadOrders();
+      loadStatistics();
     }
-  }, [employee?.employee_id, currentPage, pageSize, filters]);
+  }, [employee?.employee_id]);
 
-  // Handle search
-  const handleSearch = () => {
-    setCurrent(1);
-    loadOrders();
-  };
-
-  // Handle filter apply
-  const handleFilterApply = (values: any) => {
-    const newFilters: any = {};
-
-    if (values.quoteStage) newFilters.quoteStage = values.quoteStage;
-    if (values.dateRange) {
-      newFilters.startDate = values.dateRange[0].format('YYYY-MM-DD');
-      newFilters.endDate = values.dateRange[1].format('YYYY-MM-DD');
-    }
-
-    setFilters(newFilters);
-    setCurrent(1);
-    setFilterDrawerOpen(false);
-  };
-
-  // Handle clear filters
-  const handleClearFilters = () => {
-    setFilters({});
-    setSearchKeyword('');
-    form.resetFields();
-    setCurrent(1);
-    setFilterDrawerOpen(false);
-  };
-
-  // Handle view order details
-  const handleViewOrder = (quote: B2BQuote) => {
-    setSelectedOrder(quote);
-    setOrderDetailModalOpen(true);
-  };
 
   // Handle create quote
   const handleCreateQuote = () => {
@@ -300,7 +220,7 @@ const B2BOrderManagementPage: React.FC<B2BOrderManagementPageProps> = ({ employe
         });
         setCreateQuoteModalOpen(false);
         createQuoteForm.resetFields();
-        loadOrders(); // Reload data
+        loadStatistics(); // Reload statistics
       }
     } catch (error) {
       console.error('Error creating quote:', error);
@@ -324,110 +244,6 @@ const B2BOrderManagementPage: React.FC<B2BOrderManagementPageProps> = ({ employe
     return B2B_ORDER_STAGES.find(s => s.key === stage) || B2B_ORDER_STAGES[0];
   };
 
-  const columns: ColumnsType<B2BQuote> = [
-    {
-      title: 'Mã báo giá',
-      dataIndex: 'quote_number',
-      key: 'quote_number',
-      width: 140,
-      render: (text: string) => (
-        <Text strong style={{ color: '#722ed1' }}>
-          {text}
-        </Text>
-      ),
-    },
-    {
-      title: 'Khách hàng',
-      key: 'customer',
-      width: 200,
-      render: (_, record) => (
-        <div>
-          <Text strong>{record.customer_name}</Text>
-          <br />
-          <Text type="secondary" style={{ fontSize: '12px' }}>
-            {record.customer_code}
-          </Text>
-          {record.customer_phone && (
-            <>
-              <br />
-              <Text type="secondary" style={{ fontSize: '12px' }}>
-                {record.customer_phone}
-              </Text>
-            </>
-          )}
-        </div>
-      ),
-    },
-    {
-      title: 'Trạng thái',
-      dataIndex: 'quote_stage',
-      key: 'quote_stage',
-      width: 130,
-      render: (stage: string) => {
-        const stageInfo = getStageInfo(stage);
-        return (
-          <Tag color={stageInfo.color} icon={stageInfo.icon}>
-            {stageInfo.title}
-          </Tag>
-        );
-      },
-    },
-    {
-      title: 'Tổng giá trị',
-      dataIndex: 'total_value',
-      key: 'total_value',
-      width: 120,
-      render: (value: number) => (
-        <Text strong style={{ color: '#52c41a' }}>
-          {formatCurrency(value)}
-        </Text>
-      ),
-      sorter: true,
-    },
-    {
-      title: 'Ngày tạo',
-      dataIndex: 'quote_date',
-      key: 'quote_date',
-      width: 100,
-      render: (date: string) => dayjs(date).format('DD/MM/YYYY'),
-    },
-    {
-      title: 'Hết hạn',
-      dataIndex: 'valid_until',
-      key: 'valid_until',
-      width: 100,
-      render: (date: string) => {
-        const isExpired = dayjs(date).isBefore(dayjs());
-        return (
-          <Text style={{ color: isExpired ? '#ff4d4f' : undefined }}>
-            {dayjs(date).format('DD/MM/YYYY')}
-          </Text>
-        );
-      },
-    },
-    {
-      title: 'Thao tác',
-      key: 'actions',
-      width: 120,
-      render: (_, record) => (
-        <Space>
-          <Button
-            type="link"
-            icon={<EyeOutlined />}
-            onClick={() => handleViewOrder(record)}
-          >
-            Xem
-          </Button>
-          <Button
-            type="link"
-            icon={<EditOutlined />}
-          >
-            Sửa
-          </Button>
-        </Space>
-      ),
-    },
-  ];
 
   return (
     <div style={{ padding: '24px' }}>
@@ -446,294 +262,110 @@ const B2BOrderManagementPage: React.FC<B2BOrderManagementPageProps> = ({ employe
             <Button type="primary" icon={<PlusOutlined />} onClick={handleCreateQuote}>
               Tạo báo giá mới
             </Button>
-            <Button icon={<ReloadOutlined />} onClick={loadOrders} loading={loading}>
+            <Button icon={<ReloadOutlined />} onClick={loadStatistics}>
               Làm mới
             </Button>
           </Space>
         </Col>
       </Row>
 
-      <Tabs
-        activeKey={currentTab}
-        onChange={setCurrentTab}
-        style={{ marginBottom: 24 }}
-        items={[
-          {
-            key: "overview",
-            label: "Tổng quan",
-            children: (
-              <>
-                {/* Statistics Cards */}
-                {statistics && (
-                  <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-                    <Col xs={24} sm={12} lg={6}>
-                      <Card>
-                        <Statistic
-                          title="Tổng báo giá"
-                          value={statistics.total}
-                          prefix={<ShopOutlined />}
-                          valueStyle={{ color: '#1890ff' }}
-                        />
-                      </Card>
-                    </Col>
-                    <Col xs={24} sm={12} lg={6}>
-                      <Card>
-                        <Statistic
-                          title="Tổng giá trị"
-                          value={statistics.totalRevenue}
-                          prefix={<DollarOutlined />}
-                          formatter={(value) => formatCurrency(Number(value))}
-                          valueStyle={{ color: '#52c41a' }}
-                        />
-                      </Card>
-                    </Col>
-                    <Col xs={24} sm={12} lg={6}>
-                      <Card>
-                        <Statistic
-                          title="Báo giá nháp"
-                          value={statistics.draftQuotes}
-                          prefix={<FileTextOutlined />}
-                          valueStyle={{ color: '#8c8c8c' }}
-                        />
-                      </Card>
-                    </Col>
-                    <Col xs={24} sm={12} lg={6}>
-                      <Card>
-                        <Statistic
-                          title="Đã chấp nhận"
-                          value={statistics.acceptedQuotes}
-                          prefix={<CheckCircleOutlined />}
-                          valueStyle={{ color: '#52c41a' }}
-                        />
-                      </Card>
-                    </Col>
-                  </Row>
-                )}
+      {/* B2B Sales Dashboard - Overview Only */}
+      {statistics && (
+        <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+          <Col xs={24} sm={12} lg={6}>
+            <Card>
+              <Statistic
+                title="Tổng báo giá"
+                value={statistics.total}
+                prefix={<ShopOutlined />}
+                valueStyle={{ color: '#1890ff' }}
+              />
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} lg={6}>
+            <Card>
+              <Statistic
+                title="Tổng giá trị"
+                value={statistics.totalRevenue}
+                prefix={<DollarOutlined />}
+                formatter={(value) => formatCurrency(Number(value))}
+                valueStyle={{ color: '#52c41a' }}
+              />
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} lg={6}>
+            <Card>
+              <Statistic
+                title="Báo giá nháp"
+                value={statistics.draftQuotes}
+                prefix={<FileTextOutlined />}
+                valueStyle={{ color: '#8c8c8c' }}
+              />
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} lg={6}>
+            <Card>
+              <Statistic
+                title="Đã chấp nhận"
+                value={statistics.acceptedQuotes}
+                prefix={<CheckCircleOutlined />}
+                valueStyle={{ color: '#52c41a' }}
+              />
+            </Card>
+          </Col>
+        </Row>
+      )}
 
-                {/* Workflow Progress */}
-                <Card title="Vòng đời Báo giá B2B - 6 Giai đoạn" style={{ marginBottom: 24 }}>
-                  <div style={{ marginBottom: 16 }}>
-                    <Text type="secondary">
-                      <strong>Giai đoạn 1 - Nháp:</strong> Báo giá đã gửi cho khách hàng, đang chờ họ ra quyết định
-                    </Text>
+      {/* Workflow Progress */}
+      <Card title="Vòng đời Báo giá B2B - 6 Giai đoạn" style={{ marginBottom: 24 }}>
+        <div style={{ marginBottom: 16 }}>
+          <Text type="secondary">
+            <strong>Giai đoạn 1 - Nháp:</strong> Báo giá đã gửi cho khách hàng, đang chờ họ ra quyết định
+          </Text>
+        </div>
+        <Steps direction="horizontal" size="small">
+          {B2B_ORDER_STAGES.slice(0, 4).map((stage) => (
+            <Step
+              key={stage.key}
+              title={stage.title}
+              description={
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '12px', color: '#666' }}>
+                    {stage.description}
                   </div>
-                  <Steps direction="horizontal" size="small">
-                    {B2B_ORDER_STAGES.slice(0, 4).map((stage) => (
-                      <Step
-                        key={stage.key}
-                        title={stage.title}
-                        description={
-                          <div style={{ textAlign: 'center' }}>
-                            <div style={{ fontSize: '12px', color: '#666' }}>
-                              {stage.description}
-                            </div>
-                            <div style={{ fontSize: '14px', fontWeight: 'bold', color: stage.color === 'default' ? '#666' : stage.color }}>
-                              {statistics?.byStage?.[stage.key] || 0} báo giá
-                            </div>
-                          </div>
-                        }
-                        icon={stage.icon}
-                        status={stage.status as any}
-                      />
-                    ))}
-                  </Steps>
-
-                  {/* Rejected and Expired quotes separate */}
-                  <Row gutter={16} style={{ marginTop: 24 }}>
-                    <Col span={12}>
-                      <div style={{ padding: '16px', backgroundColor: '#fff2f0', borderRadius: '6px', border: '1px solid #ffccc7' }}>
-                        <Space>
-                          <WarningOutlined style={{ color: '#ff4d4f' }} />
-                          <Text strong>Báo giá từ chối:</Text>
-                          <Text style={{ color: '#ff4d4f' }}>{statistics?.byStage?.rejected || 0} báo giá</Text>
-                        </Space>
-                      </div>
-                    </Col>
-                    <Col span={12}>
-                      <div style={{ padding: '16px', backgroundColor: '#fff7e6', borderRadius: '6px', border: '1px solid #ffd591' }}>
-                        <Space>
-                          <WarningOutlined style={{ color: '#fa8c16' }} />
-                          <Text strong>Báo giá hết hạn:</Text>
-                          <Text style={{ color: '#fa8c16' }}>{statistics?.byStage?.expired || 0} báo giá</Text>
-                        </Space>
-                      </div>
-                    </Col>
-                  </Row>
-                </Card>
-              </>
-            )
-          },
-          {
-            key: "orders",
-            label: "Danh sách báo giá",
-            children: (
-              <>
-                {/* Search and Filter Bar */}
-                <Card style={{ marginBottom: 16 }}>
-                  <Row gutter={16} align="middle">
-                    <Col flex="auto">
-                      <Input.Search
-                        placeholder="Tìm theo mã báo giá, tên khách hàng, mã khách hàng..."
-                        value={searchKeyword}
-                        onChange={(e) => setSearchKeyword(e.target.value)}
-                        onSearch={handleSearch}
-                        style={{ width: '100%' }}
-                        size="large"
-                      />
-                    </Col>
-                    <Col>
-                      <Space>
-                        <Button
-                          icon={<FilterOutlined />}
-                          onClick={() => setFilterDrawerOpen(true)}
-                        >
-                          Bộ lọc
-                        </Button>
-                        <Button type="primary" icon={<PlusOutlined />} onClick={handleCreateQuote}>
-                          Tạo báo giá
-                        </Button>
-                      </Space>
-                    </Col>
-                  </Row>
-                </Card>
-
-                {/* Orders Table */}
-                <Card>
-                  <Table
-                    columns={columns}
-                    dataSource={orders}
-                    rowKey="quote_id"
-                    loading={loading}
-                    pagination={{
-                      current: currentPage,
-                      pageSize: pageSize,
-                      total: total,
-                      showSizeChanger: true,
-                      showQuickJumper: true,
-                      showTotal: (total, range) =>
-                        `${range[0]}-${range[1]} của ${total} báo giá`,
-                      onChange: (page, size) => {
-                        setCurrent(page);
-                        setPageSize(size || 20);
-                      },
-                    }}
-                    scroll={{ x: 1200 }}
-                  />
-                </Card>
-              </>
-            )
-          }
-        ]}
-      />
-
-      {/* Filter Drawer */}
-      <Drawer
-        title="Bộ lọc nâng cao"
-        placement="right"
-        onClose={() => setFilterDrawerOpen(false)}
-        open={filterDrawerOpen}
-        width={400}
-      >
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={handleFilterApply}
-        >
-          <Form.Item name="quoteStage" label="Trạng thái báo giá">
-            <Select placeholder="Chọn trạng thái báo giá" allowClear>
-              {B2B_ORDER_STAGES.map(stage => (
-                <Select.Option key={stage.key} value={stage.key}>
-                  {stage.title}
-                </Select.Option>
-              ))}
-            </Select>
-          </Form.Item>
-
-          <Form.Item name="dateRange" label="Khoảng thời gian">
-            <RangePicker
-              style={{ width: '100%' }}
-              format="DD/MM/YYYY"
-              placeholder={['Từ ngày', 'Đến ngày']}
+                  <div style={{ fontSize: '14px', fontWeight: 'bold', color: stage.color === 'default' ? '#666' : stage.color }}>
+                    {statistics?.byStage?.[stage.key] || 0} báo giá
+                  </div>
+                </div>
+              }
+              icon={stage.icon}
+              status={stage.status as any}
             />
-          </Form.Item>
+          ))}
+        </Steps>
 
-          <Form.Item>
-            <Space style={{ width: '100%', justifyContent: 'space-between' }}>
-              <Button onClick={handleClearFilters}>
-                Xóa bộ lọc
-              </Button>
-              <Button type="primary" htmlType="submit">
-                Áp dụng
-              </Button>
-            </Space>
-          </Form.Item>
-        </Form>
-      </Drawer>
-
-      {/* Order Detail Modal */}
-      <Modal
-        title={`Chi tiết báo giá ${selectedOrder?.quote_number}`}
-        open={orderDetailModalOpen}
-        onCancel={() => setOrderDetailModalOpen(false)}
-        footer={[
-          <Button key="close" onClick={() => setOrderDetailModalOpen(false)}>
-            Đóng
-          </Button>,
-          <Button key="edit" type="primary">
-            Chỉnh sửa
-          </Button>,
-        ]}
-        width={800}
-      >
-        {selectedOrder && (
-          <div>
-            <Descriptions bordered column={2}>
-              <Descriptions.Item label="Mã báo giá">
-                {selectedOrder.quote_number}
-              </Descriptions.Item>
-              <Descriptions.Item label="Khách hàng">
-                {selectedOrder.customer_name}
-              </Descriptions.Item>
-              <Descriptions.Item label="Mã khách hàng">
-                {selectedOrder.customer_code}
-              </Descriptions.Item>
-              <Descriptions.Item label="Người liên hệ">
-                {selectedOrder.customer_contact_person}
-              </Descriptions.Item>
-              <Descriptions.Item label="Số điện thoại">
-                {selectedOrder.customer_phone}
-              </Descriptions.Item>
-              <Descriptions.Item label="Email">
-                {selectedOrder.customer_email}
-              </Descriptions.Item>
-              <Descriptions.Item label="Ngày tạo">
-                {dayjs(selectedOrder.quote_date).format('DD/MM/YYYY')}
-              </Descriptions.Item>
-              <Descriptions.Item label="Hạn báo giá">
-                {dayjs(selectedOrder.valid_until).format('DD/MM/YYYY')}
-              </Descriptions.Item>
-              <Descriptions.Item label="Tổng giá trị">
-                <Text strong style={{ color: '#52c41a' }}>
-                  {formatCurrency(selectedOrder.total_value)}
-                </Text>
-              </Descriptions.Item>
-              <Descriptions.Item label="Chiết khấu">
-                {selectedOrder.discount_percent}%
-              </Descriptions.Item>
-              <Descriptions.Item label="Trạng thái" span={2}>
-                <Tag color={getStageInfo(selectedOrder.quote_stage).color}>
-                  {getStageInfo(selectedOrder.quote_stage).title}
-                </Tag>
-              </Descriptions.Item>
-              {selectedOrder.notes && (
-                <Descriptions.Item label="Ghi chú" span={2}>
-                  {selectedOrder.notes}
-                </Descriptions.Item>
-              )}
-            </Descriptions>
-          </div>
-        )}
-      </Modal>
+        {/* Rejected and Expired quotes separate */}
+        <Row gutter={16} style={{ marginTop: 24 }}>
+          <Col span={12}>
+            <div style={{ padding: '16px', backgroundColor: '#fff2f0', borderRadius: '6px', border: '1px solid #ffccc7' }}>
+              <Space>
+                <WarningOutlined style={{ color: '#ff4d4f' }} />
+                <Text strong>Báo giá từ chối:</Text>
+                <Text style={{ color: '#ff4d4f' }}>{statistics?.byStage?.rejected || 0} báo giá</Text>
+              </Space>
+            </div>
+          </Col>
+          <Col span={12}>
+            <div style={{ padding: '16px', backgroundColor: '#fff7e6', borderRadius: '6px', border: '1px solid #ffd591' }}>
+              <Space>
+                <WarningOutlined style={{ color: '#fa8c16' }} />
+                <Text strong>Báo giá hết hạn:</Text>
+                <Text style={{ color: '#fa8c16' }}>{statistics?.byStage?.expired || 0} báo giá</Text>
+              </Space>
+            </div>
+          </Col>
+        </Row>
+      </Card>
 
       {/* Create Quote Modal */}
       <Modal

@@ -4,8 +4,9 @@ import AppLayout from "./components/AppLayout";
 import Login from "./pages/Login";
 import { useAuth } from "./hooks/useAuth";
 import { EmployeeProvider } from "./context/EmployeeContext";
-import { ScreenProvider, ROLE_PERMISSIONS } from "@nam-viet-erp/shared-components";
+import { ScreenProvider } from "@nam-viet-erp/shared-components";
 import { Spin, Row } from "antd";
+import AuthenticatedApp from "./components/AuthenticatedApp";
 
 const App: React.FC = () => {
   const { session, loading } = useAuth();
@@ -18,22 +19,12 @@ const App: React.FC = () => {
     );
   }
 
-  // Create user object for permissions (placeholder - would typically come from auth)
-  const user = session ? {
-    id: 'current-user',
-    name: 'Current User',
-    permissions: ROLE_PERMISSIONS['sales-staff'], // Use sales-staff permissions for sale app
-    role: 'sales-staff'
-  } : null;
-
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
-      <Route path="/*" element={session && user ? (
+      <Route path="/*" element={session ? (
         <EmployeeProvider>
-          <ScreenProvider user={user}>
-            <AppLayout />
-          </ScreenProvider>
+          <AuthenticatedApp />
         </EmployeeProvider>
       ) : <Login />} />
     </Routes>

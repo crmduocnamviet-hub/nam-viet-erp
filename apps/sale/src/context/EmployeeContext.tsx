@@ -5,14 +5,16 @@ interface Employee {
   employee_id: string;
   full_name: string;
   employee_code: string | null;
-  role_name: string;
   is_active: boolean;
   user_id?: string;
+  permissions: string[]; // Permissions from database
 }
 
 interface EmployeeContextType {
   employee: Employee | null;
   loading: boolean;
+  permissions: string[];
+  hasPermission: (permission: string) => boolean;
   refreshEmployee: () => Promise<void>;
 }
 
@@ -37,26 +39,52 @@ export const EmployeeProvider: React.FC<EmployeeProviderProps> = ({
 }) => {
   const [employee, setEmployee] = useState<Employee | null>(null);
   const [loading, setLoading] = useState(true);
+  const [permissions, setPermissions] = useState<string[]>([]);
 
   const refreshEmployee = async () => {
     try {
       setLoading(true);
+      console.log('🔍 Fetching current employee data...');
       const { data, error } = await getCurrentUser();
 
       if (error) {
-        console.error("Error fetching employee:", error);
+        console.error("❌ Error fetching employee:", error);
         setEmployee(null);
+        setPermissions([]);
       } else if (data?.employee) {
-        setEmployee(data.employee);
+        console.log('✅ Employee data retrieved:', data.employee);
+        const employeeData = data.employee;
+
+        // Get permissions directly from database
+        const databasePermissions = employeeData.permissions || [];
+        console.log(`🔑 Employee ${employeeData.full_name} database permissions:`, databasePermissions);
+        console.log('📊 Total permissions count:', databasePermissions.length);
+
+        // Add permissions to employee object
+        const employeeWithPermissions = {
+          ...employeeData,
+          permissions: databasePermissions,
+        };
+
+        setEmployee(employeeWithPermissions);
+        setPermissions(databasePermissions);
       } else {
         setEmployee(null);
+        setPermissions([]);
       }
     } catch (error) {
       console.error("Error in refreshEmployee:", error);
       setEmployee(null);
+      setPermissions([]);
     } finally {
       setLoading(false);
     }
+  };
+
+  const hasPermission = (permission: string): boolean => {
+    const hasAccess = permissions.includes(permission);
+    console.log(`🔐 Permission check "${permission}":`, hasAccess ? '✅ ALLOWED' : '❌ DENIED');
+    return hasAccess;
   };
 
   useEffect(() => {
@@ -66,6 +94,8 @@ export const EmployeeProvider: React.FC<EmployeeProviderProps> = ({
   const value = {
     employee,
     loading,
+    permissions,
+    hasPermission,
     refreshEmployee,
   };
 

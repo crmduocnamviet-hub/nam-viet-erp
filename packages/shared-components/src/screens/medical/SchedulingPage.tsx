@@ -169,7 +169,7 @@ const PatientCrmModal: React.FC<any> = ({ open, onCancel, onClose }) => {
             ×
           </button>
         </div>
-        <p>Modal CRM bệnh nhân sẽ được hiển thị tại đây</p>
+        <p>🎉 Modal CRM bệnh nhân sẽ được hiển thị tại đây (Live Update Test)</p>
         <div style={{ textAlign: 'right', marginTop: '20px' }}>
           <button
             onClick={handleClose}
@@ -312,14 +312,8 @@ const SchedulingPageContent: React.FC = () => {
         <Col>
           <Button
             type="primary"
-            size="large"
             icon={<PlusOutlined />}
             onClick={() => setIsCreationModalOpen(true)}
-            style={{
-              background: "linear-gradient(45deg, #1890ff, #40a9ff)",
-              border: "none",
-              boxShadow: "0 4px 15px 0 rgba(24, 144, 255, 0.4)",
-            }}
           >
             Tạo lịch hẹn mới
           </Button>

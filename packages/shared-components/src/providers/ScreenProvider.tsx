@@ -1,16 +1,15 @@
-import React, { createContext, useContext, ReactNode } from 'react';
+import React, { createContext, useContext, ReactNode } from "react";
 import {
   SCREEN_REGISTRY,
   ScreenConfig,
   hasScreenPermission,
-  getAvailableScreens
-} from '../screens';
+  getAvailableScreens,
+} from "../screens";
 
 interface User {
   id: string;
   name: string;
   permissions: string[];
-  role: string;
 }
 
 interface ScreenProviderProps {
@@ -22,7 +21,10 @@ interface ScreenProviderProps {
 interface ScreenContextType {
   user: User | null;
   context: Record<string, any>;
-  renderScreen: (screenKey: string, props?: Record<string, any>) => React.ReactElement | null;
+  renderScreen: (
+    screenKey: string,
+    props?: Record<string, any>
+  ) => React.ReactElement | null;
   hasPermission: (screenKey: string) => boolean;
   getAvailableScreensForUser: () => Record<string, ScreenConfig>;
   getScreenComponent: (screenKey: string) => React.ComponentType<any> | null;
@@ -33,7 +35,7 @@ const ScreenContext = createContext<ScreenContextType | undefined>(undefined);
 export const ScreenProvider: React.FC<ScreenProviderProps> = ({
   children,
   user,
-  context = {}
+  context = {},
 }) => {
   const renderScreen = (screenKey: string, props: Record<string, any> = {}) => {
     const screen = SCREEN_REGISTRY[screenKey];
@@ -44,14 +46,18 @@ export const ScreenProvider: React.FC<ScreenProviderProps> = ({
 
     // Check permissions
     if (!user || !hasScreenPermission(screenKey, user.permissions)) {
-      console.warn(`User does not have permission to access screen '${screenKey}'`);
+      console.warn(
+        `User does not have permission to access screen '${screenKey}'`
+      );
       return (
-        <div style={{
-          padding: '24px',
-          textAlign: 'center',
-          color: '#ff4d4f',
-          fontSize: '16px'
-        }}>
+        <div
+          style={{
+            padding: "24px",
+            textAlign: "center",
+            color: "#ff4d4f",
+            fontSize: "16px",
+          }}
+        >
           <h3>Không có quyền truy cập</h3>
           <p>Bạn không có quyền truy cập trang này.</p>
         </div>
@@ -79,7 +85,9 @@ export const ScreenProvider: React.FC<ScreenProviderProps> = ({
     return getAvailableScreens(user.permissions);
   };
 
-  const getScreenComponent = (screenKey: string): React.ComponentType<any> | null => {
+  const getScreenComponent = (
+    screenKey: string
+  ): React.ComponentType<any> | null => {
     const screen = SCREEN_REGISTRY[screenKey];
     return screen ? screen.component : null;
   };
@@ -94,16 +102,14 @@ export const ScreenProvider: React.FC<ScreenProviderProps> = ({
   };
 
   return (
-    <ScreenContext.Provider value={value}>
-      {children}
-    </ScreenContext.Provider>
+    <ScreenContext.Provider value={value}>{children}</ScreenContext.Provider>
   );
 };
 
 export const useScreens = (): ScreenContextType => {
   const context = useContext(ScreenContext);
   if (context === undefined) {
-    throw new Error('useScreens must be used within a ScreenProvider');
+    throw new Error("useScreens must be used within a ScreenProvider");
   }
   return context;
 };
@@ -115,7 +121,7 @@ export const withScreenPermission = (screenKey: string) => {
       const { hasPermission, renderScreen } = useScreens();
 
       if (!hasPermission(screenKey)) {
-        return renderScreen('auth.unauthorized');
+        return renderScreen("auth.unauthorized");
       }
 
       return <Component {...props} />;

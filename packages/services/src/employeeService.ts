@@ -74,7 +74,19 @@ export const getCurrentEmployee = async (): Promise<PostgrestSingleResponse<IEmp
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
-    return { data: null, error: { message: "No authenticated user", details: null, hint: null, code: "UNAUTHENTICATED" } };
+    return {
+      data: null,
+      error: {
+        message: "No authenticated user",
+        details: "",
+        hint: "",
+        code: "UNAUTHENTICATED",
+        name: "AuthenticationError"
+      },
+      count: null,
+      status: 401,
+      statusText: "Unauthorized"
+    };
   }
 
   return getEmployeeByUserId(user.id);

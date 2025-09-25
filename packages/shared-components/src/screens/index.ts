@@ -6,7 +6,9 @@ import PosPage from "./pos/PosPage";
 
 // Screen Imports - B2B
 import B2BOrderManagementPage from "./b2b/B2BOrderManagementPage";
+import B2BOrderListPage from "./b2b/B2BOrderListPage";
 import QuickQuotePage from "./b2b/QuickQuotePage";
+import CreateOrderPage from "./b2b/CreateOrderPage";
 
 // Screen Imports - Medical
 import PatientsPage from "./medical/PatientsPage";
@@ -75,11 +77,11 @@ export const SCREEN_REGISTRY: ScreenRegistry = {
 
   // ==================== B2B SCREENS ====================
   "b2b.orders": {
-    component: B2BOrderManagementPage,
+    component: B2BOrderListPage,
     permissions: ["b2b.access", "quotes.view"],
     category: "b2b",
-    title: "Quản lý Đơn hàng B2B",
-    description: "Quản lý báo giá và đơn hàng bán buôn",
+    title: "Danh sách Đơn hàng B2B",
+    description: "Xem và quản lý danh sách đơn hàng bán buôn",
   },
   "b2b.quick-quote": {
     component: QuickQuotePage,
@@ -87,6 +89,20 @@ export const SCREEN_REGISTRY: ScreenRegistry = {
     category: "b2b",
     title: "Báo giá nhanh",
     description: "Tạo báo giá nhanh cho khách hàng",
+  },
+  "b2b.dashboard": {
+    component: B2BOrderManagementPage,
+    permissions: ["b2b.access", "quotes.view"],
+    category: "b2b",
+    title: "B2B Sales Dashboard",
+    description: "Dashboard tổng quan bán hàng B2B",
+  },
+  "b2b.create-quote": {
+    component: CreateOrderPage,
+    permissions: ["b2b.access", "quotes.create"],
+    category: "b2b",
+    title: "Tạo Báo Giá / Đơn Hàng",
+    description: "Tạo báo giá và đơn hàng chi tiết với thông tin khách hàng",
   },
 
   // ==================== MEDICAL SCREENS ====================
@@ -418,6 +434,15 @@ export const ROLE_PERMISSIONS = {
     "purchase-orders.approve",
   ],
 
+  "inventory-staff": [
+    "inventory.access",
+    "products.view",
+    "products.create",
+    "products.edit",
+    "purchase-orders.view",
+    "purchase-orders.create",
+  ],
+
   "marketing-manager": [
     "marketing.access",
     "marketing.dashboard",
@@ -452,7 +477,9 @@ export {
   PosPage,
   // B2B
   B2BOrderManagementPage,
+  B2BOrderListPage,
   QuickQuotePage,
+  CreateOrderPage,
   // Medical
   PatientsPage,
   PatientDetailPage,
