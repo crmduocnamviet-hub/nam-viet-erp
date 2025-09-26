@@ -14,6 +14,7 @@ import {
   InputNumber,
   Switch,
   Tag,
+  Grid,
 } from "antd";
 import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import {
@@ -25,10 +26,13 @@ import {
 } from "@nam-viet-erp/services";
 
 const { Title } = Typography;
+const { useBreakpoint } = Grid;
 
 const Vouchers: React.FC = () => {
   const { notification, modal } = App.useApp();
   const [form] = Form.useForm();
+  const screens = useBreakpoint();
+  const isMobile = !screens.lg;
   const [vouchers, setVouchers] = useState<any[]>([]);
   const [promotions, setPromotions] = useState<
     { value: number; label: string }[]
@@ -185,7 +189,7 @@ const Vouchers: React.FC = () => {
         </Col>
         <Col>
           <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
-            Tạo Mã mới
+            {!isMobile && "Tạo Mã mới"}
           </Button>
         </Col>
       </Row>

@@ -5,6 +5,7 @@ import {
   ShopOutlined,
   MenuOutlined,
   UserOutlined,
+  LogoutOutlined,
 } from "@ant-design/icons";
 import type { MenuProps } from "antd";
 import { Routes, Route, useNavigate } from "react-router-dom";
@@ -18,6 +19,7 @@ import {
   Grid,
   Drawer,
   Space,
+  Dropdown,
 } from "antd";
 import viVN from "antd/locale/vi_VN";
 import { signOut } from "@nam-viet-erp/services";
@@ -35,7 +37,7 @@ const allMenuItems = [
     label: "💰 Bán hàng (POS)",
     key: "/",
     icon: <ShoppingCartOutlined />,
-    screenKey: "pos.main"
+    screenKey: "pos.main",
   },
   {
     label: "🏢 Bán Buôn",
@@ -45,17 +47,17 @@ const allMenuItems = [
       {
         label: "B2B Sales Dashboard",
         key: "/b2b-dashboard",
-        screenKey: "b2b.dashboard"
+        screenKey: "b2b.dashboard",
       },
       {
         label: "Tạo Báo Giá / Đơn Hàng",
         key: "/create-quote",
-        screenKey: "b2b.create-quote"
+        screenKey: "b2b.create-quote",
       },
       {
         label: "Danh sách Đơn hàng",
         key: "/store-channel",
-        screenKey: "b2b.orders"
+        screenKey: "b2b.orders",
       },
     ],
   },
@@ -67,17 +69,17 @@ const allMenuItems = [
       {
         label: "Lịch hẹn hôm nay",
         key: "/scheduling",
-        screenKey: "medical.scheduling"
+        screenKey: "medical.scheduling",
       },
       {
         label: "Quản lý bệnh nhân",
         key: "/patients",
-        screenKey: "medical.patients"
+        screenKey: "medical.patients",
       },
       {
         label: "Hồ sơ y tế",
         key: "/medical-records",
-        screenKey: "medical.records"
+        screenKey: "medical.records",
       },
     ],
   },
@@ -113,12 +115,8 @@ const SiderContent: React.FC<{
   onMenuClick: MenuProps["onClick"];
   employee?: any;
   menuItems: MenuProps["items"];
-}> = ({
-  onMenuClick,
-  employee,
-  menuItems,
-}) => (
-  <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+}> = ({ onMenuClick, employee, menuItems }) => (
+  <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
     <div
       style={{
         height: "48px",
@@ -148,37 +146,45 @@ const SiderContent: React.FC<{
     />
 
     {/* User Info Section for Mobile */}
-    <div style={{
-      padding: "16px",
-      borderTop: "1px solid rgba(255, 255, 255, 0.1)",
-      backgroundColor: "rgba(255, 255, 255, 0.05)"
-    }}>
+    <div
+      style={{
+        padding: "16px",
+        borderTop: "1px solid rgba(255, 255, 255, 0.1)",
+        backgroundColor: "rgba(255, 255, 255, 0.05)",
+      }}
+    >
       <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
         <Avatar
           size="default"
           style={{
-            backgroundColor: 'rgba(255, 255, 255, 0.2)',
-            color: 'white',
-            fontWeight: 'bold'
+            backgroundColor: "rgba(255, 255, 255, 0.2)",
+            color: "white",
+            fontWeight: "bold",
           }}
         >
-          {employee?.full_name ? employee.full_name.charAt(0).toUpperCase() : 'U'}
+          {employee?.full_name
+            ? employee.full_name.charAt(0).toUpperCase()
+            : "U"}
         </Avatar>
         <div style={{ flex: 1 }}>
-          <div style={{
-            fontSize: "14px",
-            fontWeight: "500",
-            color: "white",
-            lineHeight: "1.2"
-          }}>
-            {employee?.full_name || 'Người dùng'}
+          <div
+            style={{
+              fontSize: "14px",
+              fontWeight: "500",
+              color: "white",
+              lineHeight: "1.2",
+            }}
+          >
+            {employee?.full_name || "Người dùng"}
           </div>
-          <div style={{
-            fontSize: "12px",
-            color: "rgba(255, 255, 255, 0.7)",
-            lineHeight: "1.2"
-          }}>
-            Mã NV: {employee?.employee_code || 'N/A'}
+          <div
+            style={{
+              fontSize: "12px",
+              color: "rgba(255, 255, 255, 0.7)",
+              lineHeight: "1.2",
+            }}
+          >
+            Mã NV: {employee?.employee_code || "N/A"}
           </div>
         </div>
       </div>
@@ -198,7 +204,7 @@ const AppLayout: React.FC = () => {
   // Filter menu items based on user permissions
   const getFilteredMenuItems = (): MenuProps["items"] => {
     return allMenuItems
-      .map(item => {
+      .map((item) => {
         // Check if user has permission for top-level items
         if (item.screenKey && !hasPermission(item.screenKey)) {
           return null;
@@ -206,8 +212,9 @@ const AppLayout: React.FC = () => {
 
         // If it has children, filter them too
         if (item.children) {
-          const filteredChildren = item.children
-            .filter(child => !child.screenKey || hasPermission(child.screenKey));
+          const filteredChildren = item.children.filter(
+            (child) => !child.screenKey || hasPermission(child.screenKey)
+          );
 
           // If no children are accessible, don't show the parent
           if (filteredChildren.length === 0) {
@@ -216,19 +223,23 @@ const AppLayout: React.FC = () => {
 
           return {
             ...item,
-            children: filteredChildren
+            children: filteredChildren,
           };
         }
 
         return item;
       })
-      .filter(item => item !== null);
+      .filter((item) => item !== null);
   };
 
   const menuItems = getFilteredMenuItems();
 
   // Debug: Log filtered menu items
-  console.log('📋 Filtered menu items:', menuItems?.length || 0, 'items available');
+  console.log(
+    "📋 Filtered menu items:",
+    menuItems?.length || 0,
+    "items available"
+  );
 
   const handleMenuClick: MenuProps["onClick"] = (e) => {
     navigate(e.key);
@@ -243,7 +254,13 @@ const AppLayout: React.FC = () => {
   };
 
   return (
-    <ConfigProvider theme={namVietTheme} locale={viVN}>
+    <>
+      <style>{`
+        .user-avatar-section:hover {
+          background-color: #f5f5f5;
+        }
+      `}</style>
+      <ConfigProvider theme={namVietTheme} locale={viVN}>
       <Layout style={{ minHeight: "100vh" }}>
         {!isMobile && (
           <Sider
@@ -303,14 +320,18 @@ const AppLayout: React.FC = () => {
               body: {
                 padding: 0,
                 background: namVietTheme.components.Layout.siderBg,
-                display: 'flex',
-                flexDirection: 'column',
-                height: '100vh',
+                display: "flex",
+                flexDirection: "column",
+                height: "100vh",
               },
             }}
             width={230}
           >
-            <SiderContent onMenuClick={handleMenuClick} employee={employee} menuItems={menuItems} />
+            <SiderContent
+              onMenuClick={handleMenuClick}
+              employee={employee}
+              menuItems={menuItems}
+            />
           </Drawer>
         )}
 
@@ -322,12 +343,12 @@ const AppLayout: React.FC = () => {
         >
           <Header
             style={{
-              padding: "0 24px",
+              padding: "12px 24px",
               background: namVietTheme.components.Layout.headerBg,
               display: "flex",
               justifyContent: isMobile ? "space-between" : "flex-end",
               alignItems: "center",
-              height: 48,
+              height: 70,
             }}
           >
             {isMobile && (
@@ -337,39 +358,91 @@ const AppLayout: React.FC = () => {
                 onClick={() => setMobileMenuOpen(true)}
               />
             )}
-            <Space align="center">
-              <Avatar
-                size="large"
+            <Dropdown
+              menu={{
+                items: [
+                  {
+                    key: "user-info",
+                    label: (
+                      <div style={{ padding: "8px 0", borderBottom: "1px solid #f0f0f0", marginBottom: "8px" }}>
+                        <div style={{
+                          fontSize: "16px",
+                          fontWeight: "600",
+                          color: "#262626",
+                          lineHeight: "1.2",
+                        }}>
+                          {employee?.full_name || "Người dùng"}
+                        </div>
+                        <div style={{
+                          fontSize: "13px",
+                          color: "#8c8c8c",
+                          lineHeight: "1.2",
+                        }}>
+                          Mã NV: {employee?.employee_code || "N/A"}
+                        </div>
+                      </div>
+                    ),
+                    disabled: true,
+                  },
+                  {
+                    key: "logout",
+                    label: "Đăng xuất",
+                    icon: <LogoutOutlined />,
+                    onClick: handleLogout,
+                  },
+                ],
+              }}
+              placement="bottomRight"
+              trigger={["click"]}
+            >
+              <Space
+                align="center"
                 style={{
-                  backgroundColor: '#1890ff',
-                  fontWeight: 'bold',
-                  fontSize: '16px'
+                  cursor: "pointer",
+                  padding: "8px 12px",
+                  borderRadius: "8px",
+                  transition: "background-color 0.2s",
                 }}
-                icon={!employee?.full_name ? <UserOutlined /> : null}
+                className="user-avatar-section"
               >
-                {employee?.full_name ? employee.full_name.charAt(0).toUpperCase() : 'U'}
-              </Avatar>
-              <div style={{ textAlign: "left" }}>
-                <div style={{
-                  fontSize: "16px",
-                  fontWeight: "600",
-                  color: "#262626",
-                  lineHeight: "1.2"
-                }}>
-                  {employee?.full_name || 'Người dùng'}
-                </div>
-                <div style={{
-                  fontSize: "13px",
-                  color: "#8c8c8c",
-                  lineHeight: "1.2"
-                }}>
-                  Mã NV: {employee?.employee_code || 'N/A'}
-                </div>
-              </div>
-              <Button onClick={handleLogout} type="default">
-                Đăng xuất
-              </Button>
-            </Space>
+                <Avatar
+                  size="large"
+                  style={{
+                    backgroundColor: "#1890ff",
+                    fontWeight: "bold",
+                    fontSize: "16px",
+                  }}
+                  icon={!employee?.full_name ? <UserOutlined /> : null}
+                >
+                  {employee?.full_name
+                    ? employee.full_name.charAt(0).toUpperCase()
+                    : "U"}
+                </Avatar>
+                {!isMobile && (
+                  <div style={{ textAlign: "left" }}>
+                    <div
+                      style={{
+                        fontSize: "16px",
+                        fontWeight: "600",
+                        color: "#262626",
+                        lineHeight: "1.2",
+                      }}
+                    >
+                      {employee?.full_name || "Người dùng"}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "13px",
+                        color: "#8c8c8c",
+                        lineHeight: "1.2",
+                      }}
+                    >
+                      Mã NV: {employee?.employee_code || "N/A"}
+                    </div>
+                  </div>
+                )}
+              </Space>
+            </Dropdown>
           </Header>
           <Content style={{ margin: "16px", overflow: "initial" }}>
             <div
@@ -423,6 +496,7 @@ const AppLayout: React.FC = () => {
         </Layout>
       </Layout>
     </ConfigProvider>
+    </>
   );
 };
 

@@ -10,6 +10,7 @@ import {
   Tag,
   type TableProps,
   Input,
+  Grid,
 } from "antd";
 import { PlusOutlined, RobotOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
@@ -17,11 +18,14 @@ import { getPurchaseOrder } from "@nam-viet-erp/services";
 
 const { Title } = Typography;
 const { Search } = Input;
+const { useBreakpoint } = Grid;
 
 const PurchaseOrdersContent: React.FC = () => {
   const { notification, modal } = AntApp.useApp();
   const [purchaseOrders, setPurchaseOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const screens = useBreakpoint();
+  const isMobile = !screens.lg;
 
   useEffect(() => {
     const fetchPOs = async () => {
@@ -125,7 +129,7 @@ const PurchaseOrdersContent: React.FC = () => {
               Tạo Dự trù & Lên Đơn hàng Loạt
             </Button>
             <Button type="primary" icon={<PlusOutlined />}>
-              Tạo Đơn hàng Thủ công
+              {!isMobile && "Tạo Đơn hàng Thủ công"}
             </Button>
           </Space>
         </Col>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, Table, Space, Row, Col, Typography, Modal } from 'antd';
+import { Button, Table, Space, Row, Col, Typography, Modal, Grid } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 // Temporary stub component to replace missing SegmentBuilder
 const SegmentBuilder: React.FC<any> = () => (
@@ -10,9 +10,12 @@ const SegmentBuilder: React.FC<any> = () => (
 );
 
 const { Title } = Typography;
+const { useBreakpoint } = Grid;
 
 const CustomerSegments: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = React.useState(false);
+  const screens = useBreakpoint();
+  const isMobile = !screens.lg;
 
   const columns = [
     { title: 'Tên phân khúc', dataIndex: 'name', key: 'name' },
@@ -44,7 +47,7 @@ const CustomerSegments: React.FC = () => {
         </Col>
         <Col>
           <Button type="primary" icon={<PlusOutlined />} onClick={() => setIsModalOpen(true)}>
-            Tạo phân khúc mới
+            {!isMobile && "Tạo phân khúc mới"}
           </Button>
         </Col>
       </Row>

@@ -1,10 +1,13 @@
 import React from 'react';
-import { Button, Table, Space, Row, Col, Typography } from 'antd';
+import { Button, Table, Space, Row, Col, Typography, Grid } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 
 const { Title } = Typography;
+const { useBreakpoint } = Grid;
 
 const ContentLibrary: React.FC = () => {
+  const screens = useBreakpoint();
+  const isMobile = !screens.lg;
   const columns = [
     { title: 'Tên mẫu', dataIndex: 'name', key: 'name' },
     { title: 'Nội dung', dataIndex: 'content', key: 'content', ellipsis: true },
@@ -35,7 +38,7 @@ const ContentLibrary: React.FC = () => {
         </Col>
         <Col>
           <Button type="primary" icon={<PlusOutlined />}>
-            Tạo mẫu mới
+            {!isMobile && "Tạo mẫu mới"}
           </Button>
         </Col>
       </Row>

@@ -16,6 +16,7 @@ import {
   Col,
   Drawer,
   Descriptions,
+  Grid,
 } from 'antd';
 import {
   FilterOutlined,
@@ -34,6 +35,7 @@ import {
 
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
+const { useBreakpoint } = Grid;
 
 // B2B Quote interface matching the service
 interface B2BQuote {
@@ -131,6 +133,8 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({ employee }) => {
   const [orderDetailModalOpen, setOrderDetailModalOpen] = useState(false);
   const [createQuoteModalOpen, setCreateQuoteModalOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<B2BQuote | null>(null);
+  const screens = useBreakpoint();
+  const isMobile = !screens.lg;
 
   const [form] = Form.useForm();
   const [createQuoteForm] = Form.useForm();
@@ -412,7 +416,7 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({ employee }) => {
         <Col>
           <Space>
             <Button type="primary" icon={<PlusOutlined />} onClick={handleCreateQuote}>
-              Tạo báo giá mới
+              {!isMobile && "Tạo báo giá mới"}
             </Button>
             <Button icon={<ReloadOutlined />} onClick={loadOrders} loading={loading}>
               Làm mới

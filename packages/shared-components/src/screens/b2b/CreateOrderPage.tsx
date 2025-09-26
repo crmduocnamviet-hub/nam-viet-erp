@@ -20,6 +20,7 @@ import {
   Descriptions,
   List,
   Avatar,
+  Grid,
 } from "antd";
 import {
   PlusOutlined,
@@ -73,6 +74,8 @@ interface CreateOrderPageProps {
   employee?: Employee | null;
 }
 
+const { useBreakpoint } = Grid; // <-- "Mắt thần" theo dõi kích thước màn hình
+
 const CreateOrderPage: React.FC<CreateOrderPageProps> = ({ employee }) => {
   const { notification } = App.useApp();
   const [form] = Form.useForm();
@@ -84,6 +87,8 @@ const CreateOrderPage: React.FC<CreateOrderPageProps> = ({ employee }) => {
   const [selectedProducts, setSelectedProducts] = useState<Product[]>([]);
   const [orderSummary, setOrderSummary] = useState<any>(null);
   const [previewVisible, setPreviewVisible] = useState(false);
+  const screens = useBreakpoint(); // Lấy thông tin màn hình hiện tại
+  const isMobile = !screens.lg; // Coi là mobile nếu màn hình nhỏ hơn 'lg'
 
   // Load products
   useEffect(() => {
@@ -448,12 +453,12 @@ const CreateOrderPage: React.FC<CreateOrderPageProps> = ({ employee }) => {
                 </Col>
               </Row>
               <Row gutter={16}>
-                <Col span={8}>
+                <Col xs={24} sm={12} lg={8}>
                   <Form.Item name="contact_person" label="Người liên hệ">
                     <Input placeholder="Tên người liên hệ" />
                   </Form.Item>
                 </Col>
-                <Col span={8}>
+                <Col xs={24} sm={12} lg={8}>
                   <Form.Item
                     name="customer_phone"
                     label="Số điện thoại"
@@ -467,7 +472,7 @@ const CreateOrderPage: React.FC<CreateOrderPageProps> = ({ employee }) => {
                     <Input placeholder="Số điện thoại liên hệ" />
                   </Form.Item>
                 </Col>
-                <Col span={8}>
+                <Col xs={24} sm={24} lg={8}>
                   <Form.Item
                     name="customer_email"
                     label="Email"
@@ -490,7 +495,7 @@ const CreateOrderPage: React.FC<CreateOrderPageProps> = ({ employee }) => {
               style={{ marginBottom: 16 }}
             >
               <Row gutter={16}>
-                <Col span={12}>
+                <Col xs={24} lg={12}>
                   <Form.Item
                     name="customer_address"
                     label="Địa chỉ khách hàng"
@@ -504,7 +509,7 @@ const CreateOrderPage: React.FC<CreateOrderPageProps> = ({ employee }) => {
                     <TextArea rows={2} placeholder="Địa chỉ khách hàng" />
                   </Form.Item>
                 </Col>
-                <Col span={12}>
+                <Col xs={24} lg={12}>
                   <Form.Item name="delivery_address" label="Địa chỉ giao hàng">
                     <TextArea
                       rows={2}
@@ -525,13 +530,14 @@ const CreateOrderPage: React.FC<CreateOrderPageProps> = ({ employee }) => {
               }
               style={{ marginBottom: 16 }}
             >
+              {/* Row 1: Ngày tạo and Hạn báo giá */}
               <Row gutter={16}>
-                <Col span={8}>
+                <Col xs={24} sm={12}>
                   <Form.Item name="quote_date" label="Ngày tạo">
                     <DatePicker style={{ width: "100%" }} disabled />
                   </Form.Item>
                 </Col>
-                <Col span={8}>
+                <Col xs={24} sm={12}>
                   <Form.Item
                     name="valid_until"
                     label="Hạn báo giá"
@@ -545,14 +551,11 @@ const CreateOrderPage: React.FC<CreateOrderPageProps> = ({ employee }) => {
                     />
                   </Form.Item>
                 </Col>
-                <Col span={8}>
-                  <Form.Item label="Nhân viên tạo">
-                    <Input value={employee?.full_name} disabled />
-                  </Form.Item>
-                </Col>
               </Row>
+
+              {/* Row 2: Chiết khấu and Thuế */}
               <Row gutter={16}>
-                <Col span={6}>
+                <Col xs={24} sm={12}>
                   <Form.Item name="discount_percent" label="Chiết khấu (%)">
                     <InputNumber
                       style={{ width: "100%" }}
@@ -562,7 +565,7 @@ const CreateOrderPage: React.FC<CreateOrderPageProps> = ({ employee }) => {
                     />
                   </Form.Item>
                 </Col>
-                <Col span={6}>
+                <Col xs={24} sm={12}>
                   <Form.Item name="tax_percent" label="Thuế (%)">
                     <InputNumber
                       style={{ width: "100%" }}
@@ -572,7 +575,20 @@ const CreateOrderPage: React.FC<CreateOrderPageProps> = ({ employee }) => {
                     />
                   </Form.Item>
                 </Col>
-                <Col span={12}>
+              </Row>
+
+              {/* Row 3: Nhân viên tạo (full screen) */}
+              <Row gutter={16}>
+                <Col span={24}>
+                  <Form.Item label="Nhân viên tạo">
+                    <Input value={employee?.full_name} disabled />
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              {/* Row 4: Ghi chú (full screen) */}
+              <Row gutter={16}>
+                <Col span={24}>
                   <Form.Item name="notes" label="Ghi chú">
                     <Input placeholder="Ghi chú cho đơn hàng..." />
                   </Form.Item>
@@ -595,7 +611,7 @@ const CreateOrderPage: React.FC<CreateOrderPageProps> = ({ employee }) => {
                 icon={<PlusOutlined />}
                 onClick={() => setProductSelectVisible(true)}
               >
-                Thêm sản phẩm
+                {!isMobile && "Thêm sản phẩm"}
               </Button>
             }
             style={{ marginBottom: 16 }}

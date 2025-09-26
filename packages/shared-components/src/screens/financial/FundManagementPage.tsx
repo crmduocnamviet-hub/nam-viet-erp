@@ -14,6 +14,7 @@ import {
   InputNumber,
   Tag,
   Avatar,
+  Grid,
 } from "antd";
 import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import {
@@ -40,11 +41,14 @@ const getErrorMessage = (error: unknown): string => {
 };
 
 const { Title } = Typography;
+const { useBreakpoint } = Grid;
 
 // Component con chứa toàn bộ logic và giao diện
 const FundManagementContent: React.FC = () => {
   const { notification, modal } = AntApp.useApp(); // <-- SỬA LỖI 1: Khai báo lại modal
   const [form] = Form.useForm();
+  const screens = useBreakpoint();
+  const isMobile = !screens.lg;
 
   const [funds, setFunds] = useState<any[]>([]);
   const [banks, setBanks] = useState<any[]>([]);
@@ -211,7 +215,7 @@ const FundManagementContent: React.FC = () => {
         </Col>
         <Col>
           <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
-            Thêm mới
+            {!isMobile && "Thêm mới"}
           </Button>
         </Col>
       </Row>

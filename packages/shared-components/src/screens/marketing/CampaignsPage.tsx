@@ -1,12 +1,15 @@
 import React from 'react';
-import { Button, Table, Space, Row, Col, Typography, Tag, Dropdown, Menu } from 'antd';
+import { Button, Table, Space, Row, Col, Typography, Tag, Dropdown, Menu, Grid } from 'antd';
 import { PlusOutlined, DeleteOutlined, CopyOutlined, BarChartOutlined, MoreOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 
 const { Title } = Typography;
+const { useBreakpoint } = Grid;
 
 const Campaigns: React.FC = () => {
   const navigate = useNavigate();
+  const screens = useBreakpoint();
+  const isMobile = !screens.lg;
 
   const menu = (record: any) => (
     <Menu>
@@ -56,7 +59,7 @@ const Campaigns: React.FC = () => {
         </Col>
         <Col>
           <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/marketing/campaigns/new')}>
-            Tạo chiến dịch mới
+            {!isMobile && "Tạo chiến dịch mới"}
           </Button>
         </Col>
       </Row>

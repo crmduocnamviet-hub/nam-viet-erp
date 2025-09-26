@@ -13,6 +13,7 @@ import {
   Col,
   Statistic,
   Steps,
+  Grid,
 } from 'antd';
 import {
   DollarOutlined,
@@ -33,6 +34,7 @@ import {
 
 const { Title, Text } = Typography;
 const { Step } = Steps;
+const { useBreakpoint } = Grid;
 
 // B2B Quote interface matching the service
 interface B2BQuote {
@@ -134,6 +136,8 @@ const B2BOrderManagementPage: React.FC<B2BOrderManagementPageProps> = ({ employe
   const [statistics, setStatistics] = useState<any>(null);
   const [createQuoteForm] = Form.useForm();
   const [createQuoteModalOpen, setCreateQuoteModalOpen] = useState(false);
+  const screens = useBreakpoint();
+  const isMobile = !screens.lg;
 
   // Load B2B statistics for dashboard
   const loadStatistics = async () => {
@@ -260,7 +264,7 @@ const B2BOrderManagementPage: React.FC<B2BOrderManagementPageProps> = ({ employe
         <Col>
           <Space>
             <Button type="primary" icon={<PlusOutlined />} onClick={handleCreateQuote}>
-              Tạo báo giá mới
+              {!isMobile && "Tạo báo giá mới"}
             </Button>
             <Button icon={<ReloadOutlined />} onClick={loadStatistics}>
               Làm mới
