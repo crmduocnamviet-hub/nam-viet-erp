@@ -53,7 +53,14 @@ const EmployeesPage: React.FC = () => {
   const [selectedRole, setSelectedRole] = useState<string>('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<IEmployee | null>(null);
-  const [stats, setStats] = useState({ total: 0, doctors: 0, pharmacists: 0, receptionists: 0, active: 0 });
+  const [stats, setStats] = useState({
+    total: 0,
+    inventoryStaff: 0,
+    medicalStaff: 0,
+    deliveryStaff: 0,
+    salesStaff: 0,
+    active: 0
+  });
   const [form] = Form.useForm();
 
   useEffect(() => {
@@ -90,12 +97,20 @@ const EmployeesPage: React.FC = () => {
 
   const calculateStats = (employeeData: IEmployee[]) => {
     const total = employeeData.length;
-    const doctors = employeeData.filter(emp => emp.role_name === 'BacSi').length;
-    const pharmacists = employeeData.filter(emp => emp.role_name === 'DuocSi').length;
-    const receptionists = employeeData.filter(emp => emp.role_name === 'LeTan').length;
+    const inventoryStaff = employeeData.filter(emp => emp.role_name === 'inventory-staff').length;
+    const medicalStaff = employeeData.filter(emp => emp.role_name === 'medical-staff').length;
+    const deliveryStaff = employeeData.filter(emp => emp.role_name === 'delivery-staff').length;
+    const salesStaff = employeeData.filter(emp => emp.role_name === 'sales-staff').length;
     const active = employeeData.filter(emp => emp.is_active).length;
 
-    setStats({ total, doctors, pharmacists, receptionists, active });
+    setStats({
+      total,
+      inventoryStaff,
+      medicalStaff,
+      deliveryStaff,
+      salesStaff,
+      active
+    });
   };
 
   const handleCreateEmployee = async (values: EmployeeFormData) => {
@@ -201,6 +216,14 @@ const EmployeesPage: React.FC = () => {
         return <MedicineBoxOutlined style={{ color: '#52c41a' }} />;
       case 'LeTan':
         return <CustomerServiceOutlined style={{ color: '#fa8c16' }} />;
+      case 'inventory-staff':
+        return <MedicineBoxOutlined style={{ color: '#722ed1' }} />;
+      case 'medical-staff':
+        return <UserOutlined style={{ color: '#13c2c2' }} />;
+      case 'delivery-staff':
+        return <CustomerServiceOutlined style={{ color: '#eb2f96' }} />;
+      case 'sales-staff':
+        return <UserOutlined style={{ color: '#f5222d' }} />;
       default:
         return <UserOutlined />;
     }
@@ -214,6 +237,14 @@ const EmployeesPage: React.FC = () => {
         return 'green';
       case 'LeTan':
         return 'orange';
+      case 'inventory-staff':
+        return 'purple';
+      case 'medical-staff':
+        return 'cyan';
+      case 'delivery-staff':
+        return 'magenta';
+      case 'sales-staff':
+        return 'red';
       default:
         return 'default';
     }
@@ -227,6 +258,14 @@ const EmployeesPage: React.FC = () => {
         return 'Dược sĩ';
       case 'LeTan':
         return 'Lễ tân';
+      case 'inventory-staff':
+        return 'Nhân Viên Kho';
+      case 'medical-staff':
+        return 'Nhân Viên Y Tế';
+      case 'delivery-staff':
+        return 'Nhân Viên Giao Hàng';
+      case 'sales-staff':
+        return 'Nhân Viên Kinh Doanh';
       default:
         return role;
     }
@@ -260,6 +299,10 @@ const EmployeesPage: React.FC = () => {
         { text: 'Bác sĩ', value: 'BacSi' },
         { text: 'Dược sĩ', value: 'DuocSi' },
         { text: 'Lễ tân', value: 'LeTan' },
+        { text: 'Nhân Viên Kho', value: 'inventory-staff' },
+        { text: 'Nhân Viên Y Tế', value: 'medical-staff' },
+        { text: 'Nhân Viên Giao Hàng', value: 'delivery-staff' },
+        { text: 'Nhân Viên Kinh Doanh', value: 'sales-staff' },
       ],
       onFilter: (value: any, record: IEmployee) => record.role_name === value,
     },
@@ -334,7 +377,7 @@ const EmployeesPage: React.FC = () => {
 
       {/* Statistics */}
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-        <Col xs={24} sm={6}>
+        <Col xs={24} sm={6} md={4}>
           <Card>
             <Statistic
               title="Tổng số nhân viên"
@@ -344,33 +387,56 @@ const EmployeesPage: React.FC = () => {
             />
           </Card>
         </Col>
-        <Col xs={24} sm={6}>
+        <Col xs={12} sm={6} md={4}>
           <Card>
             <Statistic
-              title="Bác sĩ"
-              value={stats.doctors}
-              prefix={<UserOutlined />}
-              valueStyle={{ color: '#1890ff' }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={6}>
-          <Card>
-            <Statistic
-              title="Dược sĩ"
-              value={stats.pharmacists}
+              title="NV Kho"
+              value={stats.inventoryStaff}
               prefix={<MedicineBoxOutlined />}
-              valueStyle={{ color: '#52c41a' }}
+              valueStyle={{ color: '#722ed1' }}
             />
           </Card>
         </Col>
-        <Col xs={24} sm={6}>
+        <Col xs={12} sm={6} md={4}>
           <Card>
             <Statistic
-              title="Lễ tân"
-              value={stats.receptionists}
+              title="NV Y Tế"
+              value={stats.medicalStaff}
+              prefix={<UserOutlined />}
+              valueStyle={{ color: '#13c2c2' }}
+            />
+          </Card>
+        </Col>
+      </Row>
+
+      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+        <Col xs={12} sm={6} md={4}>
+          <Card>
+            <Statistic
+              title="NV Giao Hàng"
+              value={stats.deliveryStaff}
               prefix={<CustomerServiceOutlined />}
-              valueStyle={{ color: '#fa8c16' }}
+              valueStyle={{ color: '#eb2f96' }}
+            />
+          </Card>
+        </Col>
+        <Col xs={12} sm={6} md={4}>
+          <Card>
+            <Statistic
+              title="NV Kinh Doanh"
+              value={stats.salesStaff}
+              prefix={<UserOutlined />}
+              valueStyle={{ color: '#f5222d' }}
+            />
+          </Card>
+        </Col>
+        <Col xs={12} sm={6} md={4}>
+          <Card>
+            <Statistic
+              title="Đang hoạt động"
+              value={stats.active}
+              prefix={<UserOutlined />}
+              valueStyle={{ color: '#52c41a' }}
             />
           </Card>
         </Col>
@@ -400,6 +466,10 @@ const EmployeesPage: React.FC = () => {
               <Select.Option value="BacSi">🩺 Bác sĩ</Select.Option>
               <Select.Option value="DuocSi">💊 Dược sĩ</Select.Option>
               <Select.Option value="LeTan">📞 Lễ tân</Select.Option>
+              <Select.Option value="inventory-staff">📦 Nhân Viên Kho</Select.Option>
+              <Select.Option value="medical-staff">🏥 Nhân Viên Y Tế</Select.Option>
+              <Select.Option value="delivery-staff">🚚 Nhân Viên Giao Hàng</Select.Option>
+              <Select.Option value="sales-staff">💼 Nhân Viên Kinh Doanh</Select.Option>
             </Select>
           </Col>
         </Row>
@@ -481,6 +551,10 @@ const EmployeesPage: React.FC = () => {
                   <Select.Option value="BacSi">🩺 Bác sĩ</Select.Option>
                   <Select.Option value="DuocSi">💊 Dược sĩ</Select.Option>
                   <Select.Option value="LeTan">📞 Lễ tân</Select.Option>
+                  <Select.Option value="inventory-staff">📦 Nhân Viên Kho</Select.Option>
+                  <Select.Option value="medical-staff">🏥 Nhân Viên Y Tế</Select.Option>
+                  <Select.Option value="delivery-staff">🚚 Nhân Viên Giao Hàng</Select.Option>
+                  <Select.Option value="sales-staff">💼 Nhân Viên Kinh Doanh</Select.Option>
                 </Select>
               </Form.Item>
             </Col>

@@ -321,12 +321,6 @@ const PatientsPage: React.FC = () => {
           <Form.Item name="chronic_diseases" label="Bệnh mãn tính">
             <Input.TextArea rows={2} placeholder="Ghi chú về bệnh mãn tính..." />
           </Form.Item>
-
-          <Form.Item name="is_b2b_customer" valuePropName="checked">
-            <Button type="dashed" style={{ width: "100%" }}>
-              ✓ Đánh dấu là khách hàng B2B
-            </Button>
-          </Form.Item>
         </Form>
       </Modal>
     </div>

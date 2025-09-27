@@ -1,11 +1,10 @@
 import React from "react";
 import { Spin, Row, Alert } from "antd";
-import { ScreenProvider } from "@nam-viet-erp/shared-components";
 import { useEmployee } from "../context/EmployeeContext";
-import AppLayout from "./AppLayout";
+import PermissionBasedAppLayout from "./PermissionBasedAppLayout";
 
 const AuthenticatedApp: React.FC = () => {
-  const { employee, loading, permissions } = useEmployee();
+  const { employee, loading } = useEmployee();
 
   if (loading) {
     return (
@@ -41,18 +40,7 @@ const AuthenticatedApp: React.FC = () => {
     );
   }
 
-  // Create user object for ScreenProvider from employee data
-  const user = {
-    id: employee.employee_id,
-    name: employee.full_name,
-    permissions: permissions,
-  };
-
-  return (
-    <ScreenProvider user={user} context={{ employee }}>
-      <AppLayout />
-    </ScreenProvider>
-  );
+  return <PermissionBasedAppLayout />;
 };
 
 export default AuthenticatedApp;

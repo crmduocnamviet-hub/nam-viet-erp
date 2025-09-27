@@ -1,10 +1,8 @@
 import React from "react";
 import { Routes, Route } from "react-router-dom";
-import AppLayout from "./components/AppLayout";
 import Login from "./pages/Login";
 import { useAuth } from "./hooks/useAuth";
 import { EmployeeProvider } from "./context/EmployeeContext";
-import { ScreenProvider } from "@nam-viet-erp/shared-components";
 import { Spin, Row } from "antd";
 import AuthenticatedApp from "./components/AuthenticatedApp";
 

@@ -41,6 +41,11 @@ import DashboardPage from "./management/DashboardPage";
 import EmployeesPage from "./management/EmployeesPage";
 import RoomManagementPage from "./management/RoomManagementPage";
 
+// Screen Imports - Staff Dashboards
+import SalesStaffDashboardPage from "./staff/SalesStaffDashboardPage";
+import InventoryStaffDashboardPage from "./staff/InventoryStaffDashboardPage";
+import DeliveryStaffDashboardPage from "./staff/DeliveryStaffDashboardPage";
+
 // Screen Registry Interface
 export interface ScreenConfig {
   component: React.ComponentType<any>;
@@ -78,7 +83,7 @@ export const SCREEN_REGISTRY: ScreenRegistry = {
   // ==================== B2B SCREENS ====================
   "b2b.orders": {
     component: B2BOrderListPage,
-    permissions: ["b2b.access", "quotes.view"],
+    permissions: ["b2b.access", "b2b.view"],
     category: "b2b",
     title: "Danh sách Đơn hàng B2B",
     description: "Xem và quản lý danh sách đơn hàng bán buôn",
@@ -92,7 +97,7 @@ export const SCREEN_REGISTRY: ScreenRegistry = {
   },
   "b2b.dashboard": {
     component: B2BOrderManagementPage,
-    permissions: ["b2b.access", "quotes.view"],
+    permissions: ["b2b.access"],
     category: "b2b",
     title: "B2B Sales Dashboard",
     description: "Dashboard tổng quan bán hàng B2B",
@@ -261,6 +266,29 @@ export const SCREEN_REGISTRY: ScreenRegistry = {
     title: "Quản lý Phòng ban",
     description: "Quản lý phòng ban và cơ cấu tổ chức",
   },
+
+  // ==================== STAFF DASHBOARD SCREENS ====================
+  "staff.sales-dashboard": {
+    component: SalesStaffDashboardPage,
+    permissions: ["sales.dashboard"],
+    category: "staff",
+    title: "Dashboard Nhân viên Bán hàng",
+    description: "Danh sách công việc và thống kê cho nhân viên bán hàng",
+  },
+  "staff.inventory-dashboard": {
+    component: InventoryStaffDashboardPage,
+    permissions: ["inventory.dashboard"],
+    category: "staff",
+    title: "Dashboard Nhân viên Kho",
+    description: "Danh sách công việc và thống kê cho nhân viên kho",
+  },
+  "staff.delivery-dashboard": {
+    component: DeliveryStaffDashboardPage,
+    permissions: ["delivery.dashboard"],
+    category: "staff",
+    title: "Dashboard Nhân viên Giao hàng",
+    description: "Lịch trình giao hàng và thống kê cho nhân viên giao hàng",
+  },
 };
 
 // ==================== PERMISSION CATEGORIES ====================
@@ -290,11 +318,16 @@ export const PERMISSIONS = {
 
   // B2B Permissions
   "b2b.access": "Truy cập chức năng B2B",
+  "b2b.view": "Xem danh sách đơn hàng B2B",
+  "b2b.create": "Tạo đơn hàng B2B",
+  "b2b.edit": "Chỉnh sửa đơn hàng B2B",
+  "b2b.delete": "Xóa đơn hàng B2B",
   "quotes.view": "Xem báo giá B2B",
   "quotes.create": "Tạo báo giá B2B",
   "quotes.edit": "Chỉnh sửa báo giá",
   "quotes.delete": "Xóa báo giá",
   "quotes.approve": "Phê duyệt báo giá",
+  "quotes.stage.update": "Cập nhật trạng thái báo giá",
 
   // Medical Permissions
   "medical.access": "Truy cập chức năng y tế",
@@ -311,6 +344,7 @@ export const PERMISSIONS = {
 
   // Inventory Permissions
   "inventory.access": "Truy cập quản lý kho",
+  "inventory.manage": "Quản lý đầy đủ kho hàng",
   "products.view": "Xem danh sách sản phẩm",
   "products.create": "Thêm sản phẩm mới",
   "products.edit": "Chỉnh sửa thông tin sản phẩm",
@@ -318,6 +352,16 @@ export const PERMISSIONS = {
   "purchase-orders.view": "Xem đơn mua hàng",
   "purchase-orders.create": "Tạo đơn mua hàng",
   "purchase-orders.approve": "Phê duyệt đơn mua hàng",
+
+  // Delivery & Shipping Permissions
+  "delivery.access": "Truy cập chức năng giao hàng",
+  "shipping.manage": "Quản lý vận chuyển",
+  "shipping.update": "Cập nhật trạng thái vận chuyển",
+
+  // Staff Dashboard Permissions
+  "sales.dashboard": "Dashboard nhân viên bán hàng",
+  "inventory.dashboard": "Dashboard nhân viên kho",
+  "delivery.dashboard": "Dashboard nhân viên giao hàng",
 
   // Financial Permissions
   "financial.access": "Truy cập chức năng tài chính",
@@ -387,29 +431,17 @@ export const ROLE_PERMISSIONS = {
     "sales.view",
     "sales.edit",
     "b2b.access",
+    "b2b.view",
+    "b2b.create",
+    "b2b.edit",
+    "b2b.delete",
     "quotes.view",
     "quotes.create",
     "quotes.edit",
+    "quotes.delete",
+    "quotes.stage.update",
     "customers.segment",
     "marketing.dashboard",
-  ],
-
-  "sales-staff": [
-    "pos.access",
-    "sales.create",
-    "sales.view",
-    "b2b.access",
-    "quotes.view",
-    "quotes.create",
-    "patients.view",
-    "patients.create",
-    "patients.edit",
-    "medical.access",
-    "patients.view",
-    "patients.create",
-    "appointments.view",
-    "appointments.create",
-    "appointments.edit",
   ],
 
   "medical-staff": [
@@ -441,6 +473,40 @@ export const ROLE_PERMISSIONS = {
     "products.edit",
     "purchase-orders.view",
     "purchase-orders.create",
+    "b2b.access",
+    "b2b.view",
+    "quotes.edit",
+    "inventory.dashboard",
+  ],
+
+  "delivery-staff": [
+    "delivery.access",
+    "shipping.manage",
+    "shipping.update",
+    "b2b.access",
+    "b2b.view",
+    "quotes.edit",
+    "delivery.dashboard",
+  ],
+
+  "sales-staff": [
+    "pos.access",
+    "sales.create",
+    "sales.view",
+    "b2b.access",
+    "b2b.view",
+    "b2b.create",
+    "quotes.view",
+    "quotes.create",
+    "quotes.edit",
+    "patients.view",
+    "patients.create",
+    "patients.edit",
+    "medical.access",
+    "appointments.view",
+    "appointments.create",
+    "appointments.edit",
+    "sales.dashboard",
   ],
 
   "marketing-manager": [
@@ -506,6 +572,10 @@ export {
   DashboardPage,
   EmployeesPage,
   RoomManagementPage,
+  // Staff Dashboards
+  SalesStaffDashboardPage,
+  InventoryStaffDashboardPage,
+  DeliveryStaffDashboardPage,
 };
 
 // Helper function to get screen by key

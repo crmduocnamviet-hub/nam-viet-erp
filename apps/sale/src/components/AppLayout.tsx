@@ -237,8 +237,7 @@ const AppLayout: React.FC = () => {
   // Debug: Log filtered menu items
   console.log(
     "📋 Filtered menu items:",
-    menuItems?.length || 0,
-    "items available"
+    menuItems?.map((i) => i?.key).join(",")
   );
 
   const handleMenuClick: MenuProps["onClick"] = (e) => {
@@ -261,241 +260,251 @@ const AppLayout: React.FC = () => {
         }
       `}</style>
       <ConfigProvider theme={namVietTheme} locale={viVN}>
-      <Layout style={{ minHeight: "100vh" }}>
-        {!isMobile && (
-          <Sider
-            collapsible
-            collapsed={collapsed}
-            onCollapse={(value) => setCollapsed(value)}
-            width={230}
-            collapsedWidth={50}
-            style={{
-              overflow: "auto",
-              height: "100vh",
-              position: "fixed",
-              left: 0,
-              top: 0,
-              bottom: 0,
-            }}
-          >
-            <div
+        <Layout style={{ minHeight: "100vh" }}>
+          {!isMobile && (
+            <Sider
+              collapsible
+              collapsed={collapsed}
+              onCollapse={(value) => setCollapsed(value)}
+              width={230}
+              collapsedWidth={50}
               style={{
-                height: "48px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "10px",
+                overflow: "auto",
+                height: "100vh",
+                position: "fixed",
+                left: 0,
+                top: 0,
+                bottom: 0,
               }}
             >
-              <Avatar
-                src={logo}
-                shape="square"
-                size="large"
-                style={{ backgroundColor: "transparent" }}
+              <div
+                style={{
+                  height: "48px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "10px",
+                }}
+              >
+                <Avatar
+                  src={logo}
+                  shape="square"
+                  size="large"
+                  style={{ backgroundColor: "transparent" }}
+                />
+                {!collapsed && (
+                  <Title level={5} style={{ color: "white", margin: 0 }}>
+                    Nam Việt Sale
+                  </Title>
+                )}
+              </div>
+              <Menu
+                theme="dark"
+                defaultSelectedKeys={["/"]}
+                mode="inline"
+                items={menuItems}
+                onClick={handleMenuClick}
+                style={{ fontSize: "16px" }}
               />
-              {!collapsed && (
-                <Title level={5} style={{ color: "white", margin: 0 }}>
-                  Nam Việt Sale
-                </Title>
-              )}
-            </div>
-            <Menu
-              theme="dark"
-              defaultSelectedKeys={["/"]}
-              mode="inline"
-              items={menuItems}
-              onClick={handleMenuClick}
-              style={{ fontSize: "16px" }}
-            />
-          </Sider>
-        )}
+            </Sider>
+          )}
 
-        {isMobile && (
-          <Drawer
-            placement="left"
-            onClose={() => setMobileMenuOpen(false)}
-            open={mobileMenuOpen}
-            closable={false}
-            styles={{
-              body: {
-                padding: 0,
-                background: namVietTheme.components.Layout.siderBg,
-                display: "flex",
-                flexDirection: "column",
-                height: "100vh",
-              },
-            }}
-            width={230}
-          >
-            <SiderContent
-              onMenuClick={handleMenuClick}
-              employee={employee}
-              menuItems={menuItems}
-            />
-          </Drawer>
-        )}
+          {isMobile && (
+            <Drawer
+              placement="left"
+              onClose={() => setMobileMenuOpen(false)}
+              open={mobileMenuOpen}
+              closable={false}
+              styles={{
+                body: {
+                  padding: 0,
+                  background: namVietTheme.components.Layout.siderBg,
+                  display: "flex",
+                  flexDirection: "column",
+                  height: "100vh",
+                },
+              }}
+              width={230}
+            >
+              <SiderContent
+                onMenuClick={handleMenuClick}
+                employee={employee}
+                menuItems={menuItems}
+              />
+            </Drawer>
+          )}
 
-        <Layout
-          style={{
-            marginLeft: isMobile ? 0 : collapsed ? 50 : 230,
-            transition: "margin-left 0.2s",
-          }}
-        >
-          <Header
+          <Layout
             style={{
-              padding: "12px 24px",
-              background: namVietTheme.components.Layout.headerBg,
-              display: "flex",
-              justifyContent: isMobile ? "space-between" : "flex-end",
-              alignItems: "center",
-              height: 70,
+              marginLeft: isMobile ? 0 : collapsed ? 50 : 230,
+              transition: "margin-left 0.2s",
             }}
           >
-            {isMobile && (
-              <Button
-                type="text"
-                icon={<MenuOutlined style={{ fontSize: "20px" }} />}
-                onClick={() => setMobileMenuOpen(true)}
-              />
-            )}
-            <Dropdown
-              menu={{
-                items: [
-                  {
-                    key: "user-info",
-                    label: (
-                      <div style={{ padding: "8px 0", borderBottom: "1px solid #f0f0f0", marginBottom: "8px" }}>
-                        <div style={{
+            <Header
+              style={{
+                padding: "12px 24px",
+                background: namVietTheme.components.Layout.headerBg,
+                display: "flex",
+                justifyContent: isMobile ? "space-between" : "flex-end",
+                alignItems: "center",
+                height: 70,
+              }}
+            >
+              {isMobile && (
+                <Button
+                  type="text"
+                  icon={<MenuOutlined style={{ fontSize: "20px" }} />}
+                  onClick={() => setMobileMenuOpen(true)}
+                />
+              )}
+              <Dropdown
+                menu={{
+                  items: [
+                    {
+                      key: "user-info",
+                      label: (
+                        <div
+                          style={{
+                            padding: "8px 0",
+                            borderBottom: "1px solid #f0f0f0",
+                            marginBottom: "8px",
+                          }}
+                        >
+                          <div
+                            style={{
+                              fontSize: "16px",
+                              fontWeight: "600",
+                              color: "#262626",
+                              lineHeight: "1.2",
+                            }}
+                          >
+                            {employee?.full_name || "Người dùng"}
+                          </div>
+                          <div
+                            style={{
+                              fontSize: "13px",
+                              color: "#8c8c8c",
+                              lineHeight: "1.2",
+                            }}
+                          >
+                            Mã NV: {employee?.employee_code || "N/A"}
+                          </div>
+                        </div>
+                      ),
+                      disabled: true,
+                    },
+                    {
+                      key: "logout",
+                      label: "Đăng xuất",
+                      icon: <LogoutOutlined />,
+                      onClick: handleLogout,
+                    },
+                  ],
+                }}
+                placement="bottomRight"
+                trigger={["click"]}
+              >
+                <Space
+                  align="center"
+                  style={{
+                    cursor: "pointer",
+                    padding: "8px 12px",
+                    borderRadius: "8px",
+                    transition: "background-color 0.2s",
+                  }}
+                  className="user-avatar-section"
+                >
+                  <Avatar
+                    size="large"
+                    style={{
+                      backgroundColor: "#1890ff",
+                      fontWeight: "bold",
+                      fontSize: "16px",
+                    }}
+                    icon={!employee?.full_name ? <UserOutlined /> : null}
+                  >
+                    {employee?.full_name
+                      ? employee.full_name.charAt(0).toUpperCase()
+                      : "U"}
+                  </Avatar>
+                  {!isMobile && (
+                    <div style={{ textAlign: "left" }}>
+                      <div
+                        style={{
                           fontSize: "16px",
                           fontWeight: "600",
                           color: "#262626",
                           lineHeight: "1.2",
-                        }}>
-                          {employee?.full_name || "Người dùng"}
-                        </div>
-                        <div style={{
+                        }}
+                      >
+                        {employee?.full_name || "Người dùng"}
+                      </div>
+                      <div
+                        style={{
                           fontSize: "13px",
                           color: "#8c8c8c",
                           lineHeight: "1.2",
-                        }}>
-                          Mã NV: {employee?.employee_code || "N/A"}
-                        </div>
+                        }}
+                      >
+                        Mã NV: {employee?.employee_code || "N/A"}
                       </div>
-                    ),
-                    disabled: true,
-                  },
-                  {
-                    key: "logout",
-                    label: "Đăng xuất",
-                    icon: <LogoutOutlined />,
-                    onClick: handleLogout,
-                  },
-                ],
-              }}
-              placement="bottomRight"
-              trigger={["click"]}
-            >
-              <Space
-                align="center"
+                    </div>
+                  )}
+                </Space>
+              </Dropdown>
+            </Header>
+            <Content style={{ margin: "16px", overflow: "initial" }}>
+              <div
                 style={{
-                  cursor: "pointer",
-                  padding: "8px 12px",
-                  borderRadius: "8px",
-                  transition: "background-color 0.2s",
+                  padding: 16,
+                  background: "#ffffff",
+                  borderRadius: namVietTheme.token.borderRadius,
+                  minHeight: "calc(100vh - 128px)",
                 }}
-                className="user-avatar-section"
               >
-                <Avatar
-                  size="large"
-                  style={{
-                    backgroundColor: "#1890ff",
-                    fontWeight: "bold",
-                    fontSize: "16px",
-                  }}
-                  icon={!employee?.full_name ? <UserOutlined /> : null}
-                >
-                  {employee?.full_name
-                    ? employee.full_name.charAt(0).toUpperCase()
-                    : "U"}
-                </Avatar>
-                {!isMobile && (
-                  <div style={{ textAlign: "left" }}>
-                    <div
-                      style={{
-                        fontSize: "16px",
-                        fontWeight: "600",
-                        color: "#262626",
-                        lineHeight: "1.2",
-                      }}
-                    >
-                      {employee?.full_name || "Người dùng"}
-                    </div>
-                    <div
-                      style={{
-                        fontSize: "13px",
-                        color: "#8c8c8c",
-                        lineHeight: "1.2",
-                      }}
-                    >
-                      Mã NV: {employee?.employee_code || "N/A"}
-                    </div>
-                  </div>
-                )}
-              </Space>
-            </Dropdown>
-          </Header>
-          <Content style={{ margin: "16px", overflow: "initial" }}>
-            <div
-              style={{
-                padding: 16,
-                background: "#ffffff",
-                borderRadius: namVietTheme.token.borderRadius,
-                minHeight: "calc(100vh - 128px)",
-              }}
-            >
-              <Routes>
-                <Route
-                  path="/"
-                  element={renderScreen("pos.main", { employee })}
-                />
-                <Route
-                  path="/store-channel"
-                  element={renderScreen("b2b.orders", { employee })}
-                />
-                <Route
-                  path="/b2b-dashboard"
-                  element={renderScreen("b2b.dashboard", { employee })}
-                />
-                <Route
-                  path="/create-quote"
-                  element={renderScreen("b2b.create-quote", { employee })}
-                />
-                <Route
-                  path="/scheduling"
-                  element={renderScreen("medical.scheduling")}
-                />
-                <Route
-                  path="/patients"
-                  element={renderScreen("medical.patients")}
-                />
-                <Route
-                  path="/patients/:patientId"
-                  element={renderScreen("medical.patient-detail")}
-                />
-                <Route
-                  path="/medical-records"
-                  element={renderScreen("medical.records")}
-                />
-                <Route path="*" element={<ComingSoon />} />
-              </Routes>
-            </div>
-          </Content>
-          <Footer style={{ textAlign: "center", padding: "10px 0" }}>
-            Nam Việt ERP ©{new Date().getFullYear()} - LVH
-          </Footer>
+                <Routes>
+                  <Route
+                    path="/"
+                    element={renderScreen("pos.main", { employee })}
+                  />
+                  <Route
+                    path="/store-channel"
+                    element={renderScreen("b2b.orders", { employee })}
+                  />
+                  <Route
+                    path="/b2b-dashboard"
+                    element={renderScreen("b2b.dashboard", { employee })}
+                  />
+                  <Route
+                    path="/create-quote"
+                    element={renderScreen("b2b.create-quote", { employee })}
+                  />
+                  <Route
+                    path="/scheduling"
+                    element={renderScreen("medical.scheduling")}
+                  />
+                  <Route
+                    path="/patients"
+                    element={renderScreen("medical.patients")}
+                  />
+                  <Route
+                    path="/patients/:patientId"
+                    element={renderScreen("medical.patient-detail")}
+                  />
+                  <Route
+                    path="/medical-records"
+                    element={renderScreen("medical.records")}
+                  />
+                  <Route path="*" element={<ComingSoon />} />
+                </Routes>
+              </div>
+            </Content>
+            <Footer style={{ textAlign: "center", padding: "10px 0" }}>
+              Nam Việt ERP ©{new Date().getFullYear()} - LVH
+            </Footer>
+          </Layout>
         </Layout>
-      </Layout>
-    </ConfigProvider>
+      </ConfigProvider>
     </>
   );
 };

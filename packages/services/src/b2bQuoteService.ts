@@ -1,79 +1,6 @@
 import type { PostgrestSingleResponse } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
 
-// B2B Quote interface
-export interface IB2BQuote {
-  quote_id: string;
-  quote_number: string; // BG-2024-001 format
-  customer_name: string;
-  customer_code?: string | null;
-  customer_contact_person?: string | null;
-  customer_phone?: string | null;
-  customer_email?: string | null;
-  customer_address?: string | null;
-  quote_stage: 'draft' | 'sent' | 'negotiating' | 'accepted' | 'rejected' | 'expired';
-  total_value: number;
-  subtotal: number;
-  discount_percent: number;
-  discount_amount: number;
-  tax_percent: number;
-  tax_amount: number;
-  quote_date: string;
-  valid_until: string;
-  notes?: string | null;
-  terms_conditions?: string | null;
-  created_by_employee_id: string;
-  created_at: string;
-  updated_at: string;
-  // Relations
-  quote_items?: IB2BQuoteItem[];
-  employee?: {
-    full_name: string;
-    employee_code: string;
-  };
-}
-
-// B2B Quote Item interface
-export interface IB2BQuoteItem {
-  item_id: string;
-  quote_id: string;
-  product_id: number;
-  product_name: string;
-  product_sku?: string | null;
-  quantity: number;
-  unit_price: number;
-  discount_percent: number;
-  discount_amount: number;
-  subtotal: number;
-  notes?: string | null;
-  created_at: string;
-  // Relations
-  product?: {
-    name: string;
-    sku: string;
-    manufacturer?: string;
-    retail_price: number;
-  };
-}
-
-// B2B Quote Customer interface
-export interface IB2BCustomer {
-  customer_id: string;
-  customer_name: string;
-  customer_code: string;
-  contact_person?: string | null;
-  phone_number?: string | null;
-  email?: string | null;
-  address?: string | null;
-  tax_code?: string | null;
-  customer_type: 'hospital' | 'pharmacy' | 'clinic' | 'distributor' | 'other';
-  credit_limit?: number | null;
-  payment_terms_days: number;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
 // Get all B2B quotes with optional filtering
 export const getB2BQuotes = async (filters?: {
   stage?: string;
@@ -147,7 +74,7 @@ export const getB2BQuoteById = async (quoteId: string): Promise<PostgrestSingleR
 
 // Create new B2B quote
 export const createB2BQuote = async (
-  quote: Omit<IB2BQuote, "quote_id" | "created_at" | "updated_at" | "quote_items" | "employee">
+  quote: Omit<IB2BQuote, "quote_id" | "quote_number" | "created_at" | "updated_at" | "quote_items" | "employee">
 ): Promise<PostgrestSingleResponse<IB2BQuote | null>> => {
   // Generate quote number
   const quoteNumber = await generateQuoteNumber();
@@ -174,7 +101,7 @@ export const createB2BQuote = async (
 // Update B2B quote
 export const updateB2BQuote = async (
   quoteId: string,
-  updates: Partial<Omit<IB2BQuote, "quote_id" | "created_at" | "quote_items" | "employee">>
+  updates: Partial<Omit<IB2BQuote, "quote_id" | "quote_number" | "created_at" | "quote_items" | "employee">>
 ): Promise<PostgrestSingleResponse<IB2BQuote | null>> => {
   const updateData = {
     ...updates,

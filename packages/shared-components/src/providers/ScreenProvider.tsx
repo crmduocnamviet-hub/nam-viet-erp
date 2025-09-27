@@ -10,6 +10,7 @@ interface User {
   id: string;
   name: string;
   permissions: string[];
+  role: string;
 }
 
 interface ScreenProviderProps {
@@ -46,9 +47,6 @@ export const ScreenProvider: React.FC<ScreenProviderProps> = ({
 
     // Check permissions
     if (!user || !hasScreenPermission(screenKey, user.permissions)) {
-      console.warn(
-        `User does not have permission to access screen '${screenKey}'`
-      );
       return (
         <div
           style={{

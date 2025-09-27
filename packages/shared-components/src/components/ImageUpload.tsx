@@ -3,7 +3,7 @@ import { PlusOutlined } from "@ant-design/icons";
 import { Modal, Upload, App } from "antd";
 import type { UploadFile, UploadProps } from "antd";
 import { getProductImageUrl, uploadProductImage } from "@nam-viet-erp/services";
-import { getErrorMessage } from "../../../types/error";
+import { getErrorMessage } from "../utils";
 
 const getBase64 = (file: File): Promise<string> =>
   new Promise((resolve, reject) => {
@@ -83,7 +83,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ value, onChange }) => {
         message: "Lỗi tải ảnh",
         description: getErrorMessage(error),
       });
-      onError?.(error as any);
+      onError?.(error as never);
     }
   };
 

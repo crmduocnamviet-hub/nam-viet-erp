@@ -22,19 +22,7 @@ import {
   DeleteOutlined,
 } from "@ant-design/icons";
 import * as XLSX from "xlsx";
-// Temporary stub component to replace missing ProductForm
-const ProductForm: React.FC<any> = ({ open, onCancel, onOk, product }) => (
-  open ? (
-    <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 1000, backgroundColor: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', minWidth: '400px' }}>
-      <h3>📦 {product ? 'Chỉnh sửa sản phẩm' : 'Thêm sản phẩm mới'}</h3>
-      <p>Form quản lý sản phẩm sẽ được hiển thị tại đây</p>
-      <div style={{ marginTop: '20px', display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-        <button onClick={onCancel} style={{ padding: '8px 16px', backgroundColor: '#f5f5f5', border: '1px solid #d9d9d9', borderRadius: '4px' }}>Hủy</button>
-        <button onClick={onOk} style={{ padding: '8px 16px', backgroundColor: '#1890ff', color: 'white', border: 'none', borderRadius: '4px' }}>Lưu</button>
-      </div>
-    </div>
-  ) : null
-);
+import ProductForm from '../../components/ProductForm';
 import { useDebounce } from '@nam-viet-erp/shared-components';
 import {
   createProduct,
@@ -53,6 +41,16 @@ const { Title, Text } = Typography;
 const { Search } = Input;
 const { Option } = Select;
 const { useBreakpoint } = Grid; // <-- Khai báo hook "mắt thần"
+
+// Helper function to validate URLs
+const isValidUrl = (string: string): boolean => {
+  try {
+    const url = new URL(string);
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch {
+    return false;
+  }
+};
 
 const ProductsPageContent: React.FC = () => {
   const { notification, modal } = AntApp.useApp();
@@ -215,7 +213,7 @@ const ProductsPageContent: React.FC = () => {
       },
     });
   };
-  const handleEdit = (product: any) => {
+  const handleEdit = (product: IProduct) => {
     setEditingProduct(product);
     setIsModalOpen(true);
   };
@@ -273,7 +271,7 @@ const ProductsPageContent: React.FC = () => {
         // --- CẬP NHẬT SẢN PHẨM ---
         const { error } = await updateProduct(
           editingProduct.id,
-          editingProduct
+          productData
         );
         if (error) throw error;
         successMessage = `Đã cập nhật sản phẩm "${values.name}" thành công.`;
@@ -461,7 +459,11 @@ const ProductsPageContent: React.FC = () => {
         key: "name",
         render: (text: string, record: any) => (
           <Space>
-            <Avatar shape="square" size={64} src={record.image_url} />
+            <Avatar
+              shape="square"
+              size={64}
+              src={record.image_url && isValidUrl(record.image_url) ? record.image_url : null}
+            />
             <div>
               <Typography.Text strong>{text}</Typography.Text>
               <div style={{ color: "gray" }}>SKU: {record.sku}</div>

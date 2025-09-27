@@ -1,5 +1,5 @@
-import React from 'react';
-import { MenuProps } from 'antd';
+import React from "react";
+import { MenuProps } from "antd";
 import {
   ShoppingCartOutlined,
   CalendarOutlined,
@@ -9,8 +9,10 @@ import {
   BankOutlined,
   RocketOutlined,
   SettingOutlined,
-} from '@ant-design/icons';
-import { hasScreenPermission } from '../screens';
+  UserOutlined,
+  TeamOutlined,
+} from "@ant-design/icons";
+import { hasScreenPermission } from "../screens";
 
 export interface MenuItemConfig {
   key: string;
@@ -24,36 +26,82 @@ export interface MenuItemConfig {
 // Define app-specific menu structures
 export const SALE_APP_MENU: MenuItemConfig[] = [
   {
-    key: 'pos',
-    label: '💰 Bán hàng (POS)',
+    label: "📋 Công việc hôm nay",
+    key: "/",
+    screenKey: "staff.sales-dashboard",
+    permissions: ["sales.dashboard"],
+    icon: <UserOutlined />,
+  },
+  {
+    label: "📋 Công việc hôm nay",
+    key: "/",
+    screenKey: "staff.inventory-dashboard",
+    permissions: ["inventory.dashboard"],
+    icon: <UserOutlined />,
+  },
+  {
+    label: "📋 Công việc hôm nay",
+    key: "/",
+    screenKey: "staff.delivery-dashboard",
+    permissions: ["delivery.dashboard"],
+    icon: <UserOutlined />,
+  },
+  {
+    label: "💰 Bán hàng (POS)",
+    key: "/pos",
     icon: <ShoppingCartOutlined />,
-    screenKey: 'pos.main',
+    screenKey: "pos.main",
+    permissions: ["pos.access"],
   },
   {
-    key: 'b2b',
-    label: '📋 Quản lý Đơn hàng B2B',
+    label: "🏢 Bán Buôn",
+    key: "wholesale",
     icon: <ShopOutlined />,
-    screenKey: 'b2b.orders',
-  },
-  {
-    key: 'medical',
-    label: '📅 Đặt lịch & Khám bệnh',
-    icon: <CalendarOutlined />,
+    permissions: ["b2b.access"],
     children: [
       {
-        key: 'scheduling',
-        label: 'Lịch hẹn hôm nay',
-        screenKey: 'medical.scheduling',
+        label: "B2B Sales Dashboard",
+        key: "/b2b-dashboard",
+        screenKey: "b2b.dashboard",
+        permissions: ["b2b.access"],
       },
       {
-        key: 'patients',
-        label: 'Quản lý bệnh nhân',
-        screenKey: 'medical.patients',
+        label: "Tạo Báo Giá / Đơn Hàng",
+        key: "/create-quote",
+        screenKey: "b2b.create-quote",
+        permissions: ["b2b.create"],
       },
       {
-        key: 'medical-records',
-        label: 'Hồ sơ y tế',
-        screenKey: 'medical.records',
+        label: "Danh sách Đơn hàng",
+        key: "/store-channel",
+        screenKey: "b2b.orders",
+        permissions: ["b2b.view"],
+      },
+    ],
+  },
+  {
+    label: "📅 Đặt lịch & Khám bệnh",
+    key: "scheduling",
+    icon: <CalendarOutlined />,
+    permissions: ["medical.access"],
+    children: [
+      {
+        label: "Lịch hẹn hôm nay",
+        key: "/scheduling",
+        screenKey: "medical.scheduling",
+        permissions: ["medical.access"],
+      },
+      {
+        label: "Quản lý bệnh nhân",
+        key: "/patients",
+        screenKey: "medical.patients",
+        permissions: ["patients.view"],
+      },
+      {
+        label: "Hồ sơ y tế",
+        key: "/medical-records",
+        screenKey: "medical.records",
+        permissions: ["medical.access"],
       },
     ],
   },
@@ -61,100 +109,116 @@ export const SALE_APP_MENU: MenuItemConfig[] = [
 
 export const CMS_APP_MENU: MenuItemConfig[] = [
   {
-    key: 'dashboard',
-    label: '📊 Tổng quan',
+    key: "dashboard",
+    label: "📊 Tổng quan",
     icon: <DashboardOutlined />,
-    screenKey: 'management.dashboard',
+    screenKey: "management.dashboard",
   },
   {
-    key: 'inventory',
-    label: '📦 Kho hàng',
+    key: "inventory",
+    label: "📦 Kho hàng",
     icon: <MedicineBoxOutlined />,
     children: [
       {
-        key: 'products',
-        label: 'Sản phẩm',
-        screenKey: 'inventory.products',
+        key: "products",
+        label: "Sản phẩm",
+        screenKey: "inventory.products",
       },
       {
-        key: 'purchase-orders',
-        label: 'Đơn mua hàng',
-        screenKey: 'inventory.purchase-orders',
+        key: "purchase-orders",
+        label: "Đơn mua hàng",
+        screenKey: "inventory.purchase-orders",
       },
     ],
   },
   {
-    key: 'b2b',
-    label: '📋 Đơn hàng B2B',
+    key: "b2b",
+    label: "📋 Đơn hàng B2B",
     icon: <ShopOutlined />,
-    screenKey: 'b2b.orders',
+    screenKey: "b2b.orders",
   },
   {
-    key: 'financial',
-    label: '💰 Tài chính',
+    key: "financial",
+    label: "💰 Tài chính",
     icon: <BankOutlined />,
     children: [
       {
-        key: 'transactions',
-        label: 'Giao dịch',
-        screenKey: 'financial.transactions',
+        key: "transactions",
+        label: "Giao dịch",
+        screenKey: "financial.transactions",
       },
       {
-        key: 'ledger',
-        label: 'Sổ cái',
-        screenKey: 'financial.ledger',
+        key: "ledger",
+        label: "Sổ cái",
+        screenKey: "financial.ledger",
       },
       {
-        key: 'funds',
-        label: 'Quản lý quỹ',
-        screenKey: 'financial.funds',
+        key: "funds",
+        label: "Quản lý quỹ",
+        screenKey: "financial.funds",
       },
     ],
   },
   {
-    key: 'marketing',
-    label: '🎯 Marketing',
+    key: "marketing",
+    label: "🎯 Marketing",
     icon: <RocketOutlined />,
     children: [
       {
-        key: 'campaigns',
-        label: 'Chiến dịch',
-        screenKey: 'marketing.campaigns',
+        key: "campaigns",
+        label: "Chiến dịch",
+        screenKey: "marketing.campaigns",
       },
       {
-        key: 'segments',
-        label: 'Phân khúc khách hàng',
-        screenKey: 'marketing.segments',
+        key: "segments",
+        label: "Phân khúc khách hàng",
+        screenKey: "marketing.segments",
       },
     ],
   },
   {
-    key: 'management',
-    label: '👥 Quản lý',
+    key: "management",
+    label: "👥 Quản lý",
     icon: <SettingOutlined />,
     children: [
       {
-        key: 'employees',
-        label: 'Nhân viên',
-        screenKey: 'management.employees',
+        key: "employees",
+        label: "Nhân viên",
+        screenKey: "management.employees",
       },
       {
-        key: 'rooms',
-        label: 'Phòng ban',
-        screenKey: 'management.rooms',
+        key: "rooms",
+        label: "Phòng ban",
+        screenKey: "management.rooms",
       },
     ],
   },
 ];
 
+// Helper function to check if user has any of the required permissions
+const hasAnyPermission = (
+  userPermissions: string[],
+  requiredPermissions: string[]
+): boolean => {
+  return requiredPermissions.some((permission) =>
+    userPermissions.includes(permission)
+  );
+};
+
 // Generate menu items based on user permissions
 export const generateMenu = (
   menuConfig: MenuItemConfig[],
   userPermissions: string[]
-): MenuProps['items'] => {
-  const filterMenuItems = (items: MenuItemConfig[]): MenuProps['items'] => {
+): MenuProps["items"] => {
+  const filterMenuItems = (items: MenuItemConfig[]): MenuProps["items"] => {
     return items
-      .filter(item => {
+      .filter((item) => {
+        if (!item.permissions?.length) return true;
+        // Check explicit permissions first - if user doesn't have required permissions, hide the item completely
+        if (item.permissions && item.permissions.length > 0) {
+          return hasAnyPermission(userPermissions, item.permissions);
+        }
+
         // If item has a screenKey, check permissions for that screen
         if (item.screenKey) {
           return hasScreenPermission(item.screenKey, userPermissions);
@@ -162,7 +226,12 @@ export const generateMenu = (
 
         // If item has children, check if any children are accessible
         if (item.children) {
-          const accessibleChildren = item.children.filter(child => {
+          const accessibleChildren = item.children.filter((child) => {
+            // Check child's explicit permissions
+            if (child.permissions && child.permissions.length > 0) {
+              return hasAnyPermission(userPermissions, child.permissions);
+            }
+
             if (child.screenKey) {
               return hasScreenPermission(child.screenKey, userPermissions);
             }
@@ -171,10 +240,10 @@ export const generateMenu = (
           return accessibleChildren.length > 0;
         }
 
-        // If no screenKey and no children, include by default
+        // If no permissions, screenKey, or children specified, include by default
         return true;
       })
-      .map(item => {
+      .map((item) => {
         const menuItem: any = {
           key: item.key,
           label: item.label,
@@ -197,11 +266,13 @@ export const generateMenu = (
 };
 
 // Helper to get route mapping from menu config
-export const getRouteMapping = (menuConfig: MenuItemConfig[]): Record<string, string> => {
+export const getRouteMapping = (
+  menuConfig: MenuItemConfig[]
+): Record<string, string> => {
   const mapping: Record<string, string> = {};
 
-  const extractRoutes = (items: MenuItemConfig[], parentPath = '') => {
-    items.forEach(item => {
+  const extractRoutes = (items: MenuItemConfig[], parentPath = "") => {
+    items.forEach((item) => {
       const path = parentPath ? `${parentPath}/${item.key}` : `/${item.key}`;
 
       if (item.screenKey) {

@@ -19,6 +19,9 @@ import {
   Modal,
   Form,
   DatePicker,
+  Grid,
+  FloatButton,
+  Badge,
 } from "antd";
 import {
   UserOutlined,
@@ -63,9 +66,11 @@ const PaymentModal: React.FC<{
     okText="Xác nhận thanh toán"
     okButtonProps={okButtonProps}
   >
-    <div style={{ padding: '20px', textAlign: 'center' }}>
+    <div style={{ padding: "20px", textAlign: "center" }}>
       <p>🏪 Giao diện thanh toán POS</p>
-      <p style={{ color: '#666', fontSize: '14px' }}>Component thanh toán đang được phát triển</p>
+      <p style={{ color: "#666", fontSize: "14px" }}>
+        Component thanh toán đang được phát triển
+      </p>
     </div>
   </Modal>
 );
@@ -90,30 +95,25 @@ type CartItem = {
 type CartDetails = {
   items: CartItem[];
   itemTotal: number;
-  discountTotal: number;
-  finalTotal: number;
   originalTotal: number;
   totalDiscount: number;
 };
 
 type PriceInfo = {
-  totalAmount: number;
-  discount: number;
-  finalAmount: number;
   finalPrice: number;
   originalPrice: number;
-  discountAmount: number;
   appliedPromotion?: any;
 };
 
 const getErrorMessage = (error: any): string => {
-  return error?.message || 'Đã xảy ra lỗi không xác định';
+  return error?.message || "Đã xảy ra lỗi không xác định";
 };
 // Context will be passed via props from the app
 // import { useEmployee } from "../../context/EmployeeContext";
 
 const { Title, Text } = Typography;
 const { Search } = Input;
+const { useBreakpoint } = Grid;
 
 // Map UI selection to warehouse and fund IDs
 const WAREHOUSE_MAP: {
@@ -140,6 +140,8 @@ interface PosPageProps {
 
 const PosPage: React.FC<PosPageProps> = ({ employee }) => {
   const { notification } = App.useApp();
+  const screens = useBreakpoint();
+  const isMobile = !screens.lg;
 
   // State
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -169,7 +171,9 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
   const [warehouseMode, setWarehouseMode] = useState(false);
   const [warehouses, setWarehouses] = useState<IWarehouse[]>([]);
   const [loadingWarehouses, setLoadingWarehouses] = useState(false);
-  const [selectedWarehouse, setSelectedWarehouse] = useState<IWarehouse | null>(null);
+  const [selectedWarehouse, setSelectedWarehouse] = useState<IWarehouse | null>(
+    null
+  );
 
   // Keep prescription integration for backward compatibility (commented out unused variables)
   // const [patientVisits, setPatientVisits] = useState<any[]>([]);
@@ -183,8 +187,14 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
   const [createCustomerForm] = Form.useForm();
   const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
 
+  // Cart modal for mobile
+  const [isCartModalOpen, setIsCartModalOpen] = useState(false);
+
   const { warehouseId, fundId } = selectedWarehouse
-    ? { warehouseId: selectedWarehouse.id, fundId: WAREHOUSE_MAP[selectedLocation]?.fundId || 1 }
+    ? {
+        warehouseId: selectedWarehouse.id,
+        fundId: WAREHOUSE_MAP[selectedLocation]?.fundId || 1,
+      }
     : WAREHOUSE_MAP[selectedLocation];
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
   const debouncedCustomerSearchTerm = useDebounce(customerSearchTerm, 300);
@@ -244,7 +254,11 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
     let appliedPromotion: IPromotion | null = null;
 
     if (bestPrice === null || bestPrice === undefined || bestPrice <= 0) {
-      return { finalPrice: 0, originalPrice: 0, appliedPromotion: null };
+      return {
+        finalPrice: 0,
+        originalPrice: 0,
+        appliedPromotion: null,
+      };
     }
 
     for (const promo of promotions) {
@@ -551,7 +565,26 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
 
   const cartDetails = useMemo((): CartDetails => {
     const items = cart.map((item) => {
-      const priceInfo = calculateBestPrice(item, promotions);
+      // Create a mock product object with the required IProduct properties
+      const mockProduct: IProduct = {
+        ...item,
+        id: item.id,
+        name: item.name,
+        retail_price: item.finalPrice || item.originalPrice,
+        manufacturer: "",
+        category: "",
+        sku: "",
+        cost_price: 0,
+        created_at: "",
+        stock_quantity: item.stock_quantity || 0,
+        image_url: item.image_url || null,
+        description: null,
+        route: null,
+        barcode: null,
+        supplier_id: null,
+      } as never;
+
+      const priceInfo = calculateBestPrice(mockProduct, promotions);
       return {
         ...item,
         ...priceInfo,
@@ -594,7 +627,8 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
         paymentMethod,
         warehouseId,
         fundId,
-        createdBy: employee?.employee_id || "00000000-0000-0000-0000-000000000001", // Use actual employee ID or fallback
+        createdBy:
+          employee?.employee_id || "00000000-0000-0000-0000-000000000001", // Use actual employee ID or fallback
         customerId: selectedCustomer?.patient_id,
       });
 
@@ -616,17 +650,23 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
   };
 
   return (
-    <div style={{ height: "100%" }}>
-      <Row style={{ marginBottom: 16 }}>
-        <Col span={12}>
-          <Title level={2} style={{ margin: 0 }}>
+    <div style={{ height: "100%", paddingBottom: isMobile ? 80 : 0 }}>
+      <Row style={{ marginBottom: 16 }} gutter={[8, 8]}>
+        <Col xs={24} sm={12} md={12}>
+          <Title level={isMobile ? 3 : 2} style={{ margin: 0 }}>
             POS Bán Lẻ & Thống kê
           </Title>
         </Col>
-        <Col span={12} style={{ textAlign: "right" }}>
-          <Space>
+        <Col
+          xs={24}
+          sm={12}
+          md={12}
+          style={{ textAlign: isMobile ? "left" : "right" }}
+        >
+          <Space wrap size={isMobile ? "small" : "middle"}>
             <Button
               type="default"
+              size={isMobile ? "small" : "middle"}
               onClick={() => {
                 notification.info({
                   message: "Thống kê bán hàng",
@@ -642,8 +682,8 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
             <Select
               value={selectedLocation}
               onChange={setSelectedLocation}
-              size="large"
-              style={{ width: 200 }}
+              size={isMobile ? "small" : "large"}
+              style={{ width: isMobile ? 150 : 200 }}
               placeholder="Chọn cửa hàng"
             >
               <Select.Option value="dh1">🏪 Nhà thuốc DH1</Select.Option>
@@ -653,12 +693,15 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
         </Col>
       </Row>
 
-      <Row gutter={[16, 16]} style={{ height: "calc(100vh - 200px)" }}>
+      <Row
+        gutter={[16, 16]}
+        style={{ minHeight: isMobile ? "auto" : "calc(100vh - 200px)" }}
+      >
         <Col xs={24} lg={8}>
           <Space
             direction="vertical"
-            size={16}
-            style={{ width: "100%", height: "100%" }}
+            size={isMobile ? 12 : 16}
+            style={{ width: "100%", height: isMobile ? "auto" : "100%" }}
           >
             <Card
               title={
@@ -791,13 +834,20 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
               }
               size="small"
               style={{
-                flex: 1,
+                flex: isMobile ? "none" : 1,
                 display: "flex",
                 flexDirection: "column",
                 borderRadius: 8,
                 overflow: "hidden",
+                minHeight: isMobile ? 300 : "auto",
               }}
-              styles={{ body: { flex: 1, padding: 16, overflow: "hidden" } }}
+              styles={{
+                body: {
+                  flex: isMobile ? "none" : 1,
+                  padding: 16,
+                  overflow: isMobile ? "visible" : "hidden",
+                },
+              }}
             >
               {!warehouseMode ? (
                 <>
@@ -809,7 +859,13 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
                     loading={isSearching}
                     style={{ marginBottom: 16 }}
                   />
-                  <div style={{ flex: 1, overflow: "auto" }}>
+                  <div
+                    style={{
+                      flex: isMobile ? "none" : 1,
+                      overflow: "auto",
+                      maxHeight: isMobile ? 250 : "none",
+                    }}
+                  >
                     <List
                       loading={isSearching}
                       dataSource={searchResults}
@@ -936,17 +992,24 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
                             backgroundColor: "#f0f9ff",
                             borderRadius: "8px",
                             border: "1px solid #bae7ff",
-                            marginBottom: "16px"
+                            marginBottom: "16px",
                           }}
                         >
-                          <Text strong style={{ fontSize: "16px", color: "#1890ff" }}>
+                          <Text
+                            strong
+                            style={{ fontSize: "16px", color: "#1890ff" }}
+                          >
                             📍 Kho được chọn: {selectedWarehouse.name}
                           </Text>
                           <div style={{ marginTop: "8px" }}>
-                            <Text type="secondary">ID Kho: {selectedWarehouse.id}</Text>
+                            <Text type="secondary">
+                              ID Kho: {selectedWarehouse.id}
+                            </Text>
                           </div>
                           <div style={{ marginTop: "8px" }}>
-                            <Text type="success">✅ Kho đã được thiết lập cho phiên bán hàng</Text>
+                            <Text type="success">
+                              ✅ Kho đã được thiết lập cho phiên bán hàng
+                            </Text>
                           </div>
                         </div>
                       )}
@@ -958,12 +1021,14 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
                           color: "#666",
                           backgroundColor: "#f9f9f9",
                           borderRadius: "8px",
-                          border: "1px dashed #d9d9d9"
+                          border: "1px dashed #d9d9d9",
                         }}
                       >
                         <Text type="secondary">
-                          💡 Chọn kho để thiết lập nguồn hàng hóa<br/>
-                          Sau khi chọn kho, thoát chế độ này để tìm kiếm sản phẩm
+                          💡 Chọn kho để thiết lập nguồn hàng hóa
+                          <br />
+                          Sau khi chọn kho, thoát chế độ này để tìm kiếm sản
+                          phẩm
                         </Text>
                       </div>
                     </>
@@ -974,24 +1039,283 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
           </Space>
         </Col>
 
-        <Col xs={24} lg={10}>
+        {!isMobile && (
+          <Col xs={24} lg={10}>
+            <Card
+              title={
+                <Space>
+                  <span>Giỏ hàng</span>
+                </Space>
+              }
+              size="small"
+              style={{
+                height: "100%",
+                display: "flex",
+                flexDirection: "column",
+                borderRadius: 8,
+                overflow: "hidden",
+              }}
+              styles={{ body: { flex: 1, padding: 16, overflow: "hidden" } }}
+            >
+              <div style={{ flex: 1, overflow: "auto" }}>
+                {cart.length === 0 ? (
+                  <div
+                    style={{
+                      textAlign: "center",
+                      padding: "40px 0",
+                      color: "#999",
+                    }}
+                  >
+                    <ShoppingCartOutlined
+                      style={{ fontSize: 48, marginBottom: 16 }}
+                    />
+                    <div>Giỏ hàng trống</div>
+                  </div>
+                ) : (
+                  <List
+                    itemLayout="horizontal"
+                    dataSource={cartDetails.items}
+                    renderItem={(item: CartItem) => (
+                      <List.Item
+                        style={{
+                          padding: "12px 0",
+                          borderRadius: 8,
+                          marginBottom: 8,
+                          backgroundColor: "#f8f9fa",
+                          paddingLeft: 12,
+                          paddingRight: 12,
+                        }}
+                        actions={[
+                          <Tooltip title="Xóa khỏi giỏ hàng">
+                            <Button
+                              type="text"
+                              danger
+                              shape="circle"
+                              icon={<DeleteOutlined />}
+                              onClick={() => handleRemoveFromCart(item.id)}
+                            />
+                          </Tooltip>,
+                        ]}
+                      >
+                        <List.Item.Meta
+                          avatar={<Avatar src={item.image_url} size={48} />}
+                          title={<Text strong>{item.name}</Text>}
+                          description={
+                            <Space
+                              direction="vertical"
+                              size={4}
+                              style={{ width: "100%" }}
+                            >
+                              <Space align="center">
+                                {item.appliedPromotion && (
+                                  <Text delete style={{ color: "#999" }}>
+                                    {item.originalPrice.toLocaleString()}đ
+                                  </Text>
+                                )}
+                                <Text strong style={{ color: "#52c41a" }}>
+                                  {item.finalPrice.toLocaleString()}đ
+                                </Text>
+                                <InputNumber
+                                  size="small"
+                                  min={1}
+                                  value={item.quantity}
+                                  onChange={(val) =>
+                                    handleUpdateQuantity(item.id, val!)
+                                  }
+                                  style={{ width: 60 }}
+                                />
+                              </Space>
+                              {item.appliedPromotion && (
+                                <Tag icon={<TagOutlined />} color="success">
+                                  {item.appliedPromotion.name}
+                                </Tag>
+                              )}
+                              {item.prescriptionNote && (
+                                <Text
+                                  type="secondary"
+                                  style={{
+                                    fontSize: "11px",
+                                    fontStyle: "italic",
+                                  }}
+                                >
+                                  📝 {item.prescriptionNote}
+                                </Text>
+                              )}
+                              {item.stock_quantity !== undefined &&
+                                item.quantity > item.stock_quantity && (
+                                  <Space>
+                                    <WarningOutlined
+                                      style={{ color: "#ff4d4f" }}
+                                    />
+                                    <Text
+                                      type="danger"
+                                      style={{ fontSize: "11px" }}
+                                    >
+                                      Vượt tồn kho ({item.stock_quantity} có
+                                      sẵn)
+                                    </Text>
+                                  </Space>
+                                )}
+                            </Space>
+                          }
+                        />
+                        <div style={{ textAlign: "right" }}>
+                          <Text strong style={{ fontSize: 16 }}>
+                            {(item.finalPrice * item.quantity).toLocaleString()}
+                            đ
+                          </Text>
+                        </div>
+                      </List.Item>
+                    )}
+                  />
+                )}
+              </div>
+            </Card>
+          </Col>
+        )}
+
+        <Col xs={24} lg={6} style={{ marginTop: isMobile ? 16 : 0 }}>
           <Card
-            title={
-              <Space>
-                <span>Giỏ hàng</span>
-              </Space>
-            }
+            title="💰 Thanh toán"
             size="small"
             style={{
-              height: "100%",
-              display: "flex",
-              flexDirection: "column",
+              height: isMobile ? "auto" : "100%",
               borderRadius: 8,
-              overflow: "hidden",
+              border: "2px solid #1890ff",
             }}
-            styles={{ body: { flex: 1, padding: 16, overflow: "hidden" } }}
           >
-            <div style={{ flex: 1, overflow: "auto" }}>
+            <Space direction="vertical" size={16} style={{ width: "100%" }}>
+              <div style={{ textAlign: "center" }}>
+                <Statistic
+                  title="Tổng cộng"
+                  value={cartDetails.itemTotal}
+                  suffix="VNĐ"
+                  valueStyle={{
+                    color: "#1890ff",
+                    fontSize: isMobile ? "1.4rem" : "1.8rem",
+                  }}
+                />
+                {cartDetails.totalDiscount > 0 && (
+                  <>
+                    <Text delete style={{ color: "#999" }}>
+                      {cartDetails.originalTotal.toLocaleString()}đ
+                    </Text>
+                    <br />
+                    <Statistic
+                      title="🎉 Tiết kiệm"
+                      value={cartDetails.totalDiscount}
+                      suffix="VNĐ"
+                      valueStyle={{
+                        color: "#52c41a",
+                        fontSize: isMobile ? "1rem" : "1.2rem",
+                      }}
+                    />
+                  </>
+                )}
+              </div>
+
+              <Divider style={{ margin: "8px 0" }} />
+
+              <Space direction="vertical" size={8} style={{ width: "100%" }}>
+                <Button
+                  block
+                  size={isMobile ? "middle" : "large"}
+                  icon={<DollarOutlined />}
+                  onClick={() => handleOpenPaymentModal("cash")}
+                  style={{ height: isMobile ? 40 : 48 }}
+                >
+                  Tiền mặt
+                </Button>
+                <Button
+                  block
+                  size={isMobile ? "middle" : "large"}
+                  icon={<CreditCardOutlined />}
+                  onClick={() => handleOpenPaymentModal("card")}
+                  style={{ height: isMobile ? 40 : 48 }}
+                >
+                  Thẻ
+                </Button>
+                <Button
+                  block
+                  size={isMobile ? "middle" : "large"}
+                  icon={<QrcodeOutlined />}
+                  onClick={() => handleOpenPaymentModal("qr")}
+                  style={{ height: isMobile ? 40 : 48 }}
+                >
+                  Chuyển khoản (QR)
+                </Button>
+              </Space>
+
+              <Button
+                type="primary"
+                block
+                size={isMobile ? "middle" : "large"}
+                style={{
+                  height: isMobile ? 50 : 64,
+                  fontSize: isMobile ? "1rem" : "1.2rem",
+                  fontWeight: "bold",
+                  background: "linear-gradient(45deg, #1890ff, #40a9ff)",
+                  border: "none",
+                  boxShadow: "0 4px 15px 0 rgba(24, 144, 255, 0.4)",
+                }}
+                disabled={cart.length === 0}
+                loading={isProcessingPayment}
+                onClick={() => handleOpenPaymentModal("cash")}
+              >
+                🚀 Thanh Toán Ngay
+              </Button>
+            </Space>
+          </Card>
+        </Col>
+      </Row>
+
+      {/* Floating Cart Button for Mobile */}
+      {isMobile && (
+        <>
+          <FloatButton
+            icon={
+              <Badge count={cart.length} size="small">
+                <ShoppingCartOutlined />
+              </Badge>
+            }
+            type="primary"
+            style={{
+              bottom: 20,
+              right: 20,
+              width: 56,
+              height: 56,
+              zIndex: 1000,
+            }}
+            onClick={() => setIsCartModalOpen(true)}
+          />
+
+          {/* Cart Modal for Mobile */}
+          <Modal
+            title={
+              <Space>
+                <ShoppingCartOutlined />
+                <span>Giỏ hàng ({cart.length} sản phẩm)</span>
+              </Space>
+            }
+            open={isCartModalOpen}
+            onCancel={() => setIsCartModalOpen(false)}
+            footer={null}
+            width="calc(100% - 32px)"
+            style={{
+              top: 16,
+              paddingBottom: 0,
+              maxWidth: "calc(100vw - 32px)",
+              margin: "16px",
+            }}
+            styles={{
+              body: {
+                padding: "16px",
+                maxHeight: "70vh",
+                overflow: "auto",
+              },
+            }}
+          >
+            <div style={{ marginBottom: 16 }}>
               {cart.length === 0 ? (
                 <div
                   style={{
@@ -1012,12 +1336,11 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
                   renderItem={(item: CartItem) => (
                     <List.Item
                       style={{
-                        padding: "12px 0",
+                        padding: "12px",
                         borderRadius: 8,
                         marginBottom: 8,
                         backgroundColor: "#f8f9fa",
-                        paddingLeft: 12,
-                        paddingRight: 12,
+                        border: "1px solid #e8e8e8",
                       }}
                       actions={[
                         <Tooltip title="Xóa khỏi giỏ hàng">
@@ -1032,21 +1355,31 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
                       ]}
                     >
                       <List.Item.Meta
-                        avatar={<Avatar src={item.image_url} size={48} />}
-                        title={<Text strong>{item.name}</Text>}
+                        avatar={<Avatar src={item.image_url} size={40} />}
+                        title={
+                          <Text strong style={{ fontSize: 14 }}>
+                            {item.name}
+                          </Text>
+                        }
                         description={
                           <Space
                             direction="vertical"
                             size={4}
                             style={{ width: "100%" }}
                           >
-                            <Space align="center">
+                            <Space align="center" wrap>
                               {item.appliedPromotion && (
-                                <Text delete style={{ color: "#999" }}>
+                                <Text
+                                  delete
+                                  style={{ color: "#999", fontSize: 12 }}
+                                >
                                   {item.originalPrice.toLocaleString()}đ
                                 </Text>
                               )}
-                              <Text strong style={{ color: "#52c41a" }}>
+                              <Text
+                                strong
+                                style={{ color: "#52c41a", fontSize: 14 }}
+                              >
                                 {item.finalPrice.toLocaleString()}đ
                               </Text>
                               <InputNumber
@@ -1060,7 +1393,11 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
                               />
                             </Space>
                             {item.appliedPromotion && (
-                              <Tag icon={<TagOutlined />} color="success">
+                              <Tag
+                                icon={<TagOutlined />}
+                                color="success"
+                                style={{ fontSize: 11 }}
+                              >
                                 {item.appliedPromotion.name}
                               </Tag>
                             )}
@@ -1068,7 +1405,7 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
                               <Text
                                 type="secondary"
                                 style={{
-                                  fontSize: "11px",
+                                  fontSize: "10px",
                                   fontStyle: "italic",
                                 }}
                               >
@@ -1079,120 +1416,90 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
                               item.quantity > item.stock_quantity && (
                                 <Space>
                                   <WarningOutlined
-                                    style={{ color: "#ff4d4f" }}
+                                    style={{ color: "#ff4d4f", fontSize: 12 }}
                                   />
                                   <Text
                                     type="danger"
-                                    style={{ fontSize: "11px" }}
+                                    style={{ fontSize: "10px" }}
                                   >
                                     Vượt tồn kho ({item.stock_quantity} có sẵn)
                                   </Text>
                                 </Space>
                               )}
+                            <div style={{ textAlign: "right", marginTop: 4 }}>
+                              <Text
+                                strong
+                                style={{ fontSize: 14, color: "#1890ff" }}
+                              >
+                                ={" "}
+                                {(
+                                  item.finalPrice * item.quantity
+                                ).toLocaleString()}
+                                đ
+                              </Text>
+                            </div>
                           </Space>
                         }
                       />
-                      <div style={{ textAlign: "right" }}>
-                        <Text strong style={{ fontSize: 16 }}>
-                          {(item.finalPrice * item.quantity).toLocaleString()}đ
-                        </Text>
-                      </div>
                     </List.Item>
                   )}
                 />
               )}
             </div>
-          </Card>
-        </Col>
 
-        <Col xs={24} lg={6}>
-          <Card
-            title="💰 Thanh toán"
-            size="small"
-            style={{
-              height: "100%",
-              borderRadius: 8,
-              border: "2px solid #1890ff",
-            }}
-          >
-            <Space direction="vertical" size={16} style={{ width: "100%" }}>
-              <div style={{ textAlign: "center" }}>
-                <Statistic
-                  title="Tổng cộng"
-                  value={cartDetails.itemTotal}
-                  suffix="VNĐ"
-                  valueStyle={{ color: "#1890ff", fontSize: "1.8rem" }}
-                />
-                {cartDetails.totalDiscount > 0 && (
-                  <>
-                    <Text delete style={{ color: "#999" }}>
-                      {cartDetails.originalTotal.toLocaleString()}đ
-                    </Text>
-                    <br />
-                    <Statistic
-                      title="🎉 Tiết kiệm"
-                      value={cartDetails.totalDiscount}
-                      suffix="VNĐ"
-                      valueStyle={{ color: "#52c41a", fontSize: "1.2rem" }}
-                    />
-                  </>
-                )}
-              </div>
-
-              <Divider style={{ margin: "8px 0" }} />
-
-              <Space direction="vertical" size={8} style={{ width: "100%" }}>
-                <Button
-                  block
-                  size="large"
-                  icon={<DollarOutlined />}
-                  onClick={() => handleOpenPaymentModal("cash")}
-                  style={{ height: 48 }}
-                >
-                  Tiền mặt
-                </Button>
-                <Button
-                  block
-                  size="large"
-                  icon={<CreditCardOutlined />}
-                  onClick={() => handleOpenPaymentModal("card")}
-                  style={{ height: 48 }}
-                >
-                  Thẻ
-                </Button>
-                <Button
-                  block
-                  size="large"
-                  icon={<QrcodeOutlined />}
-                  onClick={() => handleOpenPaymentModal("qr")}
-                  style={{ height: 48 }}
-                >
-                  Chuyển khoản (QR)
-                </Button>
-              </Space>
-
-              <Button
-                type="primary"
-                block
-                size="large"
+            {cart.length > 0 && (
+              <div
                 style={{
-                  height: 64,
-                  fontSize: "1.2rem",
-                  fontWeight: "bold",
-                  background: "linear-gradient(45deg, #1890ff, #40a9ff)",
-                  border: "none",
-                  boxShadow: "0 4px 15px 0 rgba(24, 144, 255, 0.4)",
+                  borderTop: "1px solid #e8e8e8",
+                  paddingTop: 16,
+                  position: "sticky",
+                  bottom: 0,
+                  backgroundColor: "white",
                 }}
-                disabled={cart.length === 0}
-                loading={isProcessingPayment}
-                onClick={() => handleOpenPaymentModal("cash")}
               >
-                🚀 Thanh Toán Ngay
-              </Button>
-            </Space>
-          </Card>
-        </Col>
-      </Row>
+                <div style={{ textAlign: "center", marginBottom: 16 }}>
+                  <Statistic
+                    title="Tổng cộng"
+                    value={cartDetails.itemTotal}
+                    suffix="VNĐ"
+                    valueStyle={{ color: "#1890ff", fontSize: "1.5rem" }}
+                  />
+                  {cartDetails.totalDiscount > 0 && (
+                    <div style={{ marginTop: 8 }}>
+                      <Text delete style={{ color: "#999" }}>
+                        {cartDetails.originalTotal.toLocaleString()}đ
+                      </Text>
+                      <br />
+                      <Text style={{ color: "#52c41a", fontSize: "14px" }}>
+                        🎉 Tiết kiệm:{" "}
+                        {cartDetails.totalDiscount.toLocaleString()}đ
+                      </Text>
+                    </div>
+                  )}
+                </div>
+                <Button
+                  type="primary"
+                  block
+                  size="large"
+                  style={{
+                    height: 50,
+                    fontSize: "1.1rem",
+                    fontWeight: "bold",
+                  }}
+                  disabled={cart.length === 0}
+                  loading={isProcessingPayment}
+                  onClick={() => {
+                    setIsCartModalOpen(false);
+                    handleOpenPaymentModal("cash");
+                  }}
+                >
+                  🚀 Thanh Toán ({cartDetails.itemTotal.toLocaleString()}đ)
+                </Button>
+              </div>
+            )}
+          </Modal>
+        </>
+      )}
 
       <PaymentModal
         open={isPaymentModalOpen}
@@ -1285,13 +1592,6 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
               rows={2}
               placeholder="Ghi chú về bệnh mãn tính (nếu có)..."
             />
-          </Form.Item>
-
-          <Form.Item name="is_b2b_customer" valuePropName="checked">
-            <Space>
-              <input type="checkbox" />
-              <Typography.Text>Đánh dấu là khách hàng B2B</Typography.Text>
-            </Space>
           </Form.Item>
         </Form>
       </Modal>

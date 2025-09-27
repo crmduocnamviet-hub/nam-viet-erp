@@ -22,8 +22,8 @@ const App: React.FC = () => {
   const user = session ? {
     id: 'current-user',
     name: 'Current User',
-    permissions: ROLE_PERMISSIONS['admin'], // Use admin permissions for cms app
-    role: 'admin'
+    permissions: ROLE_PERMISSIONS['super-admin'], // Use super-admin permissions for cms app (full access)
+    role: 'super-admin'
   } : null;
 
   return (

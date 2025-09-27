@@ -33,6 +33,16 @@ const getErrorMessage = (error: unknown): string => {
 const { Title, Text, Paragraph } = Typography;
 const { Search } = Input;
 
+// Helper function to validate URLs
+const isValidUrl = (string: string): boolean => {
+  try {
+    const url = new URL(string);
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch {
+    return false;
+  }
+};
+
 // === "BỘ NÃO" TÍNH GIÁ ĐÃ ĐƯỢC NÂNG CẤP TOÀN DIỆN ===
 const calculateBestPrice = (product: IProduct, promotions: IPromotion[]) => {
   let bestPrice = product.wholesale_price;
@@ -300,7 +310,7 @@ const QuickQuote: React.FC = () => {
                     <img
                       alt={product.name}
                       src={
-                        product.image_url || "https://via.placeholder.com/150"
+                        (product.image_url && isValidUrl(product.image_url)) ? product.image_url : "https://via.placeholder.com/150"
                       }
                       style={{ height: 180, objectFit: "contain", padding: 8 }}
                     />

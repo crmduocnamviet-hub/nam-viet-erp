@@ -326,3 +326,90 @@ interface ISalesOrderItem {
   is_service: boolean; // Phân biệt sản phẩm vật lý và phí dịch vụ (Phí khám)
   dosage_printed: string | null; // Hướng dẫn sử dụng in ra bill K80
 }
+
+// B2B Quote interface
+interface IB2BQuote {
+  quote_id: string;
+  quote_number: string; // BG-2024-001 format
+  customer_name: string;
+  customer_code?: string | null;
+  customer_contact_person?: string | null;
+  customer_phone?: string | null;
+  customer_email?: string | null;
+  customer_address?: string | null;
+  quote_stage:
+    | "draft"
+    | "sent"
+    | "negotiating"
+    | "accepted"
+    | "pending_packaging"
+    | "packaged"
+    | "shipping"
+    | "completed"
+    | "rejected"
+    | "cancelled"
+    | "expired";
+  payment_status?: "unpaid" | "partial" | "paid" | "overdue";
+  total_value: number;
+  subtotal: number;
+  discount_percent: number;
+  discount_amount: number;
+  tax_percent: number;
+  tax_amount: number;
+  quote_date: string;
+  valid_until: string;
+  notes?: string | null;
+  terms_conditions?: string | null;
+  created_by_employee_id: string;
+  created_at: string;
+  updated_at: string;
+  // Relations
+  quote_items?: IB2BQuoteItem[];
+  employee?: {
+    full_name: string;
+    employee_code: string;
+  };
+  b2b_customer_id?: string;
+}
+
+// B2B Quote Item interface
+interface IB2BQuoteItem {
+  item_id: string;
+  quote_id: string;
+  product_id: number;
+  product_name: string;
+  product_sku?: string | null;
+  quantity: number;
+  unit_price: number;
+  discount_percent: number;
+  discount_amount: number;
+  subtotal: number;
+  notes?: string | null;
+  created_at: string;
+  // Relations
+  product?: {
+    name: string;
+    sku: string;
+    manufacturer?: string;
+    retail_price: number;
+  };
+}
+
+// B2B Quote Customer interface
+interface IB2BCustomer {
+  customer_id: string;
+  customer_name: string;
+  customer_code: string;
+  contact_person?: string | null;
+  phone_number?: string | null;
+  email?: string | null;
+  address?: string | null;
+  tax_code?: string | null;
+  customer_type: "hospital" | "pharmacy" | "clinic" | "distributor" | "other";
+  credit_limit?: number | null;
+  payment_terms_days: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  address?: string;
+}
