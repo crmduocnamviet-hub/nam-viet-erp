@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import {
-  Modal,
   Form,
   Input,
   Tabs,
@@ -34,7 +33,6 @@ import { getErrorMessage } from "../utils";
 const { Title } = Typography; // <-- Khai báo Title để sử dụng
 
 interface ProductFormProps {
-  open: boolean;
   onClose: () => void;
   onFinish: (values: any) => void;
   loading: boolean;
@@ -42,7 +40,6 @@ interface ProductFormProps {
 }
 
 const ProductForm: React.FC<ProductFormProps> = ({
-  open,
   onClose,
   onFinish,
   loading,
@@ -189,93 +186,86 @@ const ProductForm: React.FC<ProductFormProps> = ({
 
   // Tự động hỏi danh sách kho mỗi khi form được mở
   useEffect(() => {
-    if (open) {
-      fetchWarehouses();
-    }
-  }, [open]);
+    fetchWarehouses();
+  }, []);
 
   useEffect(() => {
-    if (open) {
-      if (initialData && warehouses.length > 0) {
-        setTimeout(() => {
-          // Handle inventory settings if they exist (from separate inventory table)
-          let inventorySettingsForForm = {};
+    if (initialData && warehouses.length > 0) {
+      setTimeout(() => {
+        // Handle inventory settings if they exist (from separate inventory table)
+        let inventorySettingsForForm = {};
 
-          // Only try to process inventory data if it exists and is an array
-          if (initialData.inventory_data && Array.isArray(initialData.inventory_data)) {
-            inventorySettingsForForm = initialData.inventory_data.reduce(
-              (acc: any, inv: any) => {
-                if (inv && inv.warehouse_id) {
-                  acc[inv.warehouse_id] = {
-                    min_stock: inv.min_stock || 0,
-                    max_stock: inv.max_stock || 0,
-                  };
-                }
-                return acc;
-              },
-              {}
-            );
-          }
+        // Only try to process inventory data if it exists and is an array
+        if (
+          initialData.inventory_data &&
+          Array.isArray(initialData.inventory_data)
+        ) {
+          inventorySettingsForForm = initialData.inventory_data.reduce(
+            (acc: any, inv: any) => {
+              if (inv && inv.warehouse_id) {
+                acc[inv.warehouse_id] = {
+                  min_stock: inv.min_stock || 0,
+                  max_stock: inv.max_stock || 0,
+                };
+              }
+              return acc;
+            },
+            {}
+          );
+        }
 
-          const formData = {
-            name: initialData.name || '',
-            sku: initialData.sku || '',
-            barcode: initialData.barcode || '',
-            category: initialData.category || '',
-            tags: initialData.tags || [],
-            manufacturer: initialData.manufacturer || '',
-            distributor: initialData.distributor || '',
-            packaging: initialData.packaging || '',
-            description: initialData.description || '',
-            route: initialData.route || '',
-            disease: initialData.disease || '',
-            image_url: initialData.image_url || '',
-            image_url_manual: '',
-            productType: initialData.product_type || 'goods',
-            isFixedAsset: initialData.is_fixed_asset || false,
-            registrationNumber: initialData.registration_number || '',
-            isChronic: initialData.is_chronic || false,
-            wholesaleUnit: initialData.wholesale_unit || '',
-            retailUnit: initialData.retail_unit || '',
-            conversionRate: initialData.conversion_rate || 1,
-            invoicePrice: initialData.invoice_price || 0,
-            costPrice: initialData.cost_price || 0,
-            wholesaleProfit: initialData.wholesale_profit || 0,
-            retailProfit: initialData.retail_profit || 0,
-            wholesalePrice: initialData.wholesale_price || 0,
-            retailPrice: initialData.retail_price || 0,
-            hdsd_0_2: initialData.hdsd_0_2 || '',
-            hdsd_2_6: initialData.hdsd_2_6 || '',
-            hdsd_6_18: initialData.hdsd_6_18 || '',
-            hdsd_over_18: initialData.hdsd_over_18 || '',
-            inventory_settings: inventorySettingsForForm,
-          };
-
-          form.setFieldsValue(formData);
-        }, 0);
-      } else if (!initialData) {
-        form.resetFields();
-      }
-    }
-  }, [initialData, warehouses, form, open]);
-
-  const handleOk = () => {
-    form
-      .validateFields()
-      .then((values) => {
-        // Merge image_url and image_url_manual, preferring manual input if provided
-        const finalImageUrl = values.image_url_manual || values.image_url || '';
-        const finalValues = {
-          ...values,
-          image_url: finalImageUrl,
+        const formData = {
+          name: initialData.name || "",
+          sku: initialData.sku || "",
+          barcode: initialData.barcode || "",
+          category: initialData.category || "",
+          tags: initialData.tags || [],
+          manufacturer: initialData.manufacturer || "",
+          distributor: initialData.distributor || "",
+          packaging: initialData.packaging || "",
+          description: initialData.description || "",
+          route: initialData.route || "",
+          disease: initialData.disease || "",
+          image_url: initialData.image_url || "",
+          image_url_manual: "",
+          productType: initialData.product_type || "goods",
+          isFixedAsset: initialData.is_fixed_asset || false,
+          registrationNumber: initialData.registration_number || "",
+          isChronic: initialData.is_chronic || false,
+          wholesaleUnit: initialData.wholesale_unit || "",
+          retailUnit: initialData.retail_unit || "",
+          conversionRate: initialData.conversion_rate || 1,
+          invoicePrice: initialData.invoice_price || 0,
+          costPrice: initialData.cost_price || 0,
+          wholesaleProfit: initialData.wholesale_profit || 0,
+          retailProfit: initialData.retail_profit || 0,
+          wholesalePrice: initialData.wholesale_price || 0,
+          retailPrice: initialData.retail_price || 0,
+          hdsd_0_2: initialData.hdsd_0_2 || "",
+          hdsd_2_6: initialData.hdsd_2_6 || "",
+          hdsd_6_18: initialData.hdsd_6_18 || "",
+          hdsd_over_18: initialData.hdsd_over_18 || "",
+          inventory_settings: inventorySettingsForForm,
         };
-        // Remove the manual field since it's now merged
-        delete finalValues.image_url_manual;
-        onFinish(finalValues);
-      })
-      .catch((info) => {
-        console.log("Validate Failed:", info);
-      });
+
+        form.setFieldsValue(formData);
+      }, 0);
+    } else if (!initialData) {
+      form.resetFields();
+    }
+  }, [initialData, warehouses, form]);
+
+  const handleOk = (values: any) => {
+    // Merge image_url and image_url_manual, preferring manual input if provided
+    const finalImageUrl = values.image_url_manual || values.image_url || "";
+    const finalValues = {
+      ...values,
+      image_url: finalImageUrl,
+    };
+    // Remove the manual field since it's now merged
+    delete finalValues.image_url_manual;
+    console.log("Calling onFinish with finalValues:", finalValues);
+    onFinish(finalValues);
   };
 
   const items: TabsProps["items"] = [
@@ -574,35 +564,44 @@ const ProductForm: React.FC<ProductFormProps> = ({
   ];
 
   return (
-    <Modal
-      open={open}
-      title={initialData ? "Cập nhật sản phẩm" : "Thêm sản phẩm mới"}
-      okText={initialData ? "Cập nhật" : "Tạo mới"}
-      width={1000}
-      onCancel={onClose}
-      onOk={handleOk}
-      destroyOnHidden
-      confirmLoading={loading}
+    <Form
+      form={form}
+      layout="vertical"
+      name="product_form_detailed"
+      onValuesChange={handleValuesChange}
+      onFinish={handleOk}
+      onFinishFailed={(errorInfo) => {
+        console.log("Form validation failed:", errorInfo);
+      }}
+      className="gap-4"
     >
-      <Form
-        form={form}
-        layout="vertical"
-        name="product_form_detailed"
-        onValuesChange={handleValuesChange}
+      <Button
+        type="primary"
+        ghost
+        style={{ marginBottom: 24 }}
+        onClick={handleEnrichData}
+        loading={aiLoading}
       >
+        Gợi ý dữ liệu từ Tên [AI]
+      </Button>
+      <PdfUpload onFileReady={handleExtractFromPdf} loading={pdfLoading} />
+      <Tabs defaultActiveKey="1" items={items} />
+
+      {/* Submit button */}
+      <div style={{ marginTop: 24, textAlign: "right" }}>
+        <Button onClick={onClose} style={{ marginRight: 8 }}>
+          Hủy
+        </Button>
         <Button
           type="primary"
-          ghost
-          style={{ marginBottom: 24 }}
-          onClick={handleEnrichData}
-          loading={aiLoading}
+          htmlType="submit"
+          loading={loading}
+          onClick={() => console.log("Submit button clicked")}
         >
-          Gợi ý dữ liệu từ Tên [AI]
+          Lưu
         </Button>
-        <PdfUpload onFileReady={handleExtractFromPdf} loading={pdfLoading} />
-        <Tabs defaultActiveKey="1" items={items} />
-      </Form>
-    </Modal>
+      </div>
+    </Form>
   );
 };
 

@@ -11,7 +11,6 @@ import {
   Space,
   Table,
   InputNumber,
-  Select,
   Divider,
   Tag,
   Modal,
@@ -342,7 +341,7 @@ const CreateOrderPage: React.FC<CreateOrderPageProps> = ({ employee }) => {
           : dayjs().add(30, "days").format("YYYY-MM-DD"),
         notes: values.notes || null,
         terms_conditions: values.terms_conditions || null,
-        created_by_employee_id: employee.employee_id,
+        created_by_employee_id: employee?.employee_id || null,
       };
 
       // First, create the quote in database
@@ -472,7 +471,7 @@ const CreateOrderPage: React.FC<CreateOrderPageProps> = ({ employee }) => {
           : dayjs().add(30, "days").format("YYYY-MM-DD"),
         notes: values.notes || null,
         terms_conditions: values.terms_conditions || null,
-        created_by_employee_id: employee.employee_id,
+        created_by_employee_id: employee?.employee_id || null,
       };
 
       // Create the quote in database
@@ -671,8 +670,7 @@ const CreateOrderPage: React.FC<CreateOrderPageProps> = ({ employee }) => {
   return (
     <div
       style={{
-        padding: isMobile ? "16px" : "24px",
-        background: "#f0f2f5",
+        padding: "24px",
         minHeight: "100vh",
       }}
     >
@@ -693,22 +691,6 @@ const CreateOrderPage: React.FC<CreateOrderPageProps> = ({ employee }) => {
           </Text>
         </Col>
       </Row>
-
-      <Steps
-        current={currentStep}
-        direction={isMobile ? "vertical" : "horizontal"}
-        size={isMobile ? "small" : "default"}
-        style={{ marginBottom: isMobile ? 16 : 24 }}
-      >
-        {steps.map((step, index) => (
-          <Step
-            key={index}
-            title={step.title}
-            description={step.description}
-            icon={step.icon}
-          />
-        ))}
-      </Steps>
 
       <Row gutter={24}>
         <Col xs={24} lg={16}>

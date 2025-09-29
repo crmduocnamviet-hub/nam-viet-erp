@@ -42,7 +42,7 @@ const SeedingPanel: React.FC = () => {
           description: result.message || 'Dữ liệu bác sĩ đã tồn tại',
         });
       }
-    } catch (error) {
+    } catch {
       notification.error({
         message: 'Lỗi!',
         description: 'Không thể tạo dữ liệu bác sĩ mẫu',
@@ -68,7 +68,7 @@ const SeedingPanel: React.FC = () => {
           description: result.message || 'Dữ liệu nhân viên đã tồn tại',
         });
       }
-    } catch (error) {
+    } catch {
       notification.error({
         message: 'Lỗi!',
         description: 'Không thể tạo dữ liệu nhân viên mẫu',
@@ -96,7 +96,7 @@ const SeedingPanel: React.FC = () => {
           description: 'Không thể xóa dữ liệu nhân viên',
         });
       }
-    } catch (error) {
+    } catch {
       notification.error({
         message: 'Lỗi!',
         description: 'Không thể xóa dữ liệu nhân viên',
@@ -124,7 +124,7 @@ const SeedingPanel: React.FC = () => {
           description: 'Không tìm thấy bác sĩ nào trong hệ thống',
         });
       }
-    } catch (error) {
+    } catch {
       notification.error({
         message: 'Lỗi!',
         description: 'Không thể tải danh sách bác sĩ',

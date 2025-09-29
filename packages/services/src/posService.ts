@@ -10,7 +10,7 @@ interface IProcessSale {
   warehouseId: number;
   // Ideally, we'd get the user from the session on the server-side.
   // For now, we'll pass it from the client.
-  createdBy: string;
+  createdBy: string | null;
   // This should be determined by business logic, e.g., which fund to use for a given warehouse.
   fundId: number;
   // Customer information for sales order
@@ -36,19 +36,19 @@ export const processSaleTransaction = async ({
 }: IProcessSale) => {
   // Step 1: Create the sales order record.
   const salesOrder = {
-    patient_id: customerId || "00000000-0000-0000-0000-000000000000", // Default patient ID for walk-in customers
+    patient_id: customerId || null, // Default patient ID for walk-in customers
     order_type: "pos",
     total_value: total,
     payment_method: paymentMethod,
     payment_status: "paid",
     operational_status: "completed",
     is_ai_checked: false,
-    created_by_employee_id: createdBy.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)
-      ? createdBy
-      : "00000000-0000-0000-0000-000000000001", // Default system employee ID for POS transactions
+    created_by_employee_id: createdBy || null, // Allow null when no employee context available
   };
 
-  const { data: orderData, error: orderError } = await createSalesOrder(salesOrder);
+  const { data: orderData, error: orderError } = await createSalesOrder(
+    salesOrder
+  );
 
   if (orderError || !orderData) {
     console.error("Sales Order Creation Error:", orderError);
@@ -58,7 +58,7 @@ export const processSaleTransaction = async ({
   }
 
   // Step 2: Create sales order items.
-  const orderItems = cart.map(item => ({
+  const orderItems = (cart || []).map((item) => ({
     product_id: item.id,
     quantity: item.quantity,
     unit_price: item.finalPrice || item.retail_price || 0,
@@ -73,8 +73,13 @@ export const processSaleTransaction = async ({
   if (itemsError) {
     console.error("Sales Order Items Creation Error:", itemsError);
     // Try to rollback the sales order
-    await supabase.from("sales_orders").delete().eq("order_id", orderData.order_id);
-    throw new Error(`Failed to create sales order items: ${itemsError.message}`);
+    await supabase
+      .from("sales_orders")
+      .delete()
+      .eq("order_id", orderData.order_id);
+    throw new Error(
+      `Failed to create sales order items: ${itemsError.message}`
+    );
   }
 
   // Step 3: Create the financial transaction record.
@@ -98,15 +103,18 @@ export const processSaleTransaction = async ({
   if (transactionError) {
     console.error("Transaction Creation Error:", transactionError);
     // Rollback sales order and items
-    await supabase.from("sales_orders").delete().eq("order_id", orderData.order_id);
+    await supabase
+      .from("sales_orders")
+      .delete()
+      .eq("order_id", orderData.order_id);
     throw new Error(
       `Failed to create transaction: ${transactionError.message}`
     );
   }
 
   // Step 4: Prepare and execute inventory updates.
-  const inventoryUpdates = cart.map((item) => {
-    const warehouseInventory = item.inventory_data.find(
+  const inventoryUpdates = (cart || []).map((item) => {
+    const warehouseInventory = (item.inventory_data || []).find(
       (inv: any) => inv.warehouse_id === warehouseId
     );
 
@@ -133,7 +141,10 @@ export const processSaleTransaction = async ({
       // to avoid data inconsistency.
       console.error("Inventory Update Error:", inventoryError);
       await supabase.from("transactions").delete().eq("id", transactionData.id);
-      await supabase.from("sales_orders").delete().eq("order_id", orderData.order_id);
+      await supabase
+        .from("sales_orders")
+        .delete()
+        .eq("order_id", orderData.order_id);
       throw new Error(`Failed to update inventory: ${inventoryError.message}`);
     }
   }

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Button,
   Input,
@@ -22,18 +23,14 @@ import {
   DeleteOutlined,
 } from "@ant-design/icons";
 import * as XLSX from "xlsx";
-import ProductForm from '../../components/ProductForm';
-import { useDebounce } from '@nam-viet-erp/shared-components';
+import { useDebounce } from "@nam-viet-erp/shared-components";
 import {
-  createProduct,
   deleteProduct,
   deleteProductByIds,
   getProductWithInventory,
   getWarehouse,
   searchProducts,
-  updateProduct,
   updateProductByIds,
-  upsetInventory,
   upsetProduct,
 } from "@nam-viet-erp/services";
 
@@ -46,21 +43,25 @@ const { useBreakpoint } = Grid; // <-- Khai báo hook "mắt thần"
 const isValidUrl = (string: string): boolean => {
   try {
     const url = new URL(string);
-    return url.protocol === 'http:' || url.protocol === 'https:';
+    return url.protocol === "http:" || url.protocol === "https:";
   } catch {
     return false;
   }
 };
 
-const ProductsPageContent: React.FC = () => {
+interface ProductsPageContentProps {
+  hasPermission?: (permission: string) => boolean;
+}
+
+const ProductsPageContent: React.FC<ProductsPageContentProps> = ({
+  hasPermission = () => true
+}) => {
+  const navigate = useNavigate();
   const { notification, modal } = AntApp.useApp();
   const screens = useBreakpoint(); // <-- Gọi hook để lấy thông tin màn hình
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [formLoading, setFormLoading] = useState(false);
-  const [products, setProducts] = useState<any[]>([]);
+  const [products, setProducts] = useState<IProduct[]>([]);
   const [tableLoading, setTableLoading] = useState(true);
-  const [editingProduct, setEditingProduct] = useState<any | null>(null);
-  const [warehouses, setWarehouses] = useState<any[]>([]);
+  const [warehouses, setWarehouses] = useState<IWarehouse[]>([]);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -214,105 +215,27 @@ const ProductsPageContent: React.FC = () => {
     });
   };
   const handleEdit = (product: IProduct) => {
-    setEditingProduct(product);
-    setIsModalOpen(true);
+    if (!hasPermission("products:update")) {
+      notification.warning({
+        message: "Không có quyền",
+        description: "Bạn không có quyền chỉnh sửa sản phẩm.",
+      });
+      return;
+    }
+    navigate(`/products/edit/${product.id}`);
   };
 
   const handleAdd = () => {
-    setEditingProduct(null);
-    setIsModalOpen(true);
-  };
-
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setEditingProduct(null);
-  };
-
-  const handleFormFinish = async (values: any) => {
-    setFormLoading(true);
-    try {
-      // 1. Chuẩn bị dữ liệu sản phẩm để gửi lên CSDL
-      const productData: Partial<IProduct> = {
-        name: values.name,
-        sku: values.sku,
-        image_url: values.image_url,
-        product_type: values.productType,
-        is_fixed_asset: values.isFixedAsset,
-        barcode: values.barcode,
-        category: values.category,
-        tags: values.tags,
-        manufacturer: values.manufacturer,
-        distributor: values.distributor,
-        registration_number: values.registrationNumber,
-        packaging: values.packaging,
-        description: values.description,
-        hdsd_0_2: values.hdsd_0_2,
-        hdsd_2_6: values.hdsd_2_6,
-        hdsd_6_18: values.hdsd_6_18,
-        hdsd_over_18: values.hdsd_over_18,
-        disease: values.disease,
-        is_chronic: values.isChronic,
-        wholesale_unit: values.wholesaleUnit,
-        retail_unit: values.retailUnit,
-        conversion_rate: values.conversionRate,
-        invoice_price: values.invoicePrice,
-        cost_price: values.costPrice,
-        wholesale_profit: values.wholesaleProfit,
-        retail_profit: values.retailProfit,
-        wholesale_price: values.wholesalePrice,
-        retail_price: values.retailPrice,
-      };
-
-      let productId = editingProduct?.id;
-      let successMessage = "";
-
-      // 2. Kiểm tra xem đây là Sửa hay Thêm mới
-      if (editingProduct) {
-        // --- CẬP NHẬT SẢN PHẨM ---
-        const { error } = await updateProduct(
-          editingProduct.id,
-          productData
-        );
-        if (error) throw error;
-        successMessage = `Đã cập nhật sản phẩm "${values.name}" thành công.`;
-      } else {
-        // --- THÊM MỚI SẢN PHẨM ---
-        const { data, error } = await createProduct(productData);
-        if (error) throw error;
-        productId = data.id; // Lấy ID của sản phẩm vừa được tạo
-        successMessage = `Đã thêm sản phẩm "${values.name}" thành công.`;
-      }
-
-      // 3. Xử lý Cài đặt Tồn kho (Thêm mới hoặc Cập nhật)
-      if (values.inventory_settings && productId) {
-        const inventoryRecords = Object.entries(values.inventory_settings)
-          .filter(([, settings]) => settings !== undefined && settings !== null)
-          .map(([warehouseId, settings]: [string, any]) => ({
-            product_id: productId,
-            warehouse_id: parseInt(warehouseId, 10),
-            min_stock: settings.min_stock,
-            max_stock: settings.max_stock,
-          }));
-
-        if (inventoryRecords.length > 0) {
-          // Dùng "upsert" để tự động cập nhật nếu đã có, hoặc thêm mới nếu chưa có
-          const { error } = await upsetInventory(inventoryRecords);
-          if (error) throw error;
-        }
-      }
-
-      notification.success({
-        message: "Thành công!",
-        description: successMessage,
+    if (!hasPermission("products:create")) {
+      notification.warning({
+        message: "Không có quyền",
+        description: "Bạn không có quyền tạo sản phẩm mới.",
       });
-      handleCloseModal();
-      fetchProducts(debouncedSearchTerm, statusFilter);
-    } catch (error: any) {
-      notification.error({ message: "Thất bại", description: error.message });
-    } finally {
-      setFormLoading(false);
+      return;
     }
+    navigate("/products/create");
   };
+
 
   const onSelectChange = (newSelectedRowKeys: React.Key[]) => {
     setSelectedRowKeys(newSelectedRowKeys);
@@ -462,7 +385,11 @@ const ProductsPageContent: React.FC = () => {
             <Avatar
               shape="square"
               size={64}
-              src={record.image_url && isValidUrl(record.image_url) ? record.image_url : null}
+              src={
+                record.image_url && isValidUrl(record.image_url)
+                  ? record.image_url
+                  : null
+              }
             />
             <div>
               <Typography.Text strong>{text}</Typography.Text>
@@ -483,7 +410,7 @@ const ProductsPageContent: React.FC = () => {
         const inventory = inventoryData.find(
           (inv) => inv.warehouse_id === wh.id
         );
-        const unit = wh.name.includes("B2B")
+        const unit = wh.is_b2b_warehouse
           ? record.wholesale_unit
           : record.retail_unit;
         return `${inventory ? inventory.quantity : 0} ${unit || ""}`;
@@ -624,20 +551,13 @@ const ProductsPageContent: React.FC = () => {
           onChange={handleTableChange}
         />
       </Space>
-      <ProductForm
-        open={isModalOpen}
-        onClose={handleCloseModal}
-        onFinish={handleFormFinish}
-        loading={formLoading}
-        initialData={editingProduct}
-      />
     </>
   );
 };
 
-const Products: React.FC = () => (
+const Products: React.FC<ProductsPageContentProps> = (props) => (
   <AntApp>
-    <ProductsPageContent />
+    <ProductsPageContent {...props} />
   </AntApp>
 );
 

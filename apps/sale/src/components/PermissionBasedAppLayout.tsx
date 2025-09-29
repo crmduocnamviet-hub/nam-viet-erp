@@ -18,7 +18,6 @@ import { signOut } from "@nam-viet-erp/services";
 import {
   ScreenProvider,
   useScreens,
-  Screen,
   generateMenu,
   SALE_APP_MENU,
 } from "@nam-viet-erp/shared-components";

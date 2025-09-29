@@ -119,3 +119,29 @@ export const getActiveProduct = async () => {
 
   return response;
 };
+
+export const getProductById = async (id: number) => {
+  const response = await supabase
+    .from("products")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  return response;
+};
+
+export const searchProductInWarehouse = async ({
+  search,
+  warehouseId,
+}: {
+  search: string;
+  warehouseId: number;
+}) => {
+  const response = await supabase
+    .from("inventory")
+    .select("*, products(*)")
+    .ilike("products.name", `%${search}%`)
+    .eq("products.is_active", true)
+    .eq("warehouse_id", warehouseId);
+  return response;
+};

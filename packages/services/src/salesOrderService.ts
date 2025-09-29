@@ -4,7 +4,7 @@ import { supabase } from "./supabase";
 // Sales Order interface
 export interface ISalesOrder {
   order_id: string;
-  patient_id: string;
+  patient_id: string | null;
   medical_visit_id?: string | null;
   order_type: string;
   total_value: number;
@@ -12,7 +12,7 @@ export interface ISalesOrder {
   payment_status: string;
   operational_status: string;
   is_ai_checked: boolean;
-  created_by_employee_id: string;
+  created_by_employee_id: string | null;
   order_datetime: string;
 }
 
@@ -167,7 +167,7 @@ export const createSalesOrderFromMedicalVisit = async (
   }, 0);
 
   const salesOrder: Omit<ISalesOrder, "order_id" | "order_datetime"> = {
-    patient_id: visit.patient_id,
+    patient_id: visit.patient_id || null,
     medical_visit_id: medicalVisitId,
     order_type: "POS",
     created_by_employee_id: createdByEmployeeId,

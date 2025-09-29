@@ -1,10 +1,11 @@
-import React, { createContext, useContext, ReactNode } from "react";
+import React, { createContext, useContext } from "react";
+import type { ReactNode } from "react";
 import {
   SCREEN_REGISTRY,
-  ScreenConfig,
   hasScreenPermission,
   getAvailableScreens,
 } from "../screens";
+import type { ScreenConfig } from "../screens";
 
 interface User {
   id: string;
@@ -70,7 +71,7 @@ export const ScreenProvider: React.FC<ScreenProviderProps> = ({
       user,
     };
 
-    return <Component {...combinedProps} />;
+    return <Component {...combinedProps} props={combinedProps} />;
   };
 
   const hasPermission = (screenKey: string): boolean => {

@@ -45,48 +45,19 @@ import {
   getPrescriptionsByVisitId,
   getMedicalVisits,
   getWarehouse,
+  searchProductInWarehouse,
 } from "@nam-viet-erp/services";
-// Temporary stub component to replace missing PaymentModal
-const PaymentModal: React.FC<{
-  open: boolean;
-  paymentMethod: "cash" | "card" | "qr";
-  cartTotal: number;
-  cartItems: CartItem[];
-  customerInfo: any;
-  onCancel: () => void;
-  onFinish: () => void;
-  okButtonProps?: { loading?: boolean };
-  onPrintReceipt: () => void;
-}> = ({ open, onCancel, onFinish, okButtonProps }) => (
-  <Modal
-    open={open}
-    title="💳 Thanh toán"
-    onCancel={onCancel}
-    onOk={onFinish}
-    okText="Xác nhận thanh toán"
-    okButtonProps={okButtonProps}
-  >
-    <div style={{ padding: "20px", textAlign: "center" }}>
-      <p>🏪 Giao diện thanh toán POS</p>
-      <p style={{ color: "#666", fontSize: "14px" }}>
-        Component thanh toán đang được phát triển
-      </p>
-    </div>
-  </Modal>
-);
+import PaymentModal, {
+  type PaymentValues,
+  type CartItem as BaseCartItem,
+} from "../../components/PaymentModal";
 
-// Types defined locally to match the actual usage in the code
-type CartItem = {
-  id: number;
-  name: string;
-  quantity: number;
-  finalPrice: number;
-  originalPrice: number;
+// Extended CartItem type for POS with additional properties
+type CartItem = BaseCartItem & {
   discount?: number;
   appliedPromotion?: any;
-  prescriptionNote?: string;
   stock_quantity?: number;
-  image_url?: string;
+  image_url?: string | null;
   product_id?: string;
   unit_price?: number;
   prescription_id?: string;
@@ -138,7 +109,7 @@ interface PosPageProps {
   [key: string]: any;
 }
 
-const PosPage: React.FC<PosPageProps> = ({ employee }) => {
+const PosPage: React.FC<PosPageProps> = ({ employee, ...props }) => {
   const { notification } = App.useApp();
   const screens = useBreakpoint();
   const isMobile = !screens.lg;
@@ -332,27 +303,77 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
   useEffect(() => {
     if (debouncedSearchTerm) {
       setIsSearching(true);
-      searchProducts({
-        search: debouncedSearchTerm,
-        pageSize: 10,
-        status: "active",
-      })
-        .then(({ data, error }) => {
-          if (error) {
+
+      if (selectedWarehouse) {
+        // Search within selected warehouse
+        searchProductInWarehouse({
+          search: debouncedSearchTerm,
+          warehouseId: selectedWarehouse.id,
+        })
+          .then(({ data }) => {
+            setSearchResults(data?.map((v) => ({ ...v.products })) || []);
+          })
+          .catch((error) => {
+            console.error("Warehouse search error:", error);
             notification.error({
               message: "Lỗi tìm kiếm",
-              description: error.message,
+              description: "Không thể tìm kiếm sản phẩm trong kho",
             });
             setSearchResults([]);
-          } else {
-            setSearchResults(data || []);
-          }
+          })
+          .finally(() => setIsSearching(false));
+      } else {
+        // Fallback to general search when no warehouse is selected
+        searchProducts({
+          search: debouncedSearchTerm,
+          pageSize: 10,
+          status: "active",
         })
-        .finally(() => setIsSearching(false));
+          .then(({ data, error }) => {
+            if (error) {
+              notification.error({
+                message: "Lỗi tìm kiếm",
+                description: error.message,
+              });
+              setSearchResults([]);
+            } else {
+              setSearchResults(data || []);
+            }
+          })
+          .finally(() => setIsSearching(false));
+      }
+      // searchProducts({
+      //   search: debouncedSearchTerm,
+      //   pageSize: 10,
+      //   status: "active",
+      // })
+      //   .then(({ data, error }) => {
+      //     if (error) {
+      //       notification.error({
+      //         message: "Lỗi tìm kiếm",
+      //         description: error.message,
+      //       });
+      //       setSearchResults([]);
+      //     } else {
+      //       // Filter products to only show those with available inventory
+      //       const productsWithInventory = (data || []).filter(
+      //         (product: any) => {
+      //           // If no warehouse is selected, show all products
+      //           if (!selectedWarehouse) return true;
+
+      //           // Check if product has stock quantity available
+      //           const stockQuantity = product.stock_quantity || 0;
+      //           return stockQuantity > 0;
+      //         }
+      //       );
+      //       setSearchResults(productsWithInventory);
+      //     }
+      //   })
+      //   .finally(() => setIsSearching(false));
     } else {
       setSearchResults([]);
     }
-  }, [debouncedSearchTerm, notification]);
+  }, [debouncedSearchTerm, selectedWarehouse, notification]);
 
   useEffect(() => {
     if (debouncedCustomerSearchTerm) {
@@ -444,16 +465,17 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
   // Cart Handlers
   const handleAddToCart = (product: IProduct) => {
     setCart((prevCart) => {
-      const existingItem = prevCart.find((item) => item.id === product.id);
+      const cartArray = prevCart || [];
+      const existingItem = cartArray.find((item) => item.id === product.id);
       if (existingItem) {
-        return prevCart.map((item) =>
+        return cartArray.map((item) =>
           item.id === product.id
             ? { ...item, quantity: item.quantity + 1 }
             : item
         );
       } else {
         const priceInfo = calculateBestPrice(product, promotions);
-        return [...prevCart, { ...product, quantity: 1, ...priceInfo }];
+        return [...cartArray, { ...product, quantity: 1, ...priceInfo }];
       }
     });
     setSearchTerm("");
@@ -548,7 +570,7 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
   };
 
   const handleRemoveFromCart = (productId: number) => {
-    setCart((prevCart) => prevCart.filter((item) => item.id !== productId));
+    setCart((prevCart) => (prevCart || []).filter((item) => item.id !== productId));
   };
 
   const handleUpdateQuantity = (productId: number, newQuantity: number) => {
@@ -556,7 +578,7 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
       handleRemoveFromCart(productId);
     } else {
       setCart((prevCart) =>
-        prevCart.map((item) =>
+        (prevCart || []).map((item) =>
           item.id === productId ? { ...item, quantity: newQuantity } : item
         )
       );
@@ -564,7 +586,7 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
   };
 
   const cartDetails = useMemo((): CartDetails => {
-    const items = cart.map((item) => {
+    const items = (cart || []).map((item) => {
       // Create a mock product object with the required IProduct properties
       const mockProduct: IProduct = {
         ...item,
@@ -618,17 +640,16 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
     setIsPaymentModalOpen(true);
   };
 
-  const handleFinishPayment = async () => {
+  const handleFinishPayment = async (values: PaymentValues) => {
     setIsProcessingPayment(true);
     try {
       await processSaleTransaction({
-        cart: cartDetails.items, // Send detailed cart items
+        cart: cartDetails.items || [], // Send detailed cart items with fallback
         total: cartDetails.itemTotal,
-        paymentMethod,
+        paymentMethod: values.payment_method,
         warehouseId,
         fundId,
-        createdBy:
-          employee?.employee_id || "00000000-0000-0000-0000-000000000001", // Use actual employee ID or fallback
+        createdBy: employee?.employee_id || null, // Use actual employee ID or null when not available
         customerId: selectedCustomer?.patient_id,
       });
 
@@ -664,31 +685,49 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
           style={{ textAlign: isMobile ? "left" : "right" }}
         >
           <Space wrap size={isMobile ? "small" : "middle"}>
-            <Button
-              type="default"
-              size={isMobile ? "small" : "middle"}
-              onClick={() => {
-                notification.info({
-                  message: "Thống kê bán hàng",
-                  description: `Tổng đơn hàng hôm nay: ${
-                    cart.length
-                  } | Tổng doanh thu: ${cartDetails.itemTotal.toLocaleString()}đ`,
-                  duration: 5,
-                });
-              }}
-            >
-              📊 Thống kê
-            </Button>
-            <Select
-              value={selectedLocation}
-              onChange={setSelectedLocation}
-              size={isMobile ? "small" : "large"}
-              style={{ width: isMobile ? 150 : 200 }}
-              placeholder="Chọn cửa hàng"
-            >
-              <Select.Option value="dh1">🏪 Nhà thuốc DH1</Select.Option>
-              <Select.Option value="dh2">🏪 Nhà thuốc DH2</Select.Option>
-            </Select>
+            <div style={{ overflow: "auto" }}>
+              {loadingWarehouses ? (
+                <div
+                  style={{
+                    textAlign: "center",
+                    padding: "40px 0",
+                    color: "#999",
+                  }}
+                >
+                  <Text>Đang tải danh sách kho...</Text>
+                </div>
+              ) : warehouses.length === 0 ? (
+                <div
+                  style={{
+                    textAlign: "center",
+                    padding: "40px 0",
+                    color: "#999",
+                  }}
+                >
+                  <Text>Không có kho nào được tìm thấy</Text>
+                </div>
+              ) : (
+                <>
+                  <Select
+                    placeholder="Chọn kho"
+                    style={{ width: "100%", marginBottom: 16 }}
+                    value={selectedWarehouse?.id}
+                    onChange={(warehouseId) => {
+                      const warehouse = (warehouses || []).find(
+                        (w) => w.id === warehouseId
+                      );
+                      setSelectedWarehouse(warehouse || null);
+                    }}
+                  >
+                    {warehouses.map((warehouse) => (
+                      <Select.Option key={warehouse.id} value={warehouse.id}>
+                        🏪 {warehouse.name}
+                      </Select.Option>
+                    ))}
+                  </Select>
+                </>
+              )}
+            </div>
           </Space>
         </Col>
       </Row>
@@ -815,14 +854,8 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
             <Card
               title={
                 <Space>
-                  {warehouseMode ? (
-                    <Tag color="blue">Kho</Tag>
-                  ) : (
-                    <SearchOutlined />
-                  )}
-                  <span>
-                    {warehouseMode ? "Chọn Kho" : "Tìm kiếm Sản phẩm"}
-                  </span>
+                  <SearchOutlined />
+                  <span>Tìm kiếm Sản phẩm</span>
                   <Button
                     size="small"
                     type={warehouseMode ? "primary" : "default"}
@@ -849,192 +882,112 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
                 },
               }}
             >
-              {!warehouseMode ? (
-                <>
-                  <Search
-                    placeholder="Quét mã vạch hoặc tìm tên thuốc..."
-                    size="large"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    loading={isSearching}
-                    style={{ marginBottom: 16 }}
-                  />
+              <>
+                <Search
+                  placeholder="Quét mã vạch hoặc tìm tên thuốc..."
+                  size="large"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  loading={isSearching}
+                  style={{ marginBottom: 8 }}
+                />
+                {selectedWarehouse && (
                   <div
                     style={{
-                      flex: isMobile ? "none" : 1,
-                      overflow: "auto",
-                      maxHeight: isMobile ? 250 : "none",
+                      marginBottom: 16,
+                      padding: "4px 8px",
+                      backgroundColor: "#f0f8ff",
+                      borderRadius: 4,
+                      fontSize: "12px",
+                      color: "#666",
                     }}
                   >
-                    <List
-                      loading={isSearching}
-                      dataSource={searchResults}
-                      locale={{
-                        emptyText: searchTerm
-                          ? "Không tìm thấy sản phẩm"
-                          : "Nhập từ khóa để tìm kiếm",
-                      }}
-                      renderItem={(product: IProduct) => (
-                        <List.Item
-                          style={{
-                            padding: "12px 0",
-                            borderRadius: 8,
-                            marginBottom: 8,
-                            backgroundColor: "#fafafa",
-                            paddingLeft: 12,
-                            paddingRight: 12,
-                          }}
-                          actions={[
-                            <Tooltip title="Thêm vào giỏ hàng">
-                              <Button
-                                type="primary"
-                                shape="circle"
-                                icon={<PlusOutlined />}
-                                onClick={() => handleAddToCart(product)}
-                                disabled={product.stock_quantity === 0}
-                              />
-                            </Tooltip>,
-                          ]}
-                        >
-                          <List.Item.Meta
-                            title={
-                              <Space>
-                                <Text strong>{product.name}</Text>
-                                {product.stock_quantity !== undefined &&
-                                  product.stock_quantity <= 5 && (
-                                    <Tag
-                                      color={
-                                        product.stock_quantity === 0
-                                          ? "red"
-                                          : "orange"
-                                      }
-                                    >
-                                      {product.stock_quantity === 0
-                                        ? "Hết hàng"
-                                        : `Còn ${product.stock_quantity}`}
-                                    </Tag>
-                                  )}
-                              </Space>
-                            }
-                            description={
-                              <Space direction="vertical" size={0}>
-                                <Text
-                                  style={{ color: "#52c41a", fontWeight: 500 }}
-                                >
-                                  {(product.retail_price || 0).toLocaleString()}
-                                  đ
-                                </Text>
-                                {product.stock_quantity !== undefined && (
-                                  <Text
-                                    type="secondary"
-                                    style={{ fontSize: "12px" }}
-                                  >
-                                    📦 Tồn kho: {product.stock_quantity}
-                                  </Text>
-                                )}
-                              </Space>
-                            }
-                          />
-                        </List.Item>
-                      )}
-                    />
+                    📦 Chỉ hiển thị sản phẩm có hàng trong kho:{" "}
+                    {selectedWarehouse.name}
                   </div>
-                </>
-              ) : (
-                <div style={{ flex: 1, overflow: "auto" }}>
-                  {loadingWarehouses ? (
-                    <div
-                      style={{
-                        textAlign: "center",
-                        padding: "40px 0",
-                        color: "#999",
-                      }}
-                    >
-                      <Text>Đang tải danh sách kho...</Text>
-                    </div>
-                  ) : warehouses.length === 0 ? (
-                    <div
-                      style={{
-                        textAlign: "center",
-                        padding: "40px 0",
-                        color: "#999",
-                      }}
-                    >
-                      <Text>Không có kho nào được tìm thấy</Text>
-                    </div>
-                  ) : (
-                    <>
-                      <Select
-                        placeholder="Chọn kho"
-                        style={{ width: "100%", marginBottom: 16 }}
-                        value={selectedWarehouse?.id}
-                        onChange={(warehouseId) => {
-                          const warehouse = warehouses.find(
-                            (w) => w.id === warehouseId
-                          );
-                          setSelectedWarehouse(warehouse || null);
-                        }}
-                      >
-                        {warehouses.map((warehouse) => (
-                          <Select.Option
-                            key={warehouse.id}
-                            value={warehouse.id}
-                          >
-                            🏪 {warehouse.name}
-                          </Select.Option>
-                        ))}
-                      </Select>
-
-                      {selectedWarehouse && (
-                        <div
-                          style={{
-                            padding: "16px",
-                            backgroundColor: "#f0f9ff",
-                            borderRadius: "8px",
-                            border: "1px solid #bae7ff",
-                            marginBottom: "16px",
-                          }}
-                        >
-                          <Text
-                            strong
-                            style={{ fontSize: "16px", color: "#1890ff" }}
-                          >
-                            📍 Kho được chọn: {selectedWarehouse.name}
-                          </Text>
-                          <div style={{ marginTop: "8px" }}>
-                            <Text type="secondary">
-                              ID Kho: {selectedWarehouse.id}
-                            </Text>
-                          </div>
-                          <div style={{ marginTop: "8px" }}>
-                            <Text type="success">
-                              ✅ Kho đã được thiết lập cho phiên bán hàng
-                            </Text>
-                          </div>
-                        </div>
-                      )}
-
-                      <div
+                )}
+                <div
+                  style={{
+                    flex: isMobile ? "none" : 1,
+                    overflow: "auto",
+                    maxHeight: isMobile ? 250 : "none",
+                  }}
+                >
+                  <List
+                    loading={isSearching}
+                    dataSource={searchResults}
+                    locale={{
+                      emptyText: searchTerm
+                        ? selectedWarehouse
+                          ? "Không tìm thấy sản phẩm có hàng trong kho được chọn"
+                          : "Không tìm thấy sản phẩm"
+                        : "Nhập từ khóa để tìm kiếm",
+                    }}
+                    renderItem={(product: IProduct) => (
+                      <List.Item
                         style={{
-                          textAlign: "center",
-                          padding: "32px 0",
-                          color: "#666",
-                          backgroundColor: "#f9f9f9",
-                          borderRadius: "8px",
-                          border: "1px dashed #d9d9d9",
+                          padding: "12px 0",
+                          borderRadius: 8,
+                          marginBottom: 8,
+                          backgroundColor: "#fafafa",
+                          paddingLeft: 12,
+                          paddingRight: 12,
                         }}
+                        actions={[
+                          <Tooltip title="Thêm vào giỏ hàng">
+                            <Button
+                              type="primary"
+                              shape="circle"
+                              icon={<PlusOutlined />}
+                              onClick={() => handleAddToCart(product)}
+                              disabled={product.stock_quantity === 0}
+                            />
+                          </Tooltip>,
+                        ]}
                       >
-                        <Text type="secondary">
-                          💡 Chọn kho để thiết lập nguồn hàng hóa
-                          <br />
-                          Sau khi chọn kho, thoát chế độ này để tìm kiếm sản
-                          phẩm
-                        </Text>
-                      </div>
-                    </>
-                  )}
+                        <List.Item.Meta
+                          title={
+                            <Space>
+                              <Text strong>{product.name}</Text>
+                              {product.stock_quantity !== undefined &&
+                                product.stock_quantity <= 5 && (
+                                  <Tag
+                                    color={
+                                      product.stock_quantity === 0
+                                        ? "red"
+                                        : "orange"
+                                    }
+                                  >
+                                    {product.stock_quantity === 0
+                                      ? "Hết hàng"
+                                      : `Còn ${product.stock_quantity}`}
+                                  </Tag>
+                                )}
+                            </Space>
+                          }
+                          description={
+                            <Space direction="vertical" size={0}>
+                              <Text
+                                style={{ color: "#52c41a", fontWeight: 500 }}
+                              >
+                                {(product.retail_price || 0).toLocaleString()}đ
+                              </Text>
+                              {product.stock_quantity !== undefined && (
+                                <Text
+                                  type="secondary"
+                                  style={{ fontSize: "12px" }}
+                                >
+                                  📦 Tồn kho: {product.stock_quantity}
+                                </Text>
+                              )}
+                            </Space>
+                          }
+                        />
+                      </List.Item>
+                    )}
+                  />
                 </div>
-              )}
+              </>
             </Card>
           </Space>
         </Col>
@@ -1599,9 +1552,9 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
   );
 };
 
-const PosPageWrapper: React.FC = () => (
+const PosPageWrapper: React.FC<PosPageProps> = (props) => (
   <App>
-    <PosPage />
+    <PosPage {...props} />
   </App>
 );
 

@@ -159,6 +159,7 @@ interface IWarehouse {
   id: number;
   created_at: string;
   name: string;
+  is_b2b_warehouse: boolean;
 }
 
 interface IBank {
@@ -360,7 +361,7 @@ interface IB2BQuote {
   valid_until: string;
   notes?: string | null;
   terms_conditions?: string | null;
-  created_by_employee_id: string;
+  created_by_employee_id: string | null;
   created_at: string;
   updated_at: string;
   // Relations

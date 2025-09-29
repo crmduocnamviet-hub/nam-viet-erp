@@ -203,7 +203,9 @@ const PatientDetailPage: React.FC = () => {
         alignItems: 'center',
         height: '400px'
       }}>
-        <Spin size="large" tip="Đang tải thông tin bệnh nhân..." />
+        <Spin size="large" tip="Đang tải thông tin bệnh nhân...">
+          <div style={{ minHeight: "200px" }} />
+        </Spin>
       </div>
     );
   }

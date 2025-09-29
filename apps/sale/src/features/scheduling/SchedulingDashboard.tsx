@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Row, Col, Spin, Alert, DatePicker, Space, Typography, Modal, Form, TimePicker, App, Button, Select } from 'antd';
-import { CalendarOutlined, UserOutlined } from '@ant-design/icons';
+import { CalendarOutlined } from '@ant-design/icons';
 import { getDoctors, getAppointments, updateAppointment, getActiveRooms } from '@nam-viet-erp/services';
 import ResourceColumn from './components/ResourceColumn';
 import dayjs from 'dayjs';
@@ -272,7 +272,9 @@ const SchedulingDashboard: React.FC<SchedulingDashboardProps> = ({ onAppointment
         alignItems: 'center',
         height: '400px'
       }}>
-        <Spin size="large" tip="Đang tải lịch hẹn..." />
+        <Spin size="large" tip="Đang tải lịch hẹn...">
+          <div style={{ minHeight: "200px" }} />
+        </Spin>
       </div>
     );
   }

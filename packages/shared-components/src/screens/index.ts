@@ -18,6 +18,8 @@ import SchedulingPage from "./medical/SchedulingPage";
 
 // Screen Imports - Inventory
 import ProductsPage from "./inventory/ProductsPage";
+import CreateProductPage from "./inventory/CreateProductPage";
+import EditProductPage from "./inventory/EditProductPage";
 import PurchaseOrdersPage from "./inventory/PurchaseOrdersPage";
 
 // Screen Imports - Financial
@@ -147,6 +149,20 @@ export const SCREEN_REGISTRY: ScreenRegistry = {
     category: "inventory",
     title: "Quản lý Sản phẩm",
     description: "Quản lý danh mục và thông tin sản phẩm",
+  },
+  "inventory.products.create": {
+    component: CreateProductPage,
+    permissions: ["inventory.access", "products.create"],
+    category: "inventory",
+    title: "Thêm sản phẩm mới",
+    description: "Tạo sản phẩm mới trong hệ thống",
+  },
+  "inventory.products.edit": {
+    component: EditProductPage,
+    permissions: ["inventory.access", "products.update"],
+    category: "inventory",
+    title: "Chỉnh sửa sản phẩm",
+    description: "Cập nhật thông tin sản phẩm",
   },
   "inventory.purchase-orders": {
     component: PurchaseOrdersPage,
@@ -347,6 +363,7 @@ export const PERMISSIONS = {
   "inventory.manage": "Quản lý đầy đủ kho hàng",
   "products.view": "Xem danh sách sản phẩm",
   "products.create": "Thêm sản phẩm mới",
+  "products.update": "Cập nhật thông tin sản phẩm",
   "products.edit": "Chỉnh sửa thông tin sản phẩm",
   "products.delete": "Xóa sản phẩm",
   "purchase-orders.view": "Xem đơn mua hàng",
@@ -412,6 +429,7 @@ export const ROLE_PERMISSIONS = {
     "inventory.access",
     "products.view",
     "products.create",
+    "products.update",
     "products.edit",
     "financial.access",
     "ledger.view",
@@ -460,6 +478,7 @@ export const ROLE_PERMISSIONS = {
     "inventory.access",
     "products.view",
     "products.create",
+    "products.update",
     "products.edit",
     "purchase-orders.view",
     "purchase-orders.create",
@@ -470,6 +489,7 @@ export const ROLE_PERMISSIONS = {
     "inventory.access",
     "products.view",
     "products.create",
+    "products.update",
     "products.edit",
     "purchase-orders.view",
     "purchase-orders.create",
@@ -553,6 +573,8 @@ export {
   SchedulingPage,
   // Inventory
   ProductsPage,
+  CreateProductPage,
+  EditProductPage,
   PurchaseOrdersPage,
   // Financial
   CashLedgerPage,

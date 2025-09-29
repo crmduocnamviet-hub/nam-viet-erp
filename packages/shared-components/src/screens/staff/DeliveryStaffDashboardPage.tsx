@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, List, Badge, Button, Typography, Row, Col, Statistic, Tag, Space, Timeline } from 'antd';
+import { Card, List, Button, Typography, Row, Col, Statistic, Tag, Space, Timeline } from 'antd';
 import {
   CheckCircleOutlined,
   ClockCircleOutlined,
@@ -35,7 +35,7 @@ interface DeliveryStaffDashboardPageProps {
 
 const DeliveryStaffDashboardPage: React.FC<DeliveryStaffDashboardPageProps> = ({ employee }) => {
   const [todos, setTodos] = useState<TodoItem[]>([]);
-  const [stats, setStats] = useState({
+  const [stats] = useState({
     todayDeliveries: 8,
     pendingPickups: 3,
     completedDeliveries: 12,
@@ -325,7 +325,6 @@ const DeliveryStaffDashboardPage: React.FC<DeliveryStaffDashboardPageProps> = ({
             style={{ marginTop: 16 }}
           >
             <Timeline
-              size="small"
               items={todayDeliveries.slice(0, 4).map(item => ({
                 color: item.status === 'completed' ? 'green' :
                        item.status === 'in_progress' ? 'blue' : 'gray',

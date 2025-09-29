@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Card,
   Table,
@@ -18,7 +18,7 @@ import {
   Descriptions,
   Grid,
   Checkbox,
-} from 'antd';
+} from "antd";
 import {
   FilterOutlined,
   EyeOutlined,
@@ -27,16 +27,16 @@ import {
   PlusOutlined,
   SearchOutlined,
   FilePdfOutlined,
-} from '@ant-design/icons';
-import type { ColumnsType } from 'antd/es/table';
-import dayjs from 'dayjs';
+} from "@ant-design/icons";
+import type { ColumnsType } from "antd/es/table";
+import dayjs from "dayjs";
 import {
   getB2BQuotes,
   createB2BQuote,
   updateB2BQuote,
   getB2BCustomers,
   createB2BCustomer,
-} from '@nam-viet-erp/services';
+} from "@nam-viet-erp/services";
 
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
@@ -50,70 +50,70 @@ interface B2BQuoteWithStatus extends IB2BQuote {
 // B2B Order Stages - Complete workflow from quote to completion
 const B2B_ORDER_STAGES = [
   {
-    key: 'draft',
-    title: '⚫ Nháp',
-    description: 'Báo giá/đơn hàng đang soạn thảo',
-    color: 'default',
+    key: "draft",
+    title: "⚫ Nháp",
+    description: "Báo giá/đơn hàng đang soạn thảo",
+    color: "default",
   },
   {
-    key: 'sent',
-    title: 'Đã gửi',
-    description: 'Báo giá đã gửi cho khách hàng',
-    color: 'blue',
+    key: "sent",
+    title: "Đã gửi",
+    description: "Báo giá đã gửi cho khách hàng",
+    color: "blue",
   },
   {
-    key: 'negotiating',
-    title: 'Thương thảo',
-    description: 'Đang thương thảo điều khoản',
-    color: 'orange',
+    key: "negotiating",
+    title: "Thương thảo",
+    description: "Đang thương thảo điều khoản",
+    color: "orange",
   },
   {
-    key: 'accepted',
-    title: 'Chấp nhận',
-    description: 'Báo giá được chấp nhận, chuyển thành đơn hàng',
-    color: 'green',
+    key: "accepted",
+    title: "Chấp nhận",
+    description: "Báo giá được chấp nhận, chuyển thành đơn hàng",
+    color: "green",
   },
   {
-    key: 'pending_packaging',
-    title: '🔵 Chờ đóng gói',
-    description: 'Đơn hàng chờ xử lý và đóng gói',
-    color: 'blue',
+    key: "pending_packaging",
+    title: "🔵 Chờ đóng gói",
+    description: "Đơn hàng chờ xử lý và đóng gói",
+    color: "blue",
   },
   {
-    key: 'packaged',
-    title: '🟡 Đã đóng gói & Chờ giao vận',
-    description: 'Hàng đã đóng gói, chờ giao cho đơn vị vận chuyển',
-    color: 'orange',
+    key: "packaged",
+    title: "🟡 Đã đóng gói & Chờ giao vận",
+    description: "Hàng đã đóng gói, chờ giao cho đơn vị vận chuyển",
+    color: "orange",
   },
   {
-    key: 'shipping',
-    title: '🚚 Chờ giao tới khách hàng',
-    description: 'Hàng đang trên đường giao đến khách hàng',
-    color: 'cyan',
+    key: "shipping",
+    title: "🚚 Chờ giao tới khách hàng",
+    description: "Hàng đang trên đường giao đến khách hàng",
+    color: "cyan",
   },
   {
-    key: 'completed',
-    title: '✅ Hoàn tất',
-    description: 'Đơn hàng đã hoàn tất',
-    color: 'green',
+    key: "completed",
+    title: "✅ Hoàn tất",
+    description: "Đơn hàng đã hoàn tất",
+    color: "green",
   },
   {
-    key: 'rejected',
-    title: 'Từ chối',
-    description: 'Báo giá bị từ chối',
-    color: 'red',
+    key: "rejected",
+    title: "Từ chối",
+    description: "Báo giá bị từ chối",
+    color: "red",
   },
   {
-    key: 'cancelled',
-    title: '❌ Đã hủy',
-    description: 'Đơn hàng đã bị hủy',
-    color: 'red',
+    key: "cancelled",
+    title: "❌ Đã hủy",
+    description: "Đơn hàng đã bị hủy",
+    color: "red",
   },
   {
-    key: 'expired',
-    title: 'Hết hạn',
-    description: 'Báo giá đã hết hạn',
-    color: 'volcano',
+    key: "expired",
+    title: "Hết hạn",
+    description: "Báo giá đã hết hạn",
+    color: "volcano",
   },
 ];
 
@@ -134,11 +134,14 @@ interface B2BOrderListPageProps {
   user?: User | null;
 }
 
-const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({ employee, user }) => {
+const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
+  employee,
+  user,
+}) => {
   const { notification } = App.useApp();
   const [quotes, setQuotes] = useState<B2BQuoteWithStatus[]>([]);
   const [loading, setLoading] = useState(false);
-  const [searchKeyword, setSearchKeyword] = useState('');
+  const [searchKeyword, setSearchKeyword] = useState("");
   const [filters, setFilters] = useState<any>({});
   const [current, setCurrent] = useState(1);
   const [pageSize] = useState(10);
@@ -148,7 +151,12 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({ employee, user }) =
   const [createQuoteModalOpen, setCreateQuoteModalOpen] = useState(false);
   const [editQuoteModalOpen, setEditQuoteModalOpen] = useState(false);
   const [createCustomerModalOpen, setCreateCustomerModalOpen] = useState(false);
-  const [selectedOrder, setSelectedOrder] = useState<B2BQuoteWithStatus | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<B2BQuoteWithStatus | null>(
+    null
+  );
+  const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
+  const [bulkUpdateModalOpen, setBulkUpdateModalOpen] = useState(false);
+  const [bulkUpdateLoading, setBulkUpdateLoading] = useState(false);
   const screens = useBreakpoint();
   const isMobile = !screens.lg;
 
@@ -156,26 +164,50 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({ employee, user }) =
   const [createQuoteForm] = Form.useForm();
   const [editQuoteForm] = Form.useForm();
   const [createCustomerForm] = Form.useForm();
+  const [bulkUpdateForm] = Form.useForm();
 
   // Permission checks
   const userPermissions = user?.permissions || [];
-  const canCreateQuotes = userPermissions.includes('quotes.create') || userPermissions.includes('b2b.create');
-  const canEditQuotes = userPermissions.includes('quotes.edit') || userPermissions.includes('b2b.edit');
-  const canViewQuotes = userPermissions.includes('quotes.view') || userPermissions.includes('b2b.view');
+  const canCreateQuotes =
+    userPermissions.includes("quotes.create") ||
+    userPermissions.includes("b2b.create");
+  const canEditQuotes =
+    userPermissions.includes("quotes.edit") ||
+    userPermissions.includes("b2b.edit");
+  const canViewQuotes =
+    userPermissions.includes("quotes.view") ||
+    userPermissions.includes("b2b.view");
 
   // Role-based status change permissions
-  const isSalesStaff = userPermissions.includes('sales.create') || userPermissions.includes('sales.manage');
-  const isInventoryStaff = userPermissions.includes('inventory.access') || userPermissions.includes('inventory.manage');
-  const isDeliveryStaff = userPermissions.includes('delivery.access') || userPermissions.includes('shipping.manage');
+  const isSalesStaff =
+    userPermissions.includes("sales.create") ||
+    userPermissions.includes("sales.manage");
+  const isInventoryStaff =
+    userPermissions.includes("inventory.access") ||
+    userPermissions.includes("inventory.manage");
+  const isDeliveryStaff =
+    userPermissions.includes("delivery.access") ||
+    userPermissions.includes("shipping.manage");
 
   // Get allowed statuses based on user role and current order status
   const getAllowedStatuses = (currentStatus?: string) => {
-    const salesStatuses = ['draft', 'sent', 'negotiating', 'accepted', 'cancelled', 'rejected', 'expired'];
-    const inventoryStatuses = ['pending_packaging', 'packaged'];
-    const deliveryStatuses = ['shipping', 'completed'];
+    const salesStatuses = [
+      "draft",
+      "sent",
+      "negotiating",
+      "accepted",
+      "cancelled",
+      "rejected",
+      "expired",
+    ];
+    const inventoryStatuses = ["accepted", "pending_packaging", "packaged"];
+    const deliveryStatuses = ["packaged", "shipping", "completed"];
 
     // If user has admin permissions, allow all statuses
-    if (userPermissions.includes('admin') || userPermissions.includes('super-admin')) {
+    if (
+      userPermissions.includes("admin") ||
+      userPermissions.includes("super-admin")
+    ) {
       return B2B_ORDER_STAGES;
     }
 
@@ -193,34 +225,50 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({ employee, user }) =
 
     // If editing an existing order, check if current status is in user's range
     if (currentStatus) {
-      const isCurrentStatusInUserRange = allowedStatuses.includes(currentStatus);
+      const isCurrentStatusInUserRange =
+        allowedStatuses.includes(currentStatus);
 
       // If current status is NOT in user's range, they cannot change it
       if (!isCurrentStatusInUserRange) {
         // Return only the current status (read-only)
-        return B2B_ORDER_STAGES.filter(stage => stage.key === currentStatus);
+        return B2B_ORDER_STAGES.filter((stage) => stage.key === currentStatus);
       }
     }
 
     // Filter stages based on allowed statuses
-    return B2B_ORDER_STAGES.filter(stage => allowedStatuses.includes(stage.key));
+    return B2B_ORDER_STAGES.filter((stage) =>
+      allowedStatuses.includes(stage.key)
+    );
   };
 
   // Check if user can edit the current order status
   const canEditOrderStatus = (currentStatus: string) => {
-    const salesStatuses = ['draft', 'sent', 'negotiating', 'accepted', 'cancelled', 'rejected', 'expired'];
-    const inventoryStatuses = ['pending_packaging', 'packaged'];
-    const deliveryStatuses = ['shipping', 'completed'];
+    const salesStatuses = [
+      "draft",
+      "sent",
+      "negotiating",
+      "accepted",
+      "cancelled",
+      "rejected",
+      "expired",
+    ];
+    const inventoryStatuses = ["accepted", "pending_packaging", "packaged"];
+    const deliveryStatuses = ["packaged", "shipping", "completed"];
 
     // Admin can edit any status
-    if (userPermissions.includes('admin') || userPermissions.includes('super-admin')) {
+    if (
+      userPermissions.includes("admin") ||
+      userPermissions.includes("super-admin")
+    ) {
       return true;
     }
 
     // Check if current status is in user's authorized range
     if (isSalesStaff && salesStatuses.includes(currentStatus)) return true;
-    if (isInventoryStaff && inventoryStatuses.includes(currentStatus)) return true;
-    if (isDeliveryStaff && deliveryStatuses.includes(currentStatus)) return true;
+    if (isInventoryStaff && inventoryStatuses.includes(currentStatus))
+      return true;
+    if (isDeliveryStaff && deliveryStatuses.includes(currentStatus))
+      return true;
 
     return false;
   };
@@ -229,6 +277,25 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({ employee, user }) =
   const loadOrders = async () => {
     setLoading(true);
     try {
+      // For inventory staff, automatically filter to show only accepted orders and inventory-related stages
+      let stageFilter = filters.quoteStage;
+      if (
+        isInventoryStaff &&
+        !userPermissions.includes("admin") &&
+        !userPermissions.includes("super-admin")
+      ) {
+        // Inventory staff can only see orders that are accepted or in inventory processing stages
+        const inventoryRelevantStages = [
+          "accepted",
+          "pending_packaging",
+          "packaged",
+        ];
+        stageFilter =
+          stageFilter && inventoryRelevantStages.includes(stageFilter)
+            ? stageFilter
+            : undefined; // If no filter or invalid filter, don't restrict further, service will handle
+      }
+
       const response = await getB2BQuotes({
         // Search keyword (general search)
         customerName: searchKeyword || filters.customerName || undefined,
@@ -237,7 +304,7 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({ employee, user }) =
         // Employee filter (for personal quotes)
         employeeId: filters.employeeId || undefined,
         // Operation status filter
-        stage: filters.quoteStage || undefined,
+        stage: stageFilter || undefined,
         // Payment status filter (if supported by the service)
         // paymentStatus: filters.paymentStatus || undefined,
         // Date range filter
@@ -250,13 +317,34 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({ employee, user }) =
 
       if (response.error) throw response.error;
 
-      const quotesData = (response.data || []) as B2BQuoteWithStatus[];
+      let quotesData = (response.data || []) as B2BQuoteWithStatus[];
+
+      // Client-side filtering for inventory staff - only show accepted and inventory-relevant orders
+      if (
+        isInventoryStaff &&
+        !userPermissions.includes("admin") &&
+        !userPermissions.includes("super-admin")
+      ) {
+        const inventoryRelevantStages = [
+          "accepted",
+          "pending_packaging",
+          "packaged",
+        ];
+        quotesData = quotesData.filter((quote) =>
+          inventoryRelevantStages.includes(quote.quote_stage)
+        );
+      }
+
       setQuotes(quotesData);
       setTotal(quotesData.length); // For now, since we don't have total count from service
+
+      // Clear selected orders if they no longer exist in the current data
+      const currentOrderIds = quotesData.map(quote => quote.quote_id);
+      setSelectedOrderIds(prev => prev.filter(id => currentOrderIds.includes(id)));
     } catch (error: any) {
       notification.error({
-        message: 'Lỗi tải dữ liệu',
-        description: error.message || 'Không thể tải danh sách đơn hàng B2B',
+        message: "Lỗi tải dữ liệu",
+        description: error.message || "Không thể tải danh sách đơn hàng B2B",
       });
     } finally {
       setLoading(false);
@@ -279,8 +367,8 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({ employee, user }) =
 
     // Date filter
     if (values.dateRange) {
-      newFilters.startDate = values.dateRange[0].format('YYYY-MM-DD');
-      newFilters.endDate = values.dateRange[1].format('YYYY-MM-DD');
+      newFilters.startDate = values.dateRange[0].format("YYYY-MM-DD");
+      newFilters.endDate = values.dateRange[1].format("YYYY-MM-DD");
     }
 
     // Operation status filter (quote stage)
@@ -290,7 +378,8 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({ employee, user }) =
     if (values.paymentStatus) newFilters.paymentStatus = values.paymentStatus;
 
     // Customer name filter
-    if (values.customerName) newFilters.customerName = values.customerName.trim();
+    if (values.customerName)
+      newFilters.customerName = values.customerName.trim();
 
     // Creator name filter
     if (values.creatorName) newFilters.creatorName = values.creatorName.trim();
@@ -308,7 +397,7 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({ employee, user }) =
   // Handle clear filters
   const handleClearFilters = () => {
     setFilters({});
-    setSearchKeyword('');
+    setSearchKeyword("");
     form.resetFields();
     setCurrent(1);
     setFilterDrawerOpen(false);
@@ -317,20 +406,19 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({ employee, user }) =
   // Export to PDF function
   const handleExportToPDF = () => {
     // Create a new window with print-friendly content
-    const printWindow = window.open('', '_blank');
+    const printWindow = window.open("", "_blank");
 
     if (!printWindow) {
       notification.error({
-        message: 'Lỗi xuất PDF',
-        description: 'Không thể mở cửa sổ in. Vui lòng kiểm tra cài đặt trình duyệt.',
+        message: "Lỗi xuất PDF",
+        description:
+          "Không thể mở cửa sổ in. Vui lòng kiểm tra cài đặt trình duyệt.",
       });
       return;
     }
 
     // Prepare data for PDF
-    const currentDate = dayjs().format('DD/MM/YYYY HH:mm');
-    const filterInfo = Object.keys(filters).length > 0 ?
-      `Đã áp dụng ${Object.keys(filters).length} bộ lọc` : 'Tất cả đơn hàng';
+    const currentDate = dayjs().format("DD/MM/YYYY HH:mm");
 
     // Create simplified HTML content for PDF
     const htmlContent = `
@@ -362,21 +450,32 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({ employee, user }) =
           <p>Ngày xuất: ${currentDate} | Tổng: ${quotes.length} đơn hàng</p>
         </div>
 
-        ${quotes.map((quote, index) => {
-          // Get product items
-          const products = quote.quote_items || [];
+        ${quotes
+          .map((quote, index) => {
+            // Get product items
+            const products = quote.quote_items || [];
 
-          return `
+            return `
             <div class="order">
               <div class="order-header">
-                <div class="order-title">Đơn hàng #${index + 1}: ${quote.quote_number || 'Chưa có mã'}</div>
+                <div class="order-title">Đơn hàng #${index + 1}: ${
+              quote.quote_number || "Chưa có mã"
+            }</div>
                 <div class="client-info">
-                  <strong>Khách hàng:</strong> ${quote.customer_name || 'N/A'}<br>
-                  <strong>Ngày tạo:</strong> ${quote.created_at ? dayjs(quote.created_at).format('DD/MM/YYYY') : 'N/A'}
+                  <strong>Khách hàng:</strong> ${
+                    quote.customer_name || "N/A"
+                  }<br>
+                  <strong>Ngày tạo:</strong> ${
+                    quote.created_at
+                      ? dayjs(quote.created_at).format("DD/MM/YYYY")
+                      : "N/A"
+                  }
                 </div>
               </div>
 
-              ${products.length > 0 ? `
+              ${
+                products.length > 0
+                  ? `
                 <table class="products-table">
                   <thead>
                     <tr>
@@ -389,22 +488,33 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({ employee, user }) =
                     </tr>
                   </thead>
                   <tbody>
-                    ${products.map((item: any, itemIndex: number) => `
+                    ${products
+                      .map(
+                        (item: any, itemIndex: number) => `
                       <tr>
                         <td>${itemIndex + 1}</td>
-                        <td>${item.product_name || 'N/A'}</td>
-                        <td>${item.product_sku || 'N/A'}</td>
+                        <td>${item.product_name || "N/A"}</td>
+                        <td>${item.product_sku || "N/A"}</td>
                         <td>${item.quantity || 0}</td>
-                        <td>${(item.unit_price || 0).toLocaleString('vi-VN')} VND</td>
-                        <td>${((item.quantity || 0) * (item.unit_price || 0)).toLocaleString('vi-VN')} VND</td>
+                        <td>${(item.unit_price || 0).toLocaleString(
+                          "vi-VN"
+                        )} VND</td>
+                        <td>${(
+                          (item.quantity || 0) * (item.unit_price || 0)
+                        ).toLocaleString("vi-VN")} VND</td>
                       </tr>
-                    `).join('')}
+                    `
+                      )
+                      .join("")}
                   </tbody>
                 </table>
-              ` : '<p><em>Chưa có sản phẩm trong đơn hàng này</em></p>'}
+              `
+                  : "<p><em>Chưa có sản phẩm trong đơn hàng này</em></p>"
+              }
             </div>
           `;
-        }).join('')}
+          })
+          .join("")}
 
         <div style="text-align: center; margin-top: 20px; font-size: 10px; color: #666;">
           Nam Việt ERP - ${currentDate}
@@ -426,7 +536,7 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({ employee, user }) =
     };
 
     notification.success({
-      message: 'Đang xuất PDF',
+      message: "Đang xuất PDF",
       description: 'Cửa sổ in đã được mở. Chọn "Save as PDF" để lưu file.',
     });
   };
@@ -453,28 +563,30 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({ employee, user }) =
     try {
       if (!employee?.employee_id) {
         notification.error({
-          message: 'Lỗi',
-          description: 'Không tìm thấy thông tin nhân viên',
+          message: "Lỗi",
+          description: "Không tìm thấy thông tin nhân viên",
         });
         return;
       }
 
       const customerData = {
         customer_name: values.customer_name,
-        customer_code: values.customer_code || '',
-        contact_person: values.contact_person || '',
-        phone_number: values.phone_number || '',
-        email: values.email || '',
-        address: values.address || '',
-        tax_code: values.tax_code || '',
-        customer_type: values.customer_type || 'other' as const,
+        customer_code: values.customer_code || "",
+        contact_person: values.contact_person || "",
+        phone_number: values.phone_number || "",
+        email: values.email || "",
+        address: values.address || "",
+        tax_code: values.tax_code || "",
+        customer_type: values.customer_type || ("other" as const),
         credit_limit: values.credit_limit || null,
         payment_terms_days: values.payment_terms_days || 30,
         is_active: true,
         created_by_employee_id: employee.employee_id,
       };
 
-      const { data: newCustomer, error } = await createB2BCustomer(customerData);
+      const { data: newCustomer, error } = await createB2BCustomer(
+        customerData
+      );
 
       if (error) {
         throw new Error(error.message);
@@ -482,8 +594,8 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({ employee, user }) =
 
       if (newCustomer) {
         notification.success({
-          message: 'Thành công',
-          description: 'Tạo khách hàng B2B thành công',
+          message: "Thành công",
+          description: "Tạo khách hàng B2B thành công",
         });
 
         // Auto-fill the quote form with new customer data
@@ -500,23 +612,29 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({ employee, user }) =
         createCustomerForm.resetFields();
       }
     } catch (error) {
-      console.error('Error creating customer:', error);
+      console.error("Error creating customer:", error);
       notification.error({
-        message: 'Lỗi tạo khách hàng',
-        description: 'Không thể tạo khách hàng B2B mới',
+        message: "Lỗi tạo khách hàng",
+        description: "Không thể tạo khách hàng B2B mới",
       });
     }
   };
 
   // Auto-fill customer details when customer name/code changes
-  const handleCustomerChange = async (field: 'customer_name' | 'customer_code', value: string) => {
+  const handleCustomerChange = async (
+    field: "customer_name" | "customer_code",
+    value: string
+  ) => {
     if (!value) return;
 
     try {
       const { data: existingCustomers } = await getB2BCustomers();
-      const existingCustomer = existingCustomers?.find(c =>
-        field === 'customer_name' ? c.customer_name === value :
-        field === 'customer_code' ? c.customer_code === value : false
+      const existingCustomer = existingCustomers?.find((c) =>
+        field === "customer_name"
+          ? c.customer_name === value
+          : field === "customer_code"
+          ? c.customer_code === value
+          : false
       );
 
       if (existingCustomer) {
@@ -531,12 +649,12 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({ employee, user }) =
         });
 
         notification.info({
-          message: 'Thông tin khách hàng',
-          description: 'Đã tự động điền thông tin từ khách hàng hiện có',
+          message: "Thông tin khách hàng",
+          description: "Đã tự động điền thông tin từ khách hàng hiện có",
         });
       }
     } catch (error) {
-      console.error('Error fetching customer data:', error);
+      console.error("Error fetching customer data:", error);
     }
   };
 
@@ -552,7 +670,7 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({ employee, user }) =
       customer_email: quote.customer_email,
       customer_address: quote.customer_address,
       quote_stage: quote.quote_stage,
-      payment_status: quote.payment_status || 'unpaid',
+      payment_status: quote.payment_status || "unpaid",
       discount_percent: quote.discount_percent,
       tax_percent: quote.tax_percent,
       valid_until: quote.valid_until ? dayjs(quote.valid_until) : null,
@@ -567,8 +685,8 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({ employee, user }) =
     try {
       if (!employee?.employee_id) {
         notification.error({
-          message: 'Lỗi',
-          description: 'Không tìm thấy thông tin nhân viên',
+          message: "Lỗi",
+          description: "Không tìm thấy thông tin nhân viên",
         });
         return;
       }
@@ -580,9 +698,10 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({ employee, user }) =
       try {
         // Try to find existing customer by name or code first
         const { data: existingCustomers } = await getB2BCustomers();
-        existingCustomer = existingCustomers?.find(c =>
-          c.customer_name === values.customer_name ||
-          (values.customer_code && c.customer_code === values.customer_code)
+        existingCustomer = existingCustomers?.find(
+          (c) =>
+            c.customer_name === values.customer_name ||
+            (values.customer_code && c.customer_code === values.customer_code)
         );
 
         if (existingCustomer) {
@@ -591,18 +710,19 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({ employee, user }) =
           // Create new B2B customer
           const customerData = {
             customer_name: values.customer_name,
-            customer_code: values.customer_code || '',
-            contact_person: values.contact_person || '',
-            phone: values.customer_phone || '',
-            email: values.customer_email || '',
-            address: values.customer_address || '',
-            customer_type: 'other' as const,
+            customer_code: values.customer_code || "",
+            contact_person: values.contact_person || "",
+            phone: values.customer_phone || "",
+            email: values.customer_email || "",
+            address: values.customer_address || "",
+            customer_type: "other" as const,
             payment_terms_days: 30,
             is_active: true,
             created_by_employee_id: employee.employee_id,
           };
 
-          const { data: newCustomer, error: customerError } = await createB2BCustomer(customerData);
+          const { data: newCustomer, error: customerError } =
+            await createB2BCustomer(customerData);
 
           if (customerError) {
             throw new Error(`Lỗi tạo khách hàng: ${customerError.message}`);
@@ -613,18 +733,18 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({ employee, user }) =
           }
         }
       } catch (customerError) {
-        console.error('Error handling B2B customer:', customerError);
+        console.error("Error handling B2B customer:", customerError);
         notification.error({
-          message: 'Lỗi xử lý khách hàng',
-          description: 'Không thể tạo hoặc tìm thấy khách hàng B2B',
+          message: "Lỗi xử lý khách hàng",
+          description: "Không thể tạo hoặc tìm thấy khách hàng B2B",
         });
         return;
       }
 
       if (!b2bCustomerId) {
         notification.error({
-          message: 'Lỗi',
-          description: 'Không thể tạo khách hàng B2B',
+          message: "Lỗi",
+          description: "Không thể tạo khách hàng B2B",
         });
         return;
       }
@@ -643,15 +763,17 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({ employee, user }) =
         customer_phone: values.customer_phone,
         customer_email: values.customer_email,
         customer_address: customerAddress,
-        quote_stage: isDraft ? 'draft' as const : 'sent' as const,
+        quote_stage: isDraft ? ("draft" as const) : ("sent" as const),
         total_value: 0,
         subtotal: 0,
         discount_percent: values.discount_percent || 0,
         discount_amount: 0,
         tax_percent: values.tax_percent || 0,
         tax_amount: 0,
-        quote_date: dayjs().format('YYYY-MM-DD'),
-        valid_until: values.valid_until ? dayjs(values.valid_until).format('YYYY-MM-DD') : dayjs().add(30, 'days').format('YYYY-MM-DD'),
+        quote_date: dayjs().format("YYYY-MM-DD"),
+        valid_until: values.valid_until
+          ? dayjs(values.valid_until).format("YYYY-MM-DD")
+          : dayjs().add(30, "days").format("YYYY-MM-DD"),
         notes: values.notes,
         terms_conditions: values.terms_conditions,
         created_by_employee_id: employee.employee_id,
@@ -665,19 +787,92 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({ employee, user }) =
 
       if (newQuote) {
         notification.success({
-          message: 'Thành công',
-          description: `${isDraft ? 'Lưu nháp' : 'Gửi'} báo giá thành công`,
+          message: "Thành công",
+          description: `${isDraft ? "Lưu nháp" : "Gửi"} báo giá thành công`,
         });
         setCreateQuoteModalOpen(false);
         createQuoteForm.resetFields();
         loadOrders(); // Reload data
       }
     } catch (error) {
-      console.error('Error creating quote:', error);
+      console.error("Error creating quote:", error);
       notification.error({
-        message: 'Lỗi tạo báo giá',
-        description: 'Không thể tạo báo giá mới',
+        message: "Lỗi tạo báo giá",
+        description: "Không thể tạo báo giá mới",
       });
+    }
+  };
+
+  // Handle bulk selection
+  const handleSelectOrder = (orderId: string, checked: boolean) => {
+    if (checked) {
+      setSelectedOrderIds([...selectedOrderIds, orderId]);
+    } else {
+      setSelectedOrderIds(selectedOrderIds.filter(id => id !== orderId));
+    }
+  };
+
+  // Handle select all orders
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      const selectableOrderIds = quotes
+        .filter(quote => canEditOrderStatus(quote.quote_stage))
+        .map(quote => quote.quote_id);
+      setSelectedOrderIds(selectableOrderIds);
+    } else {
+      setSelectedOrderIds([]);
+    }
+  };
+
+  // Handle bulk update
+  const handleBulkUpdate = () => {
+    if (selectedOrderIds.length === 0) {
+      notification.warning({
+        message: "Chưa chọn đơn hàng",
+        description: "Vui lòng chọn ít nhất một đơn hàng để cập nhật",
+      });
+      return;
+    }
+    setBulkUpdateModalOpen(true);
+  };
+
+  // Handle bulk update submission
+  const handleBulkUpdateSubmit = async (values: any) => {
+    setBulkUpdateLoading(true);
+    const updateCount = selectedOrderIds.length;
+
+    try {
+      const updatePromises = selectedOrderIds.map(orderId =>
+        updateB2BQuote(orderId, {
+          quote_stage: values.quote_stage,
+        })
+      );
+
+      await Promise.all(updatePromises);
+
+      // Close modal and reset form first
+      setBulkUpdateModalOpen(false);
+      bulkUpdateForm.resetFields();
+      setSelectedOrderIds([]);
+
+      // Force refresh the table data
+      setCurrent(1); // Reset to first page
+      await loadOrders();
+
+      // Then show success notification
+      notification.success({
+        message: "Cập nhật trạng thái thành công",
+        description: `Đã cập nhật trạng thái cho ${updateCount} đơn hàng`,
+      });
+
+    } catch (error) {
+      console.error("Error bulk updating quotes:", error);
+      notification.error({
+        message: "Lỗi cập nhật trạng thái",
+        description: "Không thể cập nhật trạng thái đơn hàng",
+      });
+    } finally {
+      setBulkUpdateLoading(false);
     }
   };
 
@@ -686,8 +881,8 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({ employee, user }) =
     try {
       if (!selectedOrder?.quote_id) {
         notification.error({
-          message: 'Lỗi',
-          description: 'Không tìm thấy thông tin báo giá',
+          message: "Lỗi",
+          description: "Không tìm thấy thông tin báo giá",
         });
         return;
       }
@@ -703,12 +898,20 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({ employee, user }) =
         payment_status: values.payment_status,
         discount_percent: values.discount_percent || 0,
         tax_percent: values.tax_percent || 0,
-        valid_until: values.valid_until ? dayjs(values.valid_until).format('YYYY-MM-DD') : null,
+        valid_until: values.valid_until
+          ? dayjs(values.valid_until).format("YYYY-MM-DD")
+          : null,
         notes: values.notes,
         terms_conditions: values.terms_conditions,
       };
 
-      const { data: updatedQuote, error } = await updateB2BQuote(selectedOrder.quote_id, updateData);
+      console.log("Updating quote with data:", updateData);
+      console.log("Quote stage being sent:", values.quote_stage);
+
+      const { data: updatedQuote, error } = await updateB2BQuote(
+        selectedOrder.quote_id,
+        updateData
+      );
 
       if (error) {
         throw new Error(error.message);
@@ -716,8 +919,8 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({ employee, user }) =
 
       if (updatedQuote) {
         notification.success({
-          message: 'Thành công',
-          description: 'Cập nhật báo giá thành công',
+          message: "Thành công",
+          description: "Cập nhật báo giá thành công",
         });
         setEditQuoteModalOpen(false);
         editQuoteForm.resetFields();
@@ -725,162 +928,170 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({ employee, user }) =
         loadOrders(); // Reload data
       }
     } catch (error) {
-      console.error('Error updating quote:', error);
+      console.error("Error updating quote:", error);
       notification.error({
-        message: 'Lỗi cập nhật báo giá',
-        description: 'Không thể cập nhật báo giá',
+        message: "Lỗi cập nhật báo giá",
+        description: "Không thể cập nhật báo giá",
       });
     }
   };
 
-
   // Format currency
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND',
+    return new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
     }).format(amount);
   };
 
   // Get stage info
   const getStageInfo = (stage: string) => {
-    return B2B_ORDER_STAGES.find(s => s.key === stage) || B2B_ORDER_STAGES[0];
+    return B2B_ORDER_STAGES.find((s) => s.key === stage) || B2B_ORDER_STAGES[0];
   };
-
 
   // Payment Status
   const B2B_PAYMENT_STATUS = [
     {
-      key: 'unpaid',
-      title: 'Chưa thanh toán',
-      color: 'red',
+      key: "unpaid",
+      title: "Chưa thanh toán",
+      color: "red",
     },
     {
-      key: 'partial',
-      title: 'Thanh toán một phần',
-      color: 'orange',
+      key: "partial",
+      title: "Thanh toán một phần",
+      color: "orange",
     },
     {
-      key: 'paid',
-      title: '✅ Hoàn tất',
-      color: 'green',
+      key: "paid",
+      title: "✅ Hoàn tất",
+      color: "green",
     },
     {
-      key: 'overdue',
-      title: 'Quá hạn',
-      color: 'volcano',
+      key: "overdue",
+      title: "Quá hạn",
+      color: "volcano",
     },
   ];
 
   const getPaymentStatusInfo = (status: string) => {
-    const statusInfo = B2B_PAYMENT_STATUS.find(s => s.key === status);
-    return statusInfo || { title: status, color: 'default' };
+    const statusInfo = B2B_PAYMENT_STATUS.find((s) => s.key === status);
+    return statusInfo || { title: status, color: "default" };
   };
 
   const columns: ColumnsType<B2BQuoteWithStatus> = [
     {
-      title: 'Mã ĐH / BG',
-      dataIndex: 'quote_number',
-      key: 'quote_number',
+      title: (
+        <Checkbox
+          indeterminate={selectedOrderIds.length > 0 && selectedOrderIds.length < quotes.filter(quote => canEditOrderStatus(quote.quote_stage)).length}
+          checked={selectedOrderIds.length > 0 && selectedOrderIds.length === quotes.filter(quote => canEditOrderStatus(quote.quote_stage)).length}
+          onChange={(e) => handleSelectAll(e.target.checked)}
+        />
+      ),
+      key: "select",
+      width: 50,
+      render: (_, record) => (
+        <Checkbox
+          checked={selectedOrderIds.includes(record.quote_id)}
+          onChange={(e) => handleSelectOrder(record.quote_id, e.target.checked)}
+          disabled={!canEditOrderStatus(record.quote_stage)}
+        />
+      ),
+    },
+    {
+      title: "Mã ĐH / BG",
+      dataIndex: "quote_number",
+      key: "quote_number",
       width: 140,
       render: (text: string) => (
-        <Text strong style={{ color: '#722ed1' }}>
+        <Text strong style={{ color: "#722ed1" }}>
           {text}
         </Text>
       ),
     },
     {
-      title: 'Tên Khách hàng',
-      key: 'customer',
-      dataIndex: 'customer_name',
+      title: "Tên Khách hàng",
+      key: "customer",
+      dataIndex: "customer_name",
       width: 200,
       sorter: (a, b) => {
-        const nameA = a.customer_name || '';
-        const nameB = b.customer_name || '';
-        return nameA.localeCompare(nameB, 'vi', { sensitivity: 'base' });
+        const nameA = a.customer_name || "";
+        const nameB = b.customer_name || "";
+        return nameA.localeCompare(nameB, "vi", { sensitivity: "base" });
       },
-      sortDirections: ['ascend', 'descend'],
+      sortDirections: ["ascend", "descend"],
       showSorterTooltip: {
-        title: 'Sắp xếp theo tên khách hàng (A-Z / Z-A)'
+        title: "Sắp xếp theo tên khách hàng (A-Z / Z-A)",
       },
       render: (text, record) => (
         <div>
-          <Text strong>{text || 'N/A'}</Text>
+          <Text strong>{text || "N/A"}</Text>
           <br />
-          <Text type="secondary" style={{ fontSize: '12px' }}>
-            {record.customer_code || 'Chưa có mã'}
+          <Text type="secondary" style={{ fontSize: "12px" }}>
+            {record.customer_code || "Chưa có mã"}
           </Text>
         </div>
       ),
     },
     {
-      title: 'Ngày tạo',
-      dataIndex: 'quote_date',
-      key: 'quote_date',
+      title: "Ngày tạo",
+      dataIndex: "quote_date",
+      key: "quote_date",
       width: 110,
       sorter: (a, b) => {
         const dateA = a.quote_date ? dayjs(a.quote_date).valueOf() : 0;
         const dateB = b.quote_date ? dayjs(b.quote_date).valueOf() : 0;
         return dateA - dateB;
       },
-      sortDirections: ['ascend', 'descend'],
+      sortDirections: ["ascend", "descend"],
       showSorterTooltip: {
-        title: 'Sắp xếp theo ngày tạo (cũ → mới / mới → cũ)'
+        title: "Sắp xếp theo ngày tạo (cũ → mới / mới → cũ)",
       },
-      defaultSortOrder: 'descend',
-      render: (date: string) => dayjs(date).format('DD/MM/YYYY'),
+      defaultSortOrder: "descend",
+      render: (date: string) => dayjs(date).format("DD/MM/YYYY"),
     },
     {
-      title: 'Tổng Giá trị',
-      dataIndex: 'total_value',
-      key: 'total_value',
+      title: "Tổng Giá trị",
+      dataIndex: "total_value",
+      key: "total_value",
       width: 120,
       sorter: (a, b) => {
         const valueA = a.total_value || 0;
         const valueB = b.total_value || 0;
         return valueA - valueB;
       },
-      sortDirections: ['ascend', 'descend'],
+      sortDirections: ["ascend", "descend"],
       showSorterTooltip: {
-        title: 'Sắp xếp theo giá trị (thấp → cao / cao → thấp)'
+        title: "Sắp xếp theo giá trị (thấp → cao / cao → thấp)",
       },
       render: (value: number) => (
-        <Text strong style={{ color: '#52c41a' }}>
+        <Text strong style={{ color: "#52c41a" }}>
           {formatCurrency(value)}
         </Text>
       ),
     },
     {
-      title: 'Trạng thái Đơn hàng',
-      dataIndex: 'quote_stage',
-      key: 'quote_stage',
+      title: "Trạng thái Đơn hàng",
+      dataIndex: "quote_stage",
+      key: "quote_stage",
       width: 160,
       render: (stage: string) => {
         const stageInfo = getStageInfo(stage);
-        return (
-          <Tag color={stageInfo.color}>
-            {stageInfo.title}
-          </Tag>
-        );
+        return <Tag color={stageInfo.color}>{stageInfo.title}</Tag>;
       },
     },
     {
-      title: 'Trạng thái Thanh toán',
-      dataIndex: 'payment_status',
-      key: 'payment_status',
+      title: "Trạng thái Thanh toán",
+      dataIndex: "payment_status",
+      key: "payment_status",
       width: 150,
       render: (status: string) => {
         const statusInfo = getPaymentStatusInfo(status);
-        return (
-          <Tag color={statusInfo.color}>
-            {statusInfo.title}
-          </Tag>
-        );
+        return <Tag color={statusInfo.color}>{statusInfo.title}</Tag>;
       },
     },
     {
-      title: 'Hành Động',
-      key: 'actions',
+      title: "Hành Động",
+      key: "actions",
       width: 150,
       render: (_, record) => (
         <Space>
@@ -901,7 +1112,11 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({ employee, user }) =
               onClick={() => handleEditOrder(record)}
               size="small"
             >
-              Sửa
+              {isInventoryStaff &&
+              !userPermissions.includes("admin") &&
+              !userPermissions.includes("super-admin")
+                ? "Cập nhật"
+                : "Sửa"}
             </Button>
           )}
           {canEditQuotes && !canEditOrderStatus(record.quote_stage) && (
@@ -911,9 +1126,19 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({ employee, user }) =
               onClick={() => handleEditOrder(record)}
               size="small"
               disabled
-              title="Bạn không có quyền chỉnh sửa trạng thái này"
+              title={
+                isInventoryStaff &&
+                !userPermissions.includes("admin") &&
+                !userPermissions.includes("super-admin")
+                  ? "Đơn hàng này không thuộc phạm vi quản lý của bộ phận kho"
+                  : "Bạn không có quyền chỉnh sửa trạng thái này"
+              }
             >
-              Sửa
+              {isInventoryStaff &&
+              !userPermissions.includes("admin") &&
+              !userPermissions.includes("super-admin")
+                ? "Cập nhật"
+                : "Sửa"}
             </Button>
           )}
         </Space>
@@ -922,24 +1147,53 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({ employee, user }) =
   ];
 
   return (
-    <div style={{ padding: '24px' }}>
+    <div style={{ padding: "24px" }}>
       <Row justify="space-between" align="middle" style={{ marginBottom: 24 }}>
         <Col>
           <Title level={2} style={{ margin: 0 }}>
             📋 Danh sách Đơn hàng B2B
           </Title>
-          <Text type="secondary">
-            Quản lý và theo dõi tất cả đơn hàng bán buôn
-          </Text>
+          <div>
+            <Text type="secondary">
+              Quản lý và theo dõi tất cả đơn hàng bán buôn
+            </Text>
+            {isInventoryStaff &&
+              !userPermissions.includes("admin") &&
+              !userPermissions.includes("super-admin") && (
+                <div style={{ marginTop: 8 }}>
+                  <Tag color="orange" icon="📦">
+                    Chế độ Kho: Chỉ hiển thị đơn hàng đã được chấp nhận và cần
+                    xử lý
+                  </Tag>
+                </div>
+              )}
+          </div>
         </Col>
         <Col>
           <Space>
+            {selectedOrderIds.length > 0 && canEditQuotes && (
+              <Button
+                type="default"
+                icon={<EditOutlined />}
+                onClick={handleBulkUpdate}
+              >
+                Cập nhật trạng thái ({selectedOrderIds.length})
+              </Button>
+            )}
             {canCreateQuotes && (
-              <Button type="primary" icon={<PlusOutlined />} onClick={handleCreateQuote}>
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={handleCreateQuote}
+              >
                 {!isMobile && "Tạo báo giá mới"}
               </Button>
             )}
-            <Button icon={<ReloadOutlined />} onClick={loadOrders} loading={loading}>
+            <Button
+              icon={<ReloadOutlined />}
+              onClick={loadOrders}
+              loading={loading}
+            >
               Làm mới
             </Button>
           </Space>
@@ -955,12 +1209,12 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({ employee, user }) =
               value={searchKeyword}
               onChange={(e) => setSearchKeyword(e.target.value)}
               onSearch={handleSearch}
-              style={{ width: '100%' }}
+              style={{ width: "100%" }}
               enterButton={<SearchOutlined />}
               size="large"
             />
           </Col>
-          <Col>
+          <Col style={{ marginTop: screens.xs ? 16 : 0 }}>
             <Space>
               <Button
                 icon={<FilePdfOutlined />}
@@ -989,59 +1243,92 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({ employee, user }) =
               <Text type="secondary">Bộ lọc đang áp dụng: </Text>
               <Space wrap>
                 {filters.quoteStage && (
-                  <Tag color="blue" closable onClose={() => {
-                    const newFilters = { ...filters };
-                    delete newFilters.quoteStage;
-                    setFilters(newFilters);
-                  }}>
-                    🔄 {B2B_ORDER_STAGES.find(s => s.key === filters.quoteStage)?.title}
+                  <Tag
+                    color="blue"
+                    closable
+                    onClose={() => {
+                      const newFilters = { ...filters };
+                      delete newFilters.quoteStage;
+                      setFilters(newFilters);
+                    }}
+                  >
+                    🔄{" "}
+                    {
+                      B2B_ORDER_STAGES.find((s) => s.key === filters.quoteStage)
+                        ?.title
+                    }
                   </Tag>
                 )}
                 {filters.paymentStatus && (
-                  <Tag color="green" closable onClose={() => {
-                    const newFilters = { ...filters };
-                    delete newFilters.paymentStatus;
-                    setFilters(newFilters);
-                  }}>
-                    💰 {filters.paymentStatus === 'unpaid' ? 'Chưa thanh toán' :
-                         filters.paymentStatus === 'partial' ? 'Thanh toán một phần' :
-                         filters.paymentStatus === 'paid' ? 'Đã thanh toán' : 'Quá hạn thanh toán'}
+                  <Tag
+                    color="green"
+                    closable
+                    onClose={() => {
+                      const newFilters = { ...filters };
+                      delete newFilters.paymentStatus;
+                      setFilters(newFilters);
+                    }}
+                  >
+                    💰{" "}
+                    {filters.paymentStatus === "unpaid"
+                      ? "Chưa thanh toán"
+                      : filters.paymentStatus === "partial"
+                      ? "Thanh toán một phần"
+                      : filters.paymentStatus === "paid"
+                      ? "Đã thanh toán"
+                      : "Quá hạn thanh toán"}
                   </Tag>
                 )}
                 {filters.customerName && (
-                  <Tag color="purple" closable onClose={() => {
-                    const newFilters = { ...filters };
-                    delete newFilters.customerName;
-                    setFilters(newFilters);
-                  }}>
+                  <Tag
+                    color="purple"
+                    closable
+                    onClose={() => {
+                      const newFilters = { ...filters };
+                      delete newFilters.customerName;
+                      setFilters(newFilters);
+                    }}
+                  >
                     👤 {filters.customerName}
                   </Tag>
                 )}
                 {filters.creatorName && (
-                  <Tag color="orange" closable onClose={() => {
-                    const newFilters = { ...filters };
-                    delete newFilters.creatorName;
-                    setFilters(newFilters);
-                  }}>
+                  <Tag
+                    color="orange"
+                    closable
+                    onClose={() => {
+                      const newFilters = { ...filters };
+                      delete newFilters.creatorName;
+                      setFilters(newFilters);
+                    }}
+                  >
                     👨‍💼 {filters.creatorName}
                   </Tag>
                 )}
-                {(filters.startDate && filters.endDate) && (
-                  <Tag color="cyan" closable onClose={() => {
-                    const newFilters = { ...filters };
-                    delete newFilters.startDate;
-                    delete newFilters.endDate;
-                    setFilters(newFilters);
-                  }}>
+                {filters.startDate && filters.endDate && (
+                  <Tag
+                    color="cyan"
+                    closable
+                    onClose={() => {
+                      const newFilters = { ...filters };
+                      delete newFilters.startDate;
+                      delete newFilters.endDate;
+                      setFilters(newFilters);
+                    }}
+                  >
                     📅 {filters.startDate} - {filters.endDate}
                   </Tag>
                 )}
                 {filters.employeeId && (
-                  <Tag color="red" closable onClose={() => {
-                    const newFilters = { ...filters };
-                    delete newFilters.employeeId;
-                    setFilters(newFilters);
-                  }}>
+                  <Tag
+                    color="red"
+                    closable
+                    onClose={() => {
+                      const newFilters = { ...filters };
+                      delete newFilters.employeeId;
+                      setFilters(newFilters);
+                    }}
+                  >
                     🔒 Đơn hàng của tôi
                   </Tag>
                 )}
@@ -1053,6 +1340,29 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({ employee, user }) =
 
       {/* Orders Table */}
       <Card>
+        {selectedOrderIds.length > 0 && (
+          <div style={{
+            marginBottom: 16,
+            padding: "8px 16px",
+            backgroundColor: "#f0f8ff",
+            borderRadius: 6,
+            border: "1px solid #d6e4ff"
+          }}>
+            <Space>
+              <Text strong style={{ color: "#1890ff" }}>
+                📋 Đã chọn {selectedOrderIds.length} đơn hàng
+              </Text>
+              <Button
+                size="small"
+                type="link"
+                onClick={() => setSelectedOrderIds([])}
+                style={{ padding: 0 }}
+              >
+                Bỏ chọn tất cả
+              </Button>
+            </Space>
+          </div>
+        )}
         <Table
           columns={columns}
           dataSource={quotes}
@@ -1065,7 +1375,8 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({ employee, user }) =
             onChange: setCurrent,
             showSizeChanger: false,
             showQuickJumper: true,
-            showTotal: (total, range) => `${range[0]}-${range[1]} của ${total} đơn hàng`,
+            showTotal: (total, range) =>
+              `${range[0]}-${range[1]} của ${total} đơn hàng`,
           }}
           scroll={{ x: 1000 }}
         />
@@ -1079,60 +1390,108 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({ employee, user }) =
         open={filterDrawerOpen}
         width={420}
         extra={
-          <Text type="secondary" style={{ fontSize: '12px' }}>
+          <Text type="secondary" style={{ fontSize: "12px" }}>
             Lọc đơn hàng B2B theo nhiều tiêu chí
           </Text>
         }
       >
         {/* Quick Filter Buttons */}
         <div style={{ marginBottom: 24 }}>
-          <Text strong style={{ display: 'block', marginBottom: 12 }}>
+          <Text strong style={{ display: "block", marginBottom: 12 }}>
             ⚡ Lọc nhanh:
           </Text>
           <Space wrap>
-            <Button
-              size="small"
-              onClick={() => form.setFieldsValue({ quoteStage: 'pending_packaging' })}
-            >
-              🔵 Chờ đóng gói
-            </Button>
-            <Button
-              size="small"
-              onClick={() => form.setFieldsValue({ quoteStage: 'shipping' })}
-            >
-              🚚 Đang giao hàng
-            </Button>
-            <Button
-              size="small"
-              onClick={() => form.setFieldsValue({ paymentStatus: 'unpaid' })}
-            >
-              💰 Chưa thanh toán
-            </Button>
-            <Button
-              size="small"
-              onClick={() => form.setFieldsValue({ paymentStatus: 'overdue' })}
-            >
-              🔺 Quá hạn
-            </Button>
+            {isInventoryStaff &&
+            !userPermissions.includes("admin") &&
+            !userPermissions.includes("super-admin") ? (
+              // Inventory staff only sees inventory-relevant quick filters
+              <>
+                <Button
+                  size="small"
+                  onClick={() =>
+                    form.setFieldsValue({ quoteStage: "accepted" })
+                  }
+                >
+                  ✅ Đã chấp nhận
+                </Button>
+                <Button
+                  size="small"
+                  onClick={() =>
+                    form.setFieldsValue({ quoteStage: "pending_packaging" })
+                  }
+                >
+                  🔵 Chờ đóng gói
+                </Button>
+                <Button
+                  size="small"
+                  onClick={() =>
+                    form.setFieldsValue({ quoteStage: "packaged" })
+                  }
+                >
+                  🟡 Đã đóng gói
+                </Button>
+              </>
+            ) : (
+              // Non-inventory staff see all quick filters
+              <>
+                <Button
+                  size="small"
+                  onClick={() =>
+                    form.setFieldsValue({ quoteStage: "pending_packaging" })
+                  }
+                >
+                  🔵 Chờ đóng gói
+                </Button>
+                <Button
+                  size="small"
+                  onClick={() =>
+                    form.setFieldsValue({ quoteStage: "shipping" })
+                  }
+                >
+                  🚚 Đang giao hàng
+                </Button>
+                <Button
+                  size="small"
+                  onClick={() =>
+                    form.setFieldsValue({ paymentStatus: "unpaid" })
+                  }
+                >
+                  💰 Chưa thanh toán
+                </Button>
+                <Button
+                  size="small"
+                  onClick={() =>
+                    form.setFieldsValue({ paymentStatus: "overdue" })
+                  }
+                >
+                  🔺 Quá hạn
+                </Button>
+              </>
+            )}
           </Space>
         </div>
 
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={handleFilterApply}
-        >
+        <Form form={form} layout="vertical" onFinish={handleFilterApply}>
           <Form.Item name="dateRange" label="📅 Ngày tạo">
             <RangePicker
-              style={{ width: '100%' }}
+              style={{ width: "100%" }}
               format="DD/MM/YYYY"
-              placeholder={['Từ ngày', 'Đến ngày']}
+              placeholder={["Từ ngày", "Đến ngày"]}
             />
           </Form.Item>
 
           <Form.Item name="quoteStage" label="🔄 Trạng thái Vận hành">
             <Select placeholder="Chọn trạng thái vận hành" allowClear>
-              {B2B_ORDER_STAGES.map(stage => (
+              {(isInventoryStaff &&
+              !userPermissions.includes("admin") &&
+              !userPermissions.includes("super-admin")
+                ? B2B_ORDER_STAGES.filter((stage) =>
+                    ["accepted", "pending_packaging", "packaged"].includes(
+                      stage.key
+                    )
+                  )
+                : B2B_ORDER_STAGES
+              ).map((stage) => (
                 <Select.Option key={stage.key} value={stage.key}>
                   {stage.title}
                 </Select.Option>
@@ -1143,40 +1502,46 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({ employee, user }) =
           <Form.Item name="paymentStatus" label="💰 Trạng thái Thanh toán">
             <Select placeholder="Chọn trạng thái thanh toán" allowClear>
               <Select.Option value="unpaid">🔴 Chưa thanh toán</Select.Option>
-              <Select.Option value="partial">🟡 Thanh toán một phần</Select.Option>
+              <Select.Option value="partial">
+                🟡 Thanh toán một phần
+              </Select.Option>
               <Select.Option value="paid">🟢 Đã thanh toán</Select.Option>
-              <Select.Option value="overdue">🔺 Quá hạn thanh toán</Select.Option>
+              <Select.Option value="overdue">
+                🔺 Quá hạn thanh toán
+              </Select.Option>
             </Select>
-            <Text type="secondary" style={{ fontSize: '12px' }}>
+            <Text type="secondary" style={{ fontSize: "12px" }}>
               * Lọc theo trạng thái thanh toán từ cơ sở dữ liệu
             </Text>
           </Form.Item>
 
           <Form.Item name="customerName" label="👤 Tên Khách hàng">
             <Input placeholder="Nhập tên khách hàng để lọc" allowClear />
-            <Text type="secondary" style={{ fontSize: '12px' }}>
+            <Text type="secondary" style={{ fontSize: "12px" }}>
               * Tìm kiếm chính xác theo tên khách hàng
             </Text>
           </Form.Item>
 
           <Form.Item name="creatorName" label="👨‍💼 Người tạo">
             <Input placeholder="Nhập tên người tạo để lọc" allowClear />
-            <Text type="secondary" style={{ fontSize: '12px' }}>
+            <Text type="secondary" style={{ fontSize: "12px" }}>
               * Lọc theo nhân viên tạo đơn hàng
             </Text>
           </Form.Item>
 
           {employee?.employee_id && (
-            <Form.Item name="onlyMyQuotes" label="🔒 Bộ lọc cá nhân" valuePropName="checked">
+            <Form.Item
+              name="onlyMyQuotes"
+              label="🔒 Bộ lọc cá nhân"
+              valuePropName="checked"
+            >
               <Checkbox>Chỉ hiển thị đơn hàng do tôi tạo</Checkbox>
             </Form.Item>
           )}
 
           <Form.Item>
-            <Space style={{ width: '100%', justifyContent: 'space-between' }}>
-              <Button onClick={handleClearFilters}>
-                Xóa bộ lọc
-              </Button>
+            <Space style={{ width: "100%", justifyContent: "space-between" }}>
+              <Button onClick={handleClearFilters}>Xóa bộ lọc</Button>
               <Button type="primary" htmlType="submit">
                 Áp dụng
               </Button>
@@ -1222,13 +1587,13 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({ employee, user }) =
                 {selectedOrder.customer_email}
               </Descriptions.Item>
               <Descriptions.Item label="Ngày tạo">
-                {dayjs(selectedOrder.quote_date).format('DD/MM/YYYY')}
+                {dayjs(selectedOrder.quote_date).format("DD/MM/YYYY")}
               </Descriptions.Item>
               <Descriptions.Item label="Hạn báo giá">
-                {dayjs(selectedOrder.valid_until).format('DD/MM/YYYY')}
+                {dayjs(selectedOrder.valid_until).format("DD/MM/YYYY")}
               </Descriptions.Item>
               <Descriptions.Item label="Tổng giá trị">
-                <Text strong style={{ color: '#52c41a' }}>
+                <Text strong style={{ color: "#52c41a" }}>
                   {formatCurrency(selectedOrder.total_value)}
                 </Text>
               </Descriptions.Item>
@@ -1241,8 +1606,18 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({ employee, user }) =
                 </Tag>
               </Descriptions.Item>
               <Descriptions.Item label="Trạng thái thanh toán">
-                <Tag color={getPaymentStatusInfo(selectedOrder.payment_status || 'unpaid').color}>
-                  {getPaymentStatusInfo(selectedOrder.payment_status || 'unpaid').title}
+                <Tag
+                  color={
+                    getPaymentStatusInfo(
+                      selectedOrder.payment_status || "unpaid"
+                    ).color
+                  }
+                >
+                  {
+                    getPaymentStatusInfo(
+                      selectedOrder.payment_status || "unpaid"
+                    ).title
+                  }
                 </Tag>
               </Descriptions.Item>
               {selectedOrder.notes && (
@@ -1264,24 +1639,32 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({ employee, user }) =
           <Button key="cancel" onClick={() => setCreateQuoteModalOpen(false)}>
             Hủy
           </Button>,
-          <Button key="save-draft" type="default" onClick={async () => {
-            try {
-              const values = await createQuoteForm.validateFields();
-              handleSaveQuote(values, true);
-            } catch (error) {
-              console.error('Validation failed:', error);
-            }
-          }}>
+          <Button
+            key="save-draft"
+            type="default"
+            onClick={async () => {
+              try {
+                const values = await createQuoteForm.validateFields();
+                handleSaveQuote(values, true);
+              } catch (error) {
+                console.error("Validation failed:", error);
+              }
+            }}
+          >
             Lưu nháp
           </Button>,
-          <Button key="send" type="primary" onClick={async () => {
-            try {
-              const values = await createQuoteForm.validateFields();
-              handleSaveQuote(values, false);
-            } catch (error) {
-              console.error('Validation failed:', error);
-            }
-          }}>
+          <Button
+            key="send"
+            type="primary"
+            onClick={async () => {
+              try {
+                const values = await createQuoteForm.validateFields();
+                handleSaveQuote(values, false);
+              } catch (error) {
+                console.error("Validation failed:", error);
+              }
+            }}
+          >
             Gửi báo giá
           </Button>,
         ]}
@@ -1290,7 +1673,14 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({ employee, user }) =
         <Form layout="vertical" form={createQuoteForm}>
           <Row gutter={16} align="middle">
             <Col span={24}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: 16,
+                }}
+              >
                 <Text strong>Thông tin khách hàng</Text>
                 <Button
                   type="dashed"
@@ -1305,10 +1695,18 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({ employee, user }) =
           </Row>
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item name="customer_name" label="Tên khách hàng" rules={[{ required: true, message: 'Vui lòng nhập tên khách hàng' }]}>
+              <Form.Item
+                name="customer_name"
+                label="Tên khách hàng"
+                rules={[
+                  { required: true, message: "Vui lòng nhập tên khách hàng" },
+                ]}
+              >
                 <Input
                   placeholder="Nhập tên khách hàng"
-                  onBlur={(e) => handleCustomerChange('customer_name', e.target.value)}
+                  onBlur={(e) =>
+                    handleCustomerChange("customer_name", e.target.value)
+                  }
                 />
               </Form.Item>
             </Col>
@@ -1316,7 +1714,9 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({ employee, user }) =
               <Form.Item name="customer_code" label="Mã khách hàng">
                 <Input
                   placeholder="Mã khách hàng (tùy chọn)"
-                  onBlur={(e) => handleCustomerChange('customer_code', e.target.value)}
+                  onBlur={(e) =>
+                    handleCustomerChange("customer_code", e.target.value)
+                  }
                 />
               </Form.Item>
             </Col>
@@ -1324,18 +1724,39 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({ employee, user }) =
 
           <Row gutter={16}>
             <Col span={8}>
-              <Form.Item name="valid_until" label="Ngày hết hạn báo giá" rules={[{ required: true, message: 'Vui lòng chọn ngày hết hạn' }]}>
-                <DatePicker style={{ width: '100%' }} placeholder="Chọn ngày hết hạn" />
+              <Form.Item
+                name="valid_until"
+                label="Ngày hết hạn báo giá"
+                rules={[
+                  { required: true, message: "Vui lòng chọn ngày hết hạn" },
+                ]}
+              >
+                <DatePicker
+                  style={{ width: "100%" }}
+                  placeholder="Chọn ngày hết hạn"
+                />
               </Form.Item>
             </Col>
             <Col span={8}>
               <Form.Item name="discount_percent" label="Chiết khấu (%)">
-                <Input placeholder="0" suffix="%" type="number" min={0} max={100} />
+                <Input
+                  placeholder="0"
+                  suffix="%"
+                  type="number"
+                  min={0}
+                  max={100}
+                />
               </Form.Item>
             </Col>
             <Col span={8}>
               <Form.Item name="tax_percent" label="Thuế (%)">
-                <Input placeholder="0" suffix="%" type="number" min={0} max={100} />
+                <Input
+                  placeholder="0"
+                  suffix="%"
+                  type="number"
+                  min={0}
+                  max={100}
+                />
               </Form.Item>
             </Col>
           </Row>
@@ -1359,7 +1780,10 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({ employee, user }) =
             <Input.TextArea rows={2} placeholder="Địa chỉ khách hàng" />
           </Form.Item>
           <Form.Item name="notes" label="Ghi chú">
-            <Input.TextArea rows={3} placeholder="Thêm ghi chú cho báo giá..." />
+            <Input.TextArea
+              rows={3}
+              placeholder="Thêm ghi chú cho báo giá..."
+            />
           </Form.Item>
         </Form>
       </Modal>
@@ -1374,52 +1798,74 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({ employee, user }) =
           setSelectedOrder(null);
         }}
         footer={[
-          <Button key="cancel" onClick={() => {
-            setEditQuoteModalOpen(false);
-            editQuoteForm.resetFields();
-            setSelectedOrder(null);
-          }}>
+          <Button
+            key="cancel"
+            onClick={() => {
+              setEditQuoteModalOpen(false);
+              editQuoteForm.resetFields();
+              setSelectedOrder(null);
+            }}
+          >
             Hủy
           </Button>,
-          <Button key="update" type="primary" onClick={async () => {
-            try {
-              const values = await editQuoteForm.validateFields();
-              handleUpdateQuote(values);
-            } catch (error) {
-              console.error('Validation failed:', error);
-            }
-          }}>
+          <Button
+            key="update"
+            type="primary"
+            onClick={async () => {
+              try {
+                const values = await editQuoteForm.validateFields();
+                handleUpdateQuote(values);
+              } catch (error) {
+                console.error("Validation failed:", error);
+              }
+            }}
+          >
             Cập nhật
           </Button>,
         ]}
         width={800}
       >
         {selectedOrder && !canEditOrderStatus(selectedOrder.quote_stage) && (
-          <div style={{
-            backgroundColor: '#fff7e6',
-            border: '1px solid #ffd591',
-            borderRadius: '6px',
-            padding: '12px',
-            marginBottom: '16px',
-            display: 'flex',
-            alignItems: 'center'
-          }}>
-            <span style={{ color: '#fa8c16', marginRight: '8px' }}>⚠️</span>
-            <span style={{ color: '#ad6800' }}>
-              Trạng thái này thuộc phạm vi quản lý của bộ phận khác. Bạn chỉ có thể xem thông tin.
+          <div
+            style={{
+              backgroundColor: "#fff7e6",
+              border: "1px solid #ffd591",
+              borderRadius: "6px",
+              padding: "12px",
+              marginBottom: "16px",
+              display: "flex",
+              alignItems: "center",
+            }}
+          >
+            <span style={{ color: "#fa8c16", marginRight: "8px" }}>⚠️</span>
+            <span style={{ color: "#ad6800" }}>
+              Trạng thái này thuộc phạm vi quản lý của bộ phận khác. Bạn chỉ có
+              thể xem thông tin.
             </span>
           </div>
         )}
         <Form layout="vertical" form={editQuoteForm}>
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item name="customer_name" label="Tên khách hàng" rules={[{ required: true, message: 'Vui lòng nhập tên khách hàng' }]}>
-                <Input placeholder="Nhập tên khách hàng" />
+              <Form.Item
+                name="customer_name"
+                label="Tên khách hàng"
+                rules={[
+                  { required: true, message: "Vui lòng nhập tên khách hàng" },
+                ]}
+              >
+                <Input
+                  placeholder="Nhập tên khách hàng"
+                  disabled={isInventoryStaff}
+                />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item name="customer_code" label="Mã khách hàng">
-                <Input placeholder="Mã khách hàng (tùy chọn)" />
+                <Input
+                  placeholder="Mã khách hàng (tùy chọn)"
+                  disabled={isInventoryStaff}
+                />
               </Form.Item>
             </Col>
           </Row>
@@ -1431,40 +1877,86 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({ employee, user }) =
                 label={
                   <span>
                     Trạng thái đơn hàng
-                    {isSalesStaff && <Tag color="blue" style={{ marginLeft: 8 }}>Sales</Tag>}
-                    {isInventoryStaff && <Tag color="orange" style={{ marginLeft: 8 }}>Kho</Tag>}
-                    {isDeliveryStaff && <Tag color="green" style={{ marginLeft: 8 }}>Giao hàng</Tag>}
-                    {selectedOrder && !canEditOrderStatus(selectedOrder.quote_stage) && (
-                      <Tag color="red" style={{ marginLeft: 8 }}>Chỉ đọc</Tag>
+                    {isSalesStaff && (
+                      <Tag color="blue" style={{ marginLeft: 8 }}>
+                        Sales
+                      </Tag>
                     )}
+                    {isInventoryStaff && (
+                      <Tag color="orange" style={{ marginLeft: 8 }}>
+                        Kho
+                      </Tag>
+                    )}
+                    {isDeliveryStaff && (
+                      <Tag color="green" style={{ marginLeft: 8 }}>
+                        Giao hàng
+                      </Tag>
+                    )}
+                    {selectedOrder &&
+                      !canEditOrderStatus(selectedOrder.quote_stage) && (
+                        <Tag color="red" style={{ marginLeft: 8 }}>
+                          Chỉ đọc
+                        </Tag>
+                      )}
                   </span>
                 }
-                rules={[{ required: true, message: 'Vui lòng chọn trạng thái' }]}
+                rules={[
+                  { required: true, message: "Vui lòng chọn trạng thái" },
+                ]}
               >
                 <Select
                   placeholder="Chọn trạng thái đơn hàng"
-                  disabled={selectedOrder ? !canEditOrderStatus(selectedOrder.quote_stage) : false}
+                  disabled={
+                    selectedOrder
+                      ? !canEditOrderStatus(selectedOrder.quote_stage)
+                      : false
+                  }
                 >
-                  {getAllowedStatuses(selectedOrder?.quote_stage).map(stage => (
-                    <Select.Option key={stage.key} value={stage.key}>
-                      <Tag color={stage.color}>{stage.title}</Tag> - {stage.description}
-                    </Select.Option>
-                  ))}
+                  {getAllowedStatuses(selectedOrder?.quote_stage).map(
+                    (stage) => (
+                      <Select.Option key={stage.key} value={stage.key}>
+                        <Tag color={stage.color}>{stage.title}</Tag> -{" "}
+                        {stage.description}
+                      </Select.Option>
+                    )
+                  )}
                 </Select>
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="valid_until" label="Ngày hết hạn báo giá" rules={[{ required: true, message: 'Vui lòng chọn ngày hết hạn' }]}>
-                <DatePicker style={{ width: '100%' }} placeholder="Chọn ngày hết hạn" />
+              <Form.Item
+                name="valid_until"
+                label="Ngày hết hạn báo giá"
+                rules={[
+                  { required: true, message: "Vui lòng chọn ngày hết hạn" },
+                ]}
+              >
+                <DatePicker
+                  style={{ width: "100%" }}
+                  placeholder="Chọn ngày hết hạn"
+                  disabled={isInventoryStaff}
+                />
               </Form.Item>
             </Col>
           </Row>
 
           <Row gutter={16}>
             <Col span={8}>
-              <Form.Item name="payment_status" label="Trạng thái thanh toán" rules={[{ required: true, message: 'Vui lòng chọn trạng thái thanh toán' }]}>
-                <Select placeholder="Chọn trạng thái thanh toán">
-                  {B2B_PAYMENT_STATUS.map(status => (
+              <Form.Item
+                name="payment_status"
+                label="Trạng thái thanh toán"
+                rules={[
+                  {
+                    required: true,
+                    message: "Vui lòng chọn trạng thái thanh toán",
+                  },
+                ]}
+              >
+                <Select
+                  placeholder="Chọn trạng thái thanh toán"
+                  disabled={isInventoryStaff}
+                >
+                  {B2B_PAYMENT_STATUS.map((status) => (
                     <Select.Option key={status.key} value={status.key}>
                       <Tag color={status.color}>{status.title}</Tag>
                     </Select.Option>
@@ -1474,12 +1966,26 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({ employee, user }) =
             </Col>
             <Col span={8}>
               <Form.Item name="discount_percent" label="Chiết khấu (%)">
-                <Input placeholder="0" suffix="%" type="number" min={0} max={100} />
+                <Input
+                  placeholder="0"
+                  suffix="%"
+                  type="number"
+                  min={0}
+                  max={100}
+                  disabled={isInventoryStaff}
+                />
               </Form.Item>
             </Col>
             <Col span={8}>
               <Form.Item name="tax_percent" label="Thuế (%)">
-                <Input placeholder="0" suffix="%" type="number" min={0} max={100} />
+                <Input
+                  placeholder="0"
+                  suffix="%"
+                  type="number"
+                  min={0}
+                  max={100}
+                  disabled={isInventoryStaff}
+                />
               </Form.Item>
             </Col>
           </Row>
@@ -1487,26 +1993,48 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({ employee, user }) =
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item name="contact_person" label="Người liên hệ">
-                <Input placeholder="Tên người liên hệ" />
+                <Input
+                  placeholder="Tên người liên hệ"
+                  disabled={isInventoryStaff}
+                />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item name="customer_phone" label="Số điện thoại">
-                <Input placeholder="Số điện thoại liên hệ" />
+                <Input
+                  placeholder="Số điện thoại liên hệ"
+                  disabled={isInventoryStaff}
+                />
               </Form.Item>
             </Col>
           </Row>
           <Form.Item name="customer_email" label="Email">
-            <Input placeholder="Email khách hàng" type="email" />
+            <Input
+              placeholder="Email khách hàng"
+              type="email"
+              disabled={isInventoryStaff}
+            />
           </Form.Item>
           <Form.Item name="customer_address" label="Địa chỉ">
-            <Input.TextArea rows={2} placeholder="Địa chỉ khách hàng" />
+            <Input.TextArea
+              rows={2}
+              placeholder="Địa chỉ khách hàng"
+              disabled={isInventoryStaff}
+            />
           </Form.Item>
           <Form.Item name="notes" label="Ghi chú">
-            <Input.TextArea rows={3} placeholder="Thêm ghi chú cho báo giá..." />
+            <Input.TextArea
+              rows={3}
+              placeholder="Thêm ghi chú cho báo giá..."
+              disabled={isInventoryStaff}
+            />
           </Form.Item>
           <Form.Item name="terms_conditions" label="Điều khoản & Điều kiện">
-            <Input.TextArea rows={3} placeholder="Điều khoản và điều kiện..." />
+            <Input.TextArea
+              rows={3}
+              placeholder="Điều khoản và điều kiện..."
+              disabled={isInventoryStaff}
+            />
           </Form.Item>
         </Form>
       </Modal>
@@ -1520,20 +2048,27 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({ employee, user }) =
           createCustomerForm.resetFields();
         }}
         footer={[
-          <Button key="cancel" onClick={() => {
-            setCreateCustomerModalOpen(false);
-            createCustomerForm.resetFields();
-          }}>
+          <Button
+            key="cancel"
+            onClick={() => {
+              setCreateCustomerModalOpen(false);
+              createCustomerForm.resetFields();
+            }}
+          >
             Hủy
           </Button>,
-          <Button key="create" type="primary" onClick={async () => {
-            try {
-              const values = await createCustomerForm.validateFields();
-              handleSaveNewCustomer(values);
-            } catch (error) {
-              console.error('Validation failed:', error);
-            }
-          }}>
+          <Button
+            key="create"
+            type="primary"
+            onClick={async () => {
+              try {
+                const values = await createCustomerForm.validateFields();
+                handleSaveNewCustomer(values);
+              } catch (error) {
+                console.error("Validation failed:", error);
+              }
+            }}
+          >
             Tạo khách hàng
           </Button>,
         ]}
@@ -1542,12 +2077,24 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({ employee, user }) =
         <Form layout="vertical" form={createCustomerForm}>
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item name="customer_name" label="Tên khách hàng" rules={[{ required: true, message: 'Vui lòng nhập tên khách hàng' }]}>
+              <Form.Item
+                name="customer_name"
+                label="Tên khách hàng"
+                rules={[
+                  { required: true, message: "Vui lòng nhập tên khách hàng" },
+                ]}
+              >
                 <Input placeholder="Nhập tên khách hàng" />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="customer_code" label="Mã khách hàng" rules={[{ required: true, message: 'Vui lòng nhập mã khách hàng' }]}>
+              <Form.Item
+                name="customer_code"
+                label="Mã khách hàng"
+                rules={[
+                  { required: true, message: "Vui lòng nhập mã khách hàng" },
+                ]}
+              >
                 <Input placeholder="Nhập mã khách hàng" />
               </Form.Item>
             </Col>
@@ -1573,12 +2120,20 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({ employee, user }) =
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="customer_type" label="Loại khách hàng" rules={[{ required: true, message: 'Vui lòng chọn loại khách hàng' }]}>
+              <Form.Item
+                name="customer_type"
+                label="Loại khách hàng"
+                rules={[
+                  { required: true, message: "Vui lòng chọn loại khách hàng" },
+                ]}
+              >
                 <Select placeholder="Chọn loại khách hàng">
                   <Select.Option value="hospital">Bệnh viện</Select.Option>
                   <Select.Option value="pharmacy">Nhà thuốc</Select.Option>
                   <Select.Option value="clinic">Phòng khám</Select.Option>
-                  <Select.Option value="distributor">Nhà phân phối</Select.Option>
+                  <Select.Option value="distributor">
+                    Nhà phân phối
+                  </Select.Option>
                   <Select.Option value="other">Khác</Select.Option>
                 </Select>
               </Form.Item>
@@ -1596,7 +2151,11 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({ employee, user }) =
               </Form.Item>
             </Col>
             <Col span={8}>
-              <Form.Item name="payment_terms_days" label="Thời hạn thanh toán (ngày)" initialValue={30}>
+              <Form.Item
+                name="payment_terms_days"
+                label="Thời hạn thanh toán (ngày)"
+                initialValue={30}
+              >
                 <Input placeholder="30" type="number" min={1} max={365} />
               </Form.Item>
             </Col>
@@ -1606,6 +2165,70 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({ employee, user }) =
               </Form.Item>
             </Col>
           </Row>
+        </Form>
+      </Modal>
+
+      {/* Bulk Update Modal */}
+      <Modal
+        title={`Cập nhật trạng thái hàng loạt (${selectedOrderIds.length} đơn hàng)`}
+        open={bulkUpdateModalOpen}
+        closable={!bulkUpdateLoading}
+        maskClosable={!bulkUpdateLoading}
+        onCancel={() => {
+          if (!bulkUpdateLoading) {
+            setBulkUpdateModalOpen(false);
+            bulkUpdateForm.resetFields();
+          }
+        }}
+        footer={[
+          <Button
+            key="cancel"
+            disabled={bulkUpdateLoading}
+            onClick={() => {
+              setBulkUpdateModalOpen(false);
+              bulkUpdateForm.resetFields();
+            }}
+          >
+            Hủy
+          </Button>,
+          <Button
+            key="update"
+            type="primary"
+            loading={bulkUpdateLoading}
+            onClick={async () => {
+              try {
+                const values = await bulkUpdateForm.validateFields();
+                handleBulkUpdateSubmit(values);
+              } catch (error) {
+                console.error("Validation failed:", error);
+              }
+            }}
+          >
+            Cập nhật trạng thái
+          </Button>,
+        ]}
+        width={600}
+      >
+        <div style={{ marginBottom: 16 }}>
+          <Text type="secondary">
+            Trạng thái mới sẽ được áp dụng cho {selectedOrderIds.length} đơn hàng đã chọn
+          </Text>
+        </div>
+
+        <Form layout="vertical" form={bulkUpdateForm}>
+          <Form.Item
+            name="quote_stage"
+            label="Trạng thái đơn hàng mới"
+            rules={[{ required: true, message: "Vui lòng chọn trạng thái" }]}
+          >
+            <Select placeholder="Chọn trạng thái đơn hàng mới" size="large">
+              {getAllowedStatuses().map(stage => (
+                <Select.Option key={stage.key} value={stage.key}>
+                  <Tag color={stage.color}>{stage.title}</Tag> - {stage.description}
+                </Select.Option>
+              ))}
+            </Select>
+          </Form.Item>
         </Form>
       </Modal>
     </div>

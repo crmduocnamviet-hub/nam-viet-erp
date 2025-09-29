@@ -22,6 +22,7 @@ const EmployeeContext = createContext<EmployeeContextType | undefined>(
   undefined
 );
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useEmployee = () => {
   const context = useContext(EmployeeContext);
   if (context === undefined) {
@@ -44,7 +45,7 @@ export const EmployeeProvider: React.FC<EmployeeProviderProps> = ({
   const refreshEmployee = async () => {
     try {
       setLoading(true);
-      console.log('🔍 Fetching current employee data...');
+      console.log("🔍 Fetching current employee data...");
       const { data, error } = await getCurrentUser();
 
       if (error) {
@@ -52,13 +53,15 @@ export const EmployeeProvider: React.FC<EmployeeProviderProps> = ({
         setEmployee(null);
         setPermissions([]);
       } else if (data?.employee) {
-        console.log('✅ Employee data retrieved:', data.employee);
         const employeeData = data.employee;
 
         // Get permissions directly from database
         const databasePermissions = employeeData.permissions || [];
-        console.log(`🔑 Employee ${employeeData.full_name} database permissions:`, databasePermissions);
-        console.log('📊 Total permissions count:', databasePermissions.length);
+        console.log(
+          `🔑 Employee ${employeeData.full_name} database permissions:`,
+          databasePermissions
+        );
+        console.log("📊 Total permissions count:", databasePermissions.length);
 
         // Add permissions to employee object
         const employeeWithPermissions = {
@@ -83,7 +86,6 @@ export const EmployeeProvider: React.FC<EmployeeProviderProps> = ({
 
   const hasPermission = (permission: string): boolean => {
     const hasAccess = permissions.includes(permission);
-    console.log(`🔐 Permission check "${permission}":`, hasAccess ? '✅ ALLOWED' : '❌ DENIED');
     return hasAccess;
   };
 

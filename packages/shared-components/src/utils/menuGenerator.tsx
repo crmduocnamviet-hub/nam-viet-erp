@@ -1,5 +1,5 @@
 import React from "react";
-import { MenuProps } from "antd";
+import type { MenuProps } from "antd";
 import {
   ShoppingCartOutlined,
   CalendarOutlined,
@@ -10,7 +10,6 @@ import {
   RocketOutlined,
   SettingOutlined,
   UserOutlined,
-  TeamOutlined,
 } from "@ant-design/icons";
 import { hasScreenPermission } from "../screens";
 

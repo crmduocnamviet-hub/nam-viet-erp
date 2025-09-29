@@ -29,7 +29,7 @@ interface InventoryStaffDashboardPageProps {
 
 const InventoryStaffDashboardPage: React.FC<InventoryStaffDashboardPageProps> = ({ employee }) => {
   const [todos, setTodos] = useState<TodoItem[]>([]);
-  const [stats, setStats] = useState({
+  const [stats] = useState({
     pendingPackaging: 15,
     lowStockItems: 8,
     qualityChecks: 4,

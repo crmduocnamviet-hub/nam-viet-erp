@@ -4,7 +4,7 @@ import { supabase } from "./supabase";
 export const getWarehouse = async () => {
   const response: PostgrestSingleResponse<IWarehouse[]> = await supabase
     .from("warehouses")
-    .select("id, name");
+    .select("*");
   return response;
 };
 

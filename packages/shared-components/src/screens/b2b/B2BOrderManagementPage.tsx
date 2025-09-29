@@ -14,14 +14,12 @@ import {
   Statistic,
   Steps,
   Grid,
-  Divider,
 } from 'antd';
 import {
   DollarOutlined,
   ShopOutlined,
   ReloadOutlined,
   FileTextOutlined,
-  PlusOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
   WarningOutlined,
@@ -38,38 +36,6 @@ const { Step } = Steps;
 const { RangePicker } = DatePicker;
 const { useBreakpoint } = Grid;
 
-// B2B Quote interface matching the service
-interface B2BQuote {
-  quote_id: string;
-  quote_number: string;
-  customer_name: string;
-  customer_code?: string | null;
-  customer_contact_person?: string | null;
-  customer_phone?: string | null;
-  customer_email?: string | null;
-  customer_address?: string | null;
-  quote_stage: 'draft' | 'sent' | 'negotiating' | 'accepted' | 'rejected' | 'expired';
-  operation_status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
-  payment_status: 'unpaid' | 'partial' | 'paid' | 'overdue';
-  total_value: number;
-  subtotal: number;
-  discount_percent: number;
-  discount_amount: number;
-  tax_percent: number;
-  tax_amount: number;
-  quote_date: string;
-  valid_until: string;
-  notes?: string | null;
-  terms_conditions?: string | null;
-  created_by_employee_id: string;
-  created_at: string;
-  updated_at: string;
-  quote_items?: any[];
-  employee?: {
-    full_name: string;
-    employee_code: string;
-  };
-}
 
 // B2B Order Stages
 const B2B_ORDER_STAGES = [
@@ -234,10 +200,6 @@ const B2BOrderManagementPage: React.FC<B2BOrderManagementPageProps> = ({ employe
   };
 
 
-  // Handle create quote
-  const handleCreateQuote = () => {
-    setCreateQuoteModalOpen(true);
-  };
 
   // Handle save quote
   const handleSaveQuote = async (values: any, isDraft: boolean = true) => {
@@ -303,10 +265,6 @@ const B2BOrderManagementPage: React.FC<B2BOrderManagementPageProps> = ({ employe
     }).format(amount);
   };
 
-  // Get stage info
-  const getStageInfo = (stage: string) => {
-    return B2B_ORDER_STAGES.find(s => s.key === stage) || B2B_ORDER_STAGES[0];
-  };
 
 
   return (
