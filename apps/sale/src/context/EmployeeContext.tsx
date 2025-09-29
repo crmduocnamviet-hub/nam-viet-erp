@@ -1,17 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { getCurrentUser } from "@nam-viet-erp/services";
 
-interface Employee {
-  employee_id: string;
-  full_name: string;
-  employee_code: string | null;
-  is_active: boolean;
-  user_id?: string;
-  permissions: string[]; // Permissions from database
-}
-
 interface EmployeeContextType {
-  employee: Employee | null;
+  employee: IEmployee | null;
   loading: boolean;
   permissions: string[];
   hasPermission: (permission: string) => boolean;
@@ -38,7 +29,7 @@ interface EmployeeProviderProps {
 export const EmployeeProvider: React.FC<EmployeeProviderProps> = ({
   children,
 }) => {
-  const [employee, setEmployee] = useState<Employee | null>(null);
+  const [employee, setEmployee] = useState<IEmployee | null>(null);
   const [loading, setLoading] = useState(true);
   const [permissions, setPermissions] = useState<string[]>([]);
 

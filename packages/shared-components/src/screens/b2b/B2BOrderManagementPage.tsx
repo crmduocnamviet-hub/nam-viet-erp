@@ -14,6 +14,8 @@ import {
   Statistic,
   Steps,
   Grid,
+  Tag,
+  Descriptions,
 } from 'antd';
 import {
   DollarOutlined,
@@ -23,6 +25,8 @@ import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   WarningOutlined,
+  UserOutlined,
+  SearchOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 // Employee context will be passed as props
@@ -30,6 +34,7 @@ import {
   getQuoteStatistics,
   createB2BQuote,
 } from '@nam-viet-erp/services';
+import { B2BCustomerSearchModal } from '@nam-viet-erp/shared-components';
 
 const { Title, Text } = Typography;
 const { Step } = Steps;
@@ -89,11 +94,6 @@ const B2B_ORDER_STAGES = [
   },
 ];
 
-interface Employee {
-  employee_id: string;
-  full_name: string;
-  employee_code: string;
-}
 
 interface User {
   id: string;
@@ -102,7 +102,7 @@ interface User {
 }
 
 interface B2BOrderManagementPageProps {
-  employee?: Employee | null;
+  employee?: IEmployee | null;
   user?: User | null;
 }
 
@@ -115,6 +115,10 @@ const B2BOrderManagementPage: React.FC<B2BOrderManagementPageProps> = ({ employe
   const [loading, setLoading] = useState(false);
   const screens = useBreakpoint();
   const isMobile = !screens.lg;
+
+  // Customer search state
+  const [customerSearchModalOpen, setCustomerSearchModalOpen] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState<IB2BCustomer | null>(null);
 
   // Role detection
   const userPermissions = user?.permissions || [];
@@ -212,13 +216,21 @@ const B2BOrderManagementPage: React.FC<B2BOrderManagementPageProps> = ({ employe
         return;
       }
 
+      if (!selectedCustomer) {
+        notification.error({
+          message: 'Lỗi',
+          description: 'Vui lòng chọn khách hàng trước khi tạo báo giá',
+        });
+        return;
+      }
+
       const quoteData = {
-        customer_name: values.customer_name,
-        customer_code: values.customer_code,
-        customer_contact_person: values.contact_person,
-        customer_phone: values.customer_phone,
-        customer_email: values.customer_email,
-        customer_address: values.customer_address,
+        customer_name: selectedCustomer.customer_name,
+        customer_code: selectedCustomer.customer_code,
+        customer_contact_person: selectedCustomer.contact_person,
+        customer_phone: selectedCustomer.phone_number,
+        customer_email: selectedCustomer.email,
+        customer_address: selectedCustomer.address,
         quote_stage: isDraft ? 'draft' as const : 'sent' as const,
         total_value: 0,
         subtotal: 0,
@@ -246,6 +258,7 @@ const B2BOrderManagementPage: React.FC<B2BOrderManagementPageProps> = ({ employe
         });
         setCreateQuoteModalOpen(false);
         createQuoteForm.resetFields();
+        setSelectedCustomer(null); // Clear selected customer
         loadStatistics(); // Reload statistics
       }
     } catch (error) {
@@ -265,7 +278,25 @@ const B2BOrderManagementPage: React.FC<B2BOrderManagementPageProps> = ({ employe
     }).format(amount);
   };
 
+  // Handle customer selection
+  const handleSelectCustomer = (customer: IB2BCustomer) => {
+    setSelectedCustomer(customer);
 
+    // Auto-fill form with customer data
+    createQuoteForm.setFieldsValue({
+      customer_name: customer.customer_name,
+      customer_code: customer.customer_code,
+      contact_person: customer.contact_person,
+      customer_phone: customer.phone_number,
+      customer_email: customer.email,
+      customer_address: customer.address,
+    });
+
+    notification.success({
+      message: 'Đã chọn khách hàng',
+      description: `Đã chọn khách hàng ${customer.customer_name}`,
+    });
+  };
 
   return (
     <div style={{ padding: '24px' }}>
@@ -589,9 +620,17 @@ const B2BOrderManagementPage: React.FC<B2BOrderManagementPageProps> = ({ employe
       <Modal
         title="Tạo báo giá B2B mới"
         open={createQuoteModalOpen}
-        onCancel={() => setCreateQuoteModalOpen(false)}
+        onCancel={() => {
+          setCreateQuoteModalOpen(false);
+          createQuoteForm.resetFields();
+          setSelectedCustomer(null);
+        }}
         footer={[
-          <Button key="cancel" onClick={() => setCreateQuoteModalOpen(false)}>
+          <Button key="cancel" onClick={() => {
+            setCreateQuoteModalOpen(false);
+            createQuoteForm.resetFields();
+            setSelectedCustomer(null);
+          }}>
             Hủy
           </Button>,
           <Button key="save-draft" type="default" onClick={async () => {
@@ -617,20 +656,67 @@ const B2BOrderManagementPage: React.FC<B2BOrderManagementPageProps> = ({ employe
         ]}
         width={800}
       >
-        <Form layout="vertical" form={createQuoteForm}>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="customer_name" label="Tên khách hàng" rules={[{ required: true, message: 'Vui lòng nhập tên khách hàng' }]}>
-                <Input placeholder="Nhập tên khách hàng" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="customer_code" label="Mã khách hàng">
-                <Input placeholder="Mã khách hàng (tùy chọn)" />
-              </Form.Item>
-            </Col>
-          </Row>
+        {/* Customer Selection Section */}
+        <Card
+          title={
+            <Space>
+              <UserOutlined />
+              <span>Thông tin Khách hàng</span>
+              {selectedCustomer && (
+                <Tag color="green">Đã chọn: {selectedCustomer.customer_name}</Tag>
+              )}
+            </Space>
+          }
+          style={{ marginBottom: 16 }}
+          extra={
+            <Button
+              type="primary"
+              icon={<SearchOutlined />}
+              onClick={() => setCustomerSearchModalOpen(true)}
+            >
+              {selectedCustomer ? 'Đổi khách hàng' : 'Chọn khách hàng'}
+            </Button>
+          }
+        >
+          {selectedCustomer ? (
+            <Descriptions bordered column={2} size="small">
+              <Descriptions.Item label="Tên khách hàng" span={2}>
+                <Text strong>{selectedCustomer.customer_name}</Text>
+              </Descriptions.Item>
+              <Descriptions.Item label="Mã khách hàng">
+                {selectedCustomer.customer_code}
+              </Descriptions.Item>
+              <Descriptions.Item label="Loại khách hàng">
+                <Tag color="blue">
+                  {selectedCustomer.customer_type === 'hospital' && 'Bệnh viện'}
+                  {selectedCustomer.customer_type === 'pharmacy' && 'Nhà thuốc'}
+                  {selectedCustomer.customer_type === 'clinic' && 'Phòng khám'}
+                  {selectedCustomer.customer_type === 'distributor' && 'Nhà phân phối'}
+                  {selectedCustomer.customer_type === 'other' && 'Khác'}
+                </Tag>
+              </Descriptions.Item>
+              <Descriptions.Item label="Người liên hệ">
+                {selectedCustomer.contact_person || 'Chưa có'}
+              </Descriptions.Item>
+              <Descriptions.Item label="Số điện thoại">
+                {selectedCustomer.phone_number || 'Chưa có'}
+              </Descriptions.Item>
+              <Descriptions.Item label="Email">
+                {selectedCustomer.email || 'Chưa có'}
+              </Descriptions.Item>
+              <Descriptions.Item label="Địa chỉ" span={2}>
+                {selectedCustomer.address || 'Chưa có'}
+              </Descriptions.Item>
+            </Descriptions>
+          ) : (
+            <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>
+              <UserOutlined style={{ fontSize: 48, marginBottom: 16 }} />
+              <div>Vui lòng chọn khách hàng để tạo báo giá</div>
+            </div>
+          )}
+        </Card>
 
+        <Form layout="vertical" form={createQuoteForm}>
           <Row gutter={16}>
             <Col span={8}>
               <Form.Item name="valid_until" label="Ngày hết hạn báo giá" rules={[{ required: true, message: 'Vui lòng chọn ngày hết hạn' }]}>
@@ -649,29 +735,19 @@ const B2BOrderManagementPage: React.FC<B2BOrderManagementPageProps> = ({ employe
             </Col>
           </Row>
 
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="contact_person" label="Người liên hệ">
-                <Input placeholder="Tên người liên hệ" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="customer_phone" label="Số điện thoại">
-                <Input placeholder="Số điện thoại liên hệ" />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Form.Item name="customer_email" label="Email">
-            <Input placeholder="Email khách hàng" type="email" />
-          </Form.Item>
-          <Form.Item name="customer_address" label="Địa chỉ">
-            <Input.TextArea rows={2} placeholder="Địa chỉ khách hàng" />
-          </Form.Item>
           <Form.Item name="notes" label="Ghi chú">
             <Input.TextArea rows={3} placeholder="Thêm ghi chú cho báo giá..." />
           </Form.Item>
         </Form>
       </Modal>
+
+      {/* Customer Search Modal */}
+      <B2BCustomerSearchModal
+        open={customerSearchModalOpen}
+        onClose={() => setCustomerSearchModalOpen(false)}
+        onSelect={handleSelectCustomer}
+        title="Chọn Khách hàng B2B cho báo giá"
+      />
     </div>
   );
 };

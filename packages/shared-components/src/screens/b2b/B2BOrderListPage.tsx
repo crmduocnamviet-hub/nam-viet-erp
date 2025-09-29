@@ -117,12 +117,6 @@ const B2B_ORDER_STAGES = [
   },
 ];
 
-interface Employee {
-  employee_id: string;
-  full_name: string;
-  employee_code: string;
-}
-
 interface User {
   id: string;
   name: string;
@@ -130,7 +124,7 @@ interface User {
 }
 
 interface B2BOrderListPageProps {
-  employee?: Employee | null;
+  employee?: IEmployee | null;
   user?: User | null;
 }
 

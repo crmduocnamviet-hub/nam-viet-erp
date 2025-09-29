@@ -21,7 +21,8 @@
     "react-dom": "^19.1.1",
     "antd": "^5.27.3",
     "@ant-design/icons": "^6.0.1",
-    "@nam-viet-erp/services": "*"
+    "@nam-viet-erp/services": "*",
+    "qr-scanner": "^1.4.2"
   },
   "devDependencies": {
     "typescript": "~5.8.3"

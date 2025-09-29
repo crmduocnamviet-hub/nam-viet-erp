@@ -35,7 +35,7 @@ import {
   DollarOutlined,
   WarningOutlined,
 } from "@ant-design/icons";
-import { useDebounce } from "@nam-viet-erp/shared-components";
+import { useDebounce, QRScanner } from "@nam-viet-erp/shared-components";
 import {
   processSaleTransaction,
   searchProducts,
@@ -157,6 +157,9 @@ const PosPage: React.FC<PosPageProps> = ({ employee, ...props }) => {
     useState(false);
   const [createCustomerForm] = Form.useForm();
   const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
+
+  // QR Scanner
+  const [isQRScannerOpen, setIsQRScannerOpen] = useState(false);
 
   // Cart modal for mobile
   const [isCartModalOpen, setIsCartModalOpen] = useState(false);
@@ -569,6 +572,17 @@ const PosPage: React.FC<PosPageProps> = ({ employee, ...props }) => {
     }
   };
 
+  // QR Scanner Handler
+  const handleQRScan = (scannedData: string) => {
+    // Set the scanned data as search term to trigger product search
+    setSearchTerm(scannedData);
+
+    notification.success({
+      message: "Quét QR thành công",
+      description: `Đã quét: ${scannedData}`,
+    });
+  };
+
   const handleRemoveFromCart = (productId: number) => {
     setCart((prevCart) => (prevCart || []).filter((item) => item.id !== productId));
   };
@@ -883,14 +897,24 @@ const PosPage: React.FC<PosPageProps> = ({ employee, ...props }) => {
               }}
             >
               <>
-                <Search
-                  placeholder="Quét mã vạch hoặc tìm tên thuốc..."
-                  size="large"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  loading={isSearching}
-                  style={{ marginBottom: 8 }}
-                />
+                <Space.Compact style={{ width: '100%', marginBottom: 8 }}>
+                  <Search
+                    placeholder="Quét mã vạch hoặc tìm tên thuốc..."
+                    size="large"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    loading={isSearching}
+                    style={{ width: '100%' }}
+                  />
+                  <Tooltip title="Quét mã QR">
+                    <Button
+                      icon={<QrcodeOutlined />}
+                      size="large"
+                      onClick={() => setIsQRScannerOpen(true)}
+                      style={{ flexShrink: 0 }}
+                    />
+                  </Tooltip>
+                </Space.Compact>
                 {selectedWarehouse && (
                   <div
                     style={{
@@ -1548,6 +1572,13 @@ const PosPage: React.FC<PosPageProps> = ({ employee, ...props }) => {
           </Form.Item>
         </Form>
       </Modal>
+
+      <QRScanner
+        visible={isQRScannerOpen}
+        onClose={() => setIsQRScannerOpen(false)}
+        onScan={handleQRScan}
+        title="Quét mã QR sản phẩm"
+      />
     </div>
   );
 };
