@@ -26,11 +26,11 @@ import {
   CheckCircleOutlined,
   CameraOutlined,
   DeleteOutlined,
+  QrcodeOutlined,
 } from "@ant-design/icons";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import dayjs from "dayjs";
-import { QrcodeOutlined } from "@ant-design/icons";
 import CameraScanner from "../features/warehouse/components/CameraScanner";
 import SpeechToTextInput from "../features/warehouse/components/SpeechToTextInput";
 
@@ -47,11 +47,8 @@ const ReceivePurchaseOrderContent: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [poDetails, setPoDetails] = useState<any>(null);
   const [orderItems, setOrderItems] = useState<any[]>([]);
-  // State cho các modal
   const [setIsAiModalOpen] = useState(false);
   const [isManualScanModalOpen, setIsManualScanModalOpen] = useState(false);
-
-  // Ref để focus vào ô input sau khi quét
   const inputRefs = useRef<Record<string, any>>({});
 
   const fetchData = useCallback(async () => {
@@ -75,11 +72,11 @@ const ReceivePurchaseOrderContent: React.FC = () => {
       const formattedItems = itemsData.map((item) => ({
         key: item.products.id,
         product_id: item.products.id,
+        products: item.products,
         name: item.products.name,
         sku: item.products.sku,
         image_url: item.products.image_url,
         ordered_quantity: item.quantity,
-        // Các trường mới sẽ được điền ở đây
         invoice_quantity: item.invoiced_quantity ?? item.quantity,
         received_quantity: item.received_quantity ?? item.quantity,
         lot_number: "",
@@ -122,7 +119,6 @@ const ReceivePurchaseOrderContent: React.FC = () => {
     const productInOrder = orderItems.find(
       (item) => item.products?.barcode === scannedBarcode
     );
-
     if (productInOrder) {
       const inputRef = inputRefs.current[productInOrder.product_id]?.lot_number;
       if (inputRef) {
@@ -134,14 +130,12 @@ const ReceivePurchaseOrderContent: React.FC = () => {
         .select("*")
         .eq("barcode", scannedBarcode)
         .single();
-
       if (productData) {
         modal.confirm({
           title: "Sản phẩm không có trong đơn hàng",
           content: `Sản phẩm "${productData.name}" không nằm trong đơn đặt hàng này. Bạn có muốn thêm vào không?`,
           okText: "Thêm vào",
           onOk: () => {
-            // Bỏ async ở đây nếu không có await bên trong
             const newItem = {
               key: productData.id,
               product_id: productData.id,
@@ -151,28 +145,25 @@ const ReceivePurchaseOrderContent: React.FC = () => {
               image_url: productData.image_url,
               ordered_quantity: 0,
               received_quantity: 1,
-              lot_number: "",
-              expiry_date: null,
             };
             setOrderItems((prev) => [...prev, newItem]);
           },
         });
       } else {
         notification.error({
-          message: "Không tìm thấy sản phẩm với mã vạch này trong hệ thống.",
+          message: "Không tìm thấy sản phẩm với mã vạch này.",
         });
       }
     }
   };
 
   // const handleScanInvoice = () => {
-  //   notification.info({ message: "Chức năng AI đang được phát triển" });
+  //     notification.info({message: "Chức năng AI đang được phát triển"});
   // };
 
   const handleCompleteReceiving = () => {
     notification.info({ message: "Chức năng đang được phát triển" });
   };
-
   // THAY THẾ TOÀN BỘ BIẾN `columns` BẰNG PHIÊN BẢN NÀY
   const columns: TableProps<any>["columns"] = [
     {
