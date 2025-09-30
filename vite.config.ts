@@ -3,15 +3,16 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
-import basicSsl from "@vitejs/plugin-basic-ssl"; // <-- Thêm import mới
+import basicSsl from "@vitejs/plugin-basic-ssl"; // <-- Import plugin ssl
 
 export default defineConfig({
+  // Thêm khối server và bật https
   server: {
-    https: true, // <-- Bật chế độ HTTPS
+    https: true,
   },
   plugins: [
     react(),
-    basicSsl(), // <-- Thêm plugin vào đây
+    basicSsl(), // <-- Kích hoạt plugin ssl
     VitePWA({
       registerType: "autoUpdate",
       includeAssets: ["favicon.ico", "apple-touch-icon.png", "masked-icon.svg"],

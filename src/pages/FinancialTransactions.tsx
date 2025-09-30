@@ -288,7 +288,7 @@ const TransactionPageContent: React.FC = () => {
       if (error) throw error;
       notification.success({ message: `Đã xác nhận thực thi giao dịch!` });
       setIsViewModalOpen(false);
-      // fetchData() sẽ được gọi tự động bởi real-time channel
+      // fetchData(filters) sẽ được gọi tự động bởi real-time channel
     } catch (error: any) {
       notification.error({
         message: `Xác nhận thất bại`,
@@ -316,7 +316,7 @@ const TransactionPageContent: React.FC = () => {
           if (error) throw error;
           notification.success({ message: `Duyệt chi thành công!` });
           setIsViewModalOpen(false);
-          fetchData();
+          fetchData(filters);
         } catch (error: any) {
           notification.error({
             message: `Duyệt chi thất bại`,
@@ -342,7 +342,7 @@ const TransactionPageContent: React.FC = () => {
             .eq("id", transactionId);
           if (error) throw error;
           notification.success({ message: "Đã xóa phiếu thành công!" });
-          fetchData(); // Tải lại dữ liệu
+          fetchData(filters); // Tải lại dữ liệu
         } catch (error: any) {
           notification.error({
             message: "Xóa thất bại",

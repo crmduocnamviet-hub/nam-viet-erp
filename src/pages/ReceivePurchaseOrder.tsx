@@ -119,6 +119,7 @@ const ReceivePurchaseOrderContent: React.FC = () => {
     const productInOrder = orderItems.find(
       (item) => item.products?.barcode === scannedBarcode
     );
+
     if (productInOrder) {
       const inputRef = inputRefs.current[productInOrder.product_id]?.lot_number;
       if (inputRef) {
@@ -130,6 +131,7 @@ const ReceivePurchaseOrderContent: React.FC = () => {
         .select("*")
         .eq("barcode", scannedBarcode)
         .single();
+
       if (productData) {
         modal.confirm({
           title: "Sản phẩm không có trong đơn hàng",
