@@ -35,6 +35,7 @@ import { supabase } from "../lib/supabaseClient";
 import dayjs from "dayjs";
 import { QrcodeOutlined } from "@ant-design/icons";
 import CameraScanner from "../features/warehouse/components/CameraScanner";
+import SpeechToTextInput from "../features/warehouse/components/SpeechToTextInput";
 
 const { Title, Text } = Typography;
 const { useBreakpoint } = Grid;
@@ -180,6 +181,7 @@ const ReceivePurchaseOrderContent: React.FC = () => {
     notification.info({ message: "Chức năng đang được phát triển" });
   };
 
+  // THAY THẾ TOÀN BỘ BIẾN `columns` BẰNG PHIÊN BẢN NÀY
   const columns: TableProps<any>["columns"] = [
     {
       title: "Sản phẩm",
@@ -205,7 +207,11 @@ const ReceivePurchaseOrderContent: React.FC = () => {
       width: 120,
       render: (text: number, record: any) => (
         <InputNumber
-          ref={(el) => (inputRefs.current[record.product_id] = el)} // Gán ref
+          ref={(el) => {
+            if (!inputRefs.current[record.product_id])
+              inputRefs.current[record.product_id] = {};
+            inputRefs.current[record.product_id].received_quantity = el;
+          }}
           min={0}
           value={text}
           onChange={(val) =>
@@ -219,12 +225,12 @@ const ReceivePurchaseOrderContent: React.FC = () => {
       title: "Số Lô",
       dataIndex: "lot_number",
       key: "lot_number",
-      width: 150,
+      width: 180,
       render: (text: string, record: any) => (
-        <Input
+        <SpeechToTextInput
           value={text}
-          onChange={(e) =>
-            handleItemChange(record.product_id, "lot_number", e.target.value)
+          onConfirm={(value) =>
+            handleItemChange(record.product_id, "lot_number", value)
           }
         />
       ),
@@ -233,13 +239,12 @@ const ReceivePurchaseOrderContent: React.FC = () => {
       title: "Hạn Dùng",
       dataIndex: "expiry_date",
       key: "expiry_date",
-      width: 160,
+      width: 180,
       render: (text: string, record: any) => (
-        <Input
-          type="date"
+        <SpeechToTextInput
           value={text}
-          onChange={(e) =>
-            handleItemChange(record.product_id, "expiry_date", e.target.value)
+          onConfirm={(value) =>
+            handleItemChange(record.product_id, "expiry_date", value)
           }
         />
       ),
@@ -411,29 +416,6 @@ const ReceivePurchaseOrderContent: React.FC = () => {
             isActive={isManualScanModalOpen}
           />
         )}
-      </Modal>
-      <Modal
-        title="Tải lên Hóa đơn VAT để Đối soát"
-        open={isAiModalOpen}
-        onCancel={() => setIsAiModalOpen(false)}
-        footer={null}
-        destroyOnClose
-      >
-        <Upload.Dragger
-          customRequest={handleScanInvoice}
-          showUploadList={false}
-          accept="application/pdf,image/png,image/jpeg"
-        >
-          <p className="ant-upload-drag-icon">
-            <UploadOutlined />
-          </p>
-          <p className="ant-upload-text">
-            Kéo thả file PDF/ảnh hoặc bấm để chọn file
-          </p>
-          <p className="ant-upload-hint">
-            AI sẽ tự động đọc và đối soát với đơn hàng.
-          </p>
-        </Upload.Dragger>
       </Modal>
     </Spin>
   );

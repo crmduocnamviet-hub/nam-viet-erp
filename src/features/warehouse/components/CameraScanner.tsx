@@ -1,9 +1,8 @@
 // src/features/warehouse/components/CameraScanner.tsx
 
 import React, { useEffect, useRef, useState } from "react";
+import { BrowserMultiFormatReader, NotFoundException } from "@zxing/library";
 import { Typography, Alert, Spin } from "antd";
-
-const { Text } = Typography;
 
 interface CameraScannerProps {
   onScanSuccess: (result: string) => void;
@@ -15,85 +14,58 @@ const CameraScanner: React.FC<CameraScannerProps> = ({
   isActive,
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [error, setError] = useState<string | null>(null);
+  const codeReaderRef = useRef(new BrowserMultiFormatReader());
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isActive) {
+    if (!isActive || !videoRef.current) {
       return;
     }
 
-    // NÂNG CẤP: Kiểm tra trình duyệt có hỗ trợ API không
-    if (!("BarcodeDetector" in window)) {
-      setError(
-        "Trình duyệt của bạn không hỗ trợ tính năng quét mã vạch tự động."
-      );
-      setLoading(false);
-      return;
-    }
+    console.log("[SENKO LOG] Bắt đầu khởi tạo CameraScanner...");
+    const videoElement = videoRef.current;
+    const codeReader = codeReaderRef.current;
+    let isScanning = true;
 
-    let stream: MediaStream | null = null;
-    const barcodeDetector = new (window as any).BarcodeDetector({
-      formats: ["ean_13", "code_128", "qr_code"],
-    });
-    let animationFrameId: number;
+    // Giao toàn quyền điều khiển cho thư viện
+    codeReader
+      .decodeFromVideoDevice(undefined, videoElement, (result, err) => {
+        if (result && isScanning) {
+          isScanning = false; // Tạm ngưng quét
+          console.log("[SENKO LOG] Quét thành công! Dữ liệu thô:", result);
+          onScanSuccess(result.getText());
 
-    const detectBarcode = async () => {
-      if (
-        videoRef.current &&
-        videoRef.current.readyState === videoRef.current.HAVE_ENOUGH_DATA
-      ) {
-        try {
-          const barcodes = await barcodeDetector.detect(videoRef.current);
-          if (barcodes.length > 0) {
-            onScanSuccess(barcodes[0].rawValue);
-          }
-        } catch (e) {
-          console.error("Lỗi khi nhận dạng mã vạch:", e);
+          setTimeout(() => {
+            console.log("[SENKO LOG] Sẵn sàng để quét mã tiếp theo...");
+            isScanning = true;
+          }, 2000);
         }
-      }
-      // Tiếp tục quét ở khung hình tiếp theo
-      if (isActive) {
-        animationFrameId = requestAnimationFrame(detectBarcode);
-      }
-    };
-
-    const startCamera = async () => {
-      try {
-        // NÂNG CẤP: Yêu cầu hình ảnh chất lượng cao
-        const constraints = {
-          video: {
-            width: { ideal: 1920 },
-            height: { ideal: 1080 },
-            facingMode: "environment", // Ưu tiên camera sau trên điện thoại
-          },
-        };
-        stream = await navigator.mediaDevices.getUserMedia(constraints);
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          videoRef.current.onloadedmetadata = () => {
-            setLoading(false);
-            videoRef.current?.play();
-            detectBarcode(); // Bắt đầu vòng lặp quét
-          };
+        if (err && !(err instanceof NotFoundException)) {
+          console.log(
+            "[SENKO LOG] Gặp lỗi trong lúc quét (thường là do chưa focus):",
+            err
+          );
         }
-      } catch (err) {
-        console.error("Lỗi truy cập camera:", err);
+      })
+      .catch((err) => {
+        console.error(
+          "[SENKO LOG] Lỗi nghiêm trọng khi khởi động camera:",
+          err
+        );
         setError(
           "Không thể truy cập camera. Vui lòng kiểm tra và cấp quyền cho trang web."
         );
+      })
+      .finally(() => {
+        console.log("[SENKO LOG] Đã hoàn tất quá trình khởi động camera.");
         setLoading(false);
-      }
-    };
+      });
 
-    startCamera();
-
-    // Dọn dẹp: Tắt camera khi component unmount
+    // Dọn dẹp
     return () => {
-      cancelAnimationFrame(animationFrameId);
-      if (stream) {
-        stream.getTracks().forEach((track) => track.stop());
-      }
+      console.log("[SENKO LOG] Dọn dẹp và tắt camera.");
+      codeReader.reset();
     };
   }, [isActive, onScanSuccess]);
 
@@ -104,8 +76,14 @@ const CameraScanner: React.FC<CameraScannerProps> = ({
   }
 
   return (
-    <div style={{ position: "relative" }}>
+    <div>
       <Spin spinning={loading} tip="Đang khởi động camera...">
+        <Alert
+          message="Hướng camera của bạn vào mã vạch (barcode) trên sản phẩm."
+          type="info"
+          showIcon
+          style={{ marginBottom: 16 }}
+        />
         <video
           ref={videoRef}
           style={{

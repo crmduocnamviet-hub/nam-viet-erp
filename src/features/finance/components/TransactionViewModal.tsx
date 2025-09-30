@@ -9,6 +9,7 @@ import {
   Typography,
   Descriptions,
   Row,
+  Grid,
   Col,
   type FormInstance,
   Input,
@@ -19,6 +20,7 @@ import QRCodeDisplay from "./QRCodeDisplay";
 import CashDenominationCounter from "./CashDenominationCounter";
 import { supabase } from "../../../lib/supabaseClient";
 
+const { useBreakpoint } = Grid;
 const { Option } = Select;
 const { Text } = Typography;
 
@@ -42,10 +44,8 @@ const TransactionViewModal: React.FC<TransactionViewModalProps> = ({
   funds,
   form,
 }) => {
+  const screens = useBreakpoint();
   const { modal, notification } = AntApp.useApp();
-  const [cashierCounts, setCashierCounts] = useState<Record<number, number>>(
-    {}
-  );
 
   if (!transaction) return null;
 
@@ -100,19 +100,42 @@ const TransactionViewModal: React.FC<TransactionViewModalProps> = ({
     });
   };
 
-  const handleCashierCounterConfirm = (
-    total: number,
-    counts: Record<number, number>
-  ) => {
-    if (total !== transaction.amount) {
-      modal.warning({
-        title: "Số tiền không khớp!",
-        content:
-          "Tổng tiền Thủ quỹ đếm được khác với số tiền trên phiếu thu. Sếp có muốn tiếp tục không?",
-      });
+  const renderApprovalSection = () => (
+    <Card title="Xác nhận Thực thi" style={{ marginTop: 16 }}>
+      <Form form={form} layout="vertical" onFinish={onExecute}>
+        <Form.Item
+          name="fund_id"
+          label="Chọn Quỹ/Tài khoản để thực hiện"
+          rules={[{ required: true }]}
+        >
+          <Select placeholder="Chọn nguồn tiền">
+            {funds
+              .filter((fund) => fund.type === transaction.payment_method)
+              .map((fund) => (
+                <Option key={fund.id} value={fund.id}>
+                  {fund.name}
+                </Option>
+              ))}
+          </Select>
+        </Form.Item>
+        <Button type="primary" htmlType="submit">
+          Xác nhận Đã {isIncome ? "Thu" : "Chi"}
+        </Button>
+      </Form>
+    </Card>
+  );
+
+  const renderToolsSection = () => {
+    // SỬA LỖI: Luôn đọc qr_code_url từ transaction đã lưu
+    if (transaction.payment_method === "bank" && !isIncome) {
+      return <QRCodeDisplay qrUrl={transaction.qr_code_url} />;
     }
-    setCashierCounts(counts);
-    notification.success({ message: "Đã ghi nhận bảng kê của Thủ quỹ." });
+    if (transaction.payment_method === "cash" && isIncome) {
+      return (
+        <CashDenominationCounter targetAmount={transaction.amount} readOnly />
+      );
+    }
+    return null;
   };
 
   return (
@@ -122,22 +145,15 @@ const TransactionViewModal: React.FC<TransactionViewModalProps> = ({
       onCancel={onCancel}
       footer={null}
       width={
-        canExecute &&
-        (transaction.payment_method === "bank" ||
-          (transaction.payment_method === "cash" && isIncome))
+        canExecute && (transaction.payment_method === "bank" || isIncome)
           ? 1000
           : 600
       }
       destroyOnHidden
     >
       <Row gutter={24}>
-        <Col
-          span={
-            canExecute && (isIncome || transaction.payment_method === "bank")
-              ? 12
-              : 24
-          }
-        >
+        {/* NÂNG CẤP: Logic responsive */}
+        <Col span={screens.md && canExecute ? 12 : 24}>
           <Descriptions bordered column={1}>
             <Descriptions.Item label="Ngày">
               {dayjs(transaction.transaction_date).format("DD/MM/YYYY")}
@@ -155,10 +171,7 @@ const TransactionViewModal: React.FC<TransactionViewModalProps> = ({
             <Descriptions.Item label="Người tạo">
               {transaction.created_by}
             </Descriptions.Item>
-            <Descriptions.Item
-              label="Diễn giải"
-              style={{ whiteSpace: "pre-wrap" }}
-            >
+            <Descriptions.Item label="Diễn giải">
               {transaction.description}
             </Descriptions.Item>
             {transaction.payment_method === "bank" && !isIncome && (
@@ -202,50 +215,22 @@ const TransactionViewModal: React.FC<TransactionViewModalProps> = ({
           )}
         </Col>
 
-        {canExecute && (
+        {/* Hiển thị bên cạnh trên Desktop */}
+        {canExecute && screens.md && (
           <Col span={12}>
-            {transaction.payment_method === "bank" && !isIncome && (
-              <QRCodeDisplay qrUrl={transaction.qr_code_url} />
-            )}
-            {transaction.payment_method === "cash" && isIncome && (
-              <CashDenominationCounter
-                targetAmount={transaction.amount}
-                onConfirm={handleCashierCounterConfirm}
-              />
-            )}
-
-            <Card title="Xác nhận Thực thi" style={{ marginTop: 16 }}>
-              <Form
-                form={form}
-                layout="vertical"
-                onFinish={(values) => onExecute(values, cashierCounts)}
-              >
-                <Form.Item
-                  name="fund_id"
-                  label="Chọn Quỹ/Tài khoản để thực hiện"
-                  rules={[{ required: true }]}
-                >
-                  <Select placeholder="Chọn nguồn tiền">
-                    {funds
-                      .filter(
-                        (fund) => fund.type === transaction.payment_method
-                      )
-                      .map((fund) => (
-                        <Option key={fund.id} value={fund.id}>
-                          {fund.name}
-                        </Option>
-                      ))}
-                  </Select>
-                </Form.Item>
-                {/* Sẽ thêm bảng kê cho thủ quỹ ở đây trong bước tiếp theo */}
-                <Button type="primary" htmlType="submit">
-                  Xác nhận Đã {isIncome ? "Thu" : "Chi"}
-                </Button>
-              </Form>
-            </Card>
+            {renderToolsSection()}
+            {renderApprovalSection()}
           </Col>
         )}
       </Row>
+
+      {/* Hiển thị ở dưới trên Mobile */}
+      {canExecute && !screens.md && (
+        <Row style={{ marginTop: 24 }}>
+          <Col span={24}>{renderToolsSection()}</Col>
+          <Col span={24}>{renderApprovalSection()}</Col>
+        </Row>
+      )}
     </Modal>
   );
 };

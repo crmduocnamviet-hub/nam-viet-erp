@@ -51,13 +51,13 @@ const FundManagementContent: React.FC = () => {
 
       setFunds(fundsRes.data || []);
 
-      const bankList =
-        banksRes.data?.map((b) => ({
-          value: b.short_name,
+      if (banksRes.data) {
+        const bankList = banksRes.data.map((b) => ({
+          value: b.id, // <-- SỬA LỖI: value phải là ID (con số)
           label: `${b.short_name} - ${b.name}`,
-          bin: b.bin,
-        })) || [];
-      setBanks(bankList);
+        }));
+        setBanks(bankList);
+      }
     } catch (error: any) {
       notification.error({
         message: "Lỗi tải dữ liệu",
@@ -67,6 +67,10 @@ const FundManagementContent: React.FC = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   useEffect(() => {
     fetchData();
@@ -115,6 +119,7 @@ const FundManagementContent: React.FC = () => {
 
   const handleFinish = async (values: any) => {
     try {
+      // SỬA LỖI: Đảm bảo bank_id là một con số hợp lệ
       const record = {
         name: values.name,
         type: values.type,
@@ -262,16 +267,13 @@ const FundManagementContent: React.FC = () => {
                 <Select
                   showSearch
                   placeholder="Chọn ngân hàng"
-                  optionFilterProp="children"
+                  optionFilterProp="label" // <-- Nâng cấp: Lọc theo label
                   filterOption={(input, option) =>
                     (option?.label ?? "")
                       .toLowerCase()
                       .includes(input.toLowerCase())
                   }
-                  options={banks.map((b) => ({
-                    value: b.id,
-                    label: `${b.label}`,
-                  }))}
+                  options={banks} // <-- SỬA LỖI: Truyền trực tiếp banks đã được xử lý
                 />
               </Form.Item>
               <Form.Item
