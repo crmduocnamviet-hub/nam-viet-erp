@@ -210,7 +210,7 @@ const TransactionPageContent: React.FC = () => {
   // THAY THẾ TOÀN BỘ HÀM CŨ BẰNG PHIÊN BẢN NÀY
   const handleCreationFinish = async (values: any) => {
     try {
-      setIsSubmitting(true);
+      setLoading(true); // Sử dụng state loading chung
       let qrUrl = null;
 
       if (values.payment_method === "bank" && transactionType === "expense") {
@@ -259,7 +259,7 @@ const TransactionPageContent: React.FC = () => {
         description: error.message,
       });
     } finally {
-      setIsSubmitting(false);
+      setLoading(false);
     }
   };
 

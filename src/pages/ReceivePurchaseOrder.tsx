@@ -24,7 +24,7 @@ import type { TableProps } from "antd";
 import {
   ArrowLeftOutlined,
   CheckCircleOutlined,
-  CameraOutlined,
+  // CameraOutlined,
   DeleteOutlined,
   QrcodeOutlined,
 } from "@ant-design/icons";
@@ -47,7 +47,7 @@ const ReceivePurchaseOrderContent: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [poDetails, setPoDetails] = useState<any>(null);
   const [orderItems, setOrderItems] = useState<any[]>([]);
-  const [setIsAiModalOpen] = useState(false);
+  // const [setIsAiModalOpen] = useState(false);
   const [isManualScanModalOpen, setIsManualScanModalOpen] = useState(false);
   const inputRefs = useRef<Record<string, any>>({});
 
@@ -356,12 +356,12 @@ const ReceivePurchaseOrderContent: React.FC = () => {
                 Kiểm hàng thủ công
               </Button>
 
-              <Button
+              {/* <Button
                 icon={<CameraOutlined />}
                 onClick={() => setIsAiModalOpen(true)}
               >
                 Đối soát HĐ [AI]
-              </Button>
+              </Button> */}
               <Button
                 type="primary"
                 icon={<CheckCircleOutlined />}
@@ -393,7 +393,7 @@ const ReceivePurchaseOrderContent: React.FC = () => {
         onCancel={() => setIsManualScanModalOpen(false)}
         footer={null}
         width="90vw"
-        destroyOnClose
+        destroyOnHidden
       >
         {isManualScanModalOpen && (
           <CameraScanner
