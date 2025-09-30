@@ -153,7 +153,7 @@ const ReceivePurchaseOrderContent: React.FC = () => {
         });
       } else {
         notification.error({
-          message: "Không tìm thấy sản phẩm với mã vạch này.",
+          message: "Không tìm thấy sản phẩm với mã vạch này trong hệ thống.",
         });
       }
     }

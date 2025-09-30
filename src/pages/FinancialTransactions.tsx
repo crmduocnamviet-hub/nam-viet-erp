@@ -80,7 +80,7 @@ const TransactionPageContent: React.FC = () => {
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
 
   const fetchData = useCallback(
-    async (currentFilters = filters) => {
+    async (currentFilters: typeof filters) => {
       setLoading(true);
       try {
         let query = supabase
@@ -288,7 +288,7 @@ const TransactionPageContent: React.FC = () => {
       if (error) throw error;
       notification.success({ message: `Đã xác nhận thực thi giao dịch!` });
       setIsViewModalOpen(false);
-      // fetchData(filters) sẽ được gọi tự động bởi real-time channel
+      // fetchData(filters); sẽ được gọi tự động bởi real-time channel
     } catch (error: any) {
       notification.error({
         message: `Xác nhận thất bại`,
