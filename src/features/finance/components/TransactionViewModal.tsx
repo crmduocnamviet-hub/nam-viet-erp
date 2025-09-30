@@ -19,6 +19,7 @@ import dayjs from "dayjs";
 import QRCodeDisplay from "./QRCodeDisplay";
 import CashDenominationCounter from "./CashDenominationCounter";
 import { supabase } from "../../../lib/supabaseClient";
+import { usePermissions } from "../../../context/PermissionContext";
 
 const { useBreakpoint } = Grid;
 const { Option } = Select;
@@ -44,6 +45,7 @@ const TransactionViewModal: React.FC<TransactionViewModalProps> = ({
   funds,
   form,
 }) => {
+  const { hasPermission } = usePermissions();
   const screens = useBreakpoint();
   const { modal, notification } = AntApp.useApp();
 
@@ -205,9 +207,12 @@ const TransactionViewModal: React.FC<TransactionViewModalProps> = ({
           </Descriptions>
           {canApprove && (
             <Space style={{ marginTop: 24 }}>
-              <Button type="primary" onClick={onApprove}>
-                {isIncome ? "Duyệt Thu" : "Duyệt Chi"}
-              </Button>
+              {/* Chỉ hiển thị nút Duyệt khi có quyền */}
+              {hasPermission("transactions.approve") && (
+                <Button type="primary" onClick={onApprove}>
+                  {isIncome ? "Duyệt Thu" : "Duyệt Chi"}
+                </Button>
+              )}
               <Button danger onClick={handleReject}>
                 Từ chối
               </Button>

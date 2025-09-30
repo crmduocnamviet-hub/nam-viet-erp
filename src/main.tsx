@@ -6,6 +6,7 @@ import "antd/dist/reset.css";
 import { BrowserRouter } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext.tsx";
 import { App as AntApp } from "antd";
+import { PermissionProvider } from "./context/PermissionContext";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
@@ -14,7 +15,9 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
         {" "}
         {/* Đảm bảo AntApp được sử dụng ở đây - tránh lỗi deploy trên netlify */}
         <AuthProvider>
-          <App />
+          <PermissionProvider>
+            <App />
+          </PermissionProvider>
         </AuthProvider>
       </AntApp>
     </BrowserRouter>

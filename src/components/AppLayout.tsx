@@ -23,6 +23,7 @@ import {
 } from "antd";
 import viVN from "antd/locale/vi_VN";
 import { supabase } from "../lib/supabaseClient";
+import { usePermissions } from "../context/PermissionContext";
 
 // Import tất cả các trang của bạn ở đây
 import Dashboard from "../pages/Dashboard";
@@ -161,11 +162,25 @@ const SiderContent: React.FC<{ onMenuClick: MenuProps["onClick"] }> = ({
 );
 
 const AppLayout: React.FC = () => {
+  const { hasPermission } = usePermissions();
   const [collapsed, setCollapsed] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false); // State cho menu di động
   const navigate = useNavigate();
   const screens = useBreakpoint(); // Lấy thông tin màn hình hiện tại
   const isMobile = !screens.lg; // Coi là mobile nếu màn hình nhỏ hơn 'lg'
+
+  const filteredMenuItems = menuItems.filter((item) => {
+    // Nâng cấp: Kiểm tra xem item có tồn tại không trước khi xử lý
+    if (!item) {
+      return false;
+    }
+    // Nếu là menu "Cấu hình", chỉ hiển thị khi có quyền 'users.manage'
+    if (item.key === "settings") {
+      return hasPermission("users.manage");
+    }
+    // Các menu khác luôn hiển thị
+    return true;
+  });
 
   const handleMenuClick: MenuProps["onClick"] = (e) => {
     navigate(e.key);
@@ -227,7 +242,7 @@ const AppLayout: React.FC = () => {
               theme="dark"
               defaultSelectedKeys={["/"]}
               mode="inline"
-              items={menuItems}
+              items={filteredMenuItems}
               onClick={handleMenuClick}
               style={{ fontSize: "16px" }}
             />
