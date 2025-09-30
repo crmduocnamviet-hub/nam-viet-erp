@@ -54,7 +54,7 @@ const TransactionPageContent: React.FC = () => {
   const [executionForm] = Form.useForm();
 
   const [transactions, setTransactions] = useState<any[]>([]);
-  const [setIsSubmitting] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [funds, setFunds] = useState<any[]>([]);
   const [banks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -207,34 +207,24 @@ const TransactionPageContent: React.FC = () => {
   };
 
   // THAY THẾ TOÀN BỘ HÀM CŨ BẰNG PHIÊN BẢN NÀY
+  // THAY THẾ TOÀN BỘ HÀM CŨ BẰNG PHIÊN BẢN NÀY
   const handleCreationFinish = async (values: any) => {
     try {
-      setIsSubmitting(true); // Bắt đầu quá trình
+      setIsSubmitting(true);
       let qrUrl = null;
 
-      // Logic tính toán URL mã QR được làm lại một cách an toàn
       if (values.payment_method === "bank" && transactionType === "expense") {
-        console.log("[SENKO DEBUG] Đang tạo QR Code...");
-        console.log("[SENKO DEBUG] Dữ liệu từ form:", values);
-
         const selectedBank = banks.find(
           (b) => b.value === values.recipient_bank
         );
 
         if (selectedBank) {
-          console.log("[SENKO DEBUG] Tìm thấy ngân hàng:", selectedBank);
           const info = values.description || `Thanh toan`;
           qrUrl = `https://img.vietqr.io/image/${selectedBank.bin}-${
             values.recipient_account
           }-compact2.png?amount=${values.amount}&addInfo=${encodeURIComponent(
             info
           )}&accountName=${encodeURIComponent(values.recipient_name || "")}`;
-          console.log("[SENKO DEBUG] Đã tạo URL:", qrUrl);
-        } else {
-          console.error(
-            "[SENKO DEBUG] LỖI: Không tìm thấy ngân hàng tương ứng với giá trị:",
-            values.recipient_bank
-          );
         }
       }
 
@@ -247,7 +237,7 @@ const TransactionPageContent: React.FC = () => {
         recipient_bank: values.recipient_bank,
         recipient_account: values.recipient_account,
         recipient_name: values.recipient_name,
-        qr_code_url: qrUrl, // Gán URL đã tính toán
+        qr_code_url: qrUrl, // Luôn gán URL đã tính toán
         transaction_date: values.transaction_date.format("YYYY-MM-DD"),
         created_by:
           user?.user_metadata?.full_name || user?.email || "Không xác định",
@@ -263,14 +253,13 @@ const TransactionPageContent: React.FC = () => {
       setIsCreationModalOpen(false);
       creationForm.resetFields();
       setFileList([]);
-      // fetchData() sẽ được gọi tự động bởi real-time channel
     } catch (error: any) {
       notification.error({
         message: "Thao tác thất bại",
         description: error.message,
       });
     } finally {
-      setIsSubmitting(false); // Kết thúc quá trình
+      setIsSubmitting(false);
     }
   };
 

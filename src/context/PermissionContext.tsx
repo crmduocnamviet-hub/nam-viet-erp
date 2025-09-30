@@ -57,8 +57,8 @@ export const PermissionProvider = ({ children }: { children: ReactNode }) => {
 
         const userPermissions = new Set(
           rolePermissions
-            .map((rp) => rp.permissions?.name)
-            .filter(Boolean) as string[]
+            .map((rp) => rp.permissions?.name) // Dùng optional chaining để tránh lỗi khi permissions là null
+            .filter(Boolean) as string[] // Lọc bỏ các giá trị null/undefined
         );
         setPermissions(userPermissions);
       } catch (error: any) {

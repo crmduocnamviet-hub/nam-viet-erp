@@ -119,21 +119,16 @@ const ReceivePurchaseOrderContent: React.FC = () => {
       message: `Đã quét: ${scannedBarcode}`,
       duration: 2,
     });
-
-    // Tìm sản phẩm trong danh sách hiện tại dựa trên barcode
     const productInOrder = orderItems.find(
-      (item) => item.products.barcode === scannedBarcode
+      (item) => item.products?.barcode === scannedBarcode
     );
 
     if (productInOrder) {
-      // Tự động nhảy đến và focus vào ô số lượng của sản phẩm đó
-      const inputRef = inputRefs.current[productInOrder.product_id];
+      const inputRef = inputRefs.current[productInOrder.product_id]?.lot_number;
       if (inputRef) {
         inputRef.focus();
       }
-      // Có thể thêm logic highlight dòng sản phẩm ở đây
     } else {
-      // Nếu không có trong đơn hàng, tìm trong toàn bộ CSDL
       const { data: productData } = await supabase
         .from("products")
         .select("*")
@@ -146,16 +141,16 @@ const ReceivePurchaseOrderContent: React.FC = () => {
           content: `Sản phẩm "${productData.name}" không nằm trong đơn đặt hàng này. Bạn có muốn thêm vào không?`,
           okText: "Thêm vào",
           onOk: () => {
-            // Thêm sản phẩm mới vào bảng đối soát
+            // Bỏ async ở đây nếu không có await bên trong
             const newItem = {
               key: productData.id,
               product_id: productData.id,
-              products: productData, // Chứa toàn bộ thông tin product
+              products: productData,
               name: productData.name,
               sku: productData.sku,
               image_url: productData.image_url,
-              ordered_quantity: 0, // SL đặt là 0
-              received_quantity: 1, // Mặc định nhận 1
+              ordered_quantity: 0,
+              received_quantity: 1,
               lot_number: "",
               expiry_date: null,
             };
