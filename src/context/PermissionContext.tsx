@@ -1,7 +1,12 @@
 // src/context/PermissionContext.tsx
 
-import type { ReactNode } from "react";
-import { createContext, useContext, useState, useEffect } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react";
 import { supabase } from "../lib/supabaseClient";
 import { useAuth } from "./AuthContext";
 
@@ -16,7 +21,7 @@ const PermissionContext = createContext<PermissionContextType | undefined>(
 );
 
 export const PermissionProvider = ({ children }: { children: ReactNode }) => {
-  const { user, session } = useAuth();
+  const { user } = useAuth();
   const [permissions, setPermissions] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
 
@@ -30,7 +35,6 @@ export const PermissionProvider = ({ children }: { children: ReactNode }) => {
 
       setLoading(true);
       try {
-        // Lấy vai trò của người dùng
         const { data: userRoles, error: rolesError } = await supabase
           .from("user_roles")
           .select("role_id")
@@ -46,7 +50,6 @@ export const PermissionProvider = ({ children }: { children: ReactNode }) => {
           return;
         }
 
-        // Lấy tất cả quyền hạn từ các vai trò đó
         const { data: rolePermissions, error: permissionsError } =
           await supabase
             .from("role_permissions")
@@ -57,9 +60,9 @@ export const PermissionProvider = ({ children }: { children: ReactNode }) => {
 
         const userPermissions = new Set(
           rolePermissions
-            .flatMap((rp) => rp.permissions) // Bước 1: "Làm phẳng" dữ liệu, xử lý cả trường hợp là đối tượng đơn hoặc mảng
-            .filter(Boolean) // Bước 2: Lọc bỏ tất cả các quyền hạn bị null hoặc undefined
-            .map((permission) => permission.name) // Bước 3: Chỉ lấy ra "tên" của các quyền hạn hợp lệ
+            .flatMap((rp) => rp.permissions)
+            .filter(Boolean)
+            .map((permission) => permission.name)
         );
         setPermissions(userPermissions);
       } catch (error: any) {
@@ -70,12 +73,8 @@ export const PermissionProvider = ({ children }: { children: ReactNode }) => {
       }
     };
 
-    if (session) {
-      fetchPermissions();
-    } else {
-      setLoading(false);
-    }
-  }, [user, session]);
+    fetchPermissions();
+  }, [user]);
 
   const hasPermission = (permissionName: string) => {
     return permissions.has(permissionName);
