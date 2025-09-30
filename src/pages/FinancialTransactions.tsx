@@ -54,7 +54,7 @@ const TransactionPageContent: React.FC = () => {
   const [executionForm] = Form.useForm();
 
   const [transactions, setTransactions] = useState<any[]>([]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [setIsSubmitting] = useState(false);
   const [funds, setFunds] = useState<any[]>([]);
   const [banks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);

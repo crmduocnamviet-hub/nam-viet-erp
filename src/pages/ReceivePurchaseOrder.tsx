@@ -15,9 +15,7 @@ import {
   Spin,
   Input,
   Descriptions,
-  Tag,
   Modal,
-  Upload,
   Grid,
   List,
   Avatar,
@@ -27,7 +25,6 @@ import {
   ArrowLeftOutlined,
   CheckCircleOutlined,
   CameraOutlined,
-  UploadOutlined,
   DeleteOutlined,
 } from "@ant-design/icons";
 import { useParams, useNavigate } from "react-router-dom";
@@ -41,7 +38,7 @@ const { Title, Text } = Typography;
 const { useBreakpoint } = Grid;
 
 const ReceivePurchaseOrderContent: React.FC = () => {
-  const { notification } = AntApp.useApp();
+  const { notification, modal } = AntApp.useApp();
   const screens = useBreakpoint();
   const params = useParams();
   const navigate = useNavigate();
@@ -51,7 +48,7 @@ const ReceivePurchaseOrderContent: React.FC = () => {
   const [poDetails, setPoDetails] = useState<any>(null);
   const [orderItems, setOrderItems] = useState<any[]>([]);
   // State cho các modal
-  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+  const [setIsAiModalOpen] = useState(false);
   const [isManualScanModalOpen, setIsManualScanModalOpen] = useState(false);
 
   // Ref để focus vào ô input sau khi quét
@@ -137,7 +134,7 @@ const ReceivePurchaseOrderContent: React.FC = () => {
       // Có thể thêm logic highlight dòng sản phẩm ở đây
     } else {
       // Nếu không có trong đơn hàng, tìm trong toàn bộ CSDL
-      const { data: productData, error } = await supabase
+      const { data: productData } = await supabase
         .from("products")
         .select("*")
         .eq("barcode", scannedBarcode)
@@ -173,9 +170,9 @@ const ReceivePurchaseOrderContent: React.FC = () => {
     }
   };
 
-  const handleScanInvoice = () => {
-    notification.info({ message: "Chức năng AI đang được phát triển" });
-  };
+  // const handleScanInvoice = () => {
+  //   notification.info({ message: "Chức năng AI đang được phát triển" });
+  // };
 
   const handleCompleteReceiving = () => {
     notification.info({ message: "Chức năng đang được phát triển" });

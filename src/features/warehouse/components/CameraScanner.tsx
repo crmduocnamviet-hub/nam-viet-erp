@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { BrowserMultiFormatReader, NotFoundException } from "@zxing/library";
-import { Typography, Alert, Spin } from "antd";
+import { Alert, Spin } from "antd";
 
 interface CameraScannerProps {
   onScanSuccess: (result: string) => void;
@@ -30,7 +30,7 @@ const CameraScanner: React.FC<CameraScannerProps> = ({
 
     // Giao toàn quyền điều khiển cho thư viện
     codeReader
-      .decodeFromVideoDevice(undefined, videoElement, (result, err) => {
+      .decodeFromVideoDevice(null, videoElement, (result, err) => {
         if (result && isScanning) {
           isScanning = false; // Tạm ngưng quét
           console.log("[SENKO LOG] Quét thành công! Dữ liệu thô:", result);

@@ -1,12 +1,7 @@
 // src/context/PermissionContext.tsx
 
-import React, {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  ReactNode,
-} from "react";
+import type { ReactNode } from "react";
+import { createContext, useContext, useState, useEffect } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { useAuth } from "./AuthContext";
 
@@ -61,7 +56,9 @@ export const PermissionProvider = ({ children }: { children: ReactNode }) => {
         if (permissionsError) throw permissionsError;
 
         const userPermissions = new Set(
-          rolePermissions.map((rp) => rp.permissions.name)
+          rolePermissions
+            .map((rp) => rp.permissions?.name)
+            .filter(Boolean) as string[]
         );
         setPermissions(userPermissions);
       } catch (error: any) {
