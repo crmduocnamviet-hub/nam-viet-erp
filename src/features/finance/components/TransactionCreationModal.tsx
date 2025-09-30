@@ -62,7 +62,7 @@ const TransactionCreationModal: React.FC<TransactionCreationModalProps> = ({
           .select("id, bin, short_name, name");
         if (data) {
           const bankList = data.map((b) => ({
-            value: b.short_name, // Sử dụng short_name cho value để tìm BIN
+            value: b.short_name,
             label: `${b.short_name} - ${b.name}`,
             bin: b.bin,
           }));
@@ -71,7 +71,6 @@ const TransactionCreationModal: React.FC<TransactionCreationModalProps> = ({
         }
       };
       fetchBanks();
-      // Reset payment method khi mở lại modal
       setPaymentMethod(form.getFieldValue("payment_method") || "");
     }
   }, [open, form]);

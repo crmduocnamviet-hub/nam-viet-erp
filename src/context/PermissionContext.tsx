@@ -1,12 +1,7 @@
 // src/context/PermissionContext.tsx
 
-import React, {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  ReactNode,
-} from "react";
+import { createContext, useContext, useState, useEffect } from "react";
+import type { ReactNode } from "react"; // Tách ReactNode ra đây
 import { supabase } from "../lib/supabaseClient";
 import { useAuth } from "./AuthContext";
 

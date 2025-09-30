@@ -52,6 +52,7 @@ const TransactionPageContent: React.FC = () => {
   const { user } = useAuth();
   const [creationForm] = Form.useForm();
   const [executionForm] = Form.useForm();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [transactions, setTransactions] = useState<any[]>([]);
   // const [setIsSubmitting] = useState(false);
@@ -210,7 +211,7 @@ const TransactionPageContent: React.FC = () => {
   // THAY THẾ TOÀN BỘ HÀM CŨ BẰNG PHIÊN BẢN NÀY
   const handleCreationFinish = async (values: any) => {
     try {
-      setLoading(true); // Sử dụng state loading chung
+      setIsSubmitting(true);
       let qrUrl = null;
 
       if (values.payment_method === "bank" && transactionType === "expense") {
@@ -259,7 +260,7 @@ const TransactionPageContent: React.FC = () => {
         description: error.message,
       });
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
   };
 
