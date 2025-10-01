@@ -573,18 +573,60 @@ const PosPage: React.FC<PosPageProps> = ({ employee, ...props }) => {
   };
 
   // QR Scanner Handler
-  const handleQRScan = (scannedData: string) => {
-    // Set the scanned data as search term to trigger product search
-    setSearchTerm(scannedData);
+  const handleQRScan = async (scannedData: string) => {
+    // Search for product directly by barcode
+    try {
+      if (selectedWarehouse) {
+        const { data } = await searchProductInWarehouse({
+          search: scannedData,
+          warehouseId: selectedWarehouse.id,
+        });
 
-    notification.success({
-      message: "Quét QR thành công",
-      description: `Đã quét: ${scannedData}`,
-    });
+        const products = data?.map((v) => ({ ...v.products })) || [];
+        if (products.length > 0) {
+          handleAddToCart(products[0]);
+          notification.success({
+            message: "Đã thêm vào giỏ hàng",
+            description: `${products[0].name} - ${scannedData}`,
+          });
+        } else {
+          notification.warning({
+            message: "Không tìm thấy sản phẩm",
+            description: `Mã: ${scannedData}`,
+          });
+        }
+      } else {
+        const { data } = await searchProducts({
+          search: scannedData,
+          pageSize: 1,
+          status: "active",
+        });
+
+        if (data && data.length > 0) {
+          handleAddToCart(data[0]);
+          notification.success({
+            message: "Đã thêm vào giỏ hàng",
+            description: `${data[0].name} - ${scannedData}`,
+          });
+        } else {
+          notification.warning({
+            message: "Không tìm thấy sản phẩm",
+            description: `Mã: ${scannedData}`,
+          });
+        }
+      }
+    } catch (error) {
+      notification.error({
+        message: "Lỗi quét mã",
+        description: "Không thể tìm kiếm sản phẩm",
+      });
+    }
   };
 
   const handleRemoveFromCart = (productId: number) => {
-    setCart((prevCart) => (prevCart || []).filter((item) => item.id !== productId));
+    setCart((prevCart) =>
+      (prevCart || []).filter((item) => item.id !== productId)
+    );
   };
 
   const handleUpdateQuantity = (productId: number, newQuantity: number) => {
@@ -647,7 +689,7 @@ const PosPage: React.FC<PosPageProps> = ({ employee, ...props }) => {
   // Payment Handlers
   const handleOpenPaymentModal = (method: "cash" | "card" | "qr") => {
     if (cart.length === 0) {
-      notification.warning({ message: "Giỏ hàng đang trống!" });
+      // notification.warning({ message: "Giỏ hàng đang trống!" });
       return;
     }
     setPaymentMethod(method);
@@ -870,13 +912,6 @@ const PosPage: React.FC<PosPageProps> = ({ employee, ...props }) => {
                 <Space>
                   <SearchOutlined />
                   <span>Tìm kiếm Sản phẩm</span>
-                  <Button
-                    size="small"
-                    type={warehouseMode ? "primary" : "default"}
-                    onClick={handleToggleWarehouseMode}
-                  >
-                    {warehouseMode ? "Thoát" : "Chọn Kho"}
-                  </Button>
                 </Space>
               }
               size="small"
@@ -897,14 +932,14 @@ const PosPage: React.FC<PosPageProps> = ({ employee, ...props }) => {
               }}
             >
               <>
-                <Space.Compact style={{ width: '100%', marginBottom: 8 }}>
+                <Space.Compact style={{ width: "100%", marginBottom: 8 }}>
                   <Search
                     placeholder="Quét mã vạch hoặc tìm tên thuốc..."
                     size="large"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     loading={isSearching}
-                    style={{ width: '100%' }}
+                    style={{ width: "100%" }}
                   />
                   <Tooltip title="Quét mã QR">
                     <Button
@@ -1573,12 +1608,26 @@ const PosPage: React.FC<PosPageProps> = ({ employee, ...props }) => {
         </Form>
       </Modal>
 
-      <QRScanner
-        visible={isQRScannerOpen}
-        onClose={() => setIsQRScannerOpen(false)}
-        onScan={handleQRScan}
-        title="Quét mã QR sản phẩm"
-      />
+      {/* QR Scanner Modal - continuous scanning mode */}
+      <Modal
+        title="Quét mã vạch sản phẩm"
+        open={isQRScannerOpen}
+        onCancel={() => setIsQRScannerOpen(false)}
+        footer={[
+          <Button key="close" onClick={() => setIsQRScannerOpen(false)}>
+            Đóng
+          </Button>,
+        ]}
+        width={500}
+        centered
+      >
+        <div style={{ textAlign: "center" }}>
+          <Text type="secondary" style={{ marginBottom: 16, display: "block" }}>
+            Quét mã vạch trên sản phẩm để thêm vào giỏ hàng
+          </Text>
+          <QRScanner visible={isQRScannerOpen} onScan={handleQRScan} />
+        </div>
+      </Modal>
     </div>
   );
 };

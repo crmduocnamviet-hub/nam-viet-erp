@@ -33,7 +33,7 @@ import {
   getEmployees,
   createPatient,
 } from "@nam-viet-erp/services";
-import { useDebounce } from "./hooks/useDebounce";
+import { useDebounce } from "../hooks/useDebounce";
 
 interface AppointmentFormValues {
   patient_id?: string;
@@ -83,6 +83,8 @@ const AppointmentCreationModal: React.FC<AppointmentCreationModalProps> = ({
   const [showNewPatientForm, setShowNewPatientForm] = useState(false);
   const [creatingPatient, setCreatingPatient] = useState(false);
 
+  console.log(availableResources)
+
   const debouncedSearchTerm = useDebounce(searchTerm, 500);
   const selectedService = Form.useWatch("service", form);
   const selectedResourceId = Form.useWatch("resourceId", form);
@@ -96,7 +98,7 @@ const AppointmentCreationModal: React.FC<AppointmentCreationModalProps> = ({
         try {
           // setLoadingDoctors(true); // Removed loadingDoctors state
           const { data, error } = await getEmployees({
-            roleName: "BacSi", // Only load doctors
+            roleName: "medical-staff", // Only load doctors
             limit: 50,
           });
           if (error) {
@@ -119,15 +121,9 @@ const AppointmentCreationModal: React.FC<AppointmentCreationModalProps> = ({
   React.useEffect(() => {
     // For now, all doctors can handle all services
     // In a real app, you might filter doctors based on their specialization
-    if (selectedService) {
-      // All doctors can handle all services for now
-      setAvailableResources(resources); // Use passed resources
-      // Reset the selected resource when the service changes to avoid inconsistency.
-      form.setFieldsValue({ resourceId: undefined });
-    } else {
-      setAvailableResources(resources); // Use passed resources
-    }
-  }, [selectedService, resources, form]);
+    // Simply keep all available resources without resetting the selection
+    setAvailableResources(resources);
+  }, [resources]);
 
   React.useEffect(() => {
     const performSearch = async () => {
@@ -208,11 +204,11 @@ const AppointmentCreationModal: React.FC<AppointmentCreationModalProps> = ({
   const handleCreateNewPatient = async () => {
     try {
       setCreatingPatient(true);
-      const patientName = form.getFieldValue('patientName');
-      const patientPhone = form.getFieldValue('patientPhone');
+      const patientName = form.getFieldValue("patientName");
+      const patientPhone = form.getFieldValue("patientPhone");
 
       if (!patientName || !patientPhone) {
-        console.error('Patient name and phone are required');
+        console.error("Patient name and phone are required");
         return;
       }
 
@@ -230,7 +226,7 @@ const AppointmentCreationModal: React.FC<AppointmentCreationModalProps> = ({
       const { data: newPatient, error } = await createPatient(newPatientData);
 
       if (error) {
-        console.error('Error creating patient:', error);
+        console.error("Error creating patient:", error);
         return;
       }
 
@@ -240,10 +236,10 @@ const AppointmentCreationModal: React.FC<AppointmentCreationModalProps> = ({
           patient_id: newPatient.patient_id,
         });
         setShowNewPatientForm(false);
-        console.log('New patient created:', newPatient);
+        console.log("New patient created:", newPatient);
       }
     } catch (error) {
-      console.error('Error creating patient:', error);
+      console.error("Error creating patient:", error);
     } finally {
       setCreatingPatient(false);
     }
@@ -330,7 +326,7 @@ const AppointmentCreationModal: React.FC<AppointmentCreationModalProps> = ({
                   type="link"
                   onClick={() => {
                     setShowNewPatientForm(false);
-                    form.setFieldsValue({ patientName: '', patientPhone: '' });
+                    form.setFieldsValue({ patientName: "", patientPhone: "" });
                   }}
                 >
                   Hủy
@@ -344,7 +340,10 @@ const AppointmentCreationModal: React.FC<AppointmentCreationModalProps> = ({
                     name="patientName"
                     label="Họ và Tên"
                     rules={[
-                      { required: true, message: "Vui lòng nhập tên bệnh nhân" },
+                      {
+                        required: true,
+                        message: "Vui lòng nhập tên bệnh nhân",
+                      },
                     ]}
                   >
                     <Input placeholder="Nhập họ và tên" />
@@ -355,8 +354,14 @@ const AppointmentCreationModal: React.FC<AppointmentCreationModalProps> = ({
                     name="patientPhone"
                     label="Số điện thoại"
                     rules={[
-                      { required: true, message: "Vui lòng nhập số điện thoại" },
-                      { pattern: /^[0-9]{10,11}$/, message: "Số điện thoại không hợp lệ" },
+                      {
+                        required: true,
+                        message: "Vui lòng nhập số điện thoại",
+                      },
+                      {
+                        pattern: /^[0-9]{10,11}$/,
+                        message: "Số điện thoại không hợp lệ",
+                      },
                     ]}
                   >
                     <Input placeholder="Nhập số điện thoại" />
@@ -367,7 +372,7 @@ const AppointmentCreationModal: React.FC<AppointmentCreationModalProps> = ({
                 type="primary"
                 onClick={handleCreateNewPatient}
                 loading={creatingPatient}
-                style={{ width: '100%' }}
+                style={{ width: "100%" }}
               >
                 Tạo bệnh nhân và tiếp tục
               </Button>
@@ -375,7 +380,10 @@ const AppointmentCreationModal: React.FC<AppointmentCreationModalProps> = ({
           )}
 
           {selectedPatient && !showNewPatientForm && (
-            <Card title="Thông tin bệnh nhân đã chọn" style={{ marginBottom: 16 }}>
+            <Card
+              title="Thông tin bệnh nhân đã chọn"
+              style={{ marginBottom: 16 }}
+            >
               <Row gutter={16}>
                 <Col span={12}>
                   <Text strong>Họ và Tên: </Text>
@@ -390,7 +398,11 @@ const AppointmentCreationModal: React.FC<AppointmentCreationModalProps> = ({
                 type="link"
                 onClick={() => {
                   setSelectedPatient(null);
-                  form.setFieldsValue({ patientName: '', patientPhone: '', patient_id: '' });
+                  form.setFieldsValue({
+                    patientName: "",
+                    patientPhone: "",
+                    patient_id: "",
+                  });
                 }}
                 style={{ paddingLeft: 0 }}
               >
@@ -409,7 +421,10 @@ const AppointmentCreationModal: React.FC<AppointmentCreationModalProps> = ({
                     { required: true, message: "Vui lòng nhập tên bệnh nhân" },
                   ]}
                 >
-                  <Input disabled placeholder="Chọn từ danh sách hoặc tạo mới" />
+                  <Input
+                    disabled
+                    placeholder="Chọn từ danh sách hoặc tạo mới"
+                  />
                 </Form.Item>
               </Col>
               <Col span={12}>
@@ -420,7 +435,10 @@ const AppointmentCreationModal: React.FC<AppointmentCreationModalProps> = ({
                     { required: true, message: "Vui lòng nhập số điện thoại" },
                   ]}
                 >
-                  <Input disabled placeholder="Chọn từ danh sách hoặc tạo mới" />
+                  <Input
+                    disabled
+                    placeholder="Chọn từ danh sách hoặc tạo mới"
+                  />
                 </Form.Item>
               </Col>
             </Row>
@@ -601,10 +619,10 @@ const ConfirmationStep = ({
   const values: AppointmentFormValues = form.getFieldsValue(true) || {};
 
   // Also use useWatch for reactivity
-  const watchedValues = Form.useWatch([], form) || {};
+  const watchedValues = Form.useWatch([], form);
 
   // Merge both to ensure we get the latest values
-  const allValues = { ...values, ...(watchedValues || {}) };
+  const allValues = { ...values, ...(watchedValues && typeof watchedValues === 'object' ? watchedValues : {}) };
 
   const resourceName =
     resources.find((r) => r.employee_id === allValues.resourceId)?.full_name ||
@@ -631,9 +649,9 @@ const ConfirmationStep = ({
     }
   };
 
-  console.log('Form values:', values);
-  console.log('Watched values:', watchedValues);
-  console.log('All values:', allValues);
+  console.log("Form values:", values);
+  console.log("Watched values:", watchedValues);
+  console.log("All values:", allValues);
 
   const items = [
     { label: "Bệnh nhân", value: allValues.patientName || "Chưa nhập" },

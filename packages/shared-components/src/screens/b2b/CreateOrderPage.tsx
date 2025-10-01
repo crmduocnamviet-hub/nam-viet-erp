@@ -28,14 +28,22 @@ import {
   CalendarOutlined,
   DollarOutlined,
   InfoCircleOutlined,
+  QrcodeOutlined,
+  FilePdfOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
-import { createB2BQuote, addQuoteItem } from "@nam-viet-erp/services";
+import {
+  createB2BQuote,
+  addQuoteItem,
+  getB2BWarehouseProductByBarCode,
+} from "@nam-viet-erp/services";
 import {
   B2BCustomerSearchModal,
   B2BCustomerSearchInput,
   ProductSearchInput,
+  QRScannerModal,
+  QRScanner,
 } from "@nam-viet-erp/shared-components";
 
 const { Title, Text, Paragraph } = Typography;
@@ -86,6 +94,7 @@ const CreateOrderPage: React.FC<CreateOrderPageProps> = ({ employee }) => {
   const [selectedClient, setSelectedClient] = useState<IB2BCustomer | null>(
     null
   );
+  const [isQRScannerOpen, setIsQRScannerOpen] = useState(false);
   const screens = useBreakpoint(); // Lấy thông tin màn hình hiện tại
   const isMobile = !screens.lg; // Coi là mobile nếu màn hình nhỏ hơn 'lg'
 
@@ -127,56 +136,99 @@ const CreateOrderPage: React.FC<CreateOrderPageProps> = ({ employee }) => {
     };
   };
 
+  // Handle QR scan result
+  const handleQRScan = (scannedData: string) => {
+    getB2BWarehouseProductByBarCode({ barcode: scannedData })
+      .then(({ data }) => {
+        if (data && data.length) {
+          handleAddProducts([data[0].products as unknown as Product]);
+          setIsQRScannerOpen(false);
+        } else {
+        }
+      })
+      .catch((error) => {
+        console.error("Error fetching product by barcode:", error);
+        notification.error({
+          message: "Lỗi tìm kiếm sản phẩm",
+          description: "Có lỗi xảy ra khi tìm kiếm sản phẩm",
+        });
+      });
+  };
+
   // Add products to order (supports both single product and array)
   const handleAddProducts = (products: Product | Product[]) => {
     const productArray = Array.isArray(products) ? products : [products];
+    const newItems: OrderItem[] = [];
+    const updatedItems: string[] = [];
 
-    const newItems: OrderItem[] = productArray
-      .map((product, index) => {
-        // Check if product already exists in order
-        const existingItem = orderItems.find(
-          (item) => item.product_id === product.id
+    productArray.forEach((product, index) => {
+      // Check if product already exists in order
+      const existingItem = orderItems.find(
+        (item) => item.product_id === product.id
+      );
+
+      if (existingItem) {
+        // Increase quantity of existing product
+        setOrderItems((prev) =>
+          prev.map((item) => {
+            if (item.product_id === product.id) {
+              const newQuantity = item.quantity + 1;
+              updatedItems.push(item.product_name);
+              return {
+                ...item,
+                quantity: newQuantity,
+                total_price: newQuantity * item.unit_price,
+              };
+            }
+            return item;
+          })
         );
-        if (existingItem) {
-          notification.warning({
-            message: "Sản phẩm đã tồn tại",
-            description: `Sản phẩm "${product.name}" đã có trong đơn hàng. Vui lòng tăng số lượng nếu cần.`,
-          });
-          return null;
-        }
+        return;
+      }
 
-        // Validate product_id is a valid number
-        if (!product.id || typeof product.id !== "number") {
-          console.error(
-            "Invalid product id when adding product:",
-            product.id,
-            product
-          );
-          notification.error({
-            message: "Lỗi sản phẩm",
-            description: `Sản phẩm "${product.name}" có ID không hợp lệ: ${product.id}`,
-          });
-          return null;
-        }
+      // Validate product_id is a valid number
+      if (!product.id || typeof product.id !== "number") {
+        console.error(
+          "Invalid product id when adding product:",
+          product.id,
+          product
+        );
+        return;
+      }
 
-        return {
-          key: `${product.id}_${Date.now()}_${index}`,
-          product_id: product.id,
-          product_name: product.name,
-          unit_price: product.wholesale_price || 0,
-          quantity: 1,
-          total_price: product.wholesale_price || 0,
-          packaging: product.packaging,
-          unit: product.unit || "Hộp",
-        };
-      })
-      .filter((item) => item !== null) as OrderItem[];
+      // Add new product
+      newItems.push({
+        key: `${product.id}_${Date.now()}_${index}`,
+        product_id: product.id,
+        product_name: product.name,
+        unit_price: product.wholesale_price || 0,
+        quantity: 1,
+        total_price: product.wholesale_price || 0,
+        packaging: product.packaging,
+        unit: product.unit || "Hộp",
+      });
+    });
 
+    // Add new items to order
     if (newItems.length > 0) {
       setOrderItems((prev) => [...prev, ...newItems]);
+    }
+
+    // Show appropriate notification
+    if (newItems.length > 0 && updatedItems.length > 0) {
+      notification.success({
+        message: "Thêm sản phẩm thành công",
+        description: `Đã thêm ${newItems.length} sản phẩm mới và tăng số lượng ${updatedItems.length} sản phẩm có sẵn`,
+      });
+    } else if (newItems.length > 0) {
       notification.success({
         message: "Thêm sản phẩm thành công",
         description: `Đã thêm ${newItems.length} sản phẩm vào đơn hàng`,
+      });
+    } else if (updatedItems.length > 0) {
+      notification.success({
+        message: "Cập nhật số lượng thành công",
+        description: `Đã tăng số lượng cho ${updatedItems.join(", ")}`,
       });
     }
   };
@@ -213,10 +265,6 @@ const CreateOrderPage: React.FC<CreateOrderPageProps> = ({ employee }) => {
       ]);
 
       if (orderItems.length === 0) {
-        notification.warning({
-          message: "Cảnh báo",
-          description: "Vui lòng thêm ít nhất một sản phẩm vào đơn hàng",
-        });
         return;
       }
 
@@ -299,10 +347,6 @@ const CreateOrderPage: React.FC<CreateOrderPageProps> = ({ employee }) => {
 
       if (failedItems.length > 0) {
         console.error("Some items failed to save:", failedItems);
-        notification.warning({
-          message: "Cảnh báo",
-          description: `Đã lưu báo giá nhưng ${failedItems.length} sản phẩm không thể lưu. Vui lòng kiểm tra lại.`,
-        });
       }
 
       // Prepare order summary for preview
@@ -350,10 +394,6 @@ const CreateOrderPage: React.FC<CreateOrderPageProps> = ({ employee }) => {
       ]);
 
       if (orderItems.length === 0) {
-        notification.warning({
-          message: "Cảnh báo",
-          description: "Vui lòng thêm ít nhất một sản phẩm vào đơn hàng",
-        });
         return;
       }
 
@@ -435,10 +475,6 @@ const CreateOrderPage: React.FC<CreateOrderPageProps> = ({ employee }) => {
 
       if (failedItems.length > 0) {
         console.error("Some items failed to save:", failedItems);
-        notification.warning({
-          message: "Cảnh báo",
-          description: `Đã gửi báo giá nhưng ${failedItems.length} sản phẩm không thể lưu. Vui lòng kiểm tra lại.`,
-        });
       }
 
       // Prepare order summary for preview
@@ -473,6 +509,153 @@ const CreateOrderPage: React.FC<CreateOrderPageProps> = ({ employee }) => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Export to PDF
+  const handleExportPDF = async () => {
+    try {
+      const values = form.getFieldsValue();
+      const totals = calculateTotals();
+
+      if (orderItems.length === 0) {
+        notification.warning({
+          message: "Không có sản phẩm",
+          description: "Vui lòng thêm sản phẩm vào đơn hàng trước khi xuất PDF.",
+        });
+        return;
+      }
+
+      // Create printable content
+      const printContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Báo giá - ${values.customer_name || "Khách hàng"}</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 20px; }
+            .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 20px; }
+            .header h1 { margin: 0; color: #1890ff; }
+            .info-section { margin: 20px 0; }
+            .info-row { display: flex; margin-bottom: 10px; }
+            .info-label { font-weight: bold; width: 150px; }
+            table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+            th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+            th { background-color: #1890ff; color: white; }
+            .total-section { margin-top: 30px; text-align: right; }
+            .total-row { margin: 10px 0; font-size: 16px; }
+            .total-row.final { font-size: 20px; font-weight: bold; color: #1890ff; }
+            .footer { margin-top: 50px; text-align: center; font-size: 12px; color: #666; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>BÁO GIÁ / ĐƠN HÀNG B2B</h1>
+            <p>Ngày tạo: ${dayjs().format("DD/MM/YYYY HH:mm")}</p>
+          </div>
+
+          <div class="info-section">
+            <h3>Thông tin khách hàng</h3>
+            <div class="info-row">
+              <div class="info-label">Tên khách hàng:</div>
+              <div>${values.customer_name || ""}</div>
+            </div>
+            <div class="info-row">
+              <div class="info-label">Số điện thoại:</div>
+              <div>${values.customer_phone || ""}</div>
+            </div>
+            <div class="info-row">
+              <div class="info-label">Địa chỉ:</div>
+              <div>${values.customer_address || ""}</div>
+            </div>
+            ${
+              values.delivery_address
+                ? `<div class="info-row">
+                <div class="info-label">Địa chỉ giao hàng:</div>
+                <div>${values.delivery_address}</div>
+              </div>`
+                : ""
+            }
+          </div>
+
+          <div class="info-section">
+            <h3>Danh sách sản phẩm</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th style="width: 50px;">STT</th>
+                  <th>Tên sản phẩm</th>
+                  <th style="width: 100px;">Đơn vị</th>
+                  <th style="width: 100px;">Số lượng</th>
+                  <th style="width: 120px;">Đơn giá</th>
+                  <th style="width: 150px;">Thành tiền</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${orderItems
+                  .map(
+                    (item, index) => `
+                  <tr>
+                    <td style="text-align: center;">${index + 1}</td>
+                    <td>${item.product_name}</td>
+                    <td>${item.unit || "Hộp"}</td>
+                    <td style="text-align: center;">${item.quantity}</td>
+                    <td style="text-align: right;">${formatCurrency(item.unit_price)}</td>
+                    <td style="text-align: right;">${formatCurrency(item.total_price)}</td>
+                  </tr>
+                `
+                  )
+                  .join("")}
+              </tbody>
+            </table>
+          </div>
+
+          <div class="total-section">
+            <div class="total-row">Tạm tính: ${formatCurrency(totals.subtotal)}</div>
+            <div class="total-row">Chiết khấu (${values.discount_percent || 0}%): -${formatCurrency(totals.discountAmount)}</div>
+            <div class="total-row">Thuế (${values.tax_percent || 0}%): +${formatCurrency(totals.taxAmount)}</div>
+            <div class="total-row final">Tổng cộng: ${formatCurrency(totals.totalAmount)}</div>
+          </div>
+
+          ${
+            values.notes
+              ? `<div class="info-section">
+              <h3>Ghi chú</h3>
+              <p>${values.notes}</p>
+            </div>`
+              : ""
+          }
+
+          <div class="footer">
+            <p>Nhân viên tạo: ${employee?.full_name || ""}</p>
+            <p>Cảm ơn quý khách đã sử dụng dịch vụ của chúng tôi!</p>
+          </div>
+        </body>
+        </html>
+      `;
+
+      // Open print dialog
+      const printWindow = window.open("", "_blank");
+      if (printWindow) {
+        printWindow.document.write(printContent);
+        printWindow.document.close();
+        printWindow.focus();
+        setTimeout(() => {
+          printWindow.print();
+        }, 250);
+      }
+
+      notification.success({
+        message: "Xuất PDF",
+        description: "Đã mở hộp thoại in. Vui lòng chọn 'Save as PDF' để lưu file.",
+      });
+    } catch (error: any) {
+      console.error("Error exporting PDF:", error);
+      notification.error({
+        message: "Lỗi xuất PDF",
+        description: error.message || "Không thể xuất PDF. Vui lòng thử lại.",
+      });
     }
   };
 
@@ -600,7 +783,7 @@ const CreateOrderPage: React.FC<CreateOrderPageProps> = ({ employee }) => {
       </Row>
 
       <Row gutter={24}>
-        <Col xs={24} lg={16}>
+        <Col xs={24} lg={12}>
           <Form
             form={form}
             layout="vertical"
@@ -886,9 +1069,10 @@ const CreateOrderPage: React.FC<CreateOrderPageProps> = ({ employee }) => {
                     handleAddProducts([product]);
                   }
                 }}
-                placeholder="Tìm kiếm sản phẩm theo tên, SKU, nhà sản xuất..."
+                placeholder="Tìm kiếm sản phẩm B2B theo tên, SKU, nhà sản xuất..."
                 size="large"
                 style={{ width: "100%" }}
+                debounceDelay={200}
               />
             </div>
 
@@ -906,8 +1090,33 @@ const CreateOrderPage: React.FC<CreateOrderPageProps> = ({ employee }) => {
           </Card>
         </Col>
 
+        {/* QR Scanner Card - Desktop Only */}
+        {!isMobile && (
+          <Col xs={24} lg={6}>
+            <Card
+              title={
+                <Space>
+                  <QrcodeOutlined />
+                  Quét mã QR trên sản phẩm để thêm vào đơn hàng
+                </Space>
+              }
+              style={{ position: "sticky", top: 24 }}
+            >
+              <div style={{ textAlign: "center" }}>
+                <Text
+                  type="secondary"
+                  style={{ marginBottom: 16, display: "block" }}
+                >
+                  Quét mã QR trên sản phẩm để thêm vào đơn hàng
+                </Text>
+                <QRScanner visible={true} onScan={handleQRScan} />
+              </div>
+            </Card>
+          </Col>
+        )}
+
         {/* Order Summary Sidebar */}
-        <Col xs={24} lg={8}>
+        <Col xs={24} lg={6}>
           <Card
             title={
               <Space>
@@ -943,6 +1152,16 @@ const CreateOrderPage: React.FC<CreateOrderPageProps> = ({ employee }) => {
             <Divider />
 
             <Space direction="vertical" style={{ width: "100%" }}>
+              <Button
+                type="default"
+                icon={<FilePdfOutlined />}
+                onClick={handleExportPDF}
+                disabled={orderItems.length === 0}
+                style={{ width: "100%" }}
+                size={isMobile ? "middle" : "large"}
+              >
+                Xuất PDF
+              </Button>
               <Button
                 type="default"
                 icon={<SaveOutlined />}
@@ -1107,6 +1326,13 @@ const CreateOrderPage: React.FC<CreateOrderPageProps> = ({ employee }) => {
         onClose={() => setClientSelectVisible(false)}
         onSelect={handleSelectClient}
         title="Chọn Khách hàng B2B"
+      />
+
+      {/* QR Scanner Modal */}
+      <QRScannerModal
+        visible={isQRScannerOpen}
+        onClose={() => setIsQRScannerOpen(false)}
+        onScan={handleQRScan}
       />
     </div>
   );

@@ -145,3 +145,70 @@ export const searchProductInWarehouse = async ({
     .eq("warehouse_id", warehouseId);
   return response;
 };
+
+// Get products from B2B warehouses only
+export const getB2BWarehouseProducts = async ({
+  search,
+}: {
+  search: string;
+}) => {
+  const response = await supabase
+    .from("inventory")
+    .select(
+      `
+      quantity,
+      products!inner (*),
+      warehouses!inner (
+        id,
+        name,
+        is_b2b_warehouse
+      )
+    `
+    )
+    .ilike("products.name", `%${search}%`)
+    .eq("products.is_active", true)
+    .eq("warehouses.is_b2b_warehouse", true)
+    .gt("quantity", 0); // Only products with stock
+  return response;
+};
+
+export const getB2BWarehouseProductByBarCode = async ({
+  barcode,
+}: {
+  barcode: string;
+}) => {
+  const response = await supabase
+    .from("inventory")
+    .select(
+      `
+      quantity,
+      products!inner (*),
+      warehouses!inner (
+        id,
+        name,
+        is_b2b_warehouse
+      )
+    `
+    )
+    .eq("products.barcode", barcode)
+    .eq("products.is_active", true)
+    .eq("warehouses.is_b2b_warehouse", true)
+    .gt("quantity", 0); // Only products with stock
+  return response;
+};
+
+export const getProductInWarehouseByBarCode = async ({
+  barcode,
+  warehouseId,
+}: {
+  barcode: string;
+  warehouseId: number;
+}) => {
+  const response = await supabase
+    .from("inventory")
+    .select("*, products(*)")
+    .eq("products.barcode", barcode)
+    .eq("products.is_active", true)
+    .eq("warehouse_id", warehouseId);
+  return response;
+};

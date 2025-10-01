@@ -201,7 +201,7 @@ const B2BCustomerSearchInput: React.FC<B2BCustomerSearchInputProps> = ({
       style={style}
       size={size}
       open={open}
-      onDropdownVisibleChange={setOpen}
+      onOpenChange={setOpen}
       styles={{
         popup: {
           root: {
