@@ -83,8 +83,6 @@ const AppointmentCreationModal: React.FC<AppointmentCreationModalProps> = ({
   const [showNewPatientForm, setShowNewPatientForm] = useState(false);
   const [creatingPatient, setCreatingPatient] = useState(false);
 
-  console.log(availableResources)
-
   const debouncedSearchTerm = useDebounce(searchTerm, 500);
   const selectedService = Form.useWatch("service", form);
   const selectedResourceId = Form.useWatch("resourceId", form);
@@ -622,7 +620,12 @@ const ConfirmationStep = ({
   const watchedValues = Form.useWatch([], form);
 
   // Merge both to ensure we get the latest values
-  const allValues = { ...values, ...(watchedValues && typeof watchedValues === 'object' ? watchedValues : {}) };
+  const allValues = {
+    ...values,
+    ...(watchedValues && typeof watchedValues === "object"
+      ? watchedValues
+      : {}),
+  };
 
   const resourceName =
     resources.find((r) => r.employee_id === allValues.resourceId)?.full_name ||
@@ -648,10 +651,6 @@ const ConfirmationStep = ({
         return service || "Chưa chọn";
     }
   };
-
-  console.log("Form values:", values);
-  console.log("Watched values:", watchedValues);
-  console.log("All values:", allValues);
 
   const items = [
     { label: "Bệnh nhân", value: allValues.patientName || "Chưa nhập" },

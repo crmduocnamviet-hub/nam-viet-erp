@@ -521,7 +521,8 @@ const CreateOrderPage: React.FC<CreateOrderPageProps> = ({ employee }) => {
       if (orderItems.length === 0) {
         notification.warning({
           message: "Không có sản phẩm",
-          description: "Vui lòng thêm sản phẩm vào đơn hàng trước khi xuất PDF.",
+          description:
+            "Vui lòng thêm sản phẩm vào đơn hàng trước khi xuất PDF.",
         });
         return;
       }
@@ -601,8 +602,12 @@ const CreateOrderPage: React.FC<CreateOrderPageProps> = ({ employee }) => {
                     <td>${item.product_name}</td>
                     <td>${item.unit || "Hộp"}</td>
                     <td style="text-align: center;">${item.quantity}</td>
-                    <td style="text-align: right;">${formatCurrency(item.unit_price)}</td>
-                    <td style="text-align: right;">${formatCurrency(item.total_price)}</td>
+                    <td style="text-align: right;">${formatCurrency(
+                      item.unit_price
+                    )}</td>
+                    <td style="text-align: right;">${formatCurrency(
+                      item.total_price
+                    )}</td>
                   </tr>
                 `
                   )
@@ -612,10 +617,18 @@ const CreateOrderPage: React.FC<CreateOrderPageProps> = ({ employee }) => {
           </div>
 
           <div class="total-section">
-            <div class="total-row">Tạm tính: ${formatCurrency(totals.subtotal)}</div>
-            <div class="total-row">Chiết khấu (${values.discount_percent || 0}%): -${formatCurrency(totals.discountAmount)}</div>
-            <div class="total-row">Thuế (${values.tax_percent || 0}%): +${formatCurrency(totals.taxAmount)}</div>
-            <div class="total-row final">Tổng cộng: ${formatCurrency(totals.totalAmount)}</div>
+            <div class="total-row">Tạm tính: ${formatCurrency(
+              totals.subtotal
+            )}</div>
+            <div class="total-row">Chiết khấu (${
+              values.discount_percent || 0
+            }%): -${formatCurrency(totals.discountAmount)}</div>
+            <div class="total-row">Thuế (${
+              values.tax_percent || 0
+            }%): +${formatCurrency(totals.taxAmount)}</div>
+            <div class="total-row final">Tổng cộng: ${formatCurrency(
+              totals.totalAmount
+            )}</div>
           </div>
 
           ${
@@ -648,7 +661,8 @@ const CreateOrderPage: React.FC<CreateOrderPageProps> = ({ employee }) => {
 
       notification.success({
         message: "Xuất PDF",
-        description: "Đã mở hộp thoại in. Vui lòng chọn 'Save as PDF' để lưu file.",
+        description:
+          "Đã mở hộp thoại in. Vui lòng chọn 'Save as PDF' để lưu file.",
       });
     } catch (error: any) {
       console.error("Error exporting PDF:", error);
@@ -1091,7 +1105,7 @@ const CreateOrderPage: React.FC<CreateOrderPageProps> = ({ employee }) => {
         </Col>
 
         {/* QR Scanner Card - Desktop Only */}
-        {!isMobile && (
+        {screens.xl && (
           <Col xs={24} lg={6}>
             <Card
               title={
@@ -1109,7 +1123,11 @@ const CreateOrderPage: React.FC<CreateOrderPageProps> = ({ employee }) => {
                 >
                   Quét mã QR trên sản phẩm để thêm vào đơn hàng
                 </Text>
-                <QRScanner visible={true} onScan={handleQRScan} />
+                <QRScanner
+                  visible={true}
+                  onClose={() => {}}
+                  onScan={handleQRScan}
+                />
               </div>
             </Card>
           </Col>

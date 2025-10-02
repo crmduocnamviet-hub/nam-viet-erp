@@ -22,6 +22,7 @@ import {
   Grid,
   FloatButton,
   Badge,
+  Tabs,
 } from "antd";
 import {
   UserOutlined,
@@ -160,9 +161,15 @@ const PosPage: React.FC<PosPageProps> = ({ employee, ...props }) => {
 
   // QR Scanner
   const [isQRScannerOpen, setIsQRScannerOpen] = useState(false);
+  const [lastScanTime, setLastScanTime] = useState(0);
+  const [recentScans, setRecentScans] = useState<Set<string>>(new Set());
+  const [isScanning, setIsScanning] = useState(false);
 
   // Cart modal for mobile
   const [isCartModalOpen, setIsCartModalOpen] = useState(false);
+
+  // Tabs for merged search/cart card
+  const [activeTab, setActiveTab] = useState("search");
 
   const { warehouseId, fundId } = selectedWarehouse
     ? {
@@ -572,10 +579,46 @@ const PosPage: React.FC<PosPageProps> = ({ employee, ...props }) => {
     }
   };
 
-  // QR Scanner Handler
+  // QR Scanner Handler with delay mechanism
   const handleQRScan = async (scannedData: string) => {
+    const currentTime = Date.now();
+    const scanDelay = 2000; // 2 seconds delay between scans
+
+    // Check if we're already processing a scan
+    if (isScanning) {
+      return;
+    }
+
+    // Check if this is a duplicate scan within the delay period
+    if (
+      currentTime - lastScanTime < scanDelay ||
+      recentScans.has(scannedData)
+    ) {
+      return;
+    }
+
+    // Set scanning state to prevent concurrent scans
+    setIsScanning(true);
+    setLastScanTime(currentTime);
+
+    // Add to recent scans
+    const newRecentScans = new Set(recentScans);
+    newRecentScans.add(scannedData);
+    setRecentScans(newRecentScans);
+
+    // Remove from recent scans after delay
+    setTimeout(() => {
+      setRecentScans((prev) => {
+        const updated = new Set(prev);
+        updated.delete(scannedData);
+        return updated;
+      });
+    }, scanDelay);
+
     // Search for product directly by barcode
     try {
+      let foundProduct = null;
+
       if (selectedWarehouse) {
         const { data } = await searchProductInWarehouse({
           search: scannedData,
@@ -584,15 +627,18 @@ const PosPage: React.FC<PosPageProps> = ({ employee, ...props }) => {
 
         const products = data?.map((v) => ({ ...v.products })) || [];
         if (products.length > 0) {
+          foundProduct = products[0];
           handleAddToCart(products[0]);
           notification.success({
-            message: "Đã thêm vào giỏ hàng",
+            message: "✅ Đã thêm vào giỏ hàng",
             description: `${products[0].name} - ${scannedData}`,
+            duration: 2,
           });
         } else {
           notification.warning({
-            message: "Không tìm thấy sản phẩm",
+            message: "⚠️ Không tìm thấy sản phẩm",
             description: `Mã: ${scannedData}`,
+            duration: 2,
           });
         }
       } else {
@@ -603,23 +649,41 @@ const PosPage: React.FC<PosPageProps> = ({ employee, ...props }) => {
         });
 
         if (data && data.length > 0) {
+          foundProduct = data[0];
           handleAddToCart(data[0]);
           notification.success({
-            message: "Đã thêm vào giỏ hàng",
+            message: "✅ Đã thêm vào giỏ hàng",
             description: `${data[0].name} - ${scannedData}`,
+            duration: 2,
           });
         } else {
           notification.warning({
-            message: "Không tìm thấy sản phẩm",
+            message: "⚠️ Không tìm thấy sản phẩm",
             description: `Mã: ${scannedData}`,
+            duration: 2,
           });
         }
       }
+
+      // Show scan feedback
+      if (foundProduct) {
+        notification.info({
+          message: "📱 Quét thành công!",
+          description: "Chờ 2 giây để quét sản phẩm tiếp theo",
+          duration: 1.5,
+        });
+      }
     } catch (error) {
       notification.error({
-        message: "Lỗi quét mã",
+        message: "❌ Lỗi quét mã",
         description: "Không thể tìm kiếm sản phẩm",
+        duration: 2,
       });
+    } finally {
+      // Reset scanning state after a short delay
+      setTimeout(() => {
+        setIsScanning(false);
+      }, 500);
     }
   };
 
@@ -907,6 +971,36 @@ const PosPage: React.FC<PosPageProps> = ({ employee, ...props }) => {
               </Space>
             </Card>
 
+            {/* QR Scanner Card - Desktop only */}
+            {!isMobile && (
+              <Card
+                title={
+                  <Space>
+                    <QrcodeOutlined />
+                    <span>Quét mã QR</span>
+                  </Space>
+                }
+                size="small"
+                style={{ borderRadius: 8 }}
+              >
+                <div style={{ textAlign: "center" }}>
+                  <Text
+                    type="secondary"
+                    style={{ display: "block", marginBottom: 12 }}
+                  >
+                    Đưa mã QR/barcode vào khung hình để thêm sản phẩm
+                  </Text>
+                  <QRScanner
+                    visible={true}
+                    onClose={() => {}}
+                    onScan={handleQRScan}
+                    allowMultipleScan={true}
+                    scanDelay={2000}
+                    title=""
+                  />
+                </div>
+              </Card>
+            )}
             <Card
               title={
                 <Space>
@@ -1625,7 +1719,13 @@ const PosPage: React.FC<PosPageProps> = ({ employee, ...props }) => {
           <Text type="secondary" style={{ marginBottom: 16, display: "block" }}>
             Quét mã vạch trên sản phẩm để thêm vào giỏ hàng
           </Text>
-          <QRScanner visible={isQRScannerOpen} onScan={handleQRScan} />
+          <QRScanner
+            visible={isQRScannerOpen}
+            onClose={() => setIsQRScannerOpen(false)}
+            onScan={handleQRScan}
+            allowMultipleScan={true}
+            scanDelay={2000}
+          />
         </div>
       </Modal>
     </div>

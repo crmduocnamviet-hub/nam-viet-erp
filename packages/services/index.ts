@@ -21,6 +21,7 @@ export * from "./src/prescriptionService";
 export * from "./src/salesOrderService";
 export * from "./src/salesOrderItemService";
 export * from "./src/b2bQuoteService";
+export * from "./src/notificationService";
 
 // Room Management Services
 export * from "./src/roomService";

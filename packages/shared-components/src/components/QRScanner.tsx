@@ -17,14 +17,20 @@ declare global {
 
 interface QRScannerProps {
   visible: boolean;
+  onClose: () => void;
   onScan: (result: string) => void;
   title?: string;
+  allowMultipleScan?: boolean;
+  scanDelay?: number;
 }
 
 const QRScanner: React.FC<QRScannerProps> = ({
   visible,
+  onClose,
   onScan,
   title = "Quét mã QR",
+  allowMultipleScan = false,
+  scanDelay = 2000,
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -33,6 +39,8 @@ const QRScanner: React.FC<QRScannerProps> = ({
   const [isScanning, setIsScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showTutorial, setShowTutorial] = useState(false);
+  const [recentScans, setRecentScans] = useState<Set<string>>(new Set());
+  const [lastScanTime, setLastScanTime] = useState<number>(0);
 
   // Detect browser type for specific tutorials
   const getBrowserType = () => {
@@ -203,15 +211,37 @@ const QRScanner: React.FC<QRScannerProps> = ({
           if (barcodes.length > 0) {
             const result = barcodes[0].rawValue;
             if (result) {
-              console.log(
-                "Barcode detected:",
-                result,
-                "Format:",
-                barcodes[0].format
-              );
-              onScan(result);
-              // Keep scanning - don't stop camera or close
-              // This allows continuous scanning of multiple barcodes
+              const currentTime = Date.now();
+
+              // For multiple scan mode, prevent duplicate scans within scanDelay period
+              if (allowMultipleScan) {
+                if (currentTime - lastScanTime < scanDelay || recentScans.has(result)) {
+                  return; // Skip if too soon or recently scanned
+                }
+
+                // Update tracking
+                setLastScanTime(currentTime);
+                setRecentScans(prev => new Set(prev).add(result));
+
+                // Clear recent scan after delay to allow re-scanning same code
+                setTimeout(() => {
+                  setRecentScans(prev => {
+                    const newSet = new Set(prev);
+                    newSet.delete(result);
+                    return newSet;
+                  });
+                }, scanDelay);
+
+                console.log("Barcode detected:", result, "Format:", barcodes[0].format);
+                onScan(result);
+                // Keep scanning - don't stop camera or close
+              } else {
+                // Single scan mode - stop after first scan
+                console.log("Barcode detected:", result, "Format:", barcodes[0].format);
+                onScan(result);
+                stopCamera();
+                onClose();
+              }
             }
           }
         }

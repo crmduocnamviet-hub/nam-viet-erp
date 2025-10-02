@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Card,
   Button,
@@ -16,7 +16,7 @@ import {
   Grid,
   Tag,
   Descriptions,
-} from 'antd';
+} from "antd";
 import {
   DollarOutlined,
   ShopOutlined,
@@ -27,73 +27,17 @@ import {
   WarningOutlined,
   UserOutlined,
   SearchOutlined,
-} from '@ant-design/icons';
-import dayjs from 'dayjs';
+} from "@ant-design/icons";
+import dayjs from "dayjs";
 // Employee context will be passed as props
-import {
-  getQuoteStatistics,
-  createB2BQuote,
-} from '@nam-viet-erp/services';
-import { B2BCustomerSearchModal } from '@nam-viet-erp/shared-components';
+import { getQuoteStatistics, createB2BQuote } from "@nam-viet-erp/services";
+import { B2BCustomerSearchModal } from "@nam-viet-erp/shared-components";
+import B2B_ORDER_STAGES from "../../components/B2BOrderStages";
 
 const { Title, Text } = Typography;
 const { Step } = Steps;
 const { RangePicker } = DatePicker;
 const { useBreakpoint } = Grid;
-
-
-// B2B Order Stages
-const B2B_ORDER_STAGES = [
-  {
-    key: 'draft',
-    title: 'Nháp',
-    description: 'Báo giá đã gửi, chờ quyết định',
-    icon: <FileTextOutlined />,
-    color: 'default',
-    status: 'wait'
-  },
-  {
-    key: 'sent',
-    title: 'Đã gửi',
-    description: 'Báo giá đã gửi cho khách hàng',
-    icon: <FileTextOutlined />,
-    color: 'blue',
-    status: 'process'
-  },
-  {
-    key: 'negotiating',
-    title: 'Thương thảo',
-    description: 'Đang thương thảo điều khoản',
-    icon: <ClockCircleOutlined />,
-    color: 'orange',
-    status: 'process'
-  },
-  {
-    key: 'accepted',
-    title: 'Chấp nhận',
-    description: 'Báo giá được chấp nhận',
-    icon: <CheckCircleOutlined />,
-    color: 'green',
-    status: 'finish'
-  },
-  {
-    key: 'rejected',
-    title: 'Từ chối',
-    description: 'Báo giá bị từ chối',
-    icon: <WarningOutlined />,
-    color: 'red',
-    status: 'error'
-  },
-  {
-    key: 'expired',
-    title: 'Hết hạn',
-    description: 'Báo giá đã hết hạn',
-    icon: <WarningOutlined />,
-    color: 'volcano',
-    status: 'error'
-  },
-];
-
 
 interface User {
   id: string;
@@ -106,25 +50,38 @@ interface B2BOrderManagementPageProps {
   user?: User | null;
 }
 
-const B2BOrderManagementPage: React.FC<B2BOrderManagementPageProps> = ({ employee, user }) => {
+const B2BOrderManagementPage: React.FC<B2BOrderManagementPageProps> = ({
+  employee,
+  user,
+}) => {
   const { notification } = App.useApp();
   const [statistics, setStatistics] = useState<any>(null);
   const [createQuoteForm] = Form.useForm();
   const [createQuoteModalOpen, setCreateQuoteModalOpen] = useState(false);
-  const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
+  const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(
+    null
+  );
   const [loading, setLoading] = useState(false);
   const screens = useBreakpoint();
   const isMobile = !screens.lg;
 
   // Customer search state
   const [customerSearchModalOpen, setCustomerSearchModalOpen] = useState(false);
-  const [selectedCustomer, setSelectedCustomer] = useState<IB2BCustomer | null>(null);
+  const [selectedCustomer, setSelectedCustomer] = useState<IB2BCustomer | null>(
+    null
+  );
 
   // Role detection
   const userPermissions = user?.permissions || [];
-  const isSalesStaff = userPermissions.includes('sales.create') || userPermissions.includes('sales.manage');
-  const isInventoryStaff = userPermissions.includes('inventory.access') || userPermissions.includes('inventory.manage');
-  const isDeliveryStaff = userPermissions.includes('delivery.access') || userPermissions.includes('shipping.manage');
+  const isSalesStaff =
+    userPermissions.includes("sales.create") ||
+    userPermissions.includes("sales.manage");
+  const isInventoryStaff =
+    userPermissions.includes("inventory.access") ||
+    userPermissions.includes("inventory.manage");
+  const isDeliveryStaff =
+    userPermissions.includes("delivery.access") ||
+    userPermissions.includes("shipping.manage");
 
   // Load B2B statistics for dashboard
   const loadStatistics = async () => {
@@ -135,10 +92,10 @@ const B2BOrderManagementPage: React.FC<B2BOrderManagementPageProps> = ({ employe
       // Role-based filtering
       if (isInventoryStaff && !isSalesStaff) {
         // Inventory staff only sees accepted orders they can process
-        filters.stage = 'accepted';
+        filters.stage = "accepted";
       } else if (isDeliveryStaff && !isSalesStaff && !isInventoryStaff) {
         // Delivery staff only sees orders ready for shipping
-        filters.stage = 'packaged';
+        filters.stage = "packaged";
       } else if (isSalesStaff) {
         // Sales staff sees their own orders
         filters.employeeId = employee?.employee_id;
@@ -146,8 +103,8 @@ const B2BOrderManagementPage: React.FC<B2BOrderManagementPageProps> = ({ employe
 
       // Add date range filter if selected
       if (dateRange) {
-        filters.startDate = dateRange[0].format('YYYY-MM-DD');
-        filters.endDate = dateRange[1].format('YYYY-MM-DD');
+        filters.startDate = dateRange[0].format("YYYY-MM-DD");
+        filters.endDate = dateRange[1].format("YYYY-MM-DD");
       }
 
       const statsResponse = await getQuoteStatistics(filters);
@@ -164,16 +121,22 @@ const B2BOrderManagementPage: React.FC<B2BOrderManagementPageProps> = ({ employe
         rejectedQuotes: statsResponse.data?.byStage?.rejected || 0,
         byStage: statsResponse.data?.byStage || {},
         dateRangeText: dateRange
-          ? `${dateRange[0].format('DD/MM/YYYY')} - ${dateRange[1].format('DD/MM/YYYY')}`
-          : 'Tất cả thời gian',
-        roleContext: isInventoryStaff && !isSalesStaff ? 'inventory' :
-                    isDeliveryStaff && !isSalesStaff && !isInventoryStaff ? 'delivery' : 'sales'
+          ? `${dateRange[0].format("DD/MM/YYYY")} - ${dateRange[1].format(
+              "DD/MM/YYYY"
+            )}`
+          : "Tất cả thời gian",
+        roleContext:
+          isInventoryStaff && !isSalesStaff
+            ? "inventory"
+            : isDeliveryStaff && !isSalesStaff && !isInventoryStaff
+            ? "delivery"
+            : "sales",
       };
       setStatistics(stats);
     } catch (error: any) {
       notification.error({
-        message: 'Lỗi tải dữ liệu',
-        description: error.message || 'Không thể tải thống kê B2B',
+        message: "Lỗi tải dữ liệu",
+        description: error.message || "Không thể tải thống kê B2B",
       });
     } finally {
       setLoading(false);
@@ -199,27 +162,25 @@ const B2BOrderManagementPage: React.FC<B2BOrderManagementPageProps> = ({ employe
   // Handle quick date selections
   const handleQuickDateSelection = (days: number) => {
     const endDate = dayjs();
-    const startDate = endDate.subtract(days, 'day');
+    const startDate = endDate.subtract(days, "day");
     setDateRange([startDate, endDate]);
   };
-
-
 
   // Handle save quote
   const handleSaveQuote = async (values: any, isDraft: boolean = true) => {
     try {
       if (!employee?.employee_id) {
         notification.error({
-          message: 'Lỗi',
-          description: 'Không tìm thấy thông tin nhân viên',
+          message: "Lỗi",
+          description: "Không tìm thấy thông tin nhân viên",
         });
         return;
       }
 
       if (!selectedCustomer) {
         notification.error({
-          message: 'Lỗi',
-          description: 'Vui lòng chọn khách hàng trước khi tạo báo giá',
+          message: "Lỗi",
+          description: "Vui lòng chọn khách hàng trước khi tạo báo giá",
         });
         return;
       }
@@ -231,15 +192,17 @@ const B2BOrderManagementPage: React.FC<B2BOrderManagementPageProps> = ({ employe
         customer_phone: selectedCustomer.phone_number,
         customer_email: selectedCustomer.email,
         customer_address: selectedCustomer.address,
-        quote_stage: isDraft ? 'draft' as const : 'sent' as const,
+        quote_stage: isDraft ? ("draft" as const) : ("sent" as const),
         total_value: 0,
         subtotal: 0,
         discount_percent: values.discount_percent || 0,
         discount_amount: 0,
         tax_percent: values.tax_percent || 0,
         tax_amount: 0,
-        quote_date: dayjs().format('YYYY-MM-DD'),
-        valid_until: values.valid_until ? dayjs(values.valid_until).format('YYYY-MM-DD') : dayjs().add(30, 'days').format('YYYY-MM-DD'),
+        quote_date: dayjs().format("YYYY-MM-DD"),
+        valid_until: values.valid_until
+          ? dayjs(values.valid_until).format("YYYY-MM-DD")
+          : dayjs().add(30, "days").format("YYYY-MM-DD"),
         notes: values.notes,
         terms_conditions: values.terms_conditions,
         created_by_employee_id: employee.employee_id,
@@ -253,28 +216,40 @@ const B2BOrderManagementPage: React.FC<B2BOrderManagementPageProps> = ({ employe
 
       if (newQuote) {
         notification.success({
-          message: 'Thành công',
-          description: `${isDraft ? 'Lưu nháp' : 'Gửi'} báo giá thành công`,
+          message: "Thành công",
+          description: `${isDraft ? "Lưu nháp" : "Gửi"} báo giá thành công`,
+          duration: 2,
         });
         setCreateQuoteModalOpen(false);
         createQuoteForm.resetFields();
         setSelectedCustomer(null); // Clear selected customer
-        loadStatistics(); // Reload statistics
+
+        // Show additional success notification with redirect info
+        notification.info({
+          message: "🎉 Chuyển hướng",
+          description: "Đang chuyển đến danh sách đơn hàng B2B...",
+          duration: 1.5,
+        });
+
+        // Redirect to B2B order list after a short delay
+        setTimeout(() => {
+          window.location.href = "/b2b";
+        }, 1500);
       }
     } catch (error) {
-      console.error('Error creating quote:', error);
+      console.error("Error creating quote:", error);
       notification.error({
-        message: 'Lỗi tạo báo giá',
-        description: 'Không thể tạo báo giá mới',
+        message: "Lỗi tạo báo giá",
+        description: "Không thể tạo báo giá mới",
       });
     }
   };
 
   // Format currency
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND',
+    return new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
     }).format(amount);
   };
 
@@ -293,39 +268,38 @@ const B2BOrderManagementPage: React.FC<B2BOrderManagementPageProps> = ({ employe
     });
 
     notification.success({
-      message: 'Đã chọn khách hàng',
+      message: "Đã chọn khách hàng",
       description: `Đã chọn khách hàng ${customer.customer_name}`,
     });
   };
 
   return (
-    <div style={{ padding: '24px' }}>
+    <div style={{ padding: "24px" }}>
       <Row justify="space-between" align="middle" style={{ marginBottom: 24 }}>
         <Col>
           <Title level={2} style={{ margin: 0 }}>
             <ShopOutlined style={{ marginRight: 8 }} />
-            {statistics?.roleContext === 'inventory' ? 'Đơn hàng chờ xử lý - Kho' :
-             statistics?.roleContext === 'delivery' ? 'Đơn hàng chờ giao - Vận chuyển' :
-             'Quản lý Đơn hàng B2B'}
+            {statistics?.roleContext === "inventory"
+              ? "Đơn hàng chờ xử lý - Kho"
+              : statistics?.roleContext === "delivery"
+              ? "Đơn hàng chờ giao - Vận chuyển"
+              : "Quản lý Đơn hàng B2B"}
           </Title>
           <Text type="secondary">
-            {statistics?.roleContext === 'inventory' ? 'Xử lý đơn hàng đã được chấp nhận - Đóng gói và chuẩn bị giao hàng' :
-             statistics?.roleContext === 'delivery' ? 'Giao hàng và hoàn tất đơn hàng' :
-             'Tạo báo giá và quản lý đơn hàng bán buôn'}
+            {statistics?.roleContext === "inventory"
+              ? "Xử lý đơn hàng đã được chấp nhận - Đóng gói và chuẩn bị giao hàng"
+              : statistics?.roleContext === "delivery"
+              ? "Giao hàng và hoàn tất đơn hàng"
+              : "Tạo báo giá và quản lý đơn hàng bán buôn"}
           </Text>
         </Col>
         <Col>
           <Space>
-            {statistics?.roleContext === 'inventory' && (
-              <Text strong style={{ color: '#fa8c16' }}>Bộ phận Kho</Text>
-            )}
-            {statistics?.roleContext === 'delivery' && (
-              <Text strong style={{ color: '#52c41a' }}>Bộ phận Giao hàng</Text>
-            )}
-            {statistics?.roleContext === 'sales' && (
-              <Text strong style={{ color: '#1890ff' }}>Bộ phận Sales</Text>
-            )}
-            <Button icon={<ReloadOutlined />} onClick={loadStatistics} loading={loading}>
+            <Button
+              icon={<ReloadOutlined />}
+              onClick={loadStatistics}
+              loading={loading}
+            >
               Làm mới
             </Button>
           </Space>
@@ -334,14 +308,18 @@ const B2BOrderManagementPage: React.FC<B2BOrderManagementPageProps> = ({ employe
 
       {/* Date Filter Section */}
       <Card style={{ marginBottom: 24 }}>
-        <Space direction={isMobile ? 'vertical' : 'horizontal'} size="middle" style={{ width: '100%' }}>
+        <Space
+          direction={isMobile ? "vertical" : "horizontal"}
+          size="middle"
+          style={{ width: "100%" }}
+        >
           <Text strong>Lọc theo thời gian:</Text>
           <RangePicker
             value={dateRange}
             onChange={handleDateRangeChange}
             format="DD/MM/YYYY"
-            placeholder={['Từ ngày', 'Đến ngày']}
-            style={{ width: isMobile ? '100%' : 280 }}
+            placeholder={["Từ ngày", "Đến ngày"]}
+            style={{ width: isMobile ? "100%" : 280 }}
           />
           <Space wrap>
             <Button size="small" onClick={() => handleQuickDateSelection(7)}>
@@ -368,12 +346,16 @@ const B2BOrderManagementPage: React.FC<B2BOrderManagementPageProps> = ({ employe
         <Col xs={24} sm={12} lg={6}>
           <Card loading={loading}>
             <Statistic
-              title={statistics?.roleContext === 'inventory' ? 'Đơn hàng chờ xử lý' :
-                     statistics?.roleContext === 'delivery' ? 'Đơn hàng chờ giao' :
-                     'Tổng báo giá'}
+              title={
+                statistics?.roleContext === "inventory"
+                  ? "Đơn hàng chờ xử lý"
+                  : statistics?.roleContext === "delivery"
+                  ? "Đơn hàng chờ giao"
+                  : "Tổng báo giá"
+              }
               value={statistics?.total || 0}
               prefix={<ShopOutlined />}
-              valueStyle={{ color: '#1890ff' }}
+              valueStyle={{ color: "#1890ff" }}
             />
           </Card>
         </Col>
@@ -384,11 +366,11 @@ const B2BOrderManagementPage: React.FC<B2BOrderManagementPageProps> = ({ employe
               value={statistics?.totalRevenue || 0}
               prefix={<DollarOutlined />}
               formatter={(value) => formatCurrency(Number(value))}
-              valueStyle={{ color: '#52c41a' }}
+              valueStyle={{ color: "#52c41a" }}
             />
           </Card>
         </Col>
-        {statistics?.roleContext === 'sales' && (
+        {statistics?.roleContext === "sales" && (
           <>
             <Col xs={24} sm={12} lg={6}>
               <Card loading={loading}>
@@ -396,7 +378,7 @@ const B2BOrderManagementPage: React.FC<B2BOrderManagementPageProps> = ({ employe
                   title="Báo giá nháp"
                   value={statistics?.draftQuotes || 0}
                   prefix={<FileTextOutlined />}
-                  valueStyle={{ color: '#8c8c8c' }}
+                  valueStyle={{ color: "#8c8c8c" }}
                 />
               </Card>
             </Col>
@@ -406,13 +388,13 @@ const B2BOrderManagementPage: React.FC<B2BOrderManagementPageProps> = ({ employe
                   title="Đã chấp nhận"
                   value={statistics?.acceptedQuotes || 0}
                   prefix={<CheckCircleOutlined />}
-                  valueStyle={{ color: '#52c41a' }}
+                  valueStyle={{ color: "#52c41a" }}
                 />
               </Card>
             </Col>
           </>
         )}
-        {statistics?.roleContext === 'inventory' && (
+        {statistics?.roleContext === "inventory" && (
           <>
             <Col xs={24} sm={12} lg={6}>
               <Card loading={loading}>
@@ -420,7 +402,7 @@ const B2BOrderManagementPage: React.FC<B2BOrderManagementPageProps> = ({ employe
                   title="Chờ đóng gói"
                   value={statistics?.byStage?.accepted || 0}
                   prefix={<ClockCircleOutlined />}
-                  valueStyle={{ color: '#fa8c16' }}
+                  valueStyle={{ color: "#fa8c16" }}
                 />
               </Card>
             </Col>
@@ -430,13 +412,13 @@ const B2BOrderManagementPage: React.FC<B2BOrderManagementPageProps> = ({ employe
                   title="Đã đóng gói"
                   value={statistics?.byStage?.packaged || 0}
                   prefix={<CheckCircleOutlined />}
-                  valueStyle={{ color: '#52c41a' }}
+                  valueStyle={{ color: "#52c41a" }}
                 />
               </Card>
             </Col>
           </>
         )}
-        {statistics?.roleContext === 'delivery' && (
+        {statistics?.roleContext === "delivery" && (
           <>
             <Col xs={24} sm={12} lg={6}>
               <Card loading={loading}>
@@ -444,7 +426,7 @@ const B2BOrderManagementPage: React.FC<B2BOrderManagementPageProps> = ({ employe
                   title="Chờ giao hàng"
                   value={statistics?.byStage?.packaged || 0}
                   prefix={<ClockCircleOutlined />}
-                  valueStyle={{ color: '#fa8c16' }}
+                  valueStyle={{ color: "#fa8c16" }}
                 />
               </Card>
             </Col>
@@ -454,7 +436,7 @@ const B2BOrderManagementPage: React.FC<B2BOrderManagementPageProps> = ({ employe
                   title="Đã hoàn tất"
                   value={statistics?.byStage?.completed || 0}
                   prefix={<CheckCircleOutlined />}
-                  valueStyle={{ color: '#52c41a' }}
+                  valueStyle={{ color: "#52c41a" }}
                 />
               </Card>
             </Col>
@@ -463,105 +445,178 @@ const B2BOrderManagementPage: React.FC<B2BOrderManagementPageProps> = ({ employe
       </Row>
 
       {/* Quick Actions for Inventory/Delivery Staff */}
-      {(statistics?.roleContext === 'inventory' || statistics?.roleContext === 'delivery') && (
-        <Card title={
-          <Space>
-            <Text strong>
-              {statistics?.roleContext === 'inventory' ? 'Hành động nhanh - Kho' : 'Hành động nhanh - Giao hàng'}
-            </Text>
-            {statistics?.roleContext === 'inventory' && (
-              <Text type="secondary">(Cập nhật trạng thái đơn hàng đã chấp nhận)</Text>
-            )}
-            {statistics?.roleContext === 'delivery' && (
-              <Text type="secondary">(Cập nhật trạng thái giao hàng)</Text>
-            )}
-          </Space>
-        } style={{ marginBottom: 24 }}>
+      {(statistics?.roleContext === "inventory" ||
+        statistics?.roleContext === "delivery") && (
+        <Card
+          title={
+            <Space>
+              <Text strong>
+                {statistics?.roleContext === "inventory"
+                  ? "Hành động nhanh - Kho"
+                  : "Hành động nhanh - Giao hàng"}
+              </Text>
+              {statistics?.roleContext === "inventory" && (
+                <Text type="secondary">
+                  (Cập nhật trạng thái đơn hàng đã chấp nhận)
+                </Text>
+              )}
+              {statistics?.roleContext === "delivery" && (
+                <Text type="secondary">(Cập nhật trạng thái giao hàng)</Text>
+              )}
+            </Space>
+          }
+          style={{ marginBottom: 24 }}
+        >
           <Row gutter={16}>
             <Col xs={24} md={12} lg={8}>
-              <div style={{
-                padding: '16px',
-                backgroundColor: '#fff7e6',
-                borderRadius: '8px',
-                border: '1px solid #ffd591',
-                textAlign: 'center'
-              }}>
-                <ClockCircleOutlined style={{ fontSize: '24px', color: '#fa8c16', marginBottom: '8px' }} />
-                <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
-                  {statistics?.roleContext === 'inventory' ? 'Chờ đóng gói' : 'Chờ giao hàng'}
+              <div
+                style={{
+                  padding: "16px",
+                  backgroundColor: "#fff7e6",
+                  borderRadius: "8px",
+                  border: "1px solid #ffd591",
+                  textAlign: "center",
+                }}
+              >
+                <ClockCircleOutlined
+                  style={{
+                    fontSize: "24px",
+                    color: "#fa8c16",
+                    marginBottom: "8px",
+                  }}
+                />
+                <div style={{ fontWeight: "bold", marginBottom: "4px" }}>
+                  {statistics?.roleContext === "inventory"
+                    ? "Chờ đóng gói"
+                    : "Chờ giao hàng"}
                 </div>
-                <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#fa8c16' }}>
-                  {statistics?.roleContext === 'inventory' ?
-                    (statistics?.byStage?.accepted || 0) :
-                    (statistics?.byStage?.packaged || 0)} đơn
+                <div
+                  style={{
+                    fontSize: "20px",
+                    fontWeight: "bold",
+                    color: "#fa8c16",
+                  }}
+                >
+                  {statistics?.roleContext === "inventory"
+                    ? statistics?.byStage?.accepted || 0
+                    : statistics?.byStage?.packaged || 0}{" "}
+                  đơn
                 </div>
                 <Button
                   type="primary"
                   size="small"
-                  style={{ marginTop: '8px' }}
+                  style={{ marginTop: "8px" }}
                   onClick={() => {
                     // Navigate to order list to process orders
-                    window.location.href = '/b2b';
+                    window.location.href = "/b2b";
                   }}
                 >
                   Xử lý ngay
                 </Button>
               </div>
             </Col>
-            {statistics?.roleContext === 'inventory' && (
+            {statistics?.roleContext === "inventory" && (
               <Col xs={24} md={12} lg={8}>
-                <div style={{
-                  padding: '16px',
-                  backgroundColor: '#f6ffed',
-                  borderRadius: '8px',
-                  border: '1px solid #b7eb8f',
-                  textAlign: 'center'
-                }}>
-                  <CheckCircleOutlined style={{ fontSize: '24px', color: '#52c41a', marginBottom: '8px' }} />
-                  <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>Đã đóng gói</div>
-                  <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#52c41a' }}>
+                <div
+                  style={{
+                    padding: "16px",
+                    backgroundColor: "#f6ffed",
+                    borderRadius: "8px",
+                    border: "1px solid #b7eb8f",
+                    textAlign: "center",
+                  }}
+                >
+                  <CheckCircleOutlined
+                    style={{
+                      fontSize: "24px",
+                      color: "#52c41a",
+                      marginBottom: "8px",
+                    }}
+                  />
+                  <div style={{ fontWeight: "bold", marginBottom: "4px" }}>
+                    Đã đóng gói
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "20px",
+                      fontWeight: "bold",
+                      color: "#52c41a",
+                    }}
+                  >
                     {statistics?.byStage?.packaged || 0} đơn
                   </div>
-                  <Text type="secondary" style={{ fontSize: '12px' }}>
+                  <Text type="secondary" style={{ fontSize: "12px" }}>
                     Chờ bộ phận vận chuyển
                   </Text>
                 </div>
               </Col>
             )}
-            {statistics?.roleContext === 'delivery' && (
+            {statistics?.roleContext === "delivery" && (
               <Col xs={24} md={12} lg={8}>
-                <div style={{
-                  padding: '16px',
-                  backgroundColor: '#f6ffed',
-                  borderRadius: '8px',
-                  border: '1px solid #b7eb8f',
-                  textAlign: 'center'
-                }}>
-                  <CheckCircleOutlined style={{ fontSize: '24px', color: '#52c41a', marginBottom: '8px' }} />
-                  <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>Đã hoàn tất</div>
-                  <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#52c41a' }}>
+                <div
+                  style={{
+                    padding: "16px",
+                    backgroundColor: "#f6ffed",
+                    borderRadius: "8px",
+                    border: "1px solid #b7eb8f",
+                    textAlign: "center",
+                  }}
+                >
+                  <CheckCircleOutlined
+                    style={{
+                      fontSize: "24px",
+                      color: "#52c41a",
+                      marginBottom: "8px",
+                    }}
+                  />
+                  <div style={{ fontWeight: "bold", marginBottom: "4px" }}>
+                    Đã hoàn tất
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "20px",
+                      fontWeight: "bold",
+                      color: "#52c41a",
+                    }}
+                  >
                     {statistics?.byStage?.completed || 0} đơn
                   </div>
-                  <Text type="secondary" style={{ fontSize: '12px' }}>
+                  <Text type="secondary" style={{ fontSize: "12px" }}>
                     Đã giao thành công
                   </Text>
                 </div>
               </Col>
             )}
             <Col xs={24} md={12} lg={8}>
-              <div style={{
-                padding: '16px',
-                backgroundColor: '#f0f5ff',
-                borderRadius: '8px',
-                border: '1px solid #adc6ff',
-                textAlign: 'center'
-              }}>
-                <ShopOutlined style={{ fontSize: '24px', color: '#1890ff', marginBottom: '8px' }} />
-                <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>Tổng đơn hàng</div>
-                <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#1890ff' }}>
+              <div
+                style={{
+                  padding: "16px",
+                  backgroundColor: "#f0f5ff",
+                  borderRadius: "8px",
+                  border: "1px solid #adc6ff",
+                  textAlign: "center",
+                }}
+              >
+                <ShopOutlined
+                  style={{
+                    fontSize: "24px",
+                    color: "#1890ff",
+                    marginBottom: "8px",
+                  }}
+                />
+                <div style={{ fontWeight: "bold", marginBottom: "4px" }}>
+                  Tổng đơn hàng
+                </div>
+                <div
+                  style={{
+                    fontSize: "20px",
+                    fontWeight: "bold",
+                    color: "#1890ff",
+                  }}
+                >
                   {statistics?.total || 0} đơn
                 </div>
-                <div style={{ fontSize: '14px', color: '#52c41a' }}>
+                <div style={{ fontSize: "14px", color: "#52c41a" }}>
                   {formatCurrency(statistics?.totalRevenue || 0)}
                 </div>
               </div>
@@ -578,11 +633,17 @@ const B2BOrderManagementPage: React.FC<B2BOrderManagementPageProps> = ({ employe
               key={stage.key}
               title={stage.title}
               description={
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '12px', color: '#666' }}>
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ fontSize: "12px", color: "#666" }}>
                     {stage.description}
                   </div>
-                  <div style={{ fontSize: '14px', fontWeight: 'bold', color: stage.color === 'default' ? '#666' : stage.color }}>
+                  <div
+                    style={{
+                      fontSize: "14px",
+                      fontWeight: "bold",
+                      color: stage.color === "default" ? "#666" : stage.color,
+                    }}
+                  >
                     {statistics?.byStage?.[stage.key] || 0} báo giá
                   </div>
                 </div>
@@ -596,20 +657,38 @@ const B2BOrderManagementPage: React.FC<B2BOrderManagementPageProps> = ({ employe
         {/* Rejected and Expired quotes separate */}
         <Row gutter={16} style={{ marginTop: 24 }}>
           <Col span={12}>
-            <div style={{ padding: '16px', backgroundColor: '#fff2f0', borderRadius: '6px', border: '1px solid #ffccc7' }}>
+            <div
+              style={{
+                padding: "16px",
+                backgroundColor: "#fff2f0",
+                borderRadius: "6px",
+                border: "1px solid #ffccc7",
+              }}
+            >
               <Space>
-                <WarningOutlined style={{ color: '#ff4d4f' }} />
+                <WarningOutlined style={{ color: "#ff4d4f" }} />
                 <Text strong>Báo giá từ chối:</Text>
-                <Text style={{ color: '#ff4d4f' }}>{statistics?.byStage?.rejected || 0} báo giá</Text>
+                <Text style={{ color: "#ff4d4f" }}>
+                  {statistics?.byStage?.rejected || 0} báo giá
+                </Text>
               </Space>
             </div>
           </Col>
           <Col span={12}>
-            <div style={{ padding: '16px', backgroundColor: '#fff7e6', borderRadius: '6px', border: '1px solid #ffd591' }}>
+            <div
+              style={{
+                padding: "16px",
+                backgroundColor: "#fff7e6",
+                borderRadius: "6px",
+                border: "1px solid #ffd591",
+              }}
+            >
               <Space>
-                <WarningOutlined style={{ color: '#fa8c16' }} />
+                <WarningOutlined style={{ color: "#fa8c16" }} />
                 <Text strong>Báo giá hết hạn:</Text>
-                <Text style={{ color: '#fa8c16' }}>{statistics?.byStage?.expired || 0} báo giá</Text>
+                <Text style={{ color: "#fa8c16" }}>
+                  {statistics?.byStage?.expired || 0} báo giá
+                </Text>
               </Space>
             </div>
           </Col>
@@ -626,31 +705,42 @@ const B2BOrderManagementPage: React.FC<B2BOrderManagementPageProps> = ({ employe
           setSelectedCustomer(null);
         }}
         footer={[
-          <Button key="cancel" onClick={() => {
-            setCreateQuoteModalOpen(false);
-            createQuoteForm.resetFields();
-            setSelectedCustomer(null);
-          }}>
+          <Button
+            key="cancel"
+            onClick={() => {
+              setCreateQuoteModalOpen(false);
+              createQuoteForm.resetFields();
+              setSelectedCustomer(null);
+            }}
+          >
             Hủy
           </Button>,
-          <Button key="save-draft" type="default" onClick={async () => {
-            try {
-              const values = await createQuoteForm.validateFields();
-              handleSaveQuote(values, true);
-            } catch (error) {
-              console.error('Validation failed:', error);
-            }
-          }}>
+          <Button
+            key="save-draft"
+            type="default"
+            onClick={async () => {
+              try {
+                const values = await createQuoteForm.validateFields();
+                handleSaveQuote(values, true);
+              } catch (error) {
+                console.error("Validation failed:", error);
+              }
+            }}
+          >
             Lưu nháp
           </Button>,
-          <Button key="send" type="primary" onClick={async () => {
-            try {
-              const values = await createQuoteForm.validateFields();
-              handleSaveQuote(values, false);
-            } catch (error) {
-              console.error('Validation failed:', error);
-            }
-          }}>
+          <Button
+            key="send"
+            type="primary"
+            onClick={async () => {
+              try {
+                const values = await createQuoteForm.validateFields();
+                handleSaveQuote(values, false);
+              } catch (error) {
+                console.error("Validation failed:", error);
+              }
+            }}
+          >
             Gửi báo giá
           </Button>,
         ]}
@@ -663,7 +753,9 @@ const B2BOrderManagementPage: React.FC<B2BOrderManagementPageProps> = ({ employe
               <UserOutlined />
               <span>Thông tin Khách hàng</span>
               {selectedCustomer && (
-                <Tag color="green">Đã chọn: {selectedCustomer.customer_name}</Tag>
+                <Tag color="green">
+                  Đã chọn: {selectedCustomer.customer_name}
+                </Tag>
               )}
             </Space>
           }
@@ -674,7 +766,7 @@ const B2BOrderManagementPage: React.FC<B2BOrderManagementPageProps> = ({ employe
               icon={<SearchOutlined />}
               onClick={() => setCustomerSearchModalOpen(true)}
             >
-              {selectedCustomer ? 'Đổi khách hàng' : 'Chọn khách hàng'}
+              {selectedCustomer ? "Đổi khách hàng" : "Chọn khách hàng"}
             </Button>
           }
         >
@@ -688,28 +780,31 @@ const B2BOrderManagementPage: React.FC<B2BOrderManagementPageProps> = ({ employe
               </Descriptions.Item>
               <Descriptions.Item label="Loại khách hàng">
                 <Tag color="blue">
-                  {selectedCustomer.customer_type === 'hospital' && 'Bệnh viện'}
-                  {selectedCustomer.customer_type === 'pharmacy' && 'Nhà thuốc'}
-                  {selectedCustomer.customer_type === 'clinic' && 'Phòng khám'}
-                  {selectedCustomer.customer_type === 'distributor' && 'Nhà phân phối'}
-                  {selectedCustomer.customer_type === 'other' && 'Khác'}
+                  {selectedCustomer.customer_type === "hospital" && "Bệnh viện"}
+                  {selectedCustomer.customer_type === "pharmacy" && "Nhà thuốc"}
+                  {selectedCustomer.customer_type === "clinic" && "Phòng khám"}
+                  {selectedCustomer.customer_type === "distributor" &&
+                    "Nhà phân phối"}
+                  {selectedCustomer.customer_type === "other" && "Khác"}
                 </Tag>
               </Descriptions.Item>
               <Descriptions.Item label="Người liên hệ">
-                {selectedCustomer.contact_person || 'Chưa có'}
+                {selectedCustomer.contact_person || "Chưa có"}
               </Descriptions.Item>
               <Descriptions.Item label="Số điện thoại">
-                {selectedCustomer.phone_number || 'Chưa có'}
+                {selectedCustomer.phone_number || "Chưa có"}
               </Descriptions.Item>
               <Descriptions.Item label="Email">
-                {selectedCustomer.email || 'Chưa có'}
+                {selectedCustomer.email || "Chưa có"}
               </Descriptions.Item>
               <Descriptions.Item label="Địa chỉ" span={2}>
-                {selectedCustomer.address || 'Chưa có'}
+                {selectedCustomer.address || "Chưa có"}
               </Descriptions.Item>
             </Descriptions>
           ) : (
-            <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>
+            <div
+              style={{ textAlign: "center", padding: "40px 0", color: "#999" }}
+            >
               <UserOutlined style={{ fontSize: 48, marginBottom: 16 }} />
               <div>Vui lòng chọn khách hàng để tạo báo giá</div>
             </div>
@@ -719,24 +814,48 @@ const B2BOrderManagementPage: React.FC<B2BOrderManagementPageProps> = ({ employe
         <Form layout="vertical" form={createQuoteForm}>
           <Row gutter={16}>
             <Col span={8}>
-              <Form.Item name="valid_until" label="Ngày hết hạn báo giá" rules={[{ required: true, message: 'Vui lòng chọn ngày hết hạn' }]}>
-                <DatePicker style={{ width: '100%' }} placeholder="Chọn ngày hết hạn" />
+              <Form.Item
+                name="valid_until"
+                label="Ngày hết hạn báo giá"
+                rules={[
+                  { required: true, message: "Vui lòng chọn ngày hết hạn" },
+                ]}
+              >
+                <DatePicker
+                  style={{ width: "100%" }}
+                  placeholder="Chọn ngày hết hạn"
+                />
               </Form.Item>
             </Col>
             <Col span={8}>
               <Form.Item name="discount_percent" label="Chiết khấu (%)">
-                <Input placeholder="0" suffix="%" type="number" min={0} max={100} />
+                <Input
+                  placeholder="0"
+                  suffix="%"
+                  type="number"
+                  min={0}
+                  max={100}
+                />
               </Form.Item>
             </Col>
             <Col span={8}>
               <Form.Item name="tax_percent" label="Thuế (%)">
-                <Input placeholder="0" suffix="%" type="number" min={0} max={100} />
+                <Input
+                  placeholder="0"
+                  suffix="%"
+                  type="number"
+                  min={0}
+                  max={100}
+                />
               </Form.Item>
             </Col>
           </Row>
 
           <Form.Item name="notes" label="Ghi chú">
-            <Input.TextArea rows={3} placeholder="Thêm ghi chú cho báo giá..." />
+            <Input.TextArea
+              rows={3}
+              placeholder="Thêm ghi chú cho báo giá..."
+            />
           </Form.Item>
         </Form>
       </Modal>

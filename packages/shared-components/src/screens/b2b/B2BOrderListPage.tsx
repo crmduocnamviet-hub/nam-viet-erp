@@ -9,13 +9,11 @@ import {
   Select,
   DatePicker,
   Tag,
-  Modal,
   Form,
   App,
   Row,
   Col,
   Drawer,
-  Descriptions,
   Grid,
   Checkbox,
 } from "antd";
@@ -34,9 +32,27 @@ import {
   getB2BQuotes,
   createB2BQuote,
   updateB2BQuote,
+  updateQuoteStage,
   getB2BCustomers,
   createB2BCustomer,
+  getQuoteItems,
+  getB2BWarehouseProductByBarCode,
+  notificationService,
 } from "@nam-viet-erp/services";
+import {
+  OrderDetailModal,
+  CreateQuoteModal,
+  EditQuoteModal,
+  CreateCustomerModal,
+  BulkUpdateModal,
+  QRScannerVerificationModal,
+} from "@nam-viet-erp/shared-components";
+import {
+  B2B_ORDER_STAGES,
+  DELIVERY_STATUSES,
+  INVENTORY_STATUSES,
+  SALE_STATUSES,
+} from "../../constants/b2b";
 
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
@@ -46,76 +62,6 @@ const { useBreakpoint } = Grid;
 interface B2BQuoteWithStatus extends IB2BQuote {
   // Using quote_stage for all order statuses - no separate operation_status needed
 }
-
-// B2B Order Stages - Complete workflow from quote to completion
-const B2B_ORDER_STAGES = [
-  {
-    key: "draft",
-    title: "⚫ Nháp",
-    description: "Báo giá/đơn hàng đang soạn thảo",
-    color: "default",
-  },
-  {
-    key: "sent",
-    title: "Đã gửi",
-    description: "Báo giá đã gửi cho khách hàng",
-    color: "blue",
-  },
-  {
-    key: "negotiating",
-    title: "Thương thảo",
-    description: "Đang thương thảo điều khoản",
-    color: "orange",
-  },
-  {
-    key: "accepted",
-    title: "Chấp nhận",
-    description: "Báo giá được chấp nhận, chuyển thành đơn hàng",
-    color: "green",
-  },
-  {
-    key: "pending_packaging",
-    title: "🔵 Chờ đóng gói",
-    description: "Đơn hàng chờ xử lý và đóng gói",
-    color: "blue",
-  },
-  {
-    key: "packaged",
-    title: "🟡 Đã đóng gói & Chờ giao vận",
-    description: "Hàng đã đóng gói, chờ giao cho đơn vị vận chuyển",
-    color: "orange",
-  },
-  {
-    key: "shipping",
-    title: "🚚 Chờ giao tới khách hàng",
-    description: "Hàng đang trên đường giao đến khách hàng",
-    color: "cyan",
-  },
-  {
-    key: "completed",
-    title: "✅ Hoàn tất",
-    description: "Đơn hàng đã hoàn tất",
-    color: "green",
-  },
-  {
-    key: "rejected",
-    title: "Từ chối",
-    description: "Báo giá bị từ chối",
-    color: "red",
-  },
-  {
-    key: "cancelled",
-    title: "❌ Đã hủy",
-    description: "Đơn hàng đã bị hủy",
-    color: "red",
-  },
-  {
-    key: "expired",
-    title: "Hết hạn",
-    description: "Báo giá đã hết hạn",
-    color: "volcano",
-  },
-];
 
 interface User {
   id: string;
@@ -148,6 +94,10 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
   const [selectedOrder, setSelectedOrder] = useState<B2BQuoteWithStatus | null>(
     null
   );
+  const [orderItems, setOrderItems] = useState<any[]>([]);
+  const [loadingItems, setLoadingItems] = useState(false);
+  const [qrScannerOpen, setQrScannerOpen] = useState(false);
+  const [verifiedItems, setVerifiedItems] = useState<Set<string>>(new Set());
   const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
   const [bulkUpdateModalOpen, setBulkUpdateModalOpen] = useState(false);
   const [bulkUpdateLoading, setBulkUpdateLoading] = useState(false);
@@ -237,17 +187,9 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
 
   // Check if user can edit the current order status
   const canEditOrderStatus = (currentStatus: string) => {
-    const salesStatuses = [
-      "draft",
-      "sent",
-      "negotiating",
-      "accepted",
-      "cancelled",
-      "rejected",
-      "expired",
-    ];
-    const inventoryStatuses = ["accepted", "pending_packaging", "packaged"];
-    const deliveryStatuses = ["packaged", "shipping", "completed"];
+    const salesStatuses = SALE_STATUSES;
+    const inventoryStatuses = INVENTORY_STATUSES;
+    const deliveryStatuses = DELIVERY_STATUSES;
 
     // Admin can edit any status
     if (
@@ -333,8 +275,10 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
       setTotal(quotesData.length); // For now, since we don't have total count from service
 
       // Clear selected orders if they no longer exist in the current data
-      const currentOrderIds = quotesData.map(quote => quote.quote_id);
-      setSelectedOrderIds(prev => prev.filter(id => currentOrderIds.includes(id)));
+      const currentOrderIds = quotesData.map((quote) => quote.quote_id);
+      setSelectedOrderIds((prev) =>
+        prev.filter((id) => currentOrderIds.includes(id))
+      );
     } catch (error: any) {
       notification.error({
         message: "Lỗi tải dữ liệu",
@@ -348,6 +292,60 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
   useEffect(() => {
     loadOrders();
   }, [current, searchKeyword, filters]);
+
+  // Realtime subscription for B2B quotes with permission check
+  useEffect(() => {
+    // Check if user has b2b.notification permission
+    const hasNotificationPermission = userPermissions.includes("b2b.notification");
+
+    if (!hasNotificationPermission) {
+      console.log("[B2B Dashboard] User does not have b2b.notification permission. Skipping realtime subscription.");
+      return;
+    }
+
+    console.log("[B2B Dashboard] Setting up realtime subscription for b2b_quotes...");
+
+    // Subscribe to b2b_quotes changes
+    const unsubscribe = notificationService.subscribeToB2BQuotes(
+      (payload) => {
+        console.log("[B2B Dashboard] Received quote update:", payload);
+
+        // Handle different event types
+        if (payload.eventType === "INSERT") {
+          notification.info({
+            message: "Đơn hàng mới",
+            description: `Đơn hàng ${payload.new?.quote_number || "mới"} đã được tạo`,
+            placement: "topRight",
+            duration: 4,
+          });
+        } else if (payload.eventType === "UPDATE") {
+          notification.info({
+            message: "Cập nhật đơn hàng",
+            description: `Đơn hàng ${payload.new?.quote_number || ""} đã được cập nhật`,
+            placement: "topRight",
+            duration: 3,
+          });
+        } else if (payload.eventType === "DELETE") {
+          notification.warning({
+            message: "Đơn hàng đã xóa",
+            description: `Đơn hàng ${payload.old?.quote_number || ""} đã bị xóa`,
+            placement: "topRight",
+            duration: 3,
+          });
+        }
+
+        // Refresh the list to show updated data
+        loadOrders();
+      },
+      employee?.employee_id // Optional: filter by employee ID
+    );
+
+    // Cleanup subscription on unmount
+    return () => {
+      console.log("[B2B Dashboard] Cleaning up realtime subscription...");
+      unsubscribe();
+    };
+  }, [employee?.employee_id, userPermissions]); // Re-subscribe if employee or permissions change
 
   // Handle search
   const handleSearch = () => {
@@ -536,9 +534,186 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
   };
 
   // Handle view order details
-  const handleViewOrder = (quote: B2BQuoteWithStatus) => {
+  const handleViewOrder = async (quote: B2BQuoteWithStatus) => {
     setSelectedOrder(quote);
     setOrderDetailModalOpen(true);
+    setLoadingItems(true);
+    setVerifiedItems(new Set()); // Reset verified items
+
+    try {
+      const { data: items, error } = await getQuoteItems(quote.quote_id);
+      if (error) {
+        console.error("Error loading order items:", error);
+        notification.error({
+          message: "Lỗi tải sản phẩm",
+          description: "Không thể tải danh sách sản phẩm trong đơn hàng",
+        });
+      } else {
+        setOrderItems(items || []);
+      }
+    } catch (error) {
+      console.error("Error loading order items:", error);
+      notification.error({
+        message: "Lỗi tải sản phẩm",
+        description: "Có lỗi xảy ra khi tải danh sách sản phẩm",
+      });
+    } finally {
+      setLoadingItems(false);
+    }
+  };
+
+  // Handle QR scan for product verification
+  const handleQRScan = async (scannedData: string) => {
+    try {
+      const { data: productData, error } =
+        await getB2BWarehouseProductByBarCode({
+          barcode: scannedData,
+        });
+
+      if (error || !productData || productData.length === 0) {
+        notification.warning({
+          message: "Sản phẩm không tìm thấy",
+          description: `Không tìm thấy sản phẩm với mã QR: ${scannedData}`,
+        });
+        return;
+      }
+
+      const scannedProduct = (productData as any[])[0]?.products;
+
+      if (!scannedProduct) {
+        notification.warning({
+          message: "Sản phẩm không hợp lệ",
+          description: "Dữ liệu sản phẩm không hợp lệ",
+        });
+        return;
+      }
+
+      // Check if this product exists in the current order
+      const orderItem = orderItems.find(
+        (item) => item.product_id === scannedProduct.id
+      );
+
+      if (!orderItem) {
+        notification.warning({
+          message: "Sản phẩm không có trong đơn hàng",
+          description: `Sản phẩm "${scannedProduct.name}" không có trong đơn hàng này`,
+        });
+        return;
+      }
+
+      // Mark item as verified
+      const newVerifiedItems = new Set(verifiedItems);
+      newVerifiedItems.add(orderItem.item_id);
+      setVerifiedItems(newVerifiedItems);
+
+      notification.success({
+        message: "Xác thực thành công",
+        description: `Đã xác thực sản phẩm: ${scannedProduct.name}`,
+      });
+
+      // Check if all products are now verified
+      if (newVerifiedItems.size === orderItems.length) {
+        notification.success({
+          message: "🎉 Hoàn thành xác thực!",
+          description:
+            "Tất cả sản phẩm đã được xác thực. Có thể đánh dấu đã đóng gói.",
+          duration: 4,
+        });
+      }
+
+      // Don't close scanner in multiple scan mode - keep scanning for more products
+    } catch (error) {
+      console.error("QR scan error:", error);
+      notification.error({
+        message: "Lỗi quét QR",
+        description: "Có lỗi xảy ra khi quét mã QR",
+      });
+    }
+  };
+
+  // Handle open continuous scanner
+  const handleOpenContinuousScanner = () => {
+    setQrScannerOpen(true);
+  };
+
+  // Handle edit quote modal close
+  const handleEditQuoteModalClose = () => {
+    setEditQuoteModalOpen(false);
+    editQuoteForm.resetFields();
+    setSelectedOrder(null);
+  };
+
+  // Handle create customer modal close
+  const handleCreateCustomerModalClose = () => {
+    setCreateCustomerModalOpen(false);
+    createCustomerForm.resetFields();
+  };
+
+  // Handle bulk update modal close
+  const handleBulkUpdateModalClose = () => {
+    if (!bulkUpdateLoading) {
+      setBulkUpdateModalOpen(false);
+      bulkUpdateForm.resetFields();
+    }
+  };
+
+  // Handle marking order as packaged
+  const handleMarkAsPackaged = async () => {
+    if (!selectedOrder) return;
+
+    try {
+      setLoading(true);
+      const { error } = await updateQuoteStage(
+        selectedOrder.quote_id,
+        "packaged"
+      );
+
+      if (error) {
+        notification.error({
+          message: "Lỗi cập nhật trạng thái",
+          description: "Không thể cập nhật trạng thái đơn hàng",
+        });
+        return;
+      }
+
+      notification.success({
+        message: "Đóng gói hoàn thành",
+        description: `Đơn hàng ${selectedOrder.quote_number} đã được đánh dấu là đã đóng gói`,
+      });
+
+      // Update the selected order status
+      setSelectedOrder({
+        ...selectedOrder,
+        quote_stage: "packaged",
+      });
+
+      // Close the detail modal first
+      setOrderDetailModalOpen(false);
+      setVerifiedItems(new Set()); // Reset verified items
+
+      // Refresh the orders list after modal is closed
+      await loadOrders();
+    } catch (error) {
+      console.error("Error updating order status:", error);
+      notification.error({
+        message: "Lỗi hệ thống",
+        description: "Có lỗi xảy ra khi cập nhật trạng thái đơn hàng",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle manual verification (for items without QR)
+  const handleManualVerify = (item: any) => {
+    const newVerifiedItems = new Set(verifiedItems);
+    newVerifiedItems.add(item.item_id);
+    setVerifiedItems(newVerifiedItems);
+
+    notification.success({
+      message: "Xác thực thủ công",
+      description: `Đã xác thực sản phẩm: ${item.products?.name}`,
+    });
   };
 
   // Handle create quote
@@ -802,7 +977,7 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
     if (checked) {
       setSelectedOrderIds([...selectedOrderIds, orderId]);
     } else {
-      setSelectedOrderIds(selectedOrderIds.filter(id => id !== orderId));
+      setSelectedOrderIds(selectedOrderIds.filter((id) => id !== orderId));
     }
   };
 
@@ -810,8 +985,8 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
       const selectableOrderIds = quotes
-        .filter(quote => canEditOrderStatus(quote.quote_stage))
-        .map(quote => quote.quote_id);
+        .filter((quote) => canEditOrderStatus(quote.quote_stage))
+        .map((quote) => quote.quote_id);
       setSelectedOrderIds(selectableOrderIds);
     } else {
       setSelectedOrderIds([]);
@@ -836,7 +1011,7 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
     const updateCount = selectedOrderIds.length;
 
     try {
-      const updatePromises = selectedOrderIds.map(orderId =>
+      const updatePromises = selectedOrderIds.map((orderId) =>
         updateB2BQuote(orderId, {
           quote_stage: values.quote_stage,
         })
@@ -858,7 +1033,6 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
         message: "Cập nhật trạng thái thành công",
         description: `Đã cập nhật trạng thái cho ${updateCount} đơn hàng`,
       });
-
     } catch (error) {
       console.error("Error bulk updating quotes:", error);
       notification.error({
@@ -976,8 +1150,18 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
     {
       title: (
         <Checkbox
-          indeterminate={selectedOrderIds.length > 0 && selectedOrderIds.length < quotes.filter(quote => canEditOrderStatus(quote.quote_stage)).length}
-          checked={selectedOrderIds.length > 0 && selectedOrderIds.length === quotes.filter(quote => canEditOrderStatus(quote.quote_stage)).length}
+          indeterminate={
+            selectedOrderIds.length > 0 &&
+            selectedOrderIds.length <
+              quotes.filter((quote) => canEditOrderStatus(quote.quote_stage))
+                .length
+          }
+          checked={
+            selectedOrderIds.length > 0 &&
+            selectedOrderIds.length ===
+              quotes.filter((quote) => canEditOrderStatus(quote.quote_stage))
+                .length
+          }
           onChange={(e) => handleSelectAll(e.target.checked)}
         />
       ),
@@ -1335,13 +1519,15 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
       {/* Orders Table */}
       <Card>
         {selectedOrderIds.length > 0 && (
-          <div style={{
-            marginBottom: 16,
-            padding: "8px 16px",
-            backgroundColor: "#f0f8ff",
-            borderRadius: 6,
-            border: "1px solid #d6e4ff"
-          }}>
+          <div
+            style={{
+              marginBottom: 16,
+              padding: "8px 16px",
+              backgroundColor: "#f0f8ff",
+              borderRadius: 6,
+              border: "1px solid #d6e4ff",
+            }}
+          >
             <Space>
               <Text strong style={{ color: "#1890ff" }}>
                 📋 Đã chọn {selectedOrderIds.length} đơn hàng
@@ -1545,686 +1731,77 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
       </Drawer>
 
       {/* Order Detail Modal */}
-      <Modal
-        title={`Chi tiết báo giá ${selectedOrder?.quote_number}`}
+      <OrderDetailModal
         open={orderDetailModalOpen}
-        onCancel={() => setOrderDetailModalOpen(false)}
-        footer={[
-          <Button key="close" onClick={() => setOrderDetailModalOpen(false)}>
-            Đóng
-          </Button>,
-          <Button key="edit" type="primary">
-            Chỉnh sửa
-          </Button>,
-        ]}
-        width={800}
-      >
-        {selectedOrder && (
-          <div>
-            <Descriptions bordered column={2}>
-              <Descriptions.Item label="Mã báo giá">
-                {selectedOrder.quote_number}
-              </Descriptions.Item>
-              <Descriptions.Item label="Khách hàng">
-                {selectedOrder.customer_name}
-              </Descriptions.Item>
-              <Descriptions.Item label="Mã khách hàng">
-                {selectedOrder.customer_code}
-              </Descriptions.Item>
-              <Descriptions.Item label="Người liên hệ">
-                {selectedOrder.customer_contact_person}
-              </Descriptions.Item>
-              <Descriptions.Item label="Số điện thoại">
-                {selectedOrder.customer_phone}
-              </Descriptions.Item>
-              <Descriptions.Item label="Email">
-                {selectedOrder.customer_email}
-              </Descriptions.Item>
-              <Descriptions.Item label="Ngày tạo">
-                {dayjs(selectedOrder.quote_date).format("DD/MM/YYYY")}
-              </Descriptions.Item>
-              <Descriptions.Item label="Hạn báo giá">
-                {dayjs(selectedOrder.valid_until).format("DD/MM/YYYY")}
-              </Descriptions.Item>
-              <Descriptions.Item label="Tổng giá trị">
-                <Text strong style={{ color: "#52c41a" }}>
-                  {formatCurrency(selectedOrder.total_value)}
-                </Text>
-              </Descriptions.Item>
-              <Descriptions.Item label="Chiết khấu">
-                {selectedOrder.discount_percent}%
-              </Descriptions.Item>
-              <Descriptions.Item label="Trạng thái đơn hàng">
-                <Tag color={getStageInfo(selectedOrder.quote_stage).color}>
-                  {getStageInfo(selectedOrder.quote_stage).title}
-                </Tag>
-              </Descriptions.Item>
-              <Descriptions.Item label="Trạng thái thanh toán">
-                <Tag
-                  color={
-                    getPaymentStatusInfo(
-                      selectedOrder.payment_status || "unpaid"
-                    ).color
-                  }
-                >
-                  {
-                    getPaymentStatusInfo(
-                      selectedOrder.payment_status || "unpaid"
-                    ).title
-                  }
-                </Tag>
-              </Descriptions.Item>
-              {selectedOrder.notes && (
-                <Descriptions.Item label="Ghi chú" span={2}>
-                  {selectedOrder.notes}
-                </Descriptions.Item>
-              )}
-            </Descriptions>
-          </div>
-        )}
-      </Modal>
+        onClose={() => setOrderDetailModalOpen(false)}
+        selectedOrder={selectedOrder}
+        orderItems={orderItems}
+        loadingItems={loadingItems}
+        verifiedItems={verifiedItems}
+        isInventoryStaff={isInventoryStaff}
+        onMarkAsPackaged={handleMarkAsPackaged}
+        onOpenContinuousScanner={handleOpenContinuousScanner}
+        onManualVerify={handleManualVerify}
+        formatCurrency={formatCurrency}
+        getStageInfo={getStageInfo}
+        loading={loading}
+      />
 
       {/* Create Quote Modal */}
-      <Modal
-        title="Tạo báo giá B2B mới"
+      <CreateQuoteModal
         open={createQuoteModalOpen}
         onCancel={() => setCreateQuoteModalOpen(false)}
-        footer={[
-          <Button key="cancel" onClick={() => setCreateQuoteModalOpen(false)}>
-            Hủy
-          </Button>,
-          <Button
-            key="save-draft"
-            type="default"
-            onClick={async () => {
-              try {
-                const values = await createQuoteForm.validateFields();
-                handleSaveQuote(values, true);
-              } catch (error) {
-                console.error("Validation failed:", error);
-              }
-            }}
-          >
-            Lưu nháp
-          </Button>,
-          <Button
-            key="send"
-            type="primary"
-            onClick={async () => {
-              try {
-                const values = await createQuoteForm.validateFields();
-                handleSaveQuote(values, false);
-              } catch (error) {
-                console.error("Validation failed:", error);
-              }
-            }}
-          >
-            Gửi báo giá
-          </Button>,
-        ]}
-        width={800}
-      >
-        <Form layout="vertical" form={createQuoteForm}>
-          <Row gutter={16} align="middle">
-            <Col span={24}>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginBottom: 16,
-                }}
-              >
-                <Text strong>Thông tin khách hàng</Text>
-                <Button
-                  type="dashed"
-                  icon={<PlusOutlined />}
-                  onClick={handleCreateNewCustomer}
-                  size="small"
-                >
-                  Tạo khách hàng mới
-                </Button>
-              </div>
-            </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="customer_name"
-                label="Tên khách hàng"
-                rules={[
-                  { required: true, message: "Vui lòng nhập tên khách hàng" },
-                ]}
-              >
-                <Input
-                  placeholder="Nhập tên khách hàng"
-                  onBlur={(e) =>
-                    handleCustomerChange("customer_name", e.target.value)
-                  }
-                />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="customer_code" label="Mã khách hàng">
-                <Input
-                  placeholder="Mã khách hàng (tùy chọn)"
-                  onBlur={(e) =>
-                    handleCustomerChange("customer_code", e.target.value)
-                  }
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item
-                name="valid_until"
-                label="Ngày hết hạn báo giá"
-                rules={[
-                  { required: true, message: "Vui lòng chọn ngày hết hạn" },
-                ]}
-              >
-                <DatePicker
-                  style={{ width: "100%" }}
-                  placeholder="Chọn ngày hết hạn"
-                />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="discount_percent" label="Chiết khấu (%)">
-                <Input
-                  placeholder="0"
-                  suffix="%"
-                  type="number"
-                  min={0}
-                  max={100}
-                />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="tax_percent" label="Thuế (%)">
-                <Input
-                  placeholder="0"
-                  suffix="%"
-                  type="number"
-                  min={0}
-                  max={100}
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="contact_person" label="Người liên hệ">
-                <Input placeholder="Tên người liên hệ" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="customer_phone" label="Số điện thoại">
-                <Input placeholder="Số điện thoại liên hệ" />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Form.Item name="customer_email" label="Email">
-            <Input placeholder="Email khách hàng" type="email" />
-          </Form.Item>
-          <Form.Item name="customer_address" label="Địa chỉ">
-            <Input.TextArea rows={2} placeholder="Địa chỉ khách hàng" />
-          </Form.Item>
-          <Form.Item name="notes" label="Ghi chú">
-            <Input.TextArea
-              rows={3}
-              placeholder="Thêm ghi chú cho báo giá..."
-            />
-          </Form.Item>
-        </Form>
-      </Modal>
+        form={createQuoteForm}
+        onSaveDraft={(values) => handleSaveQuote(values, true)}
+        onSendQuote={(values) => handleSaveQuote(values, false)}
+        onCreateNewCustomer={handleCreateNewCustomer}
+        onCustomerChange={handleCustomerChange}
+      />
 
       {/* Edit Quote Modal */}
-      <Modal
-        title={`Chỉnh sửa báo giá ${selectedOrder?.quote_number}`}
+      <EditQuoteModal
         open={editQuoteModalOpen}
-        onCancel={() => {
-          setEditQuoteModalOpen(false);
-          editQuoteForm.resetFields();
-          setSelectedOrder(null);
-        }}
-        footer={[
-          <Button
-            key="cancel"
-            onClick={() => {
-              setEditQuoteModalOpen(false);
-              editQuoteForm.resetFields();
-              setSelectedOrder(null);
-            }}
-          >
-            Hủy
-          </Button>,
-          <Button
-            key="update"
-            type="primary"
-            onClick={async () => {
-              try {
-                const values = await editQuoteForm.validateFields();
-                handleUpdateQuote(values);
-              } catch (error) {
-                console.error("Validation failed:", error);
-              }
-            }}
-          >
-            Cập nhật
-          </Button>,
-        ]}
-        width={800}
-      >
-        {selectedOrder && !canEditOrderStatus(selectedOrder.quote_stage) && (
-          <div
-            style={{
-              backgroundColor: "#fff7e6",
-              border: "1px solid #ffd591",
-              borderRadius: "6px",
-              padding: "12px",
-              marginBottom: "16px",
-              display: "flex",
-              alignItems: "center",
-            }}
-          >
-            <span style={{ color: "#fa8c16", marginRight: "8px" }}>⚠️</span>
-            <span style={{ color: "#ad6800" }}>
-              Trạng thái này thuộc phạm vi quản lý của bộ phận khác. Bạn chỉ có
-              thể xem thông tin.
-            </span>
-          </div>
-        )}
-        <Form layout="vertical" form={editQuoteForm}>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="customer_name"
-                label="Tên khách hàng"
-                rules={[
-                  { required: true, message: "Vui lòng nhập tên khách hàng" },
-                ]}
-              >
-                <Input
-                  placeholder="Nhập tên khách hàng"
-                  disabled={isInventoryStaff}
-                />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="customer_code" label="Mã khách hàng">
-                <Input
-                  placeholder="Mã khách hàng (tùy chọn)"
-                  disabled={isInventoryStaff}
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="quote_stage"
-                label={
-                  <span>
-                    Trạng thái đơn hàng
-                    {isSalesStaff && (
-                      <Tag color="blue" style={{ marginLeft: 8 }}>
-                        Sales
-                      </Tag>
-                    )}
-                    {isInventoryStaff && (
-                      <Tag color="orange" style={{ marginLeft: 8 }}>
-                        Kho
-                      </Tag>
-                    )}
-                    {isDeliveryStaff && (
-                      <Tag color="green" style={{ marginLeft: 8 }}>
-                        Giao hàng
-                      </Tag>
-                    )}
-                    {selectedOrder &&
-                      !canEditOrderStatus(selectedOrder.quote_stage) && (
-                        <Tag color="red" style={{ marginLeft: 8 }}>
-                          Chỉ đọc
-                        </Tag>
-                      )}
-                  </span>
-                }
-                rules={[
-                  { required: true, message: "Vui lòng chọn trạng thái" },
-                ]}
-              >
-                <Select
-                  placeholder="Chọn trạng thái đơn hàng"
-                  disabled={
-                    selectedOrder
-                      ? !canEditOrderStatus(selectedOrder.quote_stage)
-                      : false
-                  }
-                >
-                  {getAllowedStatuses(selectedOrder?.quote_stage).map(
-                    (stage) => (
-                      <Select.Option key={stage.key} value={stage.key}>
-                        <Tag color={stage.color}>{stage.title}</Tag> -{" "}
-                        {stage.description}
-                      </Select.Option>
-                    )
-                  )}
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="valid_until"
-                label="Ngày hết hạn báo giá"
-                rules={[
-                  { required: true, message: "Vui lòng chọn ngày hết hạn" },
-                ]}
-              >
-                <DatePicker
-                  style={{ width: "100%" }}
-                  placeholder="Chọn ngày hết hạn"
-                  disabled={isInventoryStaff}
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item
-                name="payment_status"
-                label="Trạng thái thanh toán"
-                rules={[
-                  {
-                    required: true,
-                    message: "Vui lòng chọn trạng thái thanh toán",
-                  },
-                ]}
-              >
-                <Select
-                  placeholder="Chọn trạng thái thanh toán"
-                  disabled={isInventoryStaff}
-                >
-                  {B2B_PAYMENT_STATUS.map((status) => (
-                    <Select.Option key={status.key} value={status.key}>
-                      <Tag color={status.color}>{status.title}</Tag>
-                    </Select.Option>
-                  ))}
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="discount_percent" label="Chiết khấu (%)">
-                <Input
-                  placeholder="0"
-                  suffix="%"
-                  type="number"
-                  min={0}
-                  max={100}
-                  disabled={isInventoryStaff}
-                />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="tax_percent" label="Thuế (%)">
-                <Input
-                  placeholder="0"
-                  suffix="%"
-                  type="number"
-                  min={0}
-                  max={100}
-                  disabled={isInventoryStaff}
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="contact_person" label="Người liên hệ">
-                <Input
-                  placeholder="Tên người liên hệ"
-                  disabled={isInventoryStaff}
-                />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="customer_phone" label="Số điện thoại">
-                <Input
-                  placeholder="Số điện thoại liên hệ"
-                  disabled={isInventoryStaff}
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Form.Item name="customer_email" label="Email">
-            <Input
-              placeholder="Email khách hàng"
-              type="email"
-              disabled={isInventoryStaff}
-            />
-          </Form.Item>
-          <Form.Item name="customer_address" label="Địa chỉ">
-            <Input.TextArea
-              rows={2}
-              placeholder="Địa chỉ khách hàng"
-              disabled={isInventoryStaff}
-            />
-          </Form.Item>
-          <Form.Item name="notes" label="Ghi chú">
-            <Input.TextArea
-              rows={3}
-              placeholder="Thêm ghi chú cho báo giá..."
-              disabled={isInventoryStaff}
-            />
-          </Form.Item>
-          <Form.Item name="terms_conditions" label="Điều khoản & Điều kiện">
-            <Input.TextArea
-              rows={3}
-              placeholder="Điều khoản và điều kiện..."
-              disabled={isInventoryStaff}
-            />
-          </Form.Item>
-        </Form>
-      </Modal>
+        onCancel={handleEditQuoteModalClose}
+        form={editQuoteForm}
+        selectedOrder={selectedOrder}
+        onUpdateQuote={handleUpdateQuote}
+        canEditOrderStatus={canEditOrderStatus}
+        getAllowedStatuses={getAllowedStatuses}
+        B2B_PAYMENT_STATUS={B2B_PAYMENT_STATUS}
+        isSalesStaff={isSalesStaff}
+        isInventoryStaff={isInventoryStaff}
+        isDeliveryStaff={isDeliveryStaff}
+      />
 
       {/* Create Customer Modal */}
-      <Modal
-        title="Tạo khách hàng B2B mới"
+      <CreateCustomerModal
         open={createCustomerModalOpen}
-        onCancel={() => {
-          setCreateCustomerModalOpen(false);
-          createCustomerForm.resetFields();
-        }}
-        footer={[
-          <Button
-            key="cancel"
-            onClick={() => {
-              setCreateCustomerModalOpen(false);
-              createCustomerForm.resetFields();
-            }}
-          >
-            Hủy
-          </Button>,
-          <Button
-            key="create"
-            type="primary"
-            onClick={async () => {
-              try {
-                const values = await createCustomerForm.validateFields();
-                handleSaveNewCustomer(values);
-              } catch (error) {
-                console.error("Validation failed:", error);
-              }
-            }}
-          >
-            Tạo khách hàng
-          </Button>,
-        ]}
-        width={700}
-      >
-        <Form layout="vertical" form={createCustomerForm}>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="customer_name"
-                label="Tên khách hàng"
-                rules={[
-                  { required: true, message: "Vui lòng nhập tên khách hàng" },
-                ]}
-              >
-                <Input placeholder="Nhập tên khách hàng" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="customer_code"
-                label="Mã khách hàng"
-                rules={[
-                  { required: true, message: "Vui lòng nhập mã khách hàng" },
-                ]}
-              >
-                <Input placeholder="Nhập mã khách hàng" />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="contact_person" label="Người liên hệ">
-                <Input placeholder="Tên người liên hệ" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="phone_number" label="Số điện thoại">
-                <Input placeholder="Số điện thoại liên hệ" />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="email" label="Email">
-                <Input placeholder="Email khách hàng" type="email" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="customer_type"
-                label="Loại khách hàng"
-                rules={[
-                  { required: true, message: "Vui lòng chọn loại khách hàng" },
-                ]}
-              >
-                <Select placeholder="Chọn loại khách hàng">
-                  <Select.Option value="hospital">Bệnh viện</Select.Option>
-                  <Select.Option value="pharmacy">Nhà thuốc</Select.Option>
-                  <Select.Option value="clinic">Phòng khám</Select.Option>
-                  <Select.Option value="distributor">
-                    Nhà phân phối
-                  </Select.Option>
-                  <Select.Option value="other">Khác</Select.Option>
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Form.Item name="address" label="Địa chỉ">
-            <Input.TextArea rows={2} placeholder="Địa chỉ khách hàng" />
-          </Form.Item>
-
-          <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item name="tax_code" label="Mã số thuế">
-                <Input placeholder="Mã số thuế" />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item
-                name="payment_terms_days"
-                label="Thời hạn thanh toán (ngày)"
-                initialValue={30}
-              >
-                <Input placeholder="30" type="number" min={1} max={365} />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="credit_limit" label="Hạn mức tín dụng">
-                <Input placeholder="0" type="number" min={0} suffix="VND" />
-              </Form.Item>
-            </Col>
-          </Row>
-        </Form>
-      </Modal>
+        onCancel={handleCreateCustomerModalClose}
+        form={createCustomerForm}
+        onCreateCustomer={handleSaveNewCustomer}
+      />
 
       {/* Bulk Update Modal */}
-      <Modal
-        title={`Cập nhật trạng thái hàng loạt (${selectedOrderIds.length} đơn hàng)`}
+      <BulkUpdateModal
         open={bulkUpdateModalOpen}
-        closable={!bulkUpdateLoading}
-        maskClosable={!bulkUpdateLoading}
-        onCancel={() => {
-          if (!bulkUpdateLoading) {
-            setBulkUpdateModalOpen(false);
-            bulkUpdateForm.resetFields();
-          }
-        }}
-        footer={[
-          <Button
-            key="cancel"
-            disabled={bulkUpdateLoading}
-            onClick={() => {
-              setBulkUpdateModalOpen(false);
-              bulkUpdateForm.resetFields();
-            }}
-          >
-            Hủy
-          </Button>,
-          <Button
-            key="update"
-            type="primary"
-            loading={bulkUpdateLoading}
-            onClick={async () => {
-              try {
-                const values = await bulkUpdateForm.validateFields();
-                handleBulkUpdateSubmit(values);
-              } catch (error) {
-                console.error("Validation failed:", error);
-              }
-            }}
-          >
-            Cập nhật trạng thái
-          </Button>,
-        ]}
-        width={600}
-      >
-        <div style={{ marginBottom: 16 }}>
-          <Text type="secondary">
-            Trạng thái mới sẽ được áp dụng cho {selectedOrderIds.length} đơn hàng đã chọn
-          </Text>
-        </div>
+        onCancel={handleBulkUpdateModalClose}
+        form={bulkUpdateForm}
+        selectedOrderCount={selectedOrderIds.length}
+        loading={bulkUpdateLoading}
+        onBulkUpdate={handleBulkUpdateSubmit}
+        getAllowedStatuses={getAllowedStatuses}
+      />
 
-        <Form layout="vertical" form={bulkUpdateForm}>
-          <Form.Item
-            name="quote_stage"
-            label="Trạng thái đơn hàng mới"
-            rules={[{ required: true, message: "Vui lòng chọn trạng thái" }]}
-          >
-            <Select placeholder="Chọn trạng thái đơn hàng mới" size="large">
-              {getAllowedStatuses().map(stage => (
-                <Select.Option key={stage.key} value={stage.key}>
-                  <Tag color={stage.color}>{stage.title}</Tag> - {stage.description}
-                </Select.Option>
-              ))}
-            </Select>
-          </Form.Item>
-        </Form>
-      </Modal>
+      {/* QR Scanner Modal for Product Verification */}
+      {isInventoryStaff && (
+        <QRScannerVerificationModal
+          open={qrScannerOpen}
+          onClose={() => setQrScannerOpen(false)}
+          onScan={handleQRScan}
+          verifiedItems={verifiedItems}
+          orderItems={orderItems}
+        />
+      )}
     </div>
   );
 };
