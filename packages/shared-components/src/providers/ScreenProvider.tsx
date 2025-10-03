@@ -6,6 +6,7 @@ import {
   getAvailableScreens,
 } from "../screens";
 import type { ScreenConfig } from "../screens";
+import { useEmployee, usePermissions } from "@nam-viet-erp/store";
 
 interface User {
   id: string;
@@ -16,12 +17,12 @@ interface User {
 
 interface ScreenProviderProps {
   children: ReactNode;
-  user: User | null;
   context?: Record<string, any>; // Additional context to pass to screens
 }
 
 interface ScreenContextType {
   user: User | null;
+  employee: any;
   context: Record<string, any>;
   renderScreen: (
     screenKey: string,
@@ -36,9 +37,19 @@ const ScreenContext = createContext<ScreenContextType | undefined>(undefined);
 
 export const ScreenProvider: React.FC<ScreenProviderProps> = ({
   children,
-  user,
   context = {},
 }) => {
+  // Get employee and permissions from store
+  const employee = useEmployee();
+  const permissions = usePermissions();
+
+  // Convert employee to user format
+  const user = employee ? {
+    id: employee.employee_id,
+    name: employee.full_name,
+    permissions: permissions,
+    role: employee.role_name || "employee",
+  } : null;
   const renderScreen = (screenKey: string, props: Record<string, any> = {}) => {
     const screen = SCREEN_REGISTRY[screenKey];
     if (!screen) {
@@ -69,6 +80,7 @@ export const ScreenProvider: React.FC<ScreenProviderProps> = ({
       ...screen.props,
       ...props,
       user,
+      employee, // Include employee from store
     };
 
     return <Component {...combinedProps} props={combinedProps} />;
@@ -93,6 +105,7 @@ export const ScreenProvider: React.FC<ScreenProviderProps> = ({
 
   const value: ScreenContextType = {
     user,
+    employee,
     context,
     renderScreen,
     hasPermission,

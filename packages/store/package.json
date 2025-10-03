@@ -1,0 +1,21 @@
+{
+  "name": "@nam-viet-erp/store",
+  "version": "1.0.0",
+  "description": "Global state management for Nam Viet ERP using Zustand",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "immer": "^10.1.3",
+    "zustand": "^5.0.8"
+  },
+  "peerDependencies": {
+    "react": ">=18.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "typescript": "^5.0.0"
+  }
+}

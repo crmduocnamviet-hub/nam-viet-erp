@@ -106,7 +106,7 @@ const FundManagementContent: React.FC = () => {
         try {
           const { error } = await deleteFund(id);
           if (error) throw error;
-          notification.success({ message: "Đã xóa thành công!" });
+          notification?.success({ message: "Đã xóa thành công!" });
           fetchData(); // <-- Giờ đây hàm này đã tồn tại
         } catch (error: any) {
           notification.error({
@@ -137,7 +137,7 @@ const FundManagementContent: React.FC = () => {
         ({ error } = await createFund(record));
       }
       if (error) throw error;
-      notification.success({
+      notification?.success({
         message: `Đã ${editingFund ? "cập nhật" : "tạo"} thành công!`,
       });
       fetchData();

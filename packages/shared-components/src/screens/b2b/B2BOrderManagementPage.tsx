@@ -16,6 +16,7 @@ import {
   Grid,
   Tag,
   Descriptions,
+  notification,
 } from "antd";
 import {
   DollarOutlined,
@@ -54,7 +55,6 @@ const B2BOrderManagementPage: React.FC<B2BOrderManagementPageProps> = ({
   employee,
   user,
 }) => {
-  const { notification } = App.useApp();
   const [statistics, setStatistics] = useState<any>(null);
   const [createQuoteForm] = Form.useForm();
   const [createQuoteModalOpen, setCreateQuoteModalOpen] = useState(false);
@@ -215,7 +215,7 @@ const B2BOrderManagementPage: React.FC<B2BOrderManagementPageProps> = ({
       }
 
       if (newQuote) {
-        notification.success({
+        notification?.success({
           message: "Thành công",
           description: `${isDraft ? "Lưu nháp" : "Gửi"} báo giá thành công`,
           duration: 2,
@@ -267,7 +267,7 @@ const B2BOrderManagementPage: React.FC<B2BOrderManagementPageProps> = ({
       customer_address: customer.address,
     });
 
-    notification.success({
+    notification?.success({
       message: "Đã chọn khách hàng",
       description: `Đã chọn khách hàng ${customer.customer_name}`,
     });

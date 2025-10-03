@@ -134,7 +134,7 @@ const ProductsPageContent: React.FC<ProductsPageContentProps> = ({
         try {
           const { error } = await deleteProduct(productId);
           if (error) throw error;
-          notification.success({
+          notification?.success({
             message: "Đã xóa!",
             description: `Sản phẩm "${productName}" đã được xóa thành công.`,
           });
@@ -199,7 +199,7 @@ const ProductsPageContent: React.FC<ProductsPageContentProps> = ({
             ({ error } = await updateProductByIds(selectedRowKeys, updateData));
           }
           if (error) throw error;
-          notification.success({
+          notification?.success({
             message: "Thành công!",
             description: successMessage,
           });
@@ -265,7 +265,7 @@ const ProductsPageContent: React.FC<ProductsPageContentProps> = ({
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Sản phẩm");
       XLSX.writeFile(wb, "file-mau-san-pham.xlsx");
-      notification.success({ message: "Đã tải file mẫu thành công!" });
+      notification?.success({ message: "Đã tải file mẫu thành công!" });
     } catch (error: any) {
       notification.error({
         message: "Lỗi khi tạo file mẫu",
@@ -304,7 +304,7 @@ const ProductsPageContent: React.FC<ProductsPageContentProps> = ({
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Danh sách Sản phẩm");
       XLSX.writeFile(wb, "danh-sach-san-pham.xlsx");
-      notification.success({ message: "Đã xuất file excel thành công!" });
+      notification?.success({ message: "Đã xuất file excel thành công!" });
     } catch (err: any) {
       notification.error({
         message: "Xuất file thất bại",
@@ -350,7 +350,7 @@ const ProductsPageContent: React.FC<ProductsPageContentProps> = ({
 
         if (error) throw error;
 
-        notification.success({
+        notification?.success({
           message: "Thành công!",
           description: `Đã nhập thành công ${dataToUpsert.length} sản phẩm.`,
         });

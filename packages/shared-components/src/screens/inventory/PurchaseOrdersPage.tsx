@@ -64,7 +64,7 @@ const PurchaseOrdersContent: React.FC = () => {
           // Tạm thời, chúng ta sẽ thông báo thành công để kiểm tra luồng
           await new Promise((resolve) => setTimeout(resolve, 2000)); // Giả lập thời gian xử lý
 
-          notification.success({
+          notification?.success({
             message: "Đã tạo thành công các đơn hàng nháp!",
           });
           // fetchData(); // Tải lại danh sách

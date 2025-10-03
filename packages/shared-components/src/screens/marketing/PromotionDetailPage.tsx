@@ -167,12 +167,12 @@ const PromotionDetail: React.FC = () => {
       if (isCreating) {
         const { data, error } = await createPromotion(record);
         if (error) throw error;
-        notification.success({ message: "Tạo khuyến mại thành công!" });
+        notification?.success({ message: "Tạo khuyến mại thành công!" });
         navigate(`/promotions/${data.id}`); // Chuyển đến trang sửa để thêm voucher
       } else {
         const { error } = await updatePromotion(params.id!, record);
         if (error) throw error;
-        notification.success({ message: "Cập nhật thành công!" });
+        notification?.success({ message: "Cập nhật thành công!" });
       }
     } catch (error: unknown) {
       notification.error({
@@ -191,7 +191,7 @@ const PromotionDetail: React.FC = () => {
         promotion_id: params.id,
       });
       if (error) throw error;
-      notification.success({ message: "Tạo mã giảm giá thành công!" });
+      notification?.success({ message: "Tạo mã giảm giá thành công!" });
       fetchVouchers(params.id!); // Tải lại danh sách voucher
       setIsVoucherModalOpen(false);
       voucherForm.resetFields();

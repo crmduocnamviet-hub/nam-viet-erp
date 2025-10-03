@@ -139,7 +139,7 @@ const RoomManagementPage: React.FC = () => {
       const { error } = await deleteRoom(roomId);
       if (error) throw error;
 
-      notification.success({
+      notification?.success({
         message: 'Đã xóa phòng',
         description: 'Phòng đã được xóa thành công',
       });
@@ -175,7 +175,7 @@ const RoomManagementPage: React.FC = () => {
         const { error } = await createRoom(values as CreateRoomData);
         if (error) throw error;
 
-        notification.success({
+        notification?.success({
           message: 'Đã tạo phòng mới',
           description: 'Phòng đã được tạo thành công',
         });
@@ -183,7 +183,7 @@ const RoomManagementPage: React.FC = () => {
         const { error } = await updateRoom(editingRoom.room_id, values as UpdateRoomData);
         if (error) throw error;
 
-        notification.success({
+        notification?.success({
           message: 'Đã cập nhật phòng',
           description: 'Thông tin phòng đã được cập nhật thành công',
         });

@@ -41,14 +41,22 @@ class NotificationService {
         filter: options.filter,
       },
       (payload) => {
-        console.log(`[NotificationService] Received ${options.event || "*"} on ${options.table}:`, payload);
+        console.log(
+          `[NotificationService] Received ${options.event || "*"} on ${
+            options.table
+          }:`,
+          payload
+        );
         options.callback(payload);
       }
     );
 
     // Subscribe to the channel
     subscription.subscribe((status) => {
-      console.log(`[NotificationService] Channel ${channelName} status:`, status);
+      console.log(
+        `[NotificationService] Channel ${channelName} status:`,
+        status
+      );
     });
 
     // Store references
@@ -74,7 +82,9 @@ class NotificationService {
     return this.subscribe(channelName, {
       table: "b2b_quotes",
       event: "*", // Listen to all events (INSERT, UPDATE, DELETE)
-      filter: employeeId ? `created_by_employee_id=eq.${employeeId}` : undefined,
+      filter: employeeId
+        ? `created_by_employee_id=eq.${employeeId}`
+        : undefined,
       callback: (payload) => {
         // Add additional processing for B2B quotes
         const processedPayload = {

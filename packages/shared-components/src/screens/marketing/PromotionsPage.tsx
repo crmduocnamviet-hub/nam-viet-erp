@@ -59,7 +59,7 @@ const Promotions: React.FC = () => {
         try {
           const { error } = await deletePromotion(id);
           if (error) throw error;
-          notification.success({ message: "Đã xóa thành công!" });
+          notification?.success({ message: "Đã xóa thành công!" });
           fetchPromotions(); // Tải lại danh sách
         } catch (error: unknown) {
           notification.error({

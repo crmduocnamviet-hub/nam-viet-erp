@@ -183,7 +183,7 @@ const CashLedgerPageContent: React.FC = () => {
     try {
       setLoading(true);
       await createInternalTransfer(values);
-      notification.success({ message: "Chuyển tiền nội bộ thành công!" });
+      notification?.success({ message: "Chuyển tiền nội bộ thành công!" });
       handleTransferCancel();
       fetchData();
     } catch (error: unknown) {

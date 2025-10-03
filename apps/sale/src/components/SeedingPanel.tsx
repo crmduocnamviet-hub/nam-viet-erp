@@ -32,7 +32,7 @@ const SeedingPanel: React.FC = () => {
       const result = await seedDoctors();
 
       if (result.success) {
-        notification.success({
+        notification?.success({
           message: 'Thành công!',
           description: `Đã tạo ${result.count || sampleDoctors.length} bác sĩ mẫu`,
         });
@@ -58,7 +58,7 @@ const SeedingPanel: React.FC = () => {
       const result = await seedEmployees();
 
       if (result.success) {
-        notification.success({
+        notification?.success({
           message: 'Thành công!',
           description: `Đã tạo ${result.count} nhân viên mẫu (bác sĩ, dược sĩ, lễ tân)`,
         });
@@ -84,7 +84,7 @@ const SeedingPanel: React.FC = () => {
       const result = await clearEmployees();
 
       if (result.success) {
-        notification.success({
+        notification?.success({
           message: 'Thành công!',
           description: 'Đã xóa tất cả dữ liệu nhân viên',
         });

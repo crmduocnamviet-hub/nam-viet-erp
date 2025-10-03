@@ -55,7 +55,7 @@ const BulkUpdateModal: React.FC<BulkUpdateModalProps> = ({
           onClick={async () => {
             try {
               const values = await form.validateFields();
-              onBulkUpdate(values);
+              await onBulkUpdate(values);
             } catch (error) {
               console.error("Validation failed:", error);
             }

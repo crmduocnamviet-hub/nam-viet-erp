@@ -90,7 +90,7 @@ const EditProductPage: React.FC<EditProductPageProps> = ({
 
       if (error) throw error;
 
-      notification.success({
+      notification?.success({
         message: "Thành công!",
         description: "Sản phẩm đã được cập nhật thành công.",
       });

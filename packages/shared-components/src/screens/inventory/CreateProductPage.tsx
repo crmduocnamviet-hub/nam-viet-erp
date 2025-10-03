@@ -51,7 +51,7 @@ const CreateProductPage: React.FC<CreateProductPageProps> = ({
 
       if (error) throw error;
 
-      notification.success({
+      notification?.success({
         message: "Thành công!",
         description: "Sản phẩm mới đã được tạo thành công.",
       });

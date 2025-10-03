@@ -445,7 +445,7 @@ const SalesStaffDashboardPage: React.FC<SalesStaffDashboardPageProps> = ({ emplo
         }));
       }
 
-      notification.success({
+      notification?.success({
         message: 'Cập nhật thành công',
         description: `Đã cập nhật trạng thái thanh toán cho đơn hàng ${selectedOrder.orderNumber}`,
       });

@@ -3,54 +3,64 @@ import { Routes, Route } from "react-router-dom";
 import AppLayout from "./components/AppLayout"; // <-- Chúng ta sẽ tách Layout ra file riêng
 import Login from "./pages/Login";
 import { useAuth } from "./hooks/useAuth";
-import { ScreenProvider, ROLE_PERMISSIONS } from "@nam-viet-erp/shared-components";
+import { ScreenProvider } from "@nam-viet-erp/shared-components";
 import { Spin, Row, notification } from "antd";
 import { getEmployeeByUserId, signOut } from "@nam-viet-erp/services";
+import { useInitializeEmployee, useEmployee, useEmployeeStore, useAuthStore } from "@nam-viet-erp/store";
 
 const App: React.FC = () => {
   const { session, loading } = useAuth();
-  const [employee, setEmployee] = useState<IEmployee | null>(null);
-  const [roleLoading, setRoleLoading] = useState(false);
+
+  // Sync session to auth store
+  const setUser = useAuthStore((state) => state.setUser);
+  const setSession = useAuthStore((state) => state.setSession);
+
+  useEffect(() => {
+    if (session?.user) {
+      setUser(session.user as any);
+      setSession(session as any);
+    } else {
+      setUser(null);
+      setSession(null);
+    }
+  }, [session, setUser, setSession]);
+
+  // Use store for employee data
+  useInitializeEmployee(getEmployeeByUserId);
+  const employee = useEmployee();
+  const isLoading = useEmployeeStore((state) => state.isLoading);
+  const error = useEmployeeStore((state) => state.error);
+
   const [accessDenied, setAccessDenied] = useState(false);
 
-  // Fetch employee role when session is available
+  // Check employee role when employee data is loaded
   useEffect(() => {
     const checkEmployeeRole = async () => {
       if (!session?.user) {
-        setEmployee(null);
         setAccessDenied(false);
         return;
       }
 
-      setRoleLoading(true);
-      try {
-        const { data: employeeData, error } = await getEmployeeByUserId(session.user.id);
-
-        if (error || !employeeData) {
-          console.warn('Employee not found for user:', session.user.id);
+      if (!employee) {
+        // Still loading or error
+        if (error) {
           await handleUnauthorizedAccess('Không tìm thấy thông tin nhân viên');
-          return;
         }
-
-        // Check if user has admin or super-admin role
-        const allowedRoles = ['admin', 'super-admin'];
-        if (!allowedRoles.includes(employeeData.role_name)) {
-          await handleUnauthorizedAccess(`Vai trò "${employeeData.role_name}" không được phép truy cập CMS`);
-          return;
-        }
-
-        setEmployee(employeeData);
-        setAccessDenied(false);
-      } catch (error) {
-        console.error('Error checking employee role:', error);
-        await handleUnauthorizedAccess('Lỗi khi kiểm tra quyền truy cập');
-      } finally {
-        setRoleLoading(false);
+        return;
       }
+
+      // Check if user has admin or super-admin role
+      const allowedRoles = ['admin', 'super-admin'];
+      if (!allowedRoles.includes(employee.role_name)) {
+        await handleUnauthorizedAccess(`Vai trò "${employee.role_name}" không được phép truy cập CMS`);
+        return;
+      }
+
+      setAccessDenied(false);
     };
 
     checkEmployeeRole();
-  }, [session]);
+  }, [session, employee, error]);
 
   // Handle unauthorized access
   const handleUnauthorizedAccess = async (message: string) => {
@@ -61,7 +71,6 @@ const App: React.FC = () => {
     });
 
     setAccessDenied(true);
-    setEmployee(null);
 
     // Sign out after showing the notification
     setTimeout(async () => {
@@ -74,10 +83,10 @@ const App: React.FC = () => {
   };
 
   // Show loading while checking session or role
-  if (loading || roleLoading) {
+  if (loading || isLoading) {
     return (
       <Row justify="center" align="middle" style={{ minHeight: "100vh" }}>
-        <Spin size="large" tip={roleLoading ? "Đang kiểm tra quyền truy cập..." : "Đang tải..."}>
+        <Spin size="large" tip={isLoading ? "Đang kiểm tra quyền truy cập..." : "Đang tải..."}>
           <div style={{ minHeight: "200px" }} />
         </Spin>
       </Row>
@@ -98,22 +107,14 @@ const App: React.FC = () => {
     );
   }
 
-  // Create user object for permissions based on actual employee role
-  const user = session && employee ? {
-    id: session.user.id,
-    name: employee.full_name,
-    permissions: ROLE_PERMISSIONS[employee.role_name as keyof typeof ROLE_PERMISSIONS] || ROLE_PERMISSIONS['super-admin'],
-    role: employee.role_name
-  } : null;
-
   return (
     <Routes>
       {/* Nếu chưa đăng nhập, chỉ có thể truy cập trang Login */}
       <Route path="/login" element={<Login />} />
 
       {/* Nếu đã đăng nhập, có thể truy cập các trang bên trong AppLayout */}
-      <Route path="/*" element={session && user ? (
-        <ScreenProvider user={user}>
+      <Route path="/*" element={session && employee ? (
+        <ScreenProvider>
           <AppLayout />
         </ScreenProvider>
       ) : <Login />} />

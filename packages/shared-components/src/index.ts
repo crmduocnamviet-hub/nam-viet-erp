@@ -5,6 +5,7 @@ export { default as QRScannerModal } from "./components/QRScannerModal";
 export { default as QRScanner } from "./components/QRScanner";
 export { default as B2BCustomerSearchModal } from "./components/B2BCustomerSearchModal";
 export { default as B2BCustomerSearchInput } from "./components/B2BCustomerSearchInput";
+export { default as B2BOrderPreviewModal } from "./components/B2BOrderPreviewModal";
 export { default as ProductSearchInput } from "./components/ProductSearchInput";
 export { default as OrderDetailModal } from "./components/OrderDetailModal";
 export { default as CreateQuoteModal } from "./components/CreateQuoteModal";

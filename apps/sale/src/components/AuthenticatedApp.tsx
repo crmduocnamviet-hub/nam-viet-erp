@@ -1,12 +1,13 @@
 import React from "react";
 import { Spin, Row, Alert } from "antd";
-import { useEmployee } from "../context/EmployeeContext";
+import { useEmployee, useEmployeeStore } from "@nam-viet-erp/store";
 import PermissionBasedAppLayout from "./PermissionBasedAppLayout";
 
 const AuthenticatedApp: React.FC = () => {
-  const { employee, loading } = useEmployee();
+  const employee = useEmployee();
+  const isLoading = useEmployeeStore((state) => state.isLoading);
 
-  if (loading) {
+  if (isLoading) {
     return (
       <Row justify="center" align="middle" style={{ minHeight: "100vh" }}>
         <Spin size="large" />

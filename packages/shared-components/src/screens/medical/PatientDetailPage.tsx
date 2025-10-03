@@ -127,7 +127,7 @@ const PatientDetailPage: React.FC = () => {
     try {
       const { error } = await updateProfileNotes(patientId, debouncedNotes);
       if (error) throw error;
-      notification.success({ message: 'Đã lưu ghi chú!' });
+      notification?.success({ message: 'Đã lưu ghi chú!' });
     } catch (error: unknown) {
       notification.error({
         message: 'Lỗi lưu ghi chú',
@@ -155,7 +155,7 @@ const PatientDetailPage: React.FC = () => {
       setIsEditing(false);
       setHasUnsavedChanges(false);
 
-      notification.success({ message: 'Đã cập nhật thông tin bệnh nhân!' });
+      notification?.success({ message: 'Đã cập nhật thông tin bệnh nhân!' });
     } catch (error: unknown) {
       notification.error({
         message: 'Lỗi cập nhật thông tin',

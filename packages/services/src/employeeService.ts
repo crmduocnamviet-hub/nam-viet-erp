@@ -12,7 +12,9 @@ export const getEmployees = async (filters?: {
   let query = supabase.from("employees").select("*");
 
   if (filters?.search) {
-    query = query.or(`full_name.ilike.%${filters.search}%,employee_code.ilike.%${filters.search}%`);
+    query = query.or(
+      `full_name.ilike.%${filters.search}%,employee_code.ilike.%${filters.search}%`
+    );
   }
 
   if (filters?.roleName) {
@@ -28,7 +30,10 @@ export const getEmployees = async (filters?: {
   }
 
   if (filters?.offset) {
-    query = query.range(filters.offset, (filters.offset + (filters.limit || 10)) - 1);
+    query = query.range(
+      filters.offset,
+      filters.offset + (filters.limit || 10) - 1
+    );
   }
 
   const response = await query.order("full_name", { ascending: true });
@@ -36,7 +41,9 @@ export const getEmployees = async (filters?: {
 };
 
 // Get employee by ID
-export const getEmployeeById = async (employeeId: string): Promise<PostgrestSingleResponse<IEmployee | null>> => {
+export const getEmployeeById = async (
+  employeeId: string
+): Promise<PostgrestSingleResponse<IEmployee | null>> => {
   const response = await supabase
     .from("employees")
     .select("*")
@@ -47,7 +54,9 @@ export const getEmployeeById = async (employeeId: string): Promise<PostgrestSing
 };
 
 // Get employee by employee code
-export const getEmployeeByCode = async (employeeCode: string): Promise<PostgrestSingleResponse<IEmployee | null>> => {
+export const getEmployeeByCode = async (
+  employeeCode: string
+): Promise<PostgrestSingleResponse<IEmployee | null>> => {
   const response = await supabase
     .from("employees")
     .select("*")
@@ -58,7 +67,9 @@ export const getEmployeeByCode = async (employeeCode: string): Promise<Postgrest
 };
 
 // Get employee by user ID (for current authenticated user)
-export const getEmployeeByUserId = async (userId: string): Promise<PostgrestSingleResponse<IEmployee | null>> => {
+export const getEmployeeByUserId = async (
+  userId: string
+): Promise<PostgrestSingleResponse<IEmployee | null>> => {
   const response = await supabase
     .from("employees")
     .select("*")
@@ -70,8 +81,12 @@ export const getEmployeeByUserId = async (userId: string): Promise<PostgrestSing
 };
 
 // Get current employee (uses current authenticated user)
-export const getCurrentEmployee = async (): Promise<PostgrestSingleResponse<IEmployee | null>> => {
-  const { data: { user } } = await supabase.auth.getUser();
+export const getCurrentEmployee = async (): Promise<
+  PostgrestSingleResponse<IEmployee | null>
+> => {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   if (!user) {
     return {
@@ -81,11 +96,11 @@ export const getCurrentEmployee = async (): Promise<PostgrestSingleResponse<IEmp
         details: "",
         hint: "",
         code: "UNAUTHENTICATED",
-        name: "AuthenticationError"
+        name: "AuthenticationError",
       },
       count: null,
       status: 401,
-      statusText: "Unauthorized"
+      statusText: "Unauthorized",
     };
   }
 
@@ -93,7 +108,9 @@ export const getCurrentEmployee = async (): Promise<PostgrestSingleResponse<IEmp
 };
 
 // Create new employee
-export const createEmployee = async (employee: Omit<IEmployee, "employee_id">): Promise<PostgrestSingleResponse<IEmployee | null>> => {
+export const createEmployee = async (
+  employee: Omit<IEmployee, "employee_id">
+): Promise<PostgrestSingleResponse<IEmployee | null>> => {
   const response = await supabase
     .from("employees")
     .insert(employee)
@@ -119,7 +136,9 @@ export const updateEmployee = async (
 };
 
 // Delete employee (soft delete by setting is_active to false)
-export const deleteEmployee = async (employeeId: string): Promise<PostgrestSingleResponse<IEmployee | null>> => {
+export const deleteEmployee = async (
+  employeeId: string
+): Promise<PostgrestSingleResponse<IEmployee | null>> => {
   const response = await supabase
     .from("employees")
     .update({ is_active: false })
@@ -131,7 +150,9 @@ export const deleteEmployee = async (employeeId: string): Promise<PostgrestSingl
 };
 
 // Hard delete employee (permanent removal)
-export const hardDeleteEmployee = async (employeeId: string): Promise<PostgrestSingleResponse<null>> => {
+export const hardDeleteEmployee = async (
+  employeeId: string
+): Promise<PostgrestSingleResponse<null>> => {
   const response = await supabase
     .from("employees")
     .delete()
@@ -187,7 +208,9 @@ export const getEmployeeCountByRole = async () => {
 };
 
 // Activate/Deactivate employee
-export const toggleEmployeeStatus = async (employeeId: string): Promise<PostgrestSingleResponse<IEmployee | null>> => {
+export const toggleEmployeeStatus = async (
+  employeeId: string
+): Promise<PostgrestSingleResponse<IEmployee | null>> => {
   // First get current status
   const { data: currentEmployee } = await getEmployeeById(employeeId);
 

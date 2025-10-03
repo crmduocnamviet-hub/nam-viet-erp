@@ -182,7 +182,7 @@ const SchedulingDashboard: React.FC<SchedulingDashboardProps> = ({ onAppointment
         )
       );
 
-      notification.success({
+      notification?.success({
         message: 'Đã hủy lịch hẹn',
         description: 'Lịch hẹn đã được hủy thành công'
       });
@@ -246,7 +246,7 @@ const SchedulingDashboard: React.FC<SchedulingDashboardProps> = ({ onAppointment
       setEditingAppointmentId(null);
       timeEditForm.resetFields();
 
-      notification.success({
+      notification?.success({
         message: 'Đã cập nhật lịch hẹn',
         description: 'Thời gian, bác sĩ và phòng khám đã được cập nhật thành công'
       });

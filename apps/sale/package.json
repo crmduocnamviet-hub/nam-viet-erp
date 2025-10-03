@@ -12,6 +12,7 @@
   "dependencies": {
     "@nam-viet-erp/services": "*",
     "@nam-viet-erp/shared-components": "*",
+    "@nam-viet-erp/store": "*",
     "antd": "^5.27.3",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"

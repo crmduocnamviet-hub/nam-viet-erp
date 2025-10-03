@@ -22,7 +22,6 @@ import {
   SALE_APP_MENU,
 } from "@nam-viet-erp/shared-components";
 
-import { useEmployee } from "../context/EmployeeContext";
 import logo from "../assets/logo.png";
 
 const { Header, Content, Footer, Sider } = Layout;
@@ -54,19 +53,6 @@ const namVietTheme = {
   },
 };
 
-// Convert employee to user format
-const convertEmployeeToUser = (employee: any) => {
-  if (!employee) return null;
-
-  return {
-    id: employee.employee_id,
-    name: employee.full_name,
-    role: employee.role_name || "employee",
-    // Mock permissions - in real app, this would come from the backend
-    permissions: employee.permissions || [],
-  };
-};
-
 // Inner component that uses screen context
 const AppLayoutContent: React.FC = () => {
   const [collapsed, setCollapsed] = useState(true);
@@ -75,7 +61,6 @@ const AppLayoutContent: React.FC = () => {
   const screens = useBreakpoint();
   const isMobile = !screens.lg;
   const { user, renderScreen } = useScreens();
-  const { employee } = useEmployee();
 
   const menuItems = user ? generateMenu(SALE_APP_MENU, user.permissions) : [];
 
@@ -385,29 +370,26 @@ const AppLayoutContent: React.FC = () => {
                   path="/"
                   element={
                     user?.role.includes("inventory")
-                      ? renderScreen("staff.inventory-dashboard", { employee })
+                      ? renderScreen("staff.inventory-dashboard")
                       : user?.role.includes("delivery")
-                      ? renderScreen("staff.delivery-dashboard", { employee })
+                      ? renderScreen("staff.delivery-dashboard")
                       : user?.role.includes("sales")
-                      ? renderScreen("staff.sales-dashboard", { employee })
-                      : renderScreen("pos.main", { employee })
+                      ? renderScreen("staff.sales-dashboard")
+                      : renderScreen("pos.main")
                   }
                 />
-                <Route
-                  path="/pos"
-                  element={renderScreen("pos.main", { employee })}
-                />
+                <Route path="/pos" element={renderScreen("pos.main")} />
                 <Route
                   path="/store-channel"
-                  element={renderScreen("b2b.orders", { employee })}
+                  element={renderScreen("b2b.orders")}
                 />
                 <Route
                   path="/b2b-dashboard"
-                  element={renderScreen("b2b.dashboard", { employee })}
+                  element={renderScreen("b2b.dashboard")}
                 />
                 <Route
                   path="/create-quote"
-                  element={renderScreen("b2b.create-quote", { employee })}
+                  element={renderScreen("b2b.create-quote")}
                 />
                 <Route
                   path="/scheduling"
@@ -427,15 +409,15 @@ const AppLayoutContent: React.FC = () => {
                 />
                 <Route
                   path="/sales-dashboard"
-                  element={renderScreen("staff.sales-dashboard", { employee })}
+                  element={renderScreen("staff.sales-dashboard")}
                 />
                 <Route
                   path="/inventory-dashboard"
-                  element={renderScreen("staff.inventory-dashboard", { employee })}
+                  element={renderScreen("staff.inventory-dashboard")}
                 />
                 <Route
                   path="/delivery-dashboard"
-                  element={renderScreen("staff.delivery-dashboard", { employee })}
+                  element={renderScreen("staff.delivery-dashboard")}
                 />
                 {/* Fallback route */}
                 <Route path="*" element={<ComingSoon />} />
@@ -453,17 +435,14 @@ const AppLayoutContent: React.FC = () => {
 
 // Main component with providers
 const PermissionBasedAppLayout: React.FC = () => {
-  const { employee } = useEmployee();
-  const user = convertEmployeeToUser(employee);
   // Additional context to pass to screens
   const screenContext = {
-    employee,
     appType: "sale",
   };
 
   return (
     <ConfigProvider theme={namVietTheme} locale={viVN}>
-      <ScreenProvider user={user} context={screenContext}>
+      <ScreenProvider context={screenContext}>
         <AppLayoutContent />
       </ScreenProvider>
     </ConfigProvider>

@@ -494,7 +494,7 @@ const SchedulingPageContent: React.FC = () => {
           description: error.message,
         });
       } else {
-        notification.success({
+        notification?.success({
           message: "Tạo lịch hẹn thành công!",
           description: `Đã tạo lịch hẹn vào lúc ${values.appointmentTime.format(
             "HH:mm"

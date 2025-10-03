@@ -110,7 +110,7 @@ const PatientCrmModal: React.FC<PatientCrmModalProps> = ({
     try {
       const { error } = await updateProfileNotes(patientId, debouncedNotes);
       if (error) throw error;
-      notification.success({ message: 'Đã lưu ghi chú!' });
+      notification?.success({ message: 'Đã lưu ghi chú!' });
     } catch (error: unknown) {
       notification.error({
         message: 'Lỗi lưu ghi chú',

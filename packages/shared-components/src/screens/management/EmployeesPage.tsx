@@ -123,7 +123,7 @@ const EmployeesPage: React.FC = () => {
           description: error.message,
         });
       } else {
-        notification.success({
+        notification?.success({
           message: 'Tạo nhân viên thành công!',
           description: `Đã tạo nhân viên ${values.full_name}`,
         });
@@ -151,7 +151,7 @@ const EmployeesPage: React.FC = () => {
           description: error.message,
         });
       } else {
-        notification.success({
+        notification?.success({
           message: 'Cập nhật nhân viên thành công!',
           description: `Đã cập nhật thông tin ${values.full_name}`,
         });
@@ -178,7 +178,7 @@ const EmployeesPage: React.FC = () => {
           description: error.message,
         });
       } else {
-        notification.success({
+        notification?.success({
           message: 'Xóa nhân viên thành công!',
           description: `Đã xóa nhân viên ${employeeName}`,
         });

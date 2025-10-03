@@ -102,7 +102,7 @@ const Vouchers: React.FC = () => {
             description: error.message,
           });
         } else {
-          notification.success({ message: "Đã xóa thành công!" });
+          notification?.success({ message: "Đã xóa thành công!" });
           fetchVouchers();
         }
       },
@@ -126,7 +126,7 @@ const Vouchers: React.FC = () => {
       }
 
       if (error) throw error;
-      notification.success({
+      notification?.success({
         message: `Đã ${
           editingVoucher ? "cập nhật" : "tạo"
         } mã giảm giá thành công!`,

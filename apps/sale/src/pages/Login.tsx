@@ -29,7 +29,7 @@ const LoginPageContent: React.FC = () => {
 
       if (error) throw error;
 
-      notification.success({ message: "Đăng nhập thành công!" });
+      notification?.success({ message: "Đăng nhập thành công!" });
       navigate("/");
     } catch (error: any) {
       notification.error({

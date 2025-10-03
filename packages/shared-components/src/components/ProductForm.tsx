@@ -117,7 +117,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
         distributor: data.distributor,
         tags: data.tags,
       });
-      notification.success({
+      notification?.success({
         message: "Thành công!",
         description: "Đã trích xuất và điền dữ liệu từ PDF.",
       });
@@ -155,7 +155,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
         tags: data.tags,
         category: data.category,
       });
-      notification.success({
+      notification?.success({
         message: "Thành công!",
         description: "Dữ liệu đã được AI làm giàu.",
       });

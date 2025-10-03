@@ -69,7 +69,7 @@ const EditPatientModal: React.FC<EditPatientModalProps> = ({
       onPatientUpdated(updateData);
       setHasUnsavedChanges(false);
 
-      notification.success({
+      notification?.success({
         message: 'Thành công!',
         description: 'Đã cập nhật thông tin bệnh nhân thành công'
       });

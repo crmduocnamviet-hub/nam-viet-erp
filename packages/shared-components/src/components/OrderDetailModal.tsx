@@ -8,13 +8,8 @@ import {
   Typography,
   Card,
   Space,
-  App,
 } from "antd";
-import {
-  CheckCircleOutlined,
-  QrcodeOutlined,
-} from "@ant-design/icons";
-import { updateQuoteStage } from "@nam-viet-erp/services";
+import { CheckCircleOutlined, QrcodeOutlined } from "@ant-design/icons";
 
 const { Text } = Typography;
 
@@ -29,7 +24,7 @@ interface OrderDetailModalProps {
   onMarkAsPackaged: () => Promise<void>;
   onOpenContinuousScanner: () => void;
   onManualVerify: (item: any) => void;
-  formatCurrency: (amount: number) => (string);
+  formatCurrency: (amount: number) => string;
   getStageInfo: (stage: string) => any;
   loading: boolean;
 }
@@ -73,7 +68,7 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                 key="packaged"
                 type="primary"
                 icon={<CheckCircleOutlined />}
-                onClick={onMarkAsPackaged}
+                onClick={async () => await onMarkAsPackaged()}
                 loading={loading}
               >
                 ✅ Đánh dấu đã đóng gói
@@ -130,16 +125,18 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                     </Tag>
                   )}
                 </Space>
-                {isInventoryStaff && orderItems.length > 0 && (
-                  <Button
-                    type="primary"
-                    icon={<QrcodeOutlined />}
-                    onClick={onOpenContinuousScanner}
-                    size="small"
-                  >
-                    Quét liên tục
-                  </Button>
-                )}
+                {isInventoryStaff &&
+                  orderItems.length > 0 &&
+                  selectedOrder?.quote_stage !== "packaged" && (
+                    <Button
+                      type="primary"
+                      icon={<QrcodeOutlined />}
+                      onClick={onOpenContinuousScanner}
+                      size="small"
+                    >
+                      Quét liên tục
+                    </Button>
+                  )}
               </div>
             }
             loading={loadingItems}
@@ -197,19 +194,19 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                         width: 150,
                         align: "center" as const,
                         render: (_: any, record: any) => {
-                          const isVerified = verifiedItems.has(
-                            record.item_id
-                          );
+                          const isVerified = verifiedItems.has(record.item_id);
 
                           if (isVerified) {
                             return (
-                              <Tag
-                                color="green"
-                                icon={<CheckCircleOutlined />}
-                              >
+                              <Tag color="green" icon={<CheckCircleOutlined />}>
                                 Đã xác thực
                               </Tag>
                             );
+                          }
+
+                          // Hide manual verify button if status is packaged
+                          if (selectedOrder?.quote_stage === "packaged") {
+                            return null;
                           }
 
                           return (
@@ -254,10 +251,7 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                     }}
                   />
                   <div>
-                    <Text
-                      strong
-                      style={{ color: "#52c41a", fontSize: "16px" }}
-                    >
+                    <Text strong style={{ color: "#52c41a", fontSize: "16px" }}>
                       🎉 Tất cả sản phẩm đã được xác thực!
                     </Text>
                   </div>

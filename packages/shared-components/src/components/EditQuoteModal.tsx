@@ -56,7 +56,7 @@ const EditQuoteModal: React.FC<EditQuoteModalProps> = ({
           onClick={async () => {
             try {
               const values = await form.validateFields();
-              onUpdateQuote(values);
+              await onUpdateQuote(values);
             } catch (error) {
               console.error("Validation failed:", error);
             }

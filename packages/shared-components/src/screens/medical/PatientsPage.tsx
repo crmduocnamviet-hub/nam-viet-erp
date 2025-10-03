@@ -107,7 +107,7 @@ const PatientsPage: React.FC = () => {
           description: error.message,
         });
       } else {
-        notification.success({
+        notification?.success({
           message: "Tạo bệnh nhân thành công!",
         });
         setIsCreateModalOpen(false);

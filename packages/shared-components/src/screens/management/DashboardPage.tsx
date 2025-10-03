@@ -68,7 +68,7 @@ const DashboardPageContent: React.FC = () => {
     console.log('New Appointment Values:', values);
     // In a real app, you would now add the new appointment to your state
     // and call a service to persist it.
-    notification.success({
+    notification?.success({
       message: 'Tạo lịch hẹn thành công!',
       description: `Đã tạo lịch hẹn cho ${values.patientName} vào lúc ${values.appointmentTime.format('HH:mm')} ngày ${values.appointmentDate.format('DD/MM/YYYY')}.`,
     });

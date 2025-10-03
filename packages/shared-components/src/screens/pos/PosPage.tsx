@@ -561,7 +561,7 @@ const PosPage: React.FC<PosPageProps> = ({ employee, ...props }) => {
           description: error.message,
         });
       } else {
-        notification.success({
+        notification?.success({
           message: "Tạo khách hàng thành công!",
           description: `Đã tạo khách hàng ${values.full_name}`,
         });
@@ -629,7 +629,7 @@ const PosPage: React.FC<PosPageProps> = ({ employee, ...props }) => {
         if (products.length > 0) {
           foundProduct = products[0];
           handleAddToCart(products[0]);
-          notification.success({
+          notification?.success({
             message: "✅ Đã thêm vào giỏ hàng",
             description: `${products[0].name} - ${scannedData}`,
             duration: 2,
@@ -651,7 +651,7 @@ const PosPage: React.FC<PosPageProps> = ({ employee, ...props }) => {
         if (data && data.length > 0) {
           foundProduct = data[0];
           handleAddToCart(data[0]);
-          notification.success({
+          notification?.success({
             message: "✅ Đã thêm vào giỏ hàng",
             description: `${data[0].name} - ${scannedData}`,
             duration: 2,
@@ -773,7 +773,7 @@ const PosPage: React.FC<PosPageProps> = ({ employee, ...props }) => {
         customerId: selectedCustomer?.patient_id,
       });
 
-      notification.success({
+      notification?.success({
         message: "Thanh toán thành công!",
         description: `Đã ghi nhận hóa đơn ${cartDetails.itemTotal.toLocaleString()}đ.`,
       });
@@ -1617,7 +1617,7 @@ const PosPage: React.FC<PosPageProps> = ({ employee, ...props }) => {
         onFinish={handleFinishPayment}
         okButtonProps={{ loading: isProcessingPayment }}
         onPrintReceipt={() => {
-          notification.success({ message: "Đang in hóa đơn..." });
+          notification?.success({ message: "Đang in hóa đơn..." });
         }}
       />
 

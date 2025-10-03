@@ -215,7 +215,7 @@ const TransactionPageContent: React.FC<FinancialTransactionsPageProps> = ({ user
       };
       const { error } = await createTransaction(record);
       if (error) throw error;
-      notification.success({ message: `Đã tạo phiếu và gửi đi thành công!` });
+      notification?.success({ message: `Đã tạo phiếu và gửi đi thành công!` });
       setIsCreationModalOpen(false);
       fetchData();
     } catch (error: any) {
@@ -237,7 +237,7 @@ const TransactionPageContent: React.FC<FinancialTransactionsPageProps> = ({ user
       const { error } = await updateTransaction(selectedTransaction.id, record);
 
       if (error) throw error;
-      notification.success({ message: `Đã xác nhận thực thi giao dịch!` });
+      notification?.success({ message: `Đã xác nhận thực thi giao dịch!` });
       setIsViewModalOpen(false);
       fetchData();
     } catch (error: any) {
@@ -266,7 +266,7 @@ const TransactionPageContent: React.FC<FinancialTransactionsPageProps> = ({ user
             record
           );
           if (error) throw error;
-          notification.success({ message: `Duyệt chi thành công!` });
+          notification?.success({ message: `Duyệt chi thành công!` });
           setIsViewModalOpen(false);
           fetchData();
         } catch (error: any) {
@@ -289,7 +289,7 @@ const TransactionPageContent: React.FC<FinancialTransactionsPageProps> = ({ user
       onOk: async () => {
         try {
           await deleteTransaction(transactionId);
-          notification.success({ message: "Đã xóa phiếu thành công!" });
+          notification?.success({ message: "Đã xóa phiếu thành công!" });
           fetchData(); // Tải lại dữ liệu
         } catch (error: any) {
           notification.error({

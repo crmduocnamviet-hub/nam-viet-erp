@@ -13,10 +13,9 @@ import {
   InputNumber,
   Divider,
   Tag,
-  Modal,
-  App,
   Descriptions,
   Grid,
+  notification,
 } from "antd";
 import {
   DeleteOutlined,
@@ -27,7 +26,6 @@ import {
   ShoppingCartOutlined,
   CalendarOutlined,
   DollarOutlined,
-  InfoCircleOutlined,
   QrcodeOutlined,
   FilePdfOutlined,
 } from "@ant-design/icons";
@@ -41,12 +39,13 @@ import {
 import {
   B2BCustomerSearchModal,
   B2BCustomerSearchInput,
+  B2BOrderPreviewModal,
   ProductSearchInput,
   QRScannerModal,
   QRScanner,
 } from "@nam-viet-erp/shared-components";
 
-const { Title, Text, Paragraph } = Typography;
+const { Title, Text } = Typography;
 const { TextArea } = Input;
 
 interface Product {
@@ -84,7 +83,6 @@ interface CreateOrderPageProps {
 const { useBreakpoint } = Grid; // <-- "Mắt thần" theo dõi kích thước màn hình
 
 const CreateOrderPage: React.FC<CreateOrderPageProps> = ({ employee }) => {
-  const { notification } = App.useApp();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
@@ -216,17 +214,17 @@ const CreateOrderPage: React.FC<CreateOrderPageProps> = ({ employee }) => {
 
     // Show appropriate notification
     if (newItems.length > 0 && updatedItems.length > 0) {
-      notification.success({
+      notification?.success({
         message: "Thêm sản phẩm thành công",
         description: `Đã thêm ${newItems.length} sản phẩm mới và tăng số lượng ${updatedItems.length} sản phẩm có sẵn`,
       });
     } else if (newItems.length > 0) {
-      notification.success({
+      notification?.success({
         message: "Thêm sản phẩm thành công",
         description: `Đã thêm ${newItems.length} sản phẩm vào đơn hàng`,
       });
     } else if (updatedItems.length > 0) {
-      notification.success({
+      notification?.success({
         message: "Cập nhật số lượng thành công",
         description: `Đã tăng số lượng cho ${updatedItems.join(", ")}`,
       });
@@ -359,7 +357,7 @@ const CreateOrderPage: React.FC<CreateOrderPageProps> = ({ employee }) => {
         items: orderItems,
       });
 
-      notification.success({
+      notification?.success({
         message: "Thành công",
         description: `Đã lưu nháp báo giá ${newQuote.quote_number} thành công! Sales staff có thể cập nhật và thay đổi trạng thái khi cần.`,
         duration: 5,
@@ -487,7 +485,7 @@ const CreateOrderPage: React.FC<CreateOrderPageProps> = ({ employee }) => {
         items: orderItems,
       });
 
-      notification.success({
+      notification?.success({
         message: "Thành công",
         description: `Đã gửi báo giá ${newQuote.quote_number} cho khách hàng! Sales staff có thể theo dõi và cập nhật trạng thái báo giá.`,
         duration: 5,
@@ -659,7 +657,7 @@ const CreateOrderPage: React.FC<CreateOrderPageProps> = ({ employee }) => {
         }, 250);
       }
 
-      notification.success({
+      notification?.success({
         message: "Xuất PDF",
         description:
           "Đã mở hộp thoại in. Vui lòng chọn 'Save as PDF' để lưu file.",
@@ -1206,137 +1204,12 @@ const CreateOrderPage: React.FC<CreateOrderPageProps> = ({ employee }) => {
       </Row>
 
       {/* Order Preview Modal */}
-      <Modal
-        title={
-          <Space>
-            <InfoCircleOutlined />
-            Chi tiết Đơn hàng đã lưu
-          </Space>
-        }
-        open={previewVisible}
-        onCancel={() => setPreviewVisible(false)}
-        footer={[
-          <Button key="close" onClick={() => setPreviewVisible(false)}>
-            Đóng
-          </Button>,
-          <Button key="print" type="primary">
-            In báo giá
-          </Button>,
-        ]}
-        width={isMobile ? "95%" : 800}
-      >
-        {orderSummary && (
-          <div>
-            <Row gutter={16} style={{ marginBottom: 24 }}>
-              <Col span={12}>
-                <Card title="Thông tin Khách hàng" size="small">
-                  <Descriptions column={1} size="small">
-                    <Descriptions.Item label="Tên khách hàng">
-                      <Text strong>{orderSummary.customer_name}</Text>
-                    </Descriptions.Item>
-                    <Descriptions.Item label="Mã khách hàng">
-                      {orderSummary.customer_code || "Chưa có"}
-                    </Descriptions.Item>
-                    <Descriptions.Item label="Số điện thoại">
-                      {orderSummary.customer_phone}
-                    </Descriptions.Item>
-                    <Descriptions.Item label="Email">
-                      {orderSummary.customer_email || "Chưa có"}
-                    </Descriptions.Item>
-                  </Descriptions>
-                </Card>
-              </Col>
-              <Col span={12}>
-                <Card title="Địa chỉ giao hàng" size="small">
-                  <Paragraph>
-                    <Text strong>Địa chỉ khách hàng:</Text>
-                    <br />
-                    {orderSummary.customer_address}
-                  </Paragraph>
-                  {orderSummary.delivery_address && (
-                    <Paragraph>
-                      <Text strong>Địa chỉ giao hàng:</Text>
-                      <br />
-                      {orderSummary.delivery_address}
-                    </Paragraph>
-                  )}
-                </Card>
-              </Col>
-            </Row>
-
-            <Card
-              title="Thông tin Đơn hàng"
-              size="small"
-              style={{ marginBottom: 16 }}
-            >
-              <Row gutter={16}>
-                <Col span={8}>
-                  <Text strong>Mã đơn hàng:</Text>
-                  <br />
-                  <Text>{orderSummary.quote_number}</Text>
-                </Col>
-                <Col span={8}>
-                  <Text strong>Ngày tạo:</Text>
-                  <br />
-                  <Text>{orderSummary.created_at}</Text>
-                </Col>
-                <Col span={8}>
-                  <Text strong>Trạng thái:</Text>
-                  <br />
-                  <Tag color="orange">Nháp</Tag>
-                </Col>
-              </Row>
-            </Card>
-
-            <Card
-              title="Chi tiết Sản phẩm"
-              size="small"
-              style={{ marginBottom: 16 }}
-            >
-              <Table
-                columns={[
-                  { title: "Sản phẩm", dataIndex: "product_name", key: "name" },
-                  {
-                    title: "Đơn giá",
-                    dataIndex: "unit_price",
-                    key: "price",
-                    render: formatCurrency,
-                  },
-                  { title: "SL", dataIndex: "quantity", key: "quantity" },
-                  {
-                    title: "Thành tiền",
-                    dataIndex: "total_price",
-                    key: "total",
-                    render: formatCurrency,
-                  },
-                ]}
-                dataSource={orderSummary.items}
-                pagination={false}
-                size="small"
-              />
-            </Card>
-
-            <Card title="Tổng kết" size="small">
-              <Descriptions column={2} size="small">
-                <Descriptions.Item label="Tạm tính">
-                  {formatCurrency(orderSummary.totals.subtotal)}
-                </Descriptions.Item>
-                <Descriptions.Item label="Chiết khấu">
-                  -{formatCurrency(orderSummary.totals.discountAmount)}
-                </Descriptions.Item>
-                <Descriptions.Item label="Thuế">
-                  +{formatCurrency(orderSummary.totals.taxAmount)}
-                </Descriptions.Item>
-                <Descriptions.Item label="Tổng cộng">
-                  <Text strong style={{ color: "#52c41a", fontSize: 16 }}>
-                    {formatCurrency(orderSummary.totals.totalAmount)}
-                  </Text>
-                </Descriptions.Item>
-              </Descriptions>
-            </Card>
-          </div>
-        )}
-      </Modal>
+      <B2BOrderPreviewModal
+        visible={previewVisible}
+        onClose={() => setPreviewVisible(false)}
+        orderSummary={orderSummary}
+        isMobile={isMobile}
+      />
 
       {/* Client Selection Modal */}
       <B2BCustomerSearchModal

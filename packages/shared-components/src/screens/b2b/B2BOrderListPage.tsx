@@ -10,12 +10,12 @@ import {
   DatePicker,
   Tag,
   Form,
-  App,
   Row,
   Col,
   Drawer,
   Grid,
   Checkbox,
+  notification,
 } from "antd";
 import {
   FilterOutlined,
@@ -78,7 +78,6 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
   employee,
   user,
 }) => {
-  const { notification } = App.useApp();
   const [quotes, setQuotes] = useState<B2BQuoteWithStatus[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchKeyword, setSearchKeyword] = useState("");
@@ -296,14 +295,19 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
   // Realtime subscription for B2B quotes with permission check
   useEffect(() => {
     // Check if user has b2b.notification permission
-    const hasNotificationPermission = userPermissions.includes("b2b.notification");
+    const hasNotificationPermission =
+      userPermissions.includes("b2b.notification");
 
     if (!hasNotificationPermission) {
-      console.log("[B2B Dashboard] User does not have b2b.notification permission. Skipping realtime subscription.");
+      console.log(
+        "[B2B Dashboard] User does not have b2b.notification permission. Skipping realtime subscription."
+      );
       return;
     }
 
-    console.log("[B2B Dashboard] Setting up realtime subscription for b2b_quotes...");
+    console.log(
+      "[B2B Dashboard] Setting up realtime subscription for b2b_quotes..."
+    );
 
     // Subscribe to b2b_quotes changes
     const unsubscribe = notificationService.subscribeToB2BQuotes(
@@ -314,21 +318,27 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
         if (payload.eventType === "INSERT") {
           notification.info({
             message: "Đơn hàng mới",
-            description: `Đơn hàng ${payload.new?.quote_number || "mới"} đã được tạo`,
+            description: `Đơn hàng ${
+              payload.new?.quote_number || "mới"
+            } đã được tạo`,
             placement: "topRight",
             duration: 4,
           });
         } else if (payload.eventType === "UPDATE") {
           notification.info({
             message: "Cập nhật đơn hàng",
-            description: `Đơn hàng ${payload.new?.quote_number || ""} đã được cập nhật`,
+            description: `Đơn hàng ${
+              payload.new?.quote_number || ""
+            } đã được cập nhật`,
             placement: "topRight",
             duration: 3,
           });
         } else if (payload.eventType === "DELETE") {
           notification.warning({
             message: "Đơn hàng đã xóa",
-            description: `Đơn hàng ${payload.old?.quote_number || ""} đã bị xóa`,
+            description: `Đơn hàng ${
+              payload.old?.quote_number || ""
+            } đã bị xóa`,
             placement: "topRight",
             duration: 3,
           });
@@ -527,7 +537,7 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
       }, 250);
     };
 
-    notification.success({
+    notification?.success({
       message: "Đang xuất PDF",
       description: 'Cửa sổ in đã được mở. Chọn "Save as PDF" để lưu file.',
     });
@@ -606,14 +616,14 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
       newVerifiedItems.add(orderItem.item_id);
       setVerifiedItems(newVerifiedItems);
 
-      notification.success({
+      notification?.success({
         message: "Xác thực thành công",
         description: `Đã xác thực sản phẩm: ${scannedProduct.name}`,
       });
 
       // Check if all products are now verified
       if (newVerifiedItems.size === orderItems.length) {
-        notification.success({
+        notification?.success({
           message: "🎉 Hoàn thành xác thực!",
           description:
             "Tất cả sản phẩm đã được xác thực. Có thể đánh dấu đã đóng gói.",
@@ -710,7 +720,7 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
     newVerifiedItems.add(item.item_id);
     setVerifiedItems(newVerifiedItems);
 
-    notification.success({
+    notification?.success({
       message: "Xác thực thủ công",
       description: `Đã xác thực sản phẩm: ${item.products?.name}`,
     });
@@ -762,7 +772,7 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
       }
 
       if (newCustomer) {
-        notification.success({
+        notification?.success({
           message: "Thành công",
           description: "Tạo khách hàng B2B thành công",
         });
@@ -955,7 +965,7 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
       }
 
       if (newQuote) {
-        notification.success({
+        notification?.success({
           message: "Thành công",
           description: `${isDraft ? "Lưu nháp" : "Gửi"} báo giá thành công`,
         });
@@ -1029,7 +1039,7 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
       await loadOrders();
 
       // Then show success notification
-      notification.success({
+      notification?.success({
         message: "Cập nhật trạng thái thành công",
         description: `Đã cập nhật trạng thái cho ${updateCount} đơn hàng`,
       });
@@ -1086,14 +1096,14 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
       }
 
       if (updatedQuote) {
-        notification.success({
-          message: "Thành công",
-          description: "Cập nhật báo giá thành công",
-        });
         setEditQuoteModalOpen(false);
         editQuoteForm.resetFields();
         setSelectedOrder(null);
         loadOrders(); // Reload data
+        notification?.success({
+          message: "Thành công",
+          description: "Cập nhật báo giá thành công",
+        });
       }
     } catch (error) {
       console.error("Error updating quote:", error);

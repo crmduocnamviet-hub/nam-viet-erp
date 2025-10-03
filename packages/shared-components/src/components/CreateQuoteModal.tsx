@@ -47,7 +47,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({
           onClick={async () => {
             try {
               const values = await form.validateFields();
-              onSaveDraft(values);
+              await onSaveDraft(values);
             } catch (error) {
               console.error("Validation failed:", error);
             }
@@ -61,7 +61,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({
           onClick={async () => {
             try {
               const values = await form.validateFields();
-              onSendQuote(values);
+              await onSendQuote(values);
             } catch (error) {
               console.error("Validation failed:", error);
             }
