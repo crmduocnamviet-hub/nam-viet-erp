@@ -16,7 +16,8 @@ import {
   EditOutlined,
 } from "@ant-design/icons";
 import ProductForm from "../../components/ProductForm";
-import { getProductById, updateProduct } from "@nam-viet-erp/services";
+import { getProductById, updateProduct, upsetInventory, getInventoryByProductId } from "@nam-viet-erp/services";
+import { ProductFormData } from "../../types/product";
 
 const { Title } = Typography;
 
@@ -61,15 +62,29 @@ const EditProductPage: React.FC<EditProductPageProps> = ({
       }
 
       try {
-        const { data, error } = await getProductById(parseInt(id));
+        const productId = parseInt(id);
 
-        if (error) throw error;
-
-        if (!data) {
+        // Fetch product data
+        const { data: product, error: productError } = await getProductById(productId);
+        if (productError) throw productError;
+        if (!product) {
           throw new Error("Không tìm thấy sản phẩm");
         }
 
-        setProductData(data);
+        // Fetch inventory data for this product
+        const { data: inventoryData, error: inventoryError } = await getInventoryByProductId(productId);
+        if (inventoryError) {
+          console.error("Error loading inventory:", inventoryError);
+        }
+
+        // Merge inventory data into product data
+        const productWithInventory = {
+          ...product,
+          inventory_data: inventoryData || [],
+        };
+
+        console.log("Loaded product with inventory:", productWithInventory);
+        setProductData(productWithInventory);
       } catch (error: any) {
         console.error("Error loading product:", error);
         setError(error.message || "Không thể tải thông tin sản phẩm");
@@ -81,22 +96,52 @@ const EditProductPage: React.FC<EditProductPageProps> = ({
     loadProduct();
   }, [id]);
 
-  const handleUpdateProduct = async (values: any) => {
+  const handleUpdateProduct = async (values: ProductFormData) => {
     if (!id) return;
 
     setLoading(true);
     try {
-      const { error } = await updateProduct(parseInt(id), values);
+      const { inventory_settings, ...productData } = values;
+      const productId = parseInt(id);
 
-      if (error) throw error;
+      console.log("Inventory settings:", inventory_settings);
+      console.log("Product data:", productData);
+
+      // Update product data
+      const { error: productError } = await updateProduct(productId, productData);
+      if (productError) throw productError;
+
+      // Update inventory settings if they exist
+      if (inventory_settings && Object.keys(inventory_settings).length > 0) {
+        // Convert inventory_settings to array format for upsert
+        const inventoryData = Object.entries(inventory_settings)
+          .filter(([_, settings]) => settings && typeof settings === 'object')
+          .map(([warehouseId, settings]) => ({
+            product_id: productId,
+            warehouse_id: parseInt(warehouseId),
+            min_stock: settings?.min_stock || 0,
+            max_stock: settings?.max_stock || 0,
+          }));
+
+        console.log("Upserting inventory data:", inventoryData);
+
+        const { error: inventoryError } = await upsetInventory(inventoryData);
+        if (inventoryError) {
+          console.error("Inventory update error:", inventoryError);
+          notification.warning({
+            message: "Cảnh báo!",
+            description: "Sản phẩm đã được cập nhật nhưng có lỗi khi cập nhật tồn kho.",
+          });
+        }
+      }
 
       notification?.success({
         message: "Thành công!",
-        description: "Sản phẩm đã được cập nhật thành công.",
+        description: "Sản phẩm và tồn kho đã được cập nhật thành công.",
       });
 
       // Navigate back to products list
-      navigate("/inventory/products");
+      navigate("/products");
     } catch (error: any) {
       notification.error({
         message: "Lỗi cập nhật sản phẩm",
@@ -153,7 +198,7 @@ const EditProductPage: React.FC<EditProductPageProps> = ({
             title: (
               <span
                 style={{ cursor: "pointer", color: "#1890ff" }}
-                onClick={() => navigate("/inventory/products")}
+                onClick={() => navigate("/products")}
               >
                 Quản lý Sản phẩm
               </span>

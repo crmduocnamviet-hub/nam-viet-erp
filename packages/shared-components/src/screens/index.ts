@@ -18,6 +18,7 @@ import SchedulingPage from "./medical/SchedulingPage";
 
 // Screen Imports - Inventory
 import ProductsPage from "./inventory/ProductsPage";
+import ProductListPage from "./inventory/ProductListPage";
 import CreateProductPage from "./inventory/CreateProductPage";
 import EditProductPage from "./inventory/EditProductPage";
 import PurchaseOrdersPage from "./inventory/PurchaseOrdersPage";
@@ -149,6 +150,13 @@ export const SCREEN_REGISTRY: ScreenRegistry = {
     category: "inventory",
     title: "Quản lý Sản phẩm",
     description: "Quản lý danh mục và thông tin sản phẩm",
+  },
+  "inventory.products-list": {
+    component: ProductListPage,
+    permissions: ["inventory.access", "products.view"],
+    category: "inventory",
+    title: "Danh sách Sản phẩm",
+    description: "Xem danh sách sản phẩm",
   },
   "inventory.products.create": {
     component: CreateProductPage,
@@ -577,6 +585,7 @@ export {
   SchedulingPage,
   // Inventory
   ProductsPage,
+  ProductListPage,
   CreateProductPage,
   EditProductPage,
   PurchaseOrdersPage,

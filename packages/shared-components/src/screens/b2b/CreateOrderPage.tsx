@@ -31,6 +31,7 @@ interface Product {
   image_url?: string;
   unit?: string;
   sku?: string;
+  stock_quantity?: number;
 }
 
 interface Employee {
@@ -79,22 +80,49 @@ const CreateOrderPage: React.FC<CreateOrderPageProps> = ({
   };
 
   // Handle QR scan result
-  const handleQRScan = (scannedData: string) => {
-    getB2BWarehouseProductByBarCode({ barcode: scannedData })
-      .then(({ data }) => {
-        if (data && data.length) {
-          handleAddProducts([data[0].products as unknown as Product]);
-          setIsQRScannerOpen(false);
+  const handleQRScan = async (scannedData: string) => {
+    try {
+      const { data } = await getB2BWarehouseProductByBarCode({ barcode: scannedData });
+
+      if (data && data.length) {
+        const product = {
+          ...data?.[0]?.products,
+          stock_quantity: data?.[0]?.quantity || 0,
+        } as unknown as Product;
+
+        // Check inventory before adding
+        if (
+          product.stock_quantity !== undefined &&
+          product.stock_quantity <= 0
+        ) {
+          notification.error({
+            message: "❌ Sản phẩm hết hàng",
+            description: `${product.name} đã hết hàng trong kho. Vui lòng nhập thêm hàng.`,
+            duration: 3,
+          });
         } else {
+          handleAddProducts([product]);
+          notification.success({
+            message: "✅ Quét thành công",
+            description: `Đã thêm ${product.name} vào đơn hàng`,
+            duration: 2,
+          });
         }
-      })
-      .catch((error) => {
-        console.error("Error fetching product by barcode:", error);
-        notification.error({
-          message: "Lỗi tìm kiếm sản phẩm",
-          description: "Có lỗi xảy ra khi tìm kiếm sản phẩm",
+      } else {
+        notification.warning({
+          message: "⚠️ Không tìm thấy sản phẩm",
+          description: `Mã: ${scannedData}`,
+          duration: 2,
         });
+      }
+    } catch (error) {
+      console.error("Error fetching product by barcode:", error);
+      notification.error({
+        message: "❌ Lỗi quét mã",
+        description: "Không thể tìm kiếm sản phẩm",
+        duration: 2,
       });
+    }
   };
 
   // Add products to order (supports both single product and array)
@@ -102,8 +130,15 @@ const CreateOrderPage: React.FC<CreateOrderPageProps> = ({
     const productArray = Array.isArray(products) ? products : [products];
     const newItems: IB2BQuoteItem[] = [];
     const updatedItems: string[] = [];
+    const outOfStockItems: string[] = [];
 
     productArray.forEach((product, index) => {
+      // Check inventory before processing
+      if (product.stock_quantity !== undefined && product.stock_quantity <= 0) {
+        outOfStockItems.push(product.name);
+        return;
+      }
+
       // Check if product already exists in order
       const existingItem = orderItems.find(
         (item) => item.product_id === product.id
@@ -112,6 +147,17 @@ const CreateOrderPage: React.FC<CreateOrderPageProps> = ({
       if (existingItem) {
         // Increase quantity of existing product using store
         const newQuantity = existingItem.quantity + 1;
+
+        // Check if new quantity exceeds stock
+        if (product.stock_quantity !== undefined && newQuantity > product.stock_quantity) {
+          notification.error({
+            message: "Vượt quá tồn kho",
+            description: `${product.name} chỉ còn ${product.stock_quantity} sản phẩm trong kho. Hiện tại đơn hàng đã có ${existingItem.quantity}.`,
+            duration: 4,
+          });
+          return;
+        }
+
         updateOrderItem(existingItem.key, {
           quantity: newQuantity,
           total_price: newQuantity * existingItem.unit_price,
@@ -146,7 +192,17 @@ const CreateOrderPage: React.FC<CreateOrderPageProps> = ({
     // Add new items to order using store
     newItems.forEach((item) => addOrderItem(item));
 
-    // Show appropriate notification
+    // Show appropriate notifications
+    if (outOfStockItems.length > 0) {
+      notification.error({
+        message: "Không thể thêm sản phẩm hết hàng",
+        description: `Các sản phẩm sau đã hết hàng: ${outOfStockItems.join(
+          ", "
+        )}. Vui lòng nhập thêm hàng.`,
+        duration: 4,
+      });
+    }
+
     if (newItems.length > 0 && updatedItems.length > 0) {
       notification?.success({
         message: "Thêm sản phẩm thành công",

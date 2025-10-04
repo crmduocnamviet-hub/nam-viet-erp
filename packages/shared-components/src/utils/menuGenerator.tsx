@@ -79,6 +79,13 @@ export const SALE_APP_MENU: MenuItemConfig[] = [
     ],
   },
   {
+    label: "📦 Sản phẩm",
+    key: "/products",
+    icon: <MedicineBoxOutlined />,
+    screenKey: "inventory.products",
+    permissions: ["products.view"],
+  },
+  {
     label: "📅 Đặt lịch & Khám bệnh",
     key: "scheduling",
     icon: <CalendarOutlined />,

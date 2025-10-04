@@ -24,10 +24,10 @@ export interface PosTab {
   id: string;
   title: string;
   cart: CartItem[];
-  selectedCustomer: any | null;
+  selectedCustomer: IPatient | null;
   selectedWarehouse: any | null;
   selectedLocation: string;
-  paymentMethod: "cash" | "card" | "qr";
+  paymentMethod: "cash" | "card";
   isProcessingPayment: boolean;
   error: string | null;
 }
@@ -60,13 +60,13 @@ export interface PosState {
   setSelectedCustomer: (customer: any | null) => void;
   setSelectedWarehouse: (warehouse: any | null) => void;
   setSelectedLocation: (location: string) => void;
-  setPaymentMethod: (method: "cash" | "card" | "qr") => void;
+  setPaymentMethod: (method: "cash" | "card") => void;
 
   // Customer actions by index
   setSelectedCustomerByIndex: (index: number, customer: any | null) => void;
   setSelectedWarehouseByIndex: (index: number, warehouse: any | null) => void;
   setSelectedLocationByIndex: (index: number, location: string) => void;
-  setPaymentMethodByIndex: (index: number, method: "cash" | "card" | "qr") => void;
+  setPaymentMethodByIndex: (index: number, method: "cash" | "card") => void;
 
   // Processing state
   setProcessingPayment: (isProcessing: boolean) => void;
@@ -446,16 +446,24 @@ export const usePosStore = create<PosState>()(
         // Process payment with automatic tab cleanup
         processPayment: async (paymentData, processSaleTransaction) => {
           const state = get();
-          const tab = state.tabs.find((t) => t.id === state.activeTabId);
+
+          // Get target tab by index if provided, otherwise use active tab
+          const targetTabIndex = paymentData.tabIndex !== undefined
+            ? paymentData.tabIndex
+            : state.tabs.findIndex((t) => t.id === state.activeTabId);
+
+          const tab = state.tabs[targetTabIndex];
 
           if (!tab) {
-            throw new Error("No active tab found");
+            throw new Error("No tab found for payment");
           }
 
+          const targetTabId = tab.id;
+
           try {
-            // Set processing state
+            // Set processing state on target tab
             set((state) => {
-              const tab = state.tabs.find((t) => t.id === state.activeTabId);
+              const tab = state.tabs[targetTabIndex];
               if (tab) {
                 tab.isProcessingPayment = true;
                 tab.error = null;
@@ -471,7 +479,7 @@ export const usePosStore = create<PosState>()(
 
             // Clear processing state
             set((state) => {
-              const tab = state.tabs.find((t) => t.id === state.activeTabId);
+              const tab = state.tabs[targetTabIndex];
               if (tab) {
                 tab.isProcessingPayment = false;
               }
@@ -479,26 +487,23 @@ export const usePosStore = create<PosState>()(
 
             // Handle tab cleanup after successful payment
             const currentState = get();
-            const currentTabId = currentState.activeTabId;
 
             if (currentState.tabs.length > 1) {
-              // Remove current tab if there are multiple tabs
-              const tabIndex = currentState.tabs.findIndex((t) => t.id === currentTabId);
-
+              // Remove target tab if there are multiple tabs
               set((state) => {
-                if (tabIndex !== -1) {
-                  // Remove the tab
-                  state.tabs.splice(tabIndex, 1);
+                // Remove the tab
+                state.tabs.splice(targetTabIndex, 1);
 
-                  // Switch to another tab
-                  const newActiveIndex = Math.min(tabIndex, state.tabs.length - 1);
+                // If we removed the active tab, switch to another tab
+                if (targetTabId === state.activeTabId) {
+                  const newActiveIndex = Math.min(targetTabIndex, state.tabs.length - 1);
                   state.activeTabId = state.tabs[newActiveIndex].id;
                 }
               });
             } else {
               // Reset the tab if it's the only one
               set((state) => {
-                const tab = state.tabs.find((t) => t.id === state.activeTabId);
+                const tab = state.tabs[0];
                 if (tab) {
                   tab.cart = [];
                   tab.selectedCustomer = null;
@@ -511,9 +516,9 @@ export const usePosStore = create<PosState>()(
           } catch (error: any) {
             console.error("[PROCESS PAYMENT ERROR]", error);
 
-            // Handle error
+            // Handle error on target tab
             set((state) => {
-              const tab = state.tabs.find((t) => t.id === state.activeTabId);
+              const tab = state.tabs[targetTabIndex];
               if (tab) {
                 tab.isProcessingPayment = false;
                 tab.error = error.message || "An error occurred while processing payment";

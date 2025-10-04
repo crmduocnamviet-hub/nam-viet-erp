@@ -4,7 +4,7 @@ import { createSalesOrder } from "./salesOrderService";
 import { createMultipleSalesOrderItems } from "./salesOrderItemService";
 
 interface IProcessSale {
-  cart: any[];
+  cart: CartItem[];
   total: number;
   paymentMethod: string;
   warehouseId: number;
@@ -61,7 +61,7 @@ export const processSaleTransaction = async ({
   const orderItems = (cart || []).map((item) => ({
     product_id: item.id,
     quantity: item.quantity,
-    unit_price: item.finalPrice || item.retail_price || 0,
+    unit_price: item.finalPrice || 0,
     is_service: false,
   }));
 
@@ -114,22 +114,12 @@ export const processSaleTransaction = async ({
 
   // Step 4: Prepare and execute inventory updates.
   const inventoryUpdates = (cart || []).map((item) => {
-    const warehouseInventory = (item.inventory_data || []).find(
-      (inv: any) => inv.warehouse_id === warehouseId
-    );
-
-    const currentQuantity = warehouseInventory
-      ? warehouseInventory.quantity
-      : 0;
-    const newQuantity = currentQuantity - item.quantity;
-
+    const currentQuantity = item.stock_quantity || 0;
+    const newQuantity = (currentQuantity || 0) - item.quantity;
     return {
       product_id: item.id,
       warehouse_id: warehouseId,
       quantity: newQuantity,
-      // We must include min/max stock for the upsert to not nullify them.
-      min_stock: warehouseInventory ? warehouseInventory.min_stock : 0,
-      max_stock: warehouseInventory ? warehouseInventory.max_stock : 0,
     };
   });
 

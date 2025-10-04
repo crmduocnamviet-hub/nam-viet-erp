@@ -139,8 +139,24 @@ export const searchProductInWarehouse = async ({
 }) => {
   const response = await supabase
     .from("inventory")
-    .select("*, products(*)")
+    .select("*, products!inner (*)")
     .ilike("products.name", `%${search}%`)
+    .eq("products.is_active", true)
+    .eq("warehouse_id", warehouseId);
+  return response;
+};
+
+export const searchProductInWarehouseByBarcode = async ({
+  search,
+  warehouseId,
+}: {
+  search: string;
+  warehouseId: number;
+}) => {
+  const response = await supabase
+    .from("inventory")
+    .select("*, products!inner (*)")
+    .eq("products.barcode", search)
     .eq("products.is_active", true)
     .eq("warehouse_id", warehouseId);
   return response;

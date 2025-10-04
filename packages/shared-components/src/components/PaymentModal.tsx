@@ -13,27 +13,10 @@ import {
   Card,
   QRCode,
 } from "antd";
-import { PrinterOutlined, DownloadOutlined } from '@ant-design/icons';
+import { PrinterOutlined, DownloadOutlined } from "@ant-design/icons";
 import type { ButtonProps } from "antd";
 
 const { Text } = Typography;
-
-// PaymentValues type definition
-export interface PaymentValues {
-  customer_cash?: number;
-  payment_method: "cash" | "card" | "qr";
-  total: number;
-}
-
-// CartItem type definition
-export interface CartItem {
-  id: number;
-  name: string;
-  quantity: number;
-  finalPrice: number;
-  originalPrice: number;
-  prescriptionNote?: string;
-}
 
 interface PaymentModalProps {
   open: boolean;
@@ -42,9 +25,11 @@ interface PaymentModalProps {
   cartItems?: CartItem[];
   customerInfo?: any;
   onCancel: () => void;
-  onFinish: (values: PaymentValues) => void;
+  onFinish: (values: PaymentValues, tabIndex?: number) => void;
   okButtonProps?: ButtonProps;
   onPrintReceipt?: () => void;
+  tabIndex?: number; // Index of the tab to pay for (optional, uses active tab if not provided)
+  tabTitle?: string; // Title of the tab being paid for
 }
 
 const PaymentModal: React.FC<PaymentModalProps> = ({
@@ -57,6 +42,8 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
   onFinish,
   okButtonProps,
   onPrintReceipt,
+  tabIndex,
+  tabTitle,
 }) => {
   const [form] = Form.useForm();
   const [customerCash, setCustomerCash] = useState<number>(0);
@@ -69,6 +56,10 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
     if (open) {
       form.resetFields();
       setCustomerCash(0);
+    } else {
+      // Reset receipt information when modal is closed
+      setShowReceipt(false);
+      setReceiptData(null);
     }
   }, [open, form]);
 
@@ -76,32 +67,39 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
     if (showReceipt) {
       return "Hóa đơn thanh toán";
     }
-    switch (paymentMethod) {
-      case "cash":
-        return "Thanh toán Tiền mặt";
-      case "card":
-        return "Thanh toán Thẻ";
-      case "qr":
-        return "Thanh toán bằng Mã QR";
-      default:
-        return "Thanh toán";
+
+    const paymentTypeText =
+      paymentMethod === "cash"
+        ? "Tiền mặt"
+        : paymentMethod === "card"
+        ? "Thẻ"
+        : "Mã QR";
+
+    const baseTitle = `Thanh toán ${paymentTypeText}`;
+
+    // Add tab title if paying for a specific tab
+    if (tabTitle) {
+      return `${baseTitle} - ${tabTitle}`;
     }
+
+    return baseTitle;
   };
 
   const handlePaymentSuccess = (values: PaymentValues) => {
     const receipt = {
       receiptNumber: `HD${Date.now()}`,
-      date: new Date().toLocaleString('vi-VN'),
-      customer: customerInfo || { full_name: 'Khách vãng lai' },
+      date: new Date().toLocaleString("vi-VN"),
+      customer: customerInfo || { full_name: "Khách vãng lai" },
       items: cartItems,
       total: cartTotal,
       paymentMethod,
-      customerCash: paymentMethod === 'cash' ? customerCash : cartTotal,
-      change: paymentMethod === 'cash' ? change : 0,
+      customerCash: paymentMethod === "cash" ? customerCash : cartTotal,
+      change: paymentMethod === "cash" ? change : 0,
+      tabTitle: tabTitle || "Đơn hàng",
     };
     setReceiptData(receipt);
     setShowReceipt(true);
-    onFinish(values);
+    onFinish(values, tabIndex); // Pass tabIndex to parent handler
   };
 
   const handlePrintReceipt = () => {
@@ -109,7 +107,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
       onPrintReceipt();
     } else {
       // Default print behavior
-      const printWindow = window.open('', '_blank');
+      const printWindow = window.open("", "_blank");
       if (printWindow && receiptData) {
         printWindow.document.write(generateReceiptHTML());
         printWindow.document.close();
@@ -119,7 +117,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
   };
 
   const generateReceiptHTML = () => {
-    if (!receiptData) return '';
+    if (!receiptData) return "";
 
     return `
       <html>
@@ -137,22 +135,43 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
           <div class="header">
             <h2>NAM VIỆT ERP</h2>
             <p>Hóa đơn: ${receiptData.receiptNumber}</p>
+            ${
+              receiptData.tabTitle
+                ? `<p><strong>${receiptData.tabTitle}</strong></p>`
+                : ""
+            }
             <p>${receiptData.date}</p>
           </div>
 
           <div>
-            <p><strong>Khách hàng:</strong> ${receiptData.customer.full_name}</p>
-            ${receiptData.customer.phone_number ? `<p><strong>SĐT:</strong> ${receiptData.customer.phone_number}</p>` : ''}
+            <p><strong>Khách hàng:</strong> ${
+              receiptData.customer.full_name
+            }</p>
+            ${
+              receiptData.customer.phone_number
+                ? `<p><strong>SĐT:</strong> ${receiptData.customer.phone_number}</p>`
+                : ""
+            }
           </div>
 
           <div>
-            ${receiptData.items.map((item: CartItem) => `
+            ${receiptData.items
+              .map(
+                (item: CartItem) => `
               <div class="item">
                 <span>${item.name} x${item.quantity}</span>
-                <span>${(item.finalPrice * item.quantity).toLocaleString()}đ</span>
+                <span>${(
+                  item.finalPrice * item.quantity
+                ).toLocaleString()}đ</span>
               </div>
-              ${item.prescriptionNote ? `<div style="font-size: 12px; color: #666; margin-left: 10px;">📝 ${item.prescriptionNote}</div>` : ''}
-            `).join('')}
+              ${
+                item.prescriptionNote
+                  ? `<div style="font-size: 12px; color: #666; margin-left: 10px;">📝 ${item.prescriptionNote}</div>`
+                  : ""
+              }
+            `
+              )
+              .join("")}
           </div>
 
           <div class="total">
@@ -160,7 +179,9 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
               <span>Tổng cộng:</span>
               <span>${receiptData.total.toLocaleString()}đ</span>
             </div>
-            ${receiptData.paymentMethod === 'cash' ? `
+            ${
+              receiptData.paymentMethod === "cash"
+                ? `
               <div class="item">
                 <span>Tiền khách đưa:</span>
                 <span>${receiptData.customerCash.toLocaleString()}đ</span>
@@ -169,7 +190,9 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                 <span>Tiền thối:</span>
                 <span>${receiptData.change.toLocaleString()}đ</span>
               </div>
-            ` : ''}
+            `
+                : ""
+            }
           </div>
 
           <div class="footer">
@@ -189,50 +212,97 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
       onOk={() => form.submit()}
       okText="Xác nhận Thanh toán"
       destroyOnHidden
-      okButtonProps={showReceipt ? { style: { display: 'none' } } : okButtonProps}
-      cancelButtonProps={showReceipt ? { style: { display: 'none' } } : undefined}
+      okButtonProps={
+        showReceipt ? { style: { display: "none" } } : okButtonProps
+      }
+      cancelButtonProps={
+        showReceipt ? { style: { display: "none" } } : undefined
+      }
     >
       {showReceipt && receiptData ? (
         <div>
           <Card style={{ marginBottom: 16 }}>
-            <div style={{ textAlign: 'center', marginBottom: 16 }}>
+            <div style={{ textAlign: "center", marginBottom: 16 }}>
               <Typography.Title level={4}>HÓA ĐƠN THANH TOÁN</Typography.Title>
-              <Typography.Text type="secondary">#{receiptData.receiptNumber}</Typography.Text>
+              <Typography.Text type="secondary">
+                #{receiptData.receiptNumber}
+              </Typography.Text>
             </div>
 
             <Descriptions bordered size="small" column={1}>
-              <Descriptions.Item label="Thời gian">{receiptData.date}</Descriptions.Item>
-              <Descriptions.Item label="Khách hàng">{receiptData.customer.full_name}</Descriptions.Item>
+              <Descriptions.Item label="Thời gian">
+                {receiptData.date}
+              </Descriptions.Item>
+              <Descriptions.Item label="Khách hàng">
+                {receiptData.customer.full_name}
+              </Descriptions.Item>
               {receiptData.customer.phone_number && (
-                <Descriptions.Item label="Số điện thoại">{receiptData.customer.phone_number}</Descriptions.Item>
+                <Descriptions.Item label="Số điện thoại">
+                  {receiptData.customer.phone_number}
+                </Descriptions.Item>
               )}
               <Descriptions.Item label="Phương thức thanh toán">
-                {paymentMethod === 'cash' ? 'Tiền mặt' : paymentMethod === 'card' ? 'Thẻ' : 'Chuyển khoản'}
+                {paymentMethod === "cash"
+                  ? "Tiền mặt"
+                  : paymentMethod === "card"
+                  ? "Thẻ"
+                  : "Chuyển khoản"}
               </Descriptions.Item>
             </Descriptions>
 
-            <div style={{ margin: '16px 0' }}>
+            <div style={{ margin: "16px 0" }}>
               <Typography.Text strong>Chi tiết sản phẩm:</Typography.Text>
               {receiptData.items.map((item: CartItem, index: number) => (
-                <div key={index} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid #f0f0f0' }}>
-                  <span>{item.name} x{item.quantity}</span>
-                  <span>{(item.finalPrice * item.quantity).toLocaleString()}đ</span>
+                <div
+                  key={index}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    padding: "4px 0",
+                    borderBottom: "1px solid #f0f0f0",
+                  }}
+                >
+                  <span>
+                    {item.name} x{item.quantity}
+                  </span>
+                  <span>
+                    {(item.finalPrice * item.quantity).toLocaleString()}đ
+                  </span>
                 </div>
               ))}
             </div>
 
-            <div style={{ borderTop: '2px solid #000', paddingTop: 8 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '16px' }}>
+            <div style={{ borderTop: "2px solid #000", paddingTop: 8 }}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  fontWeight: "bold",
+                  fontSize: "16px",
+                }}
+              >
                 <span>Tổng cộng:</span>
                 <span>{receiptData.total.toLocaleString()}đ</span>
               </div>
-              {paymentMethod === 'cash' && (
+              {paymentMethod === "cash" && (
                 <>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      marginTop: 4,
+                    }}
+                  >
                     <span>Tiền khách đưa:</span>
                     <span>{receiptData.customerCash.toLocaleString()}đ</span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      marginTop: 4,
+                    }}
+                  >
                     <span>Tiền thối:</span>
                     <span>{receiptData.change.toLocaleString()}đ</span>
                   </div>
@@ -241,24 +311,32 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
             </div>
           </Card>
 
-          <Space style={{ width: '100%', justifyContent: 'center' }}>
-            <Button type="primary" icon={<PrinterOutlined />} onClick={handlePrintReceipt}>
+          <Space style={{ width: "100%", justifyContent: "center" }}>
+            <Button
+              type="primary"
+              icon={<PrinterOutlined />}
+              onClick={handlePrintReceipt}
+            >
               In hóa đơn
             </Button>
-            <Button icon={<DownloadOutlined />} onClick={() => {
-              const blob = new Blob([generateReceiptHTML()], { type: 'text/html' });
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement('a');
-              a.href = url;
-              a.download = `hoa-don-${receiptData.receiptNumber}.html`;
-              a.click();
-            }}>
+            <Button
+              icon={<DownloadOutlined />}
+              onClick={() => {
+                const blob = new Blob([generateReceiptHTML()], {
+                  type: "text/html",
+                });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `hoa-don-${receiptData.receiptNumber}.html`;
+                a.click();
+              }}
+            >
               Tải về
             </Button>
-            <Button onClick={() => {
-              setShowReceipt(false);
-              onCancel();
-            }}>
+            <Button
+              onClick={onCancel}
+            >
               Đóng
             </Button>
           </Space>
@@ -270,62 +348,68 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
           onFinish={handlePaymentSuccess}
           style={{ paddingTop: 24 }}
         >
-        <Row gutter={16}>
-          <Col span={12}>
-            <Statistic title="Tổng tiền hàng" value={cartTotal} suffix="VNĐ" />
-          </Col>
-          {paymentMethod === "cash" && (
+          <Row gutter={16}>
             <Col span={12}>
               <Statistic
-                title="Tiền thối lại"
-                value={change}
+                title="Tổng tiền hàng"
+                value={cartTotal}
                 suffix="VNĐ"
-                valueStyle={{ color: "#3f8600" }}
               />
             </Col>
+            {paymentMethod === "cash" && (
+              <Col span={12}>
+                <Statistic
+                  title="Tiền thối lại"
+                  value={change}
+                  suffix="VNĐ"
+                  valueStyle={{ color: "#3f8600" }}
+                />
+              </Col>
+            )}
+          </Row>
+
+          {paymentMethod === "cash" && (
+            <Form.Item
+              name="customer_cash"
+              label="Số tiền khách đưa"
+              rules={[{ required: true, message: "Vui lòng nhập số tiền" }]}
+            >
+              <InputNumber
+                style={{
+                  width: "100%",
+                  marginTop: 16,
+                  fontSize: "1.5rem",
+                  height: 50,
+                }}
+                formatter={(value) =>
+                  `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ".")
+                }
+                parser={(value) => Number(value!.replace(/\./g, ""))}
+                onChange={(value) => setCustomerCash(Number(value) || 0)}
+                autoFocus
+              />
+            </Form.Item>
           )}
-        </Row>
 
-        {paymentMethod === "cash" && (
-          <Form.Item
-            name="customer_cash"
-            label="Số tiền khách đưa"
-            rules={[{ required: true, message: "Vui lòng nhập số tiền" }]}
-          >
-            <InputNumber
-              style={{
-                width: "100%",
-                marginTop: 16,
-                fontSize: "1.5rem",
-                height: 50,
-              }}
-              formatter={(value) =>
-                `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ".")
-              }
-              parser={(value) => Number(value!.replace(/\./g, ""))}
-              onChange={(value) => setCustomerCash(Number(value) || 0)}
-              autoFocus
-            />
-          </Form.Item>
-        )}
+          {paymentMethod === "card" && (
+            <Text style={{ marginTop: 16, display: "block" }}>
+              Vui lòng quẹt thẻ qua máy POS.
+            </Text>
+          )}
 
-        {paymentMethod === "card" && (
-          <Text style={{ marginTop: 16, display: "block" }}>
-            Vui lòng quẹt thẻ qua máy POS.
-          </Text>
-        )}
-
-        {paymentMethod === "qr" && (
-          <div style={{ textAlign: "center", marginTop: 16 }}>
-            <QRCode
-              value={`https://img.vietqr.io/image/970436-0123456789-compact2.png?amount=${cartTotal}&addInfo=Thanh%20toan%20don%20hang`}
-              size={200}
-              style={{ marginBottom: 16 }}
-            />
-            <br />
-            <Text type="secondary">Quét mã để thanh toán {cartTotal.toLocaleString()}đ</Text>
-          </div>
-        )}
+          {paymentMethod === "qr" && (
+            <div style={{ textAlign: "center", marginTop: 16 }}>
+              <QRCode
+                value={`https://img.vietqr.io/image/970436-0123456789-compact2.png?amount=${cartTotal}&addInfo=Thanh%20toan%20don%20hang`}
+                size={200}
+                style={{ marginBottom: 16 }}
+              />
+              <br />
+              <Text type="secondary">
+                Quét mã để thanh toán {cartTotal.toLocaleString()}đ
+              </Text>
+            </div>
+          )}
         </Form>
       )}
     </Modal>

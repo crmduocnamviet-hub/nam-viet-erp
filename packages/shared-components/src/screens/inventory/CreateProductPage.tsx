@@ -6,6 +6,9 @@ import {
   Button,
   App as AntApp,
   Breadcrumb,
+  Grid,
+  Row,
+  Col,
 } from "antd";
 import {
   ArrowLeftOutlined,
@@ -13,9 +16,11 @@ import {
   PlusOutlined,
 } from "@ant-design/icons";
 import ProductForm from "../../components/ProductForm";
-import { createProduct } from "@nam-viet-erp/services";
+import { createProduct, upsetInventory } from "@nam-viet-erp/services";
+import { ProductFormData } from "../../types/product";
 
-const { Title } = Typography;
+const { Title, Text } = Typography;
+const { useBreakpoint } = Grid;
 
 interface CreateProductPageProps {
   hasPermission?: (permission: string) => boolean;
@@ -27,33 +32,66 @@ const CreateProductPage: React.FC<CreateProductPageProps> = ({
   const navigate = useNavigate();
   const { notification } = AntApp.useApp();
   const [loading, setLoading] = useState(false);
+  const screens = useBreakpoint();
+  const isMobile = !screens.lg;
 
   // Check permission
   if (!hasPermission("products:create")) {
     return (
-      <Card>
-        <div style={{ textAlign: "center", padding: "40px 0" }}>
-          <Title level={3}>🚫 Không có quyền truy cập</Title>
-          <p>Bạn không có quyền tạo sản phẩm mới.</p>
-          <Button onClick={() => navigate(-1)}>
-            <ArrowLeftOutlined /> Quay lại
-          </Button>
-        </div>
-      </Card>
+      <div style={{ padding: "24px", minHeight: "100vh" }}>
+        <Card>
+          <div style={{ textAlign: "center", padding: "40px 0" }}>
+            <Title level={3}>🚫 Không có quyền truy cập</Title>
+            <p>Bạn không có quyền tạo sản phẩm mới.</p>
+            <Button onClick={() => navigate(-1)}>
+              <ArrowLeftOutlined /> Quay lại
+            </Button>
+          </div>
+        </Card>
+      </div>
     );
   }
 
-  const handleCreateProduct = async (values: any) => {
+  const handleCreateProduct = async (values: ProductFormData) => {
     console.log("CreateProductPage handleCreateProduct called with:", values);
     setLoading(true);
     try {
-      const { error } = await createProduct(values);
+      const { inventory_settings, ...productData } = values;
 
-      if (error) throw error;
+      console.log("Inventory settings:", inventory_settings);
+      console.log("Product data:", productData);
+
+      // Create product first
+      const { data: createdProduct, error: productError } = await createProduct(productData);
+      if (productError) throw productError;
+
+      // Save inventory_settings to inventory table if product was created and settings exist
+      if (createdProduct?.id && inventory_settings && Object.keys(inventory_settings).length > 0) {
+        // Convert inventory_settings to array format for upsert
+        const inventoryData = Object.entries(inventory_settings)
+          .filter(([_, settings]) => settings && typeof settings === 'object')
+          .map(([warehouseId, settings]) => ({
+            product_id: createdProduct.id,
+            warehouse_id: parseInt(warehouseId),
+            min_stock: settings?.min_stock || 0,
+            max_stock: settings?.max_stock || 0,
+          }));
+
+        console.log("Upserting inventory data:", inventoryData);
+
+        const { error: inventoryError } = await upsetInventory(inventoryData);
+        if (inventoryError) {
+          console.error("Inventory create error:", inventoryError);
+          notification.warning({
+            message: "Cảnh báo!",
+            description: "Sản phẩm đã được tạo nhưng có lỗi khi cập nhật tồn kho.",
+          });
+        }
+      }
 
       notification?.success({
         message: "Thành công!",
-        description: "Sản phẩm mới đã được tạo thành công.",
+        description: "Sản phẩm mới và tồn kho đã được tạo thành công.",
       });
 
       // Navigate back to products list
@@ -68,15 +106,14 @@ const CreateProductPage: React.FC<CreateProductPageProps> = ({
     }
   };
 
-
   return (
-    <div style={{ padding: "24px" }}>
+    <div style={{ padding: "24px", minHeight: "100vh" }}>
       {/* Breadcrumb */}
       <Breadcrumb
         style={{ marginBottom: "16px" }}
         items={[
           {
-            title: <HomeOutlined />
+            title: <HomeOutlined />,
           },
           {
             title: (
@@ -86,42 +123,39 @@ const CreateProductPage: React.FC<CreateProductPageProps> = ({
               >
                 Quản lý Sản phẩm
               </span>
-            )
+            ),
           },
           {
-            title: "Thêm sản phẩm mới"
-          }
+            title: "Thêm sản phẩm mới",
+          },
         ]}
       />
 
       {/* Header */}
-      <Card style={{ marginBottom: "24px" }}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <div>
-            <Title level={2} style={{ margin: 0 }}>
-              <PlusOutlined /> Thêm sản phẩm mới
-            </Title>
-            <p style={{ margin: "8px 0 0 0", color: "#666" }}>
-              Điền thông tin để tạo sản phẩm mới trong hệ thống
-            </p>
-          </div>
-        </div>
-      </Card>
+      <Row
+        justify="space-between"
+        align="middle"
+        style={{ marginBottom: isMobile ? 16 : 24 }}
+      >
+        <Col>
+          <Title level={isMobile ? 3 : 2} style={{ margin: 0 }}>
+            <PlusOutlined /> Thêm sản phẩm mới
+          </Title>
+          <Text
+            type="secondary"
+            style={{ fontSize: isMobile ? "14px" : "16px" }}
+          >
+            Điền thông tin để tạo sản phẩm mới trong hệ thống
+          </Text>
+        </Col>
+      </Row>
 
       {/* Product Form */}
       <Card>
         <ProductForm
           onFinish={handleCreateProduct}
           initialData={null}
-          onClose={function (): void {
-            navigate("/products");
-          }}
+          onClose={() => navigate("/products")}
           loading={loading}
         />
       </Card>

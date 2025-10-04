@@ -8,6 +8,23 @@ export const getWarehouse = async () => {
   return response;
 };
 
+export const getWarehouseById = async (warehouseId: number) => {
+  const response: PostgrestSingleResponse<IWarehouse> = await supabase
+    .from("warehouses")
+    .select("*")
+    .eq("id", warehouseId)
+    .single();
+  return response;
+};
+
+export const getInventoryByProductId = async (productId: number) => {
+  const response = await supabase
+    .from("inventory")
+    .select("*")
+    .eq("product_id", productId);
+  return response;
+};
+
 export const upsetInventory = async (record: Partial<IInventory>[]) => {
   const response = await supabase.from("inventory").upsert(record, {
     onConflict: "product_id, warehouse_id",

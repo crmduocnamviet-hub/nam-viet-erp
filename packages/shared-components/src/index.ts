@@ -13,6 +13,7 @@ export { default as EditQuoteModal } from "./components/EditQuoteModal";
 export { default as CreateCustomerModal } from "./components/CreateCustomerModal";
 export { default as BulkUpdateModal } from "./components/BulkUpdateModal";
 export { default as QRScannerVerificationModal } from "./components/QRScannerVerificationModal";
+export { default as PosTabContent } from "./components/PosTabContent";
 export * from "./hooks/useDebounce";
 
 // Screens and Permission System
@@ -22,3 +23,6 @@ export * from "./providers/ScreenProvider";
 // Utils
 export * from "./utils/menuGenerator";
 export * from "./utils/b2bOrder";
+
+// Types
+export * from "./types/product";

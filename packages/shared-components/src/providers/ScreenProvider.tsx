@@ -44,12 +44,14 @@ export const ScreenProvider: React.FC<ScreenProviderProps> = ({
   const permissions = usePermissions();
 
   // Convert employee to user format
-  const user = employee ? {
-    id: employee.employee_id,
-    name: employee.full_name,
-    permissions: permissions,
-    role: employee.role_name || "employee",
-  } : null;
+  const user = employee
+    ? {
+        id: employee.employee_id,
+        name: employee.full_name,
+        permissions: permissions,
+        role: employee.role_name || "employee",
+      }
+    : null;
   const renderScreen = (screenKey: string, props: Record<string, any> = {}) => {
     const screen = SCREEN_REGISTRY[screenKey];
     if (!screen) {

@@ -7,8 +7,6 @@ import {
   Col,
   InputNumber,
   Select,
-  Switch,
-  Checkbox,
   Button,
   Typography,
   Divider,
@@ -20,6 +18,7 @@ import {
   InfoCircleOutlined,
   DollarCircleOutlined,
   HomeOutlined,
+  QrcodeOutlined,
 } from "@ant-design/icons";
 import ImageUpload from "./ImageUpload";
 import {
@@ -28,13 +27,15 @@ import {
   getWarehouse,
 } from "@nam-viet-erp/services";
 import PdfUpload from "./PdfUpload";
+import QRScannerModal from "./QRScannerModal";
 import { getErrorMessage } from "../utils";
+import { ProductFormData } from "../types/product";
 
-const { Title } = Typography; // <-- Khai báo Title để sử dụng
+const { Title } = Typography;
 
 interface ProductFormProps {
   onClose: () => void;
-  onFinish: (values: any) => void;
+  onFinish: (values: ProductFormData) => void;
   loading: boolean;
   initialData?: any | null;
 }
@@ -46,43 +47,30 @@ const ProductForm: React.FC<ProductFormProps> = ({
   initialData,
 }) => {
   const [form] = Form.useForm();
-  // HÀM MỚI: Xử lý logic tính toán
-  const handleValuesChange = (changedValues: any, allValues: any) => {
-    const { costPrice, wholesaleProfit, retailProfit, conversionRate } =
-      allValues;
-    const changedKey = Object.keys(changedValues)[0];
-
-    // Chỉ tính Giá Bán Buôn khi người dùng thay đổi Giá Vốn hoặc Lãi Bán Buôn
-    if (
-      ["costPrice", "wholesaleProfit"].includes(changedKey) &&
-      costPrice &&
-      wholesaleProfit
-    ) {
-      const newWholesalePrice = costPrice + wholesaleProfit;
-      form.setFieldsValue({ wholesalePrice: newWholesalePrice });
-    }
-
-    // Chỉ tính Giá Bán Lẻ khi người dùng thay đổi các trường liên quan
-    if (
-      ["costPrice", "retailProfit", "conversionRate"].includes(changedKey) &&
-      costPrice &&
-      retailProfit &&
-      conversionRate > 0
-    ) {
-      const newRetailPrice = (costPrice + retailProfit) / conversionRate;
-      form.setFieldsValue({ retailPrice: Math.round(newRetailPrice) }); // Làm tròn để có số đẹp
-    }
-  };
   const { notification } = App.useApp();
   const [aiLoading, setAiLoading] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [isQRScannerOpen, setIsQRScannerOpen] = useState(false);
 
-  const wholesaleUnit = Form.useWatch("wholesaleUnit", form);
-  const retailUnit = Form.useWatch("retailUnit", form);
+  const [warehouses, setWarehouses] = useState<any[]>([]);
+  const [loadingWarehouses, setLoadingWarehouses] = useState(false);
 
-  const conversionLabel = `Số lượng Quy đổi ${
-    wholesaleUnit && retailUnit ? `(1 ${wholesaleUnit} = ? ${retailUnit})` : ""
-  }`;
+  const fetchWarehouses = async () => {
+    setLoadingWarehouses(true);
+    const { data, error } = await getWarehouse();
+
+    if (error) {
+      console.error("Lỗi tải danh sách kho:", error);
+    } else {
+      setWarehouses(data);
+    }
+    setLoadingWarehouses(false);
+  };
+
+  // Tự động hỏi danh sách kho mỗi khi form được mở
+  useEffect(() => {
+    fetchWarehouses();
+  }, []);
 
   const handleExtractFromPdf = async (
     fileContent: string,
@@ -99,7 +87,6 @@ const ProductForm: React.FC<ProductFormProps> = ({
       // Nâng cấp để điền tất cả các trường mới từ AI
       form.setFieldsValue({
         name: data.name,
-        registrationNumber: (data as any).registrationNumber,
         category: data.category,
         packaging: data.packaging,
         description: data.description,
@@ -109,10 +96,8 @@ const ProductForm: React.FC<ProductFormProps> = ({
         hdsd_6_18: data.hdsd_6_18,
         hdsd_over_18: data.hdsd_over_18,
         disease: data.disease,
-        isChronic: (data as any).isChronic,
-        wholesaleUnit: (data as any).wholesaleUnit,
-        retailUnit: (data as any).retailUnit,
-        conversionRate: (data as any).conversionRate,
+        wholesale_unit: (data as any).wholesale_unit,
+        retail_unit: (data as any).retail_unit,
         manufacturer: data.manufacturer,
         distributor: data.distributor,
         tags: data.tags,
@@ -169,25 +154,17 @@ const ProductForm: React.FC<ProductFormProps> = ({
     }
   };
 
-  const [warehouses, setWarehouses] = useState<any[]>([]);
-  const [loadingWarehouses, setLoadingWarehouses] = useState(false);
-
-  const fetchWarehouses = async () => {
-    setLoadingWarehouses(true);
-    const { data, error } = await getWarehouse();
-
-    if (error) {
-      console.error("Lỗi tải danh sách kho:", error);
-    } else {
-      setWarehouses(data);
-    }
-    setLoadingWarehouses(false);
+  // Handle QR scan for barcode
+  const handleQRScan = (scannedData: string) => {
+    form.setFieldsValue({ barcode: scannedData });
+    setIsQRScannerOpen(false);
+    notification.success({
+      message: "✅ Quét thành công",
+      description: `Đã điền mã vạch: ${scannedData}`,
+      duration: 2,
+    });
   };
 
-  // Tự động hỏi danh sách kho mỗi khi form được mở
-  useEffect(() => {
-    fetchWarehouses();
-  }, []);
 
   useEffect(() => {
     if (initialData && warehouses.length > 0) {
@@ -228,19 +205,10 @@ const ProductForm: React.FC<ProductFormProps> = ({
           disease: initialData.disease || "",
           image_url: initialData.image_url || "",
           image_url_manual: "",
-          productType: initialData.product_type || "goods",
-          isFixedAsset: initialData.is_fixed_asset || false,
-          registrationNumber: initialData.registration_number || "",
-          isChronic: initialData.is_chronic || false,
-          wholesaleUnit: initialData.wholesale_unit || "",
-          retailUnit: initialData.retail_unit || "",
-          conversionRate: initialData.conversion_rate || 1,
-          invoicePrice: initialData.invoice_price || 0,
-          costPrice: initialData.cost_price || 0,
-          wholesaleProfit: initialData.wholesale_profit || 0,
-          retailProfit: initialData.retail_profit || 0,
-          wholesalePrice: initialData.wholesale_price || 0,
-          retailPrice: initialData.retail_price || 0,
+          wholesale_unit: initialData.wholesale_unit || "",
+          retail_unit: initialData.retail_unit || "",
+          wholesale_price: initialData.wholesale_price || 0,
+          retail_price: initialData.retail_price || 0,
           hdsd_0_2: initialData.hdsd_0_2 || "",
           hdsd_2_6: initialData.hdsd_2_6 || "",
           hdsd_6_18: initialData.hdsd_6_18 || "",
@@ -258,13 +226,24 @@ const ProductForm: React.FC<ProductFormProps> = ({
   const handleOk = (values: any) => {
     // Merge image_url and image_url_manual, preferring manual input if provided
     const finalImageUrl = values.image_url_manual || values.image_url || "";
+
+    // Separate inventory_settings from product data
+    const { inventory_settings, ...productData } = values;
+
     const finalValues = {
-      ...values,
+      ...productData,
       image_url: finalImageUrl,
+      // Pass inventory_settings separately so it can be saved to inventory table
+      inventory_settings: inventory_settings || {},
     };
+
     // Remove the manual field since it's now merged
     delete finalValues.image_url_manual;
+
     console.log("Calling onFinish with finalValues:", finalValues);
+    console.log("Product data:", { ...finalValues, inventory_settings: undefined });
+    console.log("Inventory settings:", finalValues.inventory_settings);
+
     onFinish(finalValues);
   };
 
@@ -284,25 +263,6 @@ const ProductForm: React.FC<ProductFormProps> = ({
             </Form.Item>
             <Form.Item name="image_url_manual">
               <Input placeholder="Hoặc dán URL ảnh trực tiếp vào đây" />
-            </Form.Item>
-            <Form.Item
-              name="productType"
-              label="Loại hàng"
-              initialValue="goods"
-            >
-              <Select
-                options={[
-                  { value: "goods", label: "Hàng hóa" },
-                  { value: "service", label: "Dịch vụ" },
-                ]}
-              />
-            </Form.Item>
-            <Form.Item
-              name="isFixedAsset"
-              label="Là sản phẩm cố định"
-              valuePropName="checked"
-            >
-              <Switch />
             </Form.Item>
           </Col>
           <Col span={16}>
@@ -327,7 +287,15 @@ const ProductForm: React.FC<ProductFormProps> = ({
               </Col>
               <Col span={12}>
                 <Form.Item name="barcode" label="Mã vạch (Barcode)">
-                  <Input />
+                  <Input
+                    addonAfter={
+                      <QrcodeOutlined
+                        style={{ cursor: "pointer" }}
+                        onClick={() => setIsQRScannerOpen(true)}
+                      />
+                    }
+                    placeholder="Nhập hoặc quét mã vạch"
+                  />
                 </Form.Item>
               </Col>
               <Col span={12}>
@@ -347,11 +315,6 @@ const ProductForm: React.FC<ProductFormProps> = ({
               </Col>
               <Col span={12}>
                 <Form.Item name="distributor" label="Công ty phân phối">
-                  <Input />
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item name="registrationNumber" label="Số Đăng ký">
                   <Input />
                 </Form.Item>
               </Col>
@@ -409,9 +372,6 @@ const ProductForm: React.FC<ProductFormProps> = ({
             <Form.Item name="disease" label="Bệnh áp dụng (Gợi ý từ AI)">
               <Input />
             </Form.Item>
-            <Form.Item name="isChronic" valuePropName="checked">
-              <Checkbox>Là bệnh mãn tính</Checkbox>
-            </Form.Item>
           </Col>
         </Row>
       ),
@@ -426,24 +386,19 @@ const ProductForm: React.FC<ProductFormProps> = ({
       children: (
         <Row gutter={16}>
           <Col span={8}>
-            <Form.Item name="wholesaleUnit" label="Đơn vị Bán Buôn">
+            <Form.Item name="wholesale_unit" label="Đơn vị Bán Buôn">
               <Input placeholder="ví dụ: Thùng" />
             </Form.Item>
           </Col>
           <Col span={8}>
-            <Form.Item name="retailUnit" label="Đơn vị Bán lẻ">
+            <Form.Item name="retail_unit" label="Đơn vị Bán lẻ">
               <Input placeholder="ví dụ: Hộp" />
             </Form.Item>
           </Col>
-          <Col span={8}>
-            <Form.Item name="conversionRate" label={conversionLabel}>
-              <InputNumber style={{ width: "100%" }} min={1} />
-            </Form.Item>
-          </Col>
 
-          {/* === CÁC Ô ĐÃ ĐƯỢC NÂNG CẤP === */}
+          {/* === PRICING === */}
           <Col span={12}>
-            <Form.Item name="invoicePrice" label="Giá nhập trên Hóa Đơn">
+            <Form.Item name="wholesale_price" label="Giá bán buôn">
               <InputNumber
                 style={{ width: "100%" }}
                 addonAfter="VNĐ"
@@ -455,59 +410,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
             </Form.Item>
           </Col>
           <Col span={12}>
-            <Form.Item
-              name="costPrice"
-              label="Giá vốn thực tế"
-              rules={[{ required: true }]}
-            >
-              <InputNumber
-                style={{ width: "100%" }}
-                addonAfter="VNĐ"
-                formatter={(value) =>
-                  `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ".")
-                }
-                parser={(value) => value!.replace(/\./g, "")}
-              />
-            </Form.Item>
-          </Col>
-          <Col span={12}>
-            <Form.Item name="wholesaleProfit" label="Lãi bán buôn">
-              <InputNumber
-                style={{ width: "100%" }}
-                addonAfter="VNĐ"
-                formatter={(value) =>
-                  `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ".")
-                }
-                parser={(value) => value!.replace(/\./g, "")}
-              />
-            </Form.Item>
-          </Col>
-          <Col span={12}>
-            <Form.Item name="retailProfit" label="Lãi bán lẻ">
-              <InputNumber
-                style={{ width: "100%" }}
-                addonAfter="VNĐ"
-                formatter={(value) =>
-                  `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ".")
-                }
-                parser={(value) => value!.replace(/\./g, "")}
-              />
-            </Form.Item>
-          </Col>
-          <Col span={12}>
-            <Form.Item name="wholesalePrice" label="Giá bán buôn (Tự tính)">
-              <InputNumber
-                style={{ width: "100%" }}
-                addonAfter="VNĐ"
-                formatter={(value) =>
-                  `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ".")
-                }
-                parser={(value) => value!.replace(/\./g, "")}
-              />
-            </Form.Item>
-          </Col>
-          <Col span={12}>
-            <Form.Item name="retailPrice" label="Giá bán lẻ (Tự tính)">
+            <Form.Item name="retail_price" label="Giá bán lẻ">
               <InputNumber
                 style={{ width: "100%" }}
                 addonAfter="VNĐ"
@@ -529,7 +432,6 @@ const ProductForm: React.FC<ProductFormProps> = ({
         </>
       ),
       children:
-        // === NÂNG CẤP LÕI NẰM Ở ĐÂY ===
         loadingWarehouses ? (
           <Spin />
         ) : (
@@ -540,7 +442,6 @@ const ProductForm: React.FC<ProductFormProps> = ({
               </Title>
               <Row gutter={16}>
                 <Col span={12}>
-                  {/* Tên của Form Item giờ đây cũng được tạo động */}
                   <Form.Item
                     name={["inventory_settings", wh.id, "min_stock"]}
                     label="Tồn tối thiểu"
@@ -568,7 +469,6 @@ const ProductForm: React.FC<ProductFormProps> = ({
       form={form}
       layout="vertical"
       name="product_form_detailed"
-      onValuesChange={handleValuesChange}
       onFinish={handleOk}
       onFinishFailed={(errorInfo) => {
         console.log("Form validation failed:", errorInfo);
@@ -601,6 +501,13 @@ const ProductForm: React.FC<ProductFormProps> = ({
           Lưu
         </Button>
       </div>
+
+      {/* QR Scanner Modal */}
+      <QRScannerModal
+        visible={isQRScannerOpen}
+        onClose={() => setIsQRScannerOpen(false)}
+        onScan={handleQRScan}
+      />
     </Form>
   );
 };

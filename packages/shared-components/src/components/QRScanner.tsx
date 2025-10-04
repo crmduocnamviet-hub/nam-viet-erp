@@ -36,11 +36,12 @@ const QRScanner: React.FC<QRScannerProps> = ({
   const streamRef = useRef<MediaStream | null>(null);
   const scanIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const barcodeDetectorRef = useRef<any>(null);
-  const [isScanning, setIsScanning] = useState(false);
+  const [isScanReady, setIsScanReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showTutorial, setShowTutorial] = useState(false);
   const [recentScans, setRecentScans] = useState<Set<string>>(new Set());
   const [lastScanTime, setLastScanTime] = useState<number>(0);
+  const [isScanning, setIsScanning] = useState<boolean>(false);
 
   // Detect browser type for specific tutorials
   const getBrowserType = () => {
@@ -140,18 +141,18 @@ const QRScanner: React.FC<QRScannerProps> = ({
   const startCamera = async () => {
     try {
       setError(null);
-      setIsScanning(false);
+      setIsScanReady(false);
 
-      // Check HTTPS requirement
-      if (
-        window.location.protocol !== "https:" &&
-        window.location.hostname !== "localhost"
-      ) {
-        setError(
-          "Camera chỉ hoạt động trên HTTPS. Vui lòng truy cập qua HTTPS."
-        );
-        return;
-      }
+      // // Check HTTPS requirement
+      // if (
+      //   window.location.protocol !== "https:" &&
+      //   window.location.hostname !== "localhost"
+      // ) {
+      //   setError(
+      //     "Camera chỉ hoạt động trên HTTPS. Vui lòng truy cập qua HTTPS."
+      //   );
+      //   return;
+      // }
 
       // Initialize barcode detector
       const hasDetector = await initializeBarcodeDetector();
@@ -180,7 +181,7 @@ const QRScanner: React.FC<QRScannerProps> = ({
 
         // Wait for video to be ready
         videoRef.current.onloadedmetadata = () => {
-          setIsScanning(true);
+          setIsScanReady(true);
           startScanning();
         };
       }
@@ -199,60 +200,74 @@ const QRScanner: React.FC<QRScannerProps> = ({
     }
   };
 
-  const startScanning = () => {
-    if (!barcodeDetectorRef.current || !videoRef.current) return;
+  React.useEffect(() => {
+    if (recentScans.size > 0) {
+      clearInterval(scanIntervalRef.current);
+      setTimeout(() => {
+        setRecentScans(new Set());
+      }, scanDelay);
+    }
+    if (isScanning && recentScans.size === 0) {
+      scanIntervalRef.current = setInterval(async () => {
+        try {
+          if (videoRef.current && videoRef.current.readyState === 4) {
+            const barcodes = await barcodeDetectorRef.current.detect(
+              videoRef.current
+            );
+            if (barcodes.length > 0) {
+              const result = barcodes[0].rawValue;
+              if (result) {
+                const currentTime = Date.now();
 
-    scanIntervalRef.current = setInterval(async () => {
-      try {
-        if (videoRef.current && videoRef.current.readyState === 4) {
-          const barcodes = await barcodeDetectorRef.current.detect(
-            videoRef.current
-          );
-          if (barcodes.length > 0) {
-            const result = barcodes[0].rawValue;
-            if (result) {
-              const currentTime = Date.now();
+                // For multiple scan mode, prevent duplicate scans within scanDelay period
+                if (allowMultipleScan) {
+                  if (
+                    currentTime - lastScanTime < scanDelay ||
+                    recentScans.has(result)
+                  ) {
+                    return; // Skip if too soon or recently scanned
+                  }
 
-              // For multiple scan mode, prevent duplicate scans within scanDelay period
-              if (allowMultipleScan) {
-                if (currentTime - lastScanTime < scanDelay || recentScans.has(result)) {
-                  return; // Skip if too soon or recently scanned
+                  // Update tracking
+                  setLastScanTime(currentTime);
+
+                  // Clear recent scan after delay to allow re-scanning same code
+                  onScan(result);
+
+                  setRecentScans((prev) => new Set(prev).add(result));
+                  // Keep scanning - don't stop camera or close
+                } else {
+                  // Single scan mode - stop after first scan
+                  console.log(
+                    "Barcode detected:",
+                    result,
+                    "Format:",
+                    barcodes[0].format
+                  );
+                  onScan(result);
+                  stopCamera();
+                  onClose();
                 }
-
-                // Update tracking
-                setLastScanTime(currentTime);
-                setRecentScans(prev => new Set(prev).add(result));
-
-                // Clear recent scan after delay to allow re-scanning same code
-                setTimeout(() => {
-                  setRecentScans(prev => {
-                    const newSet = new Set(prev);
-                    newSet.delete(result);
-                    return newSet;
-                  });
-                }, scanDelay);
-
-                console.log("Barcode detected:", result, "Format:", barcodes[0].format);
-                onScan(result);
-                // Keep scanning - don't stop camera or close
-              } else {
-                // Single scan mode - stop after first scan
-                console.log("Barcode detected:", result, "Format:", barcodes[0].format);
-                onScan(result);
-                stopCamera();
-                onClose();
               }
             }
           }
+        } catch (err) {
+          console.error("Scanning error:", err);
         }
-      } catch (err) {
-        console.error("Scanning error:", err);
-      }
-    }, 150); // Scan every 150ms for faster detection
+      }, 150); // Scan every 150ms for faster detection
+      return () => {
+        clearInterval(scanIntervalRef.current);
+      };
+    }
+  }, [isScanning, recentScans]);
+
+  const startScanning = () => {
+    if (!barcodeDetectorRef.current || !videoRef.current) return;
+    setIsScanning(true);
   };
 
   const stopCamera = () => {
-    setIsScanning(false);
+    setIsScanReady(false);
 
     if (scanIntervalRef.current) {
       clearInterval(scanIntervalRef.current);
@@ -452,13 +467,13 @@ const QRScanner: React.FC<QRScannerProps> = ({
 
       <div style={{ textAlign: "center" }}>
         <Text type="secondary" style={{ display: "block", marginBottom: 8 }}>
-          {isScanning
+          {isScanReady
             ? "Đưa mã QR hoặc barcode vào khung hình"
             : error
             ? "Camera đang gặp sự cố"
             : "Đang khởi động camera..."}
         </Text>
-        {isScanning && (
+        {isScanReady && (
           <Text type="secondary" style={{ fontSize: 12, display: "block" }}>
             Hỗ trợ: QR Code, EAN-13, EAN-8, Code 128, Code 39, UPC-A, UPC-E
           </Text>
