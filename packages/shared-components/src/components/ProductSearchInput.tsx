@@ -20,20 +20,9 @@ import QRScanner from "./QRScannerModal";
 
 const { Text } = Typography;
 
-interface Product {
-  id: number;
-  name: string;
-  wholesale_price: number;
-  packaging?: string;
-  manufacturer?: string;
-  image_url?: string;
-  unit?: string;
-  sku?: string;
-}
-
 interface ProductSearchInputProps {
-  value?: Product | null;
-  onChange?: (product: Product | null) => void;
+  value?: IProduct | null;
+  onChange?: (product: IProduct | null) => void;
   placeholder?: string;
   allowClear?: boolean;
   disabled?: boolean;
@@ -55,7 +44,7 @@ const ProductSearchInput: React.FC<ProductSearchInputProps> = ({
   debounceDelay = 300,
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<IProduct[]>([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const [isQRScannerOpen, setIsQRScannerOpen] = useState(false);

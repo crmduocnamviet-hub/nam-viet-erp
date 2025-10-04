@@ -14,3 +14,6 @@ export const getErrorMessage = (error: unknown): string => {
 
   return "An unknown error occurred";
 };
+
+// B2B Order PDF Export utilities
+export * from './b2bOrder';

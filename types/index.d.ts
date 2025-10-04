@@ -34,6 +34,7 @@ interface IProduct {
   supplier_id: number | null;
   shelf_location: string | null;
   stock_quantity?: number;
+  unit?: string;
 }
 
 interface IPromotion {
@@ -328,6 +329,16 @@ interface ISalesOrderItem {
   dosage_printed: string | null; // Hướng dẫn sử dụng in ra bill K80
 }
 
+type IB2BQuoteForm = Omit<
+  IB2BQuote,
+  | "quote_id"
+  | "quote_number"
+  | "created_at"
+  | "updated_at"
+  | "quote_items"
+  | "employee"
+>;
+
 // B2B Quote interface
 interface IB2BQuote {
   quote_id: string;
@@ -351,7 +362,7 @@ interface IB2BQuote {
     | "cancelled"
     | "expired";
   payment_status?: "unpaid" | "partial" | "paid" | "overdue";
-  total_value: number;
+  total_value?: number;
   subtotal: number;
   discount_percent: number;
   discount_amount: number;
@@ -361,7 +372,7 @@ interface IB2BQuote {
   valid_until: string;
   notes?: string | null;
   terms_conditions?: string | null;
-  created_by_employee_id: string | null;
+  created_by_employee_id?: string | null;
   created_at: string;
   updated_at: string;
   // Relations
@@ -394,6 +405,10 @@ interface IB2BQuoteItem {
     manufacturer?: string;
     retail_price: number;
   };
+  total_price?: number;
+  key?: string;
+  unit?: string;
+  packaging?: string;
 }
 
 // B2B Quote Customer interface

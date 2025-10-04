@@ -18,4 +18,7 @@ export * from "./hooks/useDebounce";
 // Screens and Permission System
 export * from "./screens";
 export * from "./providers/ScreenProvider";
+
+// Utils
 export * from "./utils/menuGenerator";
+export * from "./utils/b2bOrder";
