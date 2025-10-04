@@ -233,24 +233,41 @@ const PosTabContent: React.FC<PosTabContentProps> = ({
                   </Text>
                   <br />
                   {selectedCustomer ? (
-                    <Space>
-                      <Text type="secondary">
-                        {selectedCustomer.phone_number}
-                      </Text>
-                      {selectedCustomer.loyalty_points > 0 && (
-                        <Tag color="gold">
-                          {selectedCustomer.loyalty_points} điểm
-                        </Tag>
+                    <>
+                      <Space>
+                        <Text type="secondary">
+                          {selectedCustomer.phone_number}
+                        </Text>
+                        {selectedCustomer.loyalty_points > 0 && (
+                          <Tag color="gold">
+                            {selectedCustomer.loyalty_points} điểm
+                          </Tag>
+                        )}
+                        <Button
+                          type="link"
+                          size="small"
+                          style={{ padding: 0, height: "auto" }}
+                          onClick={() => setStoreSelectedCustomer(null)}
+                        >
+                          Bỏ chọn
+                        </Button>
+                      </Space>
+                      <br />
+                      {selectedCustomer.allergy_notes && (
+                        <div style={{ marginTop: 8 }}>
+                          <Tag color="red" icon={<WarningOutlined />}>
+                            Dị ứng: {selectedCustomer.allergy_notes}
+                          </Tag>
+                        </div>
                       )}
-                      <Button
-                        type="link"
-                        size="small"
-                        style={{ padding: 0, height: "auto" }}
-                        onClick={() => setStoreSelectedCustomer(null)}
-                      >
-                        Bỏ chọn
-                      </Button>
-                    </Space>
+                      {selectedCustomer.chronic_diseases && (
+                        <div style={{ marginTop: 4 }}>
+                          <Tag color="orange" icon={<WarningOutlined />}>
+                            Bệnh mãn tính: {selectedCustomer.chronic_diseases}
+                          </Tag>
+                        </div>
+                      )}
+                    </>
                   ) : (
                     <Button
                       type="link"
@@ -495,11 +512,31 @@ const PosTabContent: React.FC<PosTabContentProps> = ({
                                 }
                                 style={{ width: 60 }}
                               />
+                              <div style={{ textAlign: "right" }}>
+                                <Text strong style={{ fontSize: 16 }}>
+                                  {(
+                                    item.finalPrice * item.quantity
+                                  ).toLocaleString()}
+                                  đ
+                                </Text>
+                              </div>
                             </Space>
                             {item.appliedPromotion && (
                               <Tag icon={<TagOutlined />} color="success">
                                 {item.appliedPromotion.name}
                               </Tag>
+                            )}
+                            {item.description && (
+                              <Text
+                                type="secondary"
+                                style={{
+                                  fontSize: 12,
+                                  display: "block",
+                                  marginTop: 4,
+                                }}
+                              >
+                                {item.description}
+                              </Text>
                             )}
                             {item.prescriptionNote && (
                               <Text
@@ -529,11 +566,6 @@ const PosTabContent: React.FC<PosTabContentProps> = ({
                           </Space>
                         }
                       />
-                      <div style={{ textAlign: "right" }}>
-                        <Text strong style={{ fontSize: 16 }}>
-                          {(item.finalPrice * item.quantity).toLocaleString()}đ
-                        </Text>
-                      </div>
                     </List.Item>
                   )}
                 />

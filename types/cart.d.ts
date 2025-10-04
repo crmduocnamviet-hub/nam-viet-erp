@@ -2,6 +2,7 @@
 interface BaseCartItem {
   id: number;
   name: string;
+  description?: string;
   quantity: number;
   finalPrice: number;
   originalPrice: number;
@@ -10,6 +11,7 @@ interface BaseCartItem {
 
 // Extended CartItem type for POS with additional properties
 type CartItem = BaseCartItem & {
+  key?: string;
   discount?: number;
   appliedPromotion?: any;
   stock_quantity?: number;
@@ -17,6 +19,9 @@ type CartItem = BaseCartItem & {
   product_id?: string;
   unit_price?: number;
   prescription_id?: string;
+  total?: number;
+  discount?: number;
+  price?: number;
 };
 
 type CartDetails = {

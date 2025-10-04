@@ -114,6 +114,11 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
         printWindow.print();
       }
     }
+
+    // Auto-close modal after 2 seconds
+    setTimeout(() => {
+      onCancel();
+    }, 2000);
   };
 
   const generateReceiptHTML = () => {
@@ -335,9 +340,14 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
               Tải về
             </Button>
             <Button
-              onClick={onCancel}
+              onClick={() => {
+                // Auto-close modal after 2 seconds
+                setTimeout(() => {
+                  onCancel();
+                }, 2000);
+              }}
             >
-              Đóng
+              Đóng (2s)
             </Button>
           </Space>
         </div>

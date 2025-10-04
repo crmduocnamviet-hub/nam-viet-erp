@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Modal,
   Form,
@@ -8,11 +8,11 @@ import {
   Select,
   App,
   Typography,
-} from 'antd';
-import { EditOutlined, SaveOutlined } from '@ant-design/icons';
-import { updatePatient } from '@nam-viet-erp/services';
-import dayjs from 'dayjs';
-import { getErrorMessage } from '../../../types';
+} from "antd";
+import { EditOutlined, SaveOutlined } from "@ant-design/icons";
+import { updatePatient } from "@nam-viet-erp/services";
+import dayjs from "dayjs";
+import { getErrorMessage } from "../../../../../../packages/shared-components/src/utils";
 
 const { Text } = Typography;
 
@@ -40,13 +40,15 @@ const EditPatientModal: React.FC<EditPatientModalProps> = ({
   useEffect(() => {
     if (open && patientData) {
       form.setFieldsValue({
-        full_name: patientData.full_name || '',
-        phone_number: patientData.phone_number || '',
-        date_of_birth: patientData.date_of_birth ? dayjs(patientData.date_of_birth) : null,
-        gender: patientData.gender || '',
-        address: patientData.address || '',
-        allergy_notes: patientData.allergy_notes || '',
-        chronic_diseases: patientData.chronic_diseases || '',
+        full_name: patientData.full_name || "",
+        phone_number: patientData.phone_number || "",
+        date_of_birth: patientData.date_of_birth
+          ? dayjs(patientData.date_of_birth)
+          : null,
+        gender: patientData.gender || "",
+        address: patientData.address || "",
+        allergy_notes: patientData.allergy_notes || "",
+        chronic_diseases: patientData.chronic_diseases || "",
         is_b2b_customer: patientData.is_b2b_customer || false,
       });
       setHasUnsavedChanges(false);
@@ -59,7 +61,9 @@ const EditPatientModal: React.FC<EditPatientModalProps> = ({
     try {
       const updateData = {
         ...values,
-        date_of_birth: values.date_of_birth ? values.date_of_birth.format('YYYY-MM-DD') : null,
+        date_of_birth: values.date_of_birth
+          ? values.date_of_birth.format("YYYY-MM-DD")
+          : null,
       };
 
       const { error } = await updatePatient(patientId, updateData);
@@ -70,15 +74,15 @@ const EditPatientModal: React.FC<EditPatientModalProps> = ({
       setHasUnsavedChanges(false);
 
       notification?.success({
-        message: 'Thành công!',
-        description: 'Đã cập nhật thông tin bệnh nhân thành công'
+        message: "Thành công!",
+        description: "Đã cập nhật thông tin bệnh nhân thành công",
       });
 
       // Close modal after successful update
       onClose();
     } catch (error: unknown) {
       notification.error({
-        message: 'Lỗi cập nhật thông tin',
+        message: "Lỗi cập nhật thông tin",
         description: getErrorMessage(error),
       });
     } finally {
@@ -89,14 +93,15 @@ const EditPatientModal: React.FC<EditPatientModalProps> = ({
   const handleCancel = () => {
     if (hasUnsavedChanges) {
       Modal.confirm({
-        title: 'Bỏ các thay đổi?',
-        content: 'Bạn có thay đổi chưa lưu. Bạn có chắc muốn bỏ các thay đổi này?',
-        okText: 'Bỏ thay đổi',
-        cancelText: 'Tiếp tục chỉnh sửa',
+        title: "Bỏ các thay đổi?",
+        content:
+          "Bạn có thay đổi chưa lưu. Bạn có chắc muốn bỏ các thay đổi này?",
+        okText: "Bỏ thay đổi",
+        cancelText: "Tiếp tục chỉnh sửa",
         onOk: () => {
           setHasUnsavedChanges(false);
           onClose();
-        }
+        },
       });
     } else {
       onClose();
@@ -106,11 +111,11 @@ const EditPatientModal: React.FC<EditPatientModalProps> = ({
   return (
     <Modal
       title={
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <EditOutlined style={{ color: '#1890ff' }} />
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <EditOutlined style={{ color: "#1890ff" }} />
           <span>Chỉnh sửa thông tin bệnh nhân</span>
           {hasUnsavedChanges && (
-            <Text style={{ color: '#faad14', fontSize: 12 }}>
+            <Text style={{ color: "#faad14", fontSize: 12 }}>
               ● Có thay đổi chưa lưu
             </Text>
           )}
@@ -122,13 +127,18 @@ const EditPatientModal: React.FC<EditPatientModalProps> = ({
       width={600}
       maskClosable={false}
     >
-      <div style={{
-        padding: '16px 0',
-        backgroundColor: '#fafafa',
-        borderRadius: 8,
-        margin: '16px 0'
-      }}>
-        <Text type="secondary" style={{ display: 'block', textAlign: 'center' }}>
+      <div
+        style={{
+          padding: "16px 0",
+          backgroundColor: "#fafafa",
+          borderRadius: 8,
+          margin: "16px 0",
+        }}
+      >
+        <Text
+          type="secondary"
+          style={{ display: "block", textAlign: "center" }}
+        >
           📝 Cập nhật thông tin cá nhân và y tế của bệnh nhân
         </Text>
       </div>
@@ -143,46 +153,41 @@ const EditPatientModal: React.FC<EditPatientModalProps> = ({
           name="full_name"
           label="Họ và tên"
           rules={[
-            { required: true, message: 'Vui lòng nhập họ tên' },
-            { min: 2, message: 'Họ tên phải có ít nhất 2 ký tự' }
+            { required: true, message: "Vui lòng nhập họ tên" },
+            { min: 2, message: "Họ tên phải có ít nhất 2 ký tự" },
           ]}
         >
-          <Input
-            placeholder="Nhập họ và tên đầy đủ"
-            size="large"
-          />
+          <Input placeholder="Nhập họ và tên đầy đủ" size="large" />
         </Form.Item>
 
         <Form.Item
           name="phone_number"
           label="Số điện thoại"
           rules={[
-            { required: true, message: 'Vui lòng nhập số điện thoại' },
-            { pattern: /^[0-9]{10,11}$/, message: 'Số điện thoại phải có 10-11 chữ số' }
+            { required: true, message: "Vui lòng nhập số điện thoại" },
+            {
+              pattern: /^[0-9]{10,11}$/,
+              message: "Số điện thoại phải có 10-11 chữ số",
+            },
           ]}
         >
-          <Input
-            placeholder="Nhập số điện thoại (10-11 chữ số)"
-            size="large"
-          />
+          <Input placeholder="Nhập số điện thoại (10-11 chữ số)" size="large" />
         </Form.Item>
 
         <Form.Item name="date_of_birth" label="Ngày sinh">
           <DatePicker
-            style={{ width: '100%' }}
+            style={{ width: "100%" }}
             size="large"
             format="DD/MM/YYYY"
             placeholder="Chọn ngày sinh"
-            disabledDate={(current) => current && current.isAfter(dayjs(), 'day')}
+            disabledDate={(current) =>
+              current && current.isAfter(dayjs(), "day")
+            }
           />
         </Form.Item>
 
         <Form.Item name="gender" label="Giới tính">
-          <Select
-            placeholder="Chọn giới tính"
-            allowClear
-            size="large"
-          >
+          <Select placeholder="Chọn giới tính" allowClear size="large">
             <Select.Option value="Nam">👨 Nam</Select.Option>
             <Select.Option value="Nữ">👩 Nữ</Select.Option>
             <Select.Option value="Khác">🤷 Khác</Select.Option>
@@ -216,19 +221,17 @@ const EditPatientModal: React.FC<EditPatientModalProps> = ({
           />
         </Form.Item>
 
-        <div style={{
-          display: 'flex',
-          gap: 12,
-          justifyContent: 'flex-end',
-          borderTop: '1px solid #f0f0f0',
-          paddingTop: 20,
-          marginTop: 20
-        }}>
-          <Button
-            onClick={handleCancel}
-            size="large"
-            style={{ minWidth: 100 }}
-          >
+        <div
+          style={{
+            display: "flex",
+            gap: 12,
+            justifyContent: "flex-end",
+            borderTop: "1px solid #f0f0f0",
+            paddingTop: 20,
+            marginTop: 20,
+          }}
+        >
+          <Button onClick={handleCancel} size="large" style={{ minWidth: 100 }}>
             Hủy
           </Button>
           <Button

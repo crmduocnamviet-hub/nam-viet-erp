@@ -15,7 +15,6 @@ import {
 } from "antd";
 import { PrinterOutlined, DownloadOutlined } from '@ant-design/icons';
 import type { ButtonProps } from "antd";
-import type { PaymentValues, CartItem } from '../../../types';
 
 const { Text } = Typography;
 

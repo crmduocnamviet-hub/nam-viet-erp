@@ -778,7 +778,7 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
       </Form>
 
       <Row gutter={24}>
-        <Col xs={24} lg={12}>
+        <Col xs={24} lg={18}>
           {/* Order Items */}
           <Card
             title={
@@ -818,7 +818,7 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
           </Card>
         </Col>
         {/* Order Summary Sidebar */}
-        <Col xs={24} lg={12}>
+        <Col xs={24} lg={6}>
           <Card
             title={
               <Space>

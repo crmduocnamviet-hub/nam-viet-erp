@@ -2,36 +2,6 @@ import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 
-// Cart item type
-export interface CartItem {
-  key: string;
-  id: number;
-  name: string;
-  quantity: number;
-  price: number;
-  total: number;
-  discount?: number;
-  appliedPromotion?: any;
-  stock_quantity?: number;
-  image_url?: string | null;
-  product_id?: string;
-  unit_price?: number;
-  prescription_id?: string;
-}
-
-// Tab data structure
-export interface PosTab {
-  id: string;
-  title: string;
-  cart: CartItem[];
-  selectedCustomer: IPatient | null;
-  selectedWarehouse: any | null;
-  selectedLocation: string;
-  paymentMethod: "cash" | "card";
-  isProcessingPayment: boolean;
-  error: string | null;
-}
-
 // State interface
 export interface PosState {
   // Multi-tab state
@@ -52,7 +22,11 @@ export interface PosState {
 
   // Cart actions by index
   addCartItemByIndex: (index: number, item: CartItem) => void;
-  updateCartItemByIndex: (index: number, key: string, updates: Partial<CartItem>) => void;
+  updateCartItemByIndex: (
+    index: number,
+    key: string,
+    updates: Partial<CartItem>
+  ) => void;
   removeCartItemByIndex: (index: number, key: string) => void;
   clearCartByIndex: (index: number) => void;
 
@@ -185,9 +159,7 @@ export const usePosStore = create<PosState>()(
               const tab = state.tabs.find((t) => t.id === state.activeTabId);
               if (!tab) return;
 
-              const existingIndex = tab.cart.findIndex(
-                (i) => i.id === item.id
-              );
+              const existingIndex = tab.cart.findIndex((i) => i.id === item.id);
 
               if (existingIndex >= 0) {
                 // Increase quantity if product already exists
@@ -305,9 +277,7 @@ export const usePosStore = create<PosState>()(
               const tab = state.tabs[index];
               if (!tab) return;
 
-              const existingIndex = tab.cart.findIndex(
-                (i) => i.id === item.id
-              );
+              const existingIndex = tab.cart.findIndex((i) => i.id === item.id);
 
               if (existingIndex >= 0) {
                 // Increase quantity if product already exists
@@ -448,9 +418,10 @@ export const usePosStore = create<PosState>()(
           const state = get();
 
           // Get target tab by index if provided, otherwise use active tab
-          const targetTabIndex = paymentData.tabIndex !== undefined
-            ? paymentData.tabIndex
-            : state.tabs.findIndex((t) => t.id === state.activeTabId);
+          const targetTabIndex =
+            paymentData.tabIndex !== undefined
+              ? paymentData.tabIndex
+              : state.tabs.findIndex((t) => t.id === state.activeTabId);
 
           const tab = state.tabs[targetTabIndex];
 
@@ -496,7 +467,10 @@ export const usePosStore = create<PosState>()(
 
                 // If we removed the active tab, switch to another tab
                 if (targetTabId === state.activeTabId) {
-                  const newActiveIndex = Math.min(targetTabIndex, state.tabs.length - 1);
+                  const newActiveIndex = Math.min(
+                    targetTabIndex,
+                    state.tabs.length - 1
+                  );
                   state.activeTabId = state.tabs[newActiveIndex].id;
                 }
               });
@@ -521,7 +495,8 @@ export const usePosStore = create<PosState>()(
               const tab = state.tabs[targetTabIndex];
               if (tab) {
                 tab.isProcessingPayment = false;
-                tab.error = error.message || "An error occurred while processing payment";
+                tab.error =
+                  error.message || "An error occurred while processing payment";
               }
             });
 
@@ -556,7 +531,8 @@ export const usePosStore = create<PosState>()(
 
 // Selectors (return data from active tab)
 export const usePosTabs = () => usePosStore((state) => state.tabs);
-export const usePosActiveTabId = () => usePosStore((state) => state.activeTabId);
+export const usePosActiveTabId = () =>
+  usePosStore((state) => state.activeTabId);
 
 export const useCart = () =>
   usePosStore((state) => {

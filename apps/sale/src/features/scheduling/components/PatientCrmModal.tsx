@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Modal,
   Row,
@@ -15,18 +14,24 @@ import {
   App,
   Tag,
   Descriptions,
-} from 'antd';
-import { UserOutlined, SaveOutlined, CalendarOutlined, HistoryOutlined, EditOutlined } from '@ant-design/icons';
+} from "antd";
+import {
+  UserOutlined,
+  SaveOutlined,
+  CalendarOutlined,
+  HistoryOutlined,
+  EditOutlined,
+} from "@ant-design/icons";
 import {
   getProfileById,
   updateProfileNotes,
   getAppointmentsByPatientId,
   getPatientMedicalHistory,
-} from '@nam-viet-erp/services';
-import dayjs from 'dayjs';
-import { useDebounce } from '@nam-viet-erp/shared-components';
-import { getErrorMessage } from '../../../types';
-import { useNavigate } from 'react-router-dom';
+} from "@nam-viet-erp/services";
+import dayjs from "dayjs";
+import { useDebounce } from "@nam-viet-erp/shared-components";
+import { useNavigate } from "react-router-dom";
+import { getErrorMessage } from "../../../../../../packages/shared-components/src/utils";
 
 const { Title, Text, Paragraph } = Typography;
 const { TabPane } = Tabs;
@@ -34,14 +39,14 @@ const { TextArea } = Input;
 
 const getStatusColor = (status: string) => {
   const colorMap: Record<string, string> = {
-    'Chưa xác nhận': 'default',
-    'Đã xác nhận': 'blue',
-    'Đã check-in': 'green',
-    'Đang khám': 'gold',
-    'Đã hoàn tất/Chờ thanh toán': 'purple',
-    'Hủy/Không đến': 'red',
+    "Chưa xác nhận": "default",
+    "Đã xác nhận": "blue",
+    "Đã check-in": "green",
+    "Đang khám": "gold",
+    "Đã hoàn tất/Chờ thanh toán": "purple",
+    "Hủy/Không đến": "red",
   };
-  return colorMap[status] || 'default';
+  return colorMap[status] || "default";
 };
 
 interface PatientCrmModalProps {
@@ -60,7 +65,7 @@ const PatientCrmModal: React.FC<PatientCrmModalProps> = ({
   const [profile, setProfile] = useState<any | null>(null);
   const [appointments, setAppointments] = useState<any[]>([]);
   const [serviceHistory, setServiceHistory] = useState<any[]>([]);
-  const [notes, setNotes] = useState('');
+  const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -71,11 +76,12 @@ const PatientCrmModal: React.FC<PatientCrmModalProps> = ({
       const fetchData = async () => {
         setLoading(true);
         try {
-          const [profileRes, appointmentsRes, serviceHistoryRes] = await Promise.all([
-            getProfileById(patientId),
-            getAppointmentsByPatientId(patientId),
-            getPatientMedicalHistory(patientId),
-          ]);
+          const [profileRes, appointmentsRes, serviceHistoryRes] =
+            await Promise.all([
+              getProfileById(patientId),
+              getAppointmentsByPatientId(patientId),
+              getPatientMedicalHistory(patientId),
+            ]);
 
           if (profileRes.error) throw profileRes.error;
           if (appointmentsRes.error) throw appointmentsRes.error;
@@ -84,10 +90,10 @@ const PatientCrmModal: React.FC<PatientCrmModalProps> = ({
           setProfile(profileRes.data);
           setAppointments(appointmentsRes.data || []);
           setServiceHistory(serviceHistoryRes.data || []);
-          setNotes(profileRes.data?.receptionist_notes || '');
+          setNotes(profileRes.data?.receptionist_notes || "");
         } catch (error: unknown) {
           notification.error({
-            message: 'Lỗi tải dữ liệu bệnh nhân',
+            message: "Lỗi tải dữ liệu bệnh nhân",
             description: getErrorMessage(error),
           });
         } finally {
@@ -100,7 +106,7 @@ const PatientCrmModal: React.FC<PatientCrmModalProps> = ({
       setProfile(null);
       setAppointments([]);
       setServiceHistory([]);
-      setNotes('');
+      setNotes("");
     }
   }, [open, patientId, notification]);
 
@@ -110,10 +116,10 @@ const PatientCrmModal: React.FC<PatientCrmModalProps> = ({
     try {
       const { error } = await updateProfileNotes(patientId, debouncedNotes);
       if (error) throw error;
-      notification?.success({ message: 'Đã lưu ghi chú!' });
+      notification?.success({ message: "Đã lưu ghi chú!" });
     } catch (error: unknown) {
       notification.error({
-        message: 'Lỗi lưu ghi chú',
+        message: "Lỗi lưu ghi chú",
         description: getErrorMessage(error),
       });
     } finally {
@@ -141,7 +147,7 @@ const PatientCrmModal: React.FC<PatientCrmModalProps> = ({
         {profile ? (
           <Row gutter={24}>
             <Col span={8}>
-              <div style={{ textAlign: 'center' }}>
+              <div style={{ textAlign: "center" }}>
                 <Avatar
                   size={128}
                   src={profile.avatar_url}
@@ -157,7 +163,7 @@ const PatientCrmModal: React.FC<PatientCrmModalProps> = ({
                     icon={<EditOutlined />}
                     onClick={handleEditPatient}
                     size="small"
-                    style={{ width: '100%' }}
+                    style={{ width: "100%" }}
                   >
                     Chỉnh sửa thông tin
                   </Button>
@@ -170,35 +176,48 @@ const PatientCrmModal: React.FC<PatientCrmModalProps> = ({
                   column={1}
                   size="small"
                   style={{
-                    backgroundColor: '#fafafa',
-                    border: '1px solid #f0f0f0',
-                    borderRadius: 8
+                    backgroundColor: "#fafafa",
+                    border: "1px solid #f0f0f0",
+                    borderRadius: 8,
                   }}
                 >
                   <Descriptions.Item label="📅 Ngày sinh">
                     <Text strong>
-                      {profile.date_of_birth
-                        ? dayjs(profile.date_of_birth).format('DD/MM/YYYY')
-                        : <Text type="secondary">Chưa cập nhật</Text>}
+                      {profile.date_of_birth ? (
+                        dayjs(profile.date_of_birth).format("DD/MM/YYYY")
+                      ) : (
+                        <Text type="secondary">Chưa cập nhật</Text>
+                      )}
                     </Text>
                   </Descriptions.Item>
                   <Descriptions.Item label="👤 Giới tính">
                     <Text strong>
                       {profile.gender ? (
-                        profile.gender === 'Nam' ? '👨 Nam' :
-                        profile.gender === 'Nữ' ? '👩 Nữ' : '🤷 Khác'
-                      ) : <Text type="secondary">Chưa cập nhật</Text>}
+                        profile.gender === "Nam" ? (
+                          "👨 Nam"
+                        ) : profile.gender === "Nữ" ? (
+                          "👩 Nữ"
+                        ) : (
+                          "🤷 Khác"
+                        )
+                      ) : (
+                        <Text type="secondary">Chưa cập nhật</Text>
+                      )}
                     </Text>
                   </Descriptions.Item>
                   <Descriptions.Item label="🏠 Địa chỉ">
                     <Text>
-                      {profile.address || <Text type="secondary">Chưa cập nhật</Text>}
+                      {profile.address || (
+                        <Text type="secondary">Chưa cập nhật</Text>
+                      )}
                     </Text>
                   </Descriptions.Item>
                   <Descriptions.Item label="⚠️ Dị ứng">
                     <Text>
                       {profile.allergy_notes ? (
-                        <Text style={{ color: '#ff4d4f' }}>{profile.allergy_notes}</Text>
+                        <Text style={{ color: "#ff4d4f" }}>
+                          {profile.allergy_notes}
+                        </Text>
                       ) : (
                         <Text type="secondary">Không có</Text>
                       )}
@@ -207,7 +226,9 @@ const PatientCrmModal: React.FC<PatientCrmModalProps> = ({
                   <Descriptions.Item label="🏥 Bệnh mãn tính">
                     <Text>
                       {profile.chronic_diseases ? (
-                        <Text style={{ color: '#faad14' }}>{profile.chronic_diseases}</Text>
+                        <Text style={{ color: "#faad14" }}>
+                          {profile.chronic_diseases}
+                        </Text>
                       ) : (
                         <Text type="secondary">Không có</Text>
                       )}
@@ -219,7 +240,11 @@ const PatientCrmModal: React.FC<PatientCrmModalProps> = ({
             <Col span={16}>
               <Tabs defaultActiveKey="1">
                 <TabPane
-                  tab={<><CalendarOutlined /> Lịch sử Hẹn</>}
+                  tab={
+                    <>
+                      <CalendarOutlined /> Lịch sử Hẹn
+                    </>
+                  }
                   key="1"
                 >
                   <List
@@ -227,25 +252,51 @@ const PatientCrmModal: React.FC<PatientCrmModalProps> = ({
                     renderItem={(item) => (
                       <List.Item
                         style={{
-                          border: '1px solid #f0f0f0',
+                          border: "1px solid #f0f0f0",
                           borderRadius: 8,
                           marginBottom: 8,
-                          padding: 16
+                          padding: 16,
                         }}
                       >
                         <List.Item.Meta
-                          avatar={<CalendarOutlined style={{ fontSize: 16, color: '#1890ff' }} />}
+                          avatar={
+                            <CalendarOutlined
+                              style={{ fontSize: 16, color: "#1890ff" }}
+                            />
+                          }
                           title={
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <span>{dayjs(item.appointment_time).format('DD/MM/YYYY HH:mm')}</span>
-                              <Tag color={getStatusColor(item.status)}>{item.status}</Tag>
+                            <div
+                              style={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                              }}
+                            >
+                              <span>
+                                {dayjs(item.appointment_time).format(
+                                  "DD/MM/YYYY HH:mm"
+                                )}
+                              </span>
+                              <Tag color={getStatusColor(item.status)}>
+                                {item.status}
+                              </Tag>
                             </div>
                           }
                           description={
                             <div>
-                              <div><strong>Dịch vụ:</strong> {item.service || 'N/A'}</div>
+                              <div>
+                                <strong>Dịch vụ:</strong>{" "}
+                                {item.service || "N/A"}
+                              </div>
                               {item.note && (
-                                <div style={{ marginTop: 8, padding: 8, backgroundColor: '#f6f6f6', borderRadius: 4 }}>
+                                <div
+                                  style={{
+                                    marginTop: 8,
+                                    padding: 8,
+                                    backgroundColor: "#f6f6f6",
+                                    borderRadius: 4,
+                                  }}
+                                >
                                   <strong>Ghi chú:</strong> {item.note}
                                 </div>
                               )}
@@ -257,7 +308,11 @@ const PatientCrmModal: React.FC<PatientCrmModalProps> = ({
                   />
                 </TabPane>
                 <TabPane
-                  tab={<><HistoryOutlined /> Lịch sử Sử dụng Dịch vụ</>}
+                  tab={
+                    <>
+                      <HistoryOutlined /> Lịch sử Sử dụng Dịch vụ
+                    </>
+                  }
                   key="2"
                 >
                   <List
@@ -265,22 +320,35 @@ const PatientCrmModal: React.FC<PatientCrmModalProps> = ({
                     renderItem={(item) => (
                       <List.Item
                         style={{
-                          border: '1px solid #f0f0f0',
+                          border: "1px solid #f0f0f0",
                           borderRadius: 8,
                           marginBottom: 8,
-                          padding: 16
+                          padding: 16,
                         }}
                       >
                         <List.Item.Meta
-                          avatar={<HistoryOutlined style={{ fontSize: 16, color: '#52c41a' }} />}
+                          avatar={
+                            <HistoryOutlined
+                              style={{ fontSize: 16, color: "#52c41a" }}
+                            />
+                          }
                           title={
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <span>{item.services?.name || 'Dịch vụ không xác định'}</span>
+                            <div
+                              style={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                              }}
+                            >
+                              <span>
+                                {item.services?.name ||
+                                  "Dịch vụ không xác định"}
+                              </span>
                               {item.services?.price && (
-                                <Text strong style={{ color: '#52c41a' }}>
-                                  {new Intl.NumberFormat('vi-VN', {
-                                    style: 'currency',
-                                    currency: 'VND'
+                                <Text strong style={{ color: "#52c41a" }}>
+                                  {new Intl.NumberFormat("vi-VN", {
+                                    style: "currency",
+                                    currency: "VND",
                                   }).format(item.services.price)}
                                 </Text>
                               )}
@@ -289,15 +357,29 @@ const PatientCrmModal: React.FC<PatientCrmModalProps> = ({
                           description={
                             <div>
                               <div>
-                                <strong>Ngày sử dụng:</strong> {
-                                  item.appointments?.appointment_time
-                                    ? dayjs(item.appointments.appointment_time).format('DD/MM/YYYY HH:mm')
-                                    : dayjs(item.created_at).format('DD/MM/YYYY HH:mm')
-                                }
+                                <strong>Ngày sử dụng:</strong>{" "}
+                                {item.appointments?.appointment_time
+                                  ? dayjs(
+                                      item.appointments.appointment_time
+                                    ).format("DD/MM/YYYY HH:mm")
+                                  : dayjs(item.created_at).format(
+                                      "DD/MM/YYYY HH:mm"
+                                    )}
                               </div>
-                              {item.quantity && <div><strong>Số lượng:</strong> {item.quantity}</div>}
+                              {item.quantity && (
+                                <div>
+                                  <strong>Số lượng:</strong> {item.quantity}
+                                </div>
+                              )}
                               {item.notes && (
-                                <div style={{ marginTop: 8, padding: 8, backgroundColor: '#f6f6f6', borderRadius: 4 }}>
+                                <div
+                                  style={{
+                                    marginTop: 8,
+                                    padding: 8,
+                                    backgroundColor: "#f6f6f6",
+                                    borderRadius: 4,
+                                  }}
+                                >
                                   <strong>Ghi chú:</strong> {item.notes}
                                 </div>
                               )}
@@ -309,13 +391,24 @@ const PatientCrmModal: React.FC<PatientCrmModalProps> = ({
                   />
                 </TabPane>
                 <TabPane
-                  tab={<><EditOutlined /> Ghi chú Lễ tân</>}
+                  tab={
+                    <>
+                      <EditOutlined /> Ghi chú Lễ tân
+                    </>
+                  }
                   key="3"
                 >
-                  <div style={{ background: '#f9f9f9', padding: 16, borderRadius: 8, marginBottom: 16 }}>
-                    <Paragraph style={{ margin: 0, color: '#666' }}>
-                      📝 Ghi lại các thông tin phi y tế quan trọng (ví dụ: sở thích,
-                      lưu ý khi giao tiếp, người nhà cần liên hệ...).
+                  <div
+                    style={{
+                      background: "#f9f9f9",
+                      padding: 16,
+                      borderRadius: 8,
+                      marginBottom: 16,
+                    }}
+                  >
+                    <Paragraph style={{ margin: 0, color: "#666" }}>
+                      📝 Ghi lại các thông tin phi y tế quan trọng (ví dụ: sở
+                      thích, lưu ý khi giao tiếp, người nhà cần liên hệ...).
                     </Paragraph>
                   </div>
                   <TextArea
@@ -325,7 +418,14 @@ const PatientCrmModal: React.FC<PatientCrmModalProps> = ({
                     placeholder="Nhập ghi chú về bệnh nhân..."
                     style={{ borderRadius: 8 }}
                   />
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 16 }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      marginTop: 16,
+                    }}
+                  >
                     <Text type="secondary" style={{ fontSize: 12 }}>
                       Ghi chú sẽ được tự động lưu sau 500ms
                     </Text>
@@ -334,7 +434,7 @@ const PatientCrmModal: React.FC<PatientCrmModalProps> = ({
                       icon={<SaveOutlined />}
                       loading={isSaving}
                       onClick={handleSaveNotes}
-                      disabled={notes === (profile?.receptionist_notes || '')}
+                      disabled={notes === (profile?.receptionist_notes || "")}
                     >
                       Lưu ghi chú
                     </Button>

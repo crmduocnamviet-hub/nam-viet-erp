@@ -133,8 +133,6 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
 
   // QR Scanner
   const [isQRScannerOpen, setIsQRScannerOpen] = useState(false);
-  const [lastScanTime, setLastScanTime] = useState(0);
-  const [isScanning, setIsScanning] = useState(false);
 
   // Cart modal for mobile
   const [isCartModalOpen, setIsCartModalOpen] = useState(false);
@@ -499,6 +497,7 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
         key: `${product.id}_${Date.now()}`,
         id: product.id,
         name: product.name,
+        description: product.description,
         quantity: 1,
         price: priceInfo.finalPrice,
         total: priceInfo.finalPrice,
