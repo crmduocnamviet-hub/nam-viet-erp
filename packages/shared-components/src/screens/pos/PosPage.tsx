@@ -48,6 +48,15 @@ import {
   getWarehouse,
   searchProductInWarehouse,
 } from "@nam-viet-erp/services";
+import {
+  usePosStore,
+  usePosTabs,
+  usePosActiveTabId,
+  useCart,
+  usePosSelectedCustomer,
+  usePosSelectedWarehouse,
+  usePosIsProcessingPayment,
+} from "@nam-viet-erp/store";
 import PaymentModal, {
   type PaymentValues,
   type CartItem as BaseCartItem,
@@ -110,13 +119,32 @@ interface PosPageProps {
   [key: string]: any;
 }
 
-const PosPage: React.FC<PosPageProps> = ({ employee, ...props }) => {
+const PosPage: React.FC<PosPageProps> = ({ employee }) => {
   const { notification } = App.useApp();
   const screens = useBreakpoint();
   const isMobile = !screens.lg;
 
-  // State
-  const [cart, setCart] = useState<CartItem[]>([]);
+  // POS Store - Multi-tab support
+  const tabs = usePosTabs();
+  const activeTabId = usePosActiveTabId();
+  const cart = useCart();
+  const selectedCustomer = usePosSelectedCustomer();
+  const selectedWarehouse = usePosSelectedWarehouse();
+  const isProcessingPayment = usePosIsProcessingPayment();
+
+  const {
+    createTab,
+    closeTab,
+    switchTab,
+    addCartItem,
+    removeCartItem,
+    updateCartItem,
+    setSelectedCustomer: setStoreSelectedCustomer,
+    setSelectedWarehouse: setStoreSelectedWarehouse,
+    processPayment,
+  } = usePosStore();
+
+  // Local UI state (not tab-specific)
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<IProduct[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -124,14 +152,9 @@ const PosPage: React.FC<PosPageProps> = ({ employee, ...props }) => {
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "card" | "qr">(
     "cash"
   );
-  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
-  const [selectedLocation, setSelectedLocation] = useState("dh1");
   const [promotions, setPromotions] = useState<IPromotion[]>([]);
 
   // Customer management
-  const [selectedCustomer, setSelectedCustomer] = useState<IPatient | null>(
-    null
-  );
   const [customerSearchTerm, setCustomerSearchTerm] = useState("");
   const [customerSearchResults, setCustomerSearchResults] = useState<
     IPatient[]
@@ -139,13 +162,9 @@ const PosPage: React.FC<PosPageProps> = ({ employee, ...props }) => {
   const [isSearchingCustomers, setIsSearchingCustomers] = useState(false);
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
 
-  // Warehouse selection
-  const [warehouseMode, setWarehouseMode] = useState(false);
-  const [warehouses, setWarehouses] = useState<IWarehouse[]>([]);
-  const [loadingWarehouses, setLoadingWarehouses] = useState(false);
-  const [selectedWarehouse, setSelectedWarehouse] = useState<IWarehouse | null>(
-    null
-  );
+  // Employee's assigned warehouse
+  const [employeeWarehouse, setEmployeeWarehouse] = useState<IWarehouse | null>(null);
+  const [loadingWarehouse, setLoadingWarehouse] = useState(false);
 
   // Keep prescription integration for backward compatibility (commented out unused variables)
   // const [patientVisits, setPatientVisits] = useState<any[]>([]);
@@ -168,9 +187,7 @@ const PosPage: React.FC<PosPageProps> = ({ employee, ...props }) => {
   // Cart modal for mobile
   const [isCartModalOpen, setIsCartModalOpen] = useState(false);
 
-  // Tabs for merged search/cart card
-  const [activeTab, setActiveTab] = useState("search");
-
+  const selectedLocation = "dh1"; // Default location
   const { warehouseId, fundId } = selectedWarehouse
     ? {
         warehouseId: selectedWarehouse.id,
@@ -180,36 +197,51 @@ const PosPage: React.FC<PosPageProps> = ({ employee, ...props }) => {
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
   const debouncedCustomerSearchTerm = useDebounce(customerSearchTerm, 300);
 
-  // Fetch warehouses on component mount
+  // Fetch employee's assigned warehouse on component mount
   useEffect(() => {
-    const fetchWarehouses = async () => {
-      setLoadingWarehouses(true);
+    const fetchEmployeeWarehouse = async () => {
+      // If employee doesn't have a warehouse assigned, return early
+      if (!employee?.warehouse_id) {
+        notification.warning({
+          message: "Chưa gán kho",
+          description: "Nhân viên chưa được gán kho làm việc. Vui lòng liên hệ quản lý.",
+        });
+        return;
+      }
+
+      setLoadingWarehouse(true);
       try {
         const { data, error } = await getWarehouse();
         if (error) {
           notification.error({
-            message: "Lỗi tải danh sách kho",
+            message: "Lỗi tải thông tin kho",
             description: error.message,
           });
         } else if (data) {
-          setWarehouses(data);
-          // Set first warehouse as default if available
-          if (data.length > 0) {
-            setSelectedWarehouse(data[0]);
+          // Find employee's assigned warehouse
+          const assignedWarehouse = data.find(w => w.id === employee.warehouse_id);
+          if (assignedWarehouse) {
+            setEmployeeWarehouse(assignedWarehouse);
+            setStoreSelectedWarehouse(assignedWarehouse);
+          } else {
+            notification.error({
+              message: "Lỗi kho",
+              description: "Không tìm thấy kho được gán cho nhân viên này.",
+            });
           }
         }
       } catch (error) {
         notification.error({
-          message: "Lỗi tải danh sách kho",
-          description: "Không thể tải danh sách kho",
+          message: "Lỗi tải thông tin kho",
+          description: "Không thể tải thông tin kho",
         });
       } finally {
-        setLoadingWarehouses(false);
+        setLoadingWarehouse(false);
       }
     };
 
-    fetchWarehouses();
-  }, [notification]);
+    fetchEmployeeWarehouse();
+  }, [employee?.warehouse_id, notification]);
 
   useEffect(() => {
     const fetchPromos = async () => {
@@ -474,20 +506,22 @@ const PosPage: React.FC<PosPageProps> = ({ employee, ...props }) => {
 
   // Cart Handlers
   const handleAddToCart = (product: IProduct) => {
-    setCart((prevCart) => {
-      const cartArray = prevCart || [];
-      const existingItem = cartArray.find((item) => item.id === product.id);
-      if (existingItem) {
-        return cartArray.map((item) =>
-          item.id === product.id
-            ? { ...item, quantity: item.quantity + 1 }
-            : item
-        );
-      } else {
-        const priceInfo = calculateBestPrice(product, promotions);
-        return [...cartArray, { ...product, quantity: 1, ...priceInfo }];
-      }
-    });
+    const priceInfo = calculateBestPrice(product, promotions);
+    const cartItem = {
+      key: `${product.id}_${Date.now()}`,
+      id: product.id,
+      name: product.name,
+      quantity: 1,
+      price: priceInfo.finalPrice,
+      total: priceInfo.finalPrice,
+      ...priceInfo,
+      stock_quantity: product.stock_quantity,
+      image_url: product.image_url,
+      product_id: String(product.id),
+      unit_price: priceInfo.originalPrice,
+    };
+
+    addCartItem(cartItem);
     setSearchTerm("");
     setSearchResults([]);
   };
@@ -524,20 +558,6 @@ const PosPage: React.FC<PosPageProps> = ({ employee, ...props }) => {
   };
   */
 
-  const handleToggleWarehouseMode = () => {
-    setWarehouseMode(!warehouseMode);
-    if (!warehouseMode) {
-      // Entering warehouse mode
-      if (warehouses.length === 0) {
-        notification.info({
-          message: "Đang tải danh sách kho...",
-        });
-      }
-    } else {
-      // Exiting warehouse mode
-      setSelectedWarehouse(warehouses.length > 0 ? warehouses[0] : null);
-    }
-  };
 
   const handleCreateCustomer = async (values: any) => {
     try {
@@ -565,7 +585,7 @@ const PosPage: React.FC<PosPageProps> = ({ employee, ...props }) => {
           message: "Tạo khách hàng thành công!",
           description: `Đã tạo khách hàng ${values.full_name}`,
         });
-        setSelectedCustomer(data);
+        setStoreSelectedCustomer(data);
         setIsCreateCustomerModalOpen(false);
         createCustomerForm.resetFields();
       }
@@ -688,20 +708,20 @@ const PosPage: React.FC<PosPageProps> = ({ employee, ...props }) => {
   };
 
   const handleRemoveFromCart = (productId: number) => {
-    setCart((prevCart) =>
-      (prevCart || []).filter((item) => item.id !== productId)
-    );
+    const item = cart.find(i => i.id === productId);
+    if (item) {
+      removeCartItem(item.key);
+    }
   };
 
   const handleUpdateQuantity = (productId: number, newQuantity: number) => {
+    const item = cart.find(i => i.id === productId);
+    if (!item) return;
+
     if (newQuantity <= 0) {
-      handleRemoveFromCart(productId);
+      removeCartItem(item.key);
     } else {
-      setCart((prevCart) =>
-        (prevCart || []).map((item) =>
-          item.id === productId ? { ...item, quantity: newQuantity } : item
-        )
-      );
+      updateCartItem(item.key, { quantity: newQuantity, total: item.price * newQuantity });
     }
   };
 
@@ -712,7 +732,7 @@ const PosPage: React.FC<PosPageProps> = ({ employee, ...props }) => {
         ...item,
         id: item.id,
         name: item.name,
-        retail_price: item.finalPrice || item.originalPrice,
+        retail_price: item.price,
         manufacturer: "",
         category: "",
         sku: "",
@@ -761,101 +781,110 @@ const PosPage: React.FC<PosPageProps> = ({ employee, ...props }) => {
   };
 
   const handleFinishPayment = async (values: PaymentValues) => {
-    setIsProcessingPayment(true);
     try {
-      await processSaleTransaction({
-        cart: cartDetails.items || [], // Send detailed cart items with fallback
+      await processPayment({
+        cart: cartDetails.items || [],
         total: cartDetails.itemTotal,
         paymentMethod: values.payment_method,
         warehouseId,
         fundId,
-        createdBy: employee?.employee_id || null, // Use actual employee ID or null when not available
+        createdBy: employee?.employee_id || null,
         customerId: selectedCustomer?.patient_id,
-      });
+      }, processSaleTransaction);
 
       notification?.success({
         message: "Thanh toán thành công!",
         description: `Đã ghi nhận hóa đơn ${cartDetails.itemTotal.toLocaleString()}đ.`,
       });
 
-      setCart([]);
       setIsPaymentModalOpen(false);
     } catch (error: unknown) {
       notification.error({
         message: "Thanh toán thất bại",
         description: getErrorMessage(error),
       });
-    } finally {
-      setIsProcessingPayment(false);
     }
   };
 
   return (
-    <div style={{ height: "100%", paddingBottom: isMobile ? 80 : 0 }}>
-      <Row style={{ marginBottom: 16 }} gutter={[8, 8]}>
-        <Col xs={24} sm={12} md={12}>
+    <div style={{ padding: "24px", minHeight: "100vh" }}>
+      <Row
+        justify="space-between"
+        align="middle"
+        style={{ marginBottom: isMobile ? 16 : 24 }}
+      >
+        <Col>
           <Title level={isMobile ? 3 : 2} style={{ margin: 0 }}>
-            POS Bán Lẻ & Thống kê
+            💰 POS Bán Lẻ
           </Title>
-        </Col>
-        <Col
-          xs={24}
-          sm={12}
-          md={12}
-          style={{ textAlign: isMobile ? "left" : "right" }}
-        >
-          <Space wrap size={isMobile ? "small" : "middle"}>
-            <div style={{ overflow: "auto" }}>
-              {loadingWarehouses ? (
-                <div
-                  style={{
-                    textAlign: "center",
-                    padding: "40px 0",
-                    color: "#999",
-                  }}
-                >
-                  <Text>Đang tải danh sách kho...</Text>
-                </div>
-              ) : warehouses.length === 0 ? (
-                <div
-                  style={{
-                    textAlign: "center",
-                    padding: "40px 0",
-                    color: "#999",
-                  }}
-                >
-                  <Text>Không có kho nào được tìm thấy</Text>
-                </div>
-              ) : (
-                <>
-                  <Select
-                    placeholder="Chọn kho"
-                    style={{ width: "100%", marginBottom: 16 }}
-                    value={selectedWarehouse?.id}
-                    onChange={(warehouseId) => {
-                      const warehouse = (warehouses || []).find(
-                        (w) => w.id === warehouseId
-                      );
-                      setSelectedWarehouse(warehouse || null);
-                    }}
-                  >
-                    {warehouses.map((warehouse) => (
-                      <Select.Option key={warehouse.id} value={warehouse.id}>
-                        🏪 {warehouse.name}
-                      </Select.Option>
-                    ))}
-                  </Select>
-                </>
-              )}
-            </div>
-          </Space>
+          <Text
+            type="secondary"
+            style={{ fontSize: isMobile ? "14px" : "16px" }}
+          >
+            Quản lý bán hàng và thanh toán tại quầy
+          </Text>
         </Col>
       </Row>
 
-      <Row
-        gutter={[16, 16]}
-        style={{ minHeight: isMobile ? "auto" : "calc(100vh - 200px)" }}
-      >
+      {/* Multi-tab navigation */}
+      <Tabs
+        type="editable-card"
+        activeKey={activeTabId}
+        onChange={switchTab}
+        onEdit={(targetKey, action) => {
+          if (action === "add") {
+            createTab();
+          } else if (action === "remove") {
+            closeTab(targetKey as string);
+          }
+        }}
+        items={tabs.map((tab) => ({
+          key: tab.id,
+          label: (
+            <span
+              onDoubleClick={(e) => {
+                e.stopPropagation();
+                const newTitle = prompt("Nhập tên đơn hàng:", tab.title);
+                if (newTitle && newTitle.trim()) {
+                  const { updateTabTitle } = usePosStore.getState();
+                  updateTabTitle(tab.id, newTitle.trim());
+                }
+              }}
+            >
+              {tab.title}
+              {tab.cart.length > 0 && (
+                <Badge
+                  count={tab.cart.length}
+                  offset={[10, -2]}
+                  style={{ backgroundColor: "#52c41a" }}
+                />
+              )}
+            </span>
+          ),
+          closable: tabs.length > 1,
+          children: (
+            <div>
+              {/* Employee Warehouse Display */}
+              <Row style={{ marginBottom: 16 }} gutter={[8, 8]}>
+                <Col xs={24}>
+                  <Space wrap size={isMobile ? "small" : "middle"} style={{ width: "100%" }}>
+                    {loadingWarehouse ? (
+                      <Text>Đang tải thông tin kho...</Text>
+                    ) : employeeWarehouse ? (
+                      <Text>
+                        🏪 <strong>Kho:</strong> {employeeWarehouse.name}
+                      </Text>
+                    ) : (
+                      <Text type="warning">⚠️ Chưa gán kho cho nhân viên</Text>
+                    )}
+                  </Space>
+                </Col>
+              </Row>
+
+              <Row
+                gutter={[16, 16]}
+                style={{ minHeight: isMobile ? "auto" : "calc(100vh - 300px)" }}
+              >
         <Col xs={24} lg={8}>
           <Space
             direction="vertical"
@@ -901,7 +930,7 @@ const PosPage: React.FC<PosPageProps> = ({ employee, ...props }) => {
                         <List.Item
                           style={{ cursor: "pointer", padding: "8px 12px" }}
                           onClick={() => {
-                            setSelectedCustomer(customer);
+                            setStoreSelectedCustomer(customer);
                             setCustomerSearchTerm("");
                             setShowCustomerDropdown(false);
                           }}
@@ -953,7 +982,7 @@ const PosPage: React.FC<PosPageProps> = ({ employee, ...props }) => {
                         type="link"
                         size="small"
                         style={{ padding: 0, height: "auto" }}
-                        onClick={() => setSelectedCustomer(null)}
+                        onClick={() => setStoreSelectedCustomer(null)}
                       >
                         Bỏ chọn
                       </Button>
@@ -970,37 +999,6 @@ const PosPage: React.FC<PosPageProps> = ({ employee, ...props }) => {
                 </div>
               </Space>
             </Card>
-
-            {/* QR Scanner Card - Desktop only */}
-            {!isMobile && (
-              <Card
-                title={
-                  <Space>
-                    <QrcodeOutlined />
-                    <span>Quét mã QR</span>
-                  </Space>
-                }
-                size="small"
-                style={{ borderRadius: 8 }}
-              >
-                <div style={{ textAlign: "center" }}>
-                  <Text
-                    type="secondary"
-                    style={{ display: "block", marginBottom: 12 }}
-                  >
-                    Đưa mã QR/barcode vào khung hình để thêm sản phẩm
-                  </Text>
-                  <QRScanner
-                    visible={true}
-                    onClose={() => {}}
-                    onScan={handleQRScan}
-                    allowMultipleScan={true}
-                    scanDelay={2000}
-                    title=""
-                  />
-                </div>
-              </Card>
-            )}
             <Card
               title={
                 <Space>
@@ -1375,10 +1373,10 @@ const PosPage: React.FC<PosPageProps> = ({ employee, ...props }) => {
         </Col>
       </Row>
 
-      {/* Floating Cart Button for Mobile */}
-      {isMobile && (
-        <>
-          <FloatButton
+              {/* Floating Cart Button for Mobile */}
+              {isMobile && (
+                <>
+                  <FloatButton
             icon={
               <Badge count={cart.length} size="small">
                 <ShoppingCartOutlined />
@@ -1604,9 +1602,15 @@ const PosPage: React.FC<PosPageProps> = ({ employee, ...props }) => {
               </div>
             )}
           </Modal>
-        </>
-      )}
+                </>
+              )}
+            </div>
+          ),
+        }))}
+        style={{ marginBottom: 16 }}
+      />
 
+      {/* Modals */}
       <PaymentModal
         open={isPaymentModalOpen}
         paymentMethod={paymentMethod}

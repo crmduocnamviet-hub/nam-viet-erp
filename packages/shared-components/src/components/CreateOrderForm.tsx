@@ -770,7 +770,7 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
           <Row gutter={16}>
             <Col span={24}>
               <Form.Item name="notes" label="Ghi chú">
-                <Input placeholder="Ghi chú cho đơn hàng..." />
+                <TextArea rows={7} placeholder="Ghi chú cho đơn hàng..." />
               </Form.Item>
             </Col>
           </Row>

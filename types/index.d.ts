@@ -242,6 +242,7 @@ interface IEmployee {
   is_active: boolean;
   user_id?: string;
   permissions?: string[];
+  warehouse_id?: number;
 }
 
 // Appointment Status Lookup - Bảng tra cứu Trạng thái Lịch hẹn

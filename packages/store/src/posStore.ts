@@ -550,8 +550,8 @@ export const usePosStore = create<PosState>()(
 );
 
 // Selectors (return data from active tab)
-export const useTabs = () => usePosStore((state) => state.tabs);
-export const useActiveTabId = () => usePosStore((state) => state.activeTabId);
+export const usePosTabs = () => usePosStore((state) => state.tabs);
+export const usePosActiveTabId = () => usePosStore((state) => state.activeTabId);
 
 export const useCart = () =>
   usePosStore((state) => {
@@ -559,50 +559,50 @@ export const useCart = () =>
     return tab?.cart || [];
   });
 
-export const useSelectedCustomer = () =>
+export const usePosSelectedCustomer = () =>
   usePosStore((state) => {
     const tab = state.tabs.find((t) => t.id === state.activeTabId);
     return tab?.selectedCustomer || null;
   });
 
-export const useSelectedWarehouse = () =>
+export const usePosSelectedWarehouse = () =>
   usePosStore((state) => {
     const tab = state.tabs.find((t) => t.id === state.activeTabId);
     return tab?.selectedWarehouse || null;
   });
 
-export const useSelectedLocation = () =>
+export const usePosSelectedLocation = () =>
   usePosStore((state) => {
     const tab = state.tabs.find((t) => t.id === state.activeTabId);
     return tab?.selectedLocation || "dh1";
   });
 
-export const usePaymentMethod = () =>
+export const usePosPaymentMethod = () =>
   usePosStore((state) => {
     const tab = state.tabs.find((t) => t.id === state.activeTabId);
     return tab?.paymentMethod || "cash";
   });
 
-export const useIsProcessingPayment = () =>
+export const usePosIsProcessingPayment = () =>
   usePosStore((state) => {
     const tab = state.tabs.find((t) => t.id === state.activeTabId);
     return tab?.isProcessingPayment || false;
   });
 
 // Selectors by index
-export const useCartByIndex = (index: number) =>
+export const usePosCartByIndex = (index: number) =>
   usePosStore((state) => {
     const tab = state.tabs[index];
     return tab?.cart || [];
   });
 
-export const useSelectedCustomerByIndex = (index: number) =>
+export const usePosSelectedCustomerByIndex = (index: number) =>
   usePosStore((state) => {
     const tab = state.tabs[index];
     return tab?.selectedCustomer || null;
   });
 
-export const useSelectedWarehouseByIndex = (index: number) =>
+export const usePosSelectedWarehouseByIndex = (index: number) =>
   usePosStore((state) => {
     const tab = state.tabs[index];
     return tab?.selectedWarehouse || null;
