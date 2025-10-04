@@ -506,6 +506,16 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
 
   // Cart Handlers
   const handleAddToCart = (product: IProduct) => {
+    // Check if product has sufficient inventory
+    if (!product.stock_quantity || product.stock_quantity <= 0) {
+      notification.error({
+        message: "Không thể thêm sản phẩm",
+        description: `${product.name} đã hết hàng trong kho. Vui lòng nhập thêm hàng hoặc chọn sản phẩm khác.`,
+        duration: 4,
+      });
+      return;
+    }
+
     const priceInfo = calculateBestPrice(product, promotions);
     const cartItem = {
       key: `${product.id}_${Date.now()}`,
@@ -638,6 +648,7 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
     // Search for product directly by barcode
     try {
       let foundProduct = null;
+      let stockAvailable = false;
 
       if (selectedWarehouse) {
         const { data } = await searchProductInWarehouse({
@@ -648,12 +659,24 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
         const products = data?.map((v) => ({ ...v.products })) || [];
         if (products.length > 0) {
           foundProduct = products[0];
-          handleAddToCart(products[0]);
-          notification?.success({
-            message: "✅ Đã thêm vào giỏ hàng",
-            description: `${products[0].name} - ${scannedData}`,
-            duration: 2,
-          });
+
+          // Check inventory before adding
+          if (!foundProduct.stock_quantity || foundProduct.stock_quantity <= 0) {
+            notification.error({
+              message: "❌ Sản phẩm hết hàng",
+              description: `${foundProduct.name} đã hết hàng trong kho. Vui lòng nhập thêm hàng.`,
+              duration: 3,
+            });
+            stockAvailable = false;
+          } else {
+            handleAddToCart(foundProduct);
+            notification?.success({
+              message: "✅ Đã thêm vào giỏ hàng",
+              description: `${foundProduct.name} - Còn lại: ${foundProduct.stock_quantity}`,
+              duration: 2,
+            });
+            stockAvailable = true;
+          }
         } else {
           notification.warning({
             message: "⚠️ Không tìm thấy sản phẩm",
@@ -670,12 +693,24 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
 
         if (data && data.length > 0) {
           foundProduct = data[0];
-          handleAddToCart(data[0]);
-          notification?.success({
-            message: "✅ Đã thêm vào giỏ hàng",
-            description: `${data[0].name} - ${scannedData}`,
-            duration: 2,
-          });
+
+          // Check inventory before adding
+          if (!foundProduct.stock_quantity || foundProduct.stock_quantity <= 0) {
+            notification.error({
+              message: "❌ Sản phẩm hết hàng",
+              description: `${foundProduct.name} đã hết hàng trong kho. Vui lòng nhập thêm hàng.`,
+              duration: 3,
+            });
+            stockAvailable = false;
+          } else {
+            handleAddToCart(foundProduct);
+            notification?.success({
+              message: "✅ Đã thêm vào giỏ hàng",
+              description: `${foundProduct.name} - Còn lại: ${foundProduct.stock_quantity}`,
+              duration: 2,
+            });
+            stockAvailable = true;
+          }
         } else {
           notification.warning({
             message: "⚠️ Không tìm thấy sản phẩm",
@@ -685,8 +720,8 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
         }
       }
 
-      // Show scan feedback
-      if (foundProduct) {
+      // Show scan feedback only if product was successfully added
+      if (stockAvailable) {
         notification.info({
           message: "📱 Quét thành công!",
           description: "Chờ 2 giây để quét sản phẩm tiếp theo",
