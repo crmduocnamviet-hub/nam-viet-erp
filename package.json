@@ -12,8 +12,11 @@
   "dependencies": {
     "@ant-design/icons": "^6.0.1",
     "@supabase/supabase-js": "^2.57.4",
+    "@tiptap/react": "^3.6.5",
+    "@tiptap/starter-kit": "^3.6.5",
     "@zxing/library": "^0.21.3",
     "antd": "^5.27.3",
+    "lucide-react": "^0.544.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-router-dom": "^7.8.2",

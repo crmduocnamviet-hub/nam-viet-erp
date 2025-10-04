@@ -1,0 +1,35 @@
+/* src/components/RichTextEditor.css */
+
+.tiptap-editor-wrapper .ProseMirror {
+  border: 1px solid #d9d9d9;
+  border-radius: 0 0 5px 5px;
+  padding: 8px 12px;
+  min-height: 250px;
+}
+
+.tiptap-editor-wrapper .ProseMirror:focus {
+  outline: none;
+  border-color: #1773adff;
+  box-shadow: 0 0 0 2px rgba(23, 115, 173, 0.2);
+}
+
+/* NÂNG CẤP: Thêm style cơ bản cho Prosemirror để khắc phục lỗi warning */
+.ProseMirror {
+  position: relative;
+}
+
+.ProseMirror {
+  word-wrap: break-word;
+  white-space: pre-wrap; /* <-- Dòng quan trọng nhất */
+  -webkit-font-variant-ligatures: none;
+  font-variant-ligatures: none;
+  font-feature-settings: "liga" 0; /* WebKit */
+}
+
+.ProseMirror pre {
+  white-space: pre-wrap;
+}
+
+.ProseMirror li {
+  position: relative;
+}

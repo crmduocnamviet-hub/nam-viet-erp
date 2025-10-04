@@ -6,3 +6,56 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+/* === DÁN TỪ ĐÂY VÀO CUỐI FILE === */
+
+/* Style cho các Card trên Dashboard */
+.dashboard-card {
+  height: 100%;
+  border: 1px solid #f0f0f0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  transition: box-shadow 0.3s;
+}
+
+.dashboard-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Style cho viền màu phía trên Card */
+.card-border-top {
+  border-top: 4px solid;
+}
+
+/* Style cho nội dung bài viết trong Modal */
+.post-content-view {
+  line-height: 1.6;
+  font-size: 16px;
+}
+
+.post-content-view ul,
+.post-content-view ol {
+  padding-left: 24px;
+}
+
+.post-content-view blockquote {
+  border-left: 4px solid #ccc;
+  margin-left: 0;
+  padding-left: 16px;
+  color: #666;
+}
+
+.post-content-view a {
+  color: #1773adff; /* Màu chủ đạo của Sếp */
+  text-decoration: none;
+}
+.post-content-view a:hover {
+  text-decoration: underline;
+}
+.content-snippet {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  margin-top: 16px;
+}

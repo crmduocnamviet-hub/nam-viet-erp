@@ -1,3 +1,5 @@
+// src/App.tsx
+
 import React from "react";
 import { Routes, Route } from "react-router-dom";
 import AppLayout from "./components/AppLayout"; // <-- Chúng ta sẽ tách Layout ra file riêng

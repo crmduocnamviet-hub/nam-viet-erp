@@ -52,7 +52,7 @@ const TransactionPageContent: React.FC = () => {
   const { user } = useAuth();
   const [creationForm] = Form.useForm();
   const [executionForm] = Form.useForm();
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [setIsSubmitting] = useState(false);
 
   const [transactions, setTransactions] = useState<any[]>([]);
   // const [setIsSubmitting] = useState(false);
@@ -208,7 +208,6 @@ const TransactionPageContent: React.FC = () => {
   };
 
   // THAY THẾ TOÀN BỘ HÀM CŨ BẰNG PHIÊN BẢN NÀY
-  // THAY THẾ TOÀN BỘ HÀM CŨ BẰNG PHIÊN BẢN NÀY
   const handleCreationFinish = async (values: any) => {
     try {
       setIsSubmitting(true);
@@ -245,6 +244,7 @@ const TransactionPageContent: React.FC = () => {
         attachments: attachmentUrls.length > 0 ? attachmentUrls : null,
         status: transactionType === "income" ? "chờ thực thu" : "chờ duyệt",
         initial_denomination_counts: values.initial_denomination_counts,
+        author_id: user?.id,
       };
 
       const { error } = await supabase.from("transactions").insert([record]);

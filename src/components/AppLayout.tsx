@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react"; // <-- Thêm useMemo
 import {
   PieChartOutlined,
   AppstoreOutlined,
@@ -8,6 +8,10 @@ import {
   SettingOutlined,
   UsergroupAddOutlined,
   MenuOutlined,
+  UserOutlined,
+  KeyOutlined,
+  BellOutlined,
+  LogoutOutlined,
 } from "@ant-design/icons";
 import type { MenuProps } from "antd";
 import { Routes, Route, useNavigate } from "react-router-dom";
@@ -20,12 +24,17 @@ import {
   Button,
   Grid,
   Drawer,
+  Dropdown,
+  Badge,
+  Space,
 } from "antd";
 import viVN from "antd/locale/vi_VN";
 import { supabase } from "../lib/supabaseClient";
+import { useAuth } from "../context/AuthContext";
 import { usePermissions } from "../context/PermissionContext";
+import NewsfeedManagement from "../pages/NewsfeedManagement";
 
-// Import tất cả các trang của bạn ở đây
+// Import các trang
 import Dashboard from "../pages/Dashboard";
 import Products from "../pages/Products";
 import QuickQuote from "../pages/QuickQuote";
@@ -40,172 +49,231 @@ import PurchaseOrders from "../pages/PurchaseOrders";
 import RolesPermissions from "../pages/RolesPermissions";
 import UserManagement from "../pages/UserManagement";
 import ReceivePurchaseOrder from "../pages/ReceivePurchaseOrder";
+import Profile from "../pages/Profile";
+import ChangePasswordModal from "../features/users/components/ChangePasswordModal";
+// Trong src/components/AppLayout.tsx
+import Community from "../pages/Community";
+import PostDetail from "../pages/PostDetail";
+import { MessageSquare } from "lucide-react"; // Icon cho menu mới
+import ModerationQueue from "../pages/ModerationQueue";
+import SystemSettings from "../pages/SystemSettings";
 
 const { Header, Content, Footer, Sider } = Layout;
 const { Title } = Typography;
-const { useBreakpoint } = Grid; // <-- "Mắt thần" theo dõi kích thước màn hình
+const { useBreakpoint } = Grid;
 
-const menuItems: MenuProps["items"] = [
-  { label: "Tổng quan", key: "/", icon: <PieChartOutlined /> },
-  {
-    label: "Kho - Sản Phẩm",
-    key: "inventory",
-    icon: <AppstoreOutlined />,
-    children: [
-      { label: "Danh sách Sản phẩm", key: "/products" },
-      { label: "Quản lý Đặt hàng", key: "/purchase-orders" },
-    ],
-  },
-  {
-    label: "Bán Buôn (B2B)",
-    key: "b2b",
-    icon: <ShopOutlined />,
-    children: [{ label: "Xem Nhanh Báo Giá", key: "/quick-quote" }],
-  },
-  {
-    label: "Marketing",
-    key: "marketing",
-    icon: <TagOutlined />,
-    children: [
-      { label: "Quản lý Khuyến mại", key: "/promotions" },
-      { label: "Quản lý Mã Giảm Giá", key: "/vouchers" },
-    ],
-  },
-  {
-    label: "Đối Tác",
-    key: "partners",
-    icon: <UsergroupAddOutlined />,
-    children: [{ label: "Nhà Cung Cấp", key: "/suppliers" }],
-  },
-  {
-    label: "Tài chính",
-    key: "finance",
-    icon: <DollarOutlined />,
-    children: [
-      { label: "Quản lý Thu - Chi", key: "/financial-transactions" },
-      { label: "Sổ Quỹ", key: "/cash-ledger" },
-    ],
-  },
-  {
-    label: "Cấu hình",
-    key: "settings",
-    icon: <SettingOutlined />,
-    children: [
-      { label: "Quản lý Quỹ", key: "/settings/funds" },
-      { label: "Phân quyền & Vai trò", key: "/settings/roles" },
-      { label: "Quản lý Người dùng", key: "/settings/users" },
-    ],
-  },
-];
-
-// === BẢN CẬP NHẬT THEME HOÀN CHỈNH ===
+// Biến theme và các component tĩnh vẫn có thể để bên ngoài
 const namVietTheme = {
   token: {
     colorBgLayout: "#f0f2f5",
-    colorPrimary: "#1773adff", // <-- ĐỔI MÀU CHỦ ĐẠO
+    colorPrimary: "#1773adff",
     borderRadius: 5,
   },
   components: {
     Layout: {
       headerBg: "#ffffff",
-      siderBg: "#015ba9ff", // <-- ĐỔI MÀU NỀN SIDER
-      triggerBg: "#015ba9ff", // <-- ĐỔI MÀU NÚT ẨN / HIỆN SIDEBAR MENU BAR
+      siderBg: "#015ba9ff",
+      triggerBg: "#015ba9ff",
     },
     Menu: {
-      // Tùy chỉnh cho Menu có theme="dark"
-      darkItemBg: "#015ba9ff", // Nền item trùng với nền Sider
-      darkSubMenuItemBg: "#015ba9ff", //Nền menu con khi rê chu
-      darkItemColor: "rgba(255, 255, 255, 0.75)", // Màu chữ item thường
-      darkItemHoverBg: "rgba(255, 255, 255, 0.15)", // Nền item khi rê chuột
-      darkItemHoverColor: "#ffffff", // Màu chữ item khi rê chuột
-      darkItemSelectedBg: "#00809D", // Màu nền item được chọn (có thể dùng colorPrimary hoặc màu khác)
-      darkItemSelectedColor: "#ffffff", // Màu chữ item được chọn
+      darkItemBg: "#015ba9ff",
+      darkSubMenuItemBg: "#015ba9ff",
+      darkItemColor: "rgba(255, 255, 255, 0.75)",
+      darkItemHoverBg: "rgba(255, 255, 255, 0.15)",
+      darkItemHoverColor: "#ffffff",
+      darkItemSelectedBg: "#00809D",
+      darkItemSelectedColor: "#ffffff",
     },
   },
 };
-
 const ComingSoon = () => <h1>Tính năng này sắp ra mắt!</h1>;
 
-// Tách nội dung của Sider ra một component riêng để tái sử dụng
-const SiderContent: React.FC<{ onMenuClick: MenuProps["onClick"] }> = ({
-  onMenuClick,
-}) => (
-  <>
-    <div
-      style={{
-        height: "48px",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: "10px",
-      }}
-    >
-      <Avatar
-        src={logo}
-        shape="square"
-        size="large"
-        style={{ backgroundColor: "transparent" }}
-      />
-      <Title level={5} style={{ color: "white", margin: 0 }}>
-        Nam Việt EMS
-      </Title>
-    </div>
-    <Menu
-      theme="dark"
-      defaultSelectedKeys={["/"]}
-      mode="inline"
-      items={menuItems}
-      onClick={onMenuClick}
-      style={{ fontSize: "16px" }}
-    />
-  </>
-);
-
 const AppLayout: React.FC = () => {
-  const { hasPermission } = usePermissions();
+  const { user } = useAuth();
+  const { hasPermission } = usePermissions(); // <-- Hook được gọi ở đây
   const [collapsed, setCollapsed] = useState(true);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false); // State cho menu di động
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
-  const screens = useBreakpoint(); // Lấy thông tin màn hình hiện tại
-  const isMobile = !screens.lg; // Coi là mobile nếu màn hình nhỏ hơn 'lg'
+  const screens = useBreakpoint();
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const isMobile = !screens.lg;
 
-  const filteredMenuItems = menuItems.filter((item) => {
-    // Nâng cấp: Kiểm tra xem item có tồn tại không trước khi xử lý
-    if (!item) {
-      return false;
-    }
-    // Nếu là menu "Cấu hình", chỉ hiển thị khi có quyền 'users.manage'
-    if (item.key === "settings") {
-      return hasPermission("users.manage");
-    }
-    // Các menu khác luôn hiển thị
-    return true;
-  });
-
-  const handleMenuClick: MenuProps["onClick"] = (e) => {
-    navigate(e.key);
-    if (isMobile) {
-      setMobileMenuOpen(false); // Tự động đóng menu sau khi chọn trên mobile
-    }
-  };
+  // SỬA LỖI: Di chuyển menuItems vào bên trong component và dùng useMemo
+  const menuItems: MenuProps["items"] = useMemo(
+    () => [
+      { label: "Tổng quan", key: "/", icon: <PieChartOutlined /> },
+      {
+        label: "Kho - Sản Phẩm",
+        key: "inventory",
+        icon: <AppstoreOutlined />,
+        children: [
+          { label: "Danh sách Sản phẩm", key: "/products" },
+          { label: "Quản lý Đặt hàng", key: "/purchase-orders" },
+        ],
+      },
+      {
+        label: "Diễn đàn",
+        key: "/community",
+        icon: <MessageSquare size={18} />,
+      },
+      {
+        label: "Bán Buôn (B2B)",
+        key: "b2b",
+        icon: <ShopOutlined />,
+        children: [{ label: "Xem Nhanh Báo Giá", key: "/quick-quote" }],
+      },
+      {
+        label: "Marketing",
+        key: "marketing",
+        icon: <TagOutlined />,
+        children: [
+          { label: "Quản lý Khuyến mại", key: "/promotions" },
+          { label: "Quản lý Mã Giảm Giá", key: "/vouchers" },
+        ],
+      },
+      {
+        label: "Đối Tác",
+        key: "partners",
+        icon: <UsergroupAddOutlined />,
+        children: [{ label: "Nhà Cung Cấp", key: "/suppliers" }],
+      },
+      {
+        label: "Tài chính",
+        key: "finance",
+        icon: <DollarOutlined />,
+        children: [
+          { label: "Quản lý Thu - Chi", key: "/financial-transactions" },
+          {
+            label: "Sổ Quỹ",
+            key: "/cash-ledger",
+            // Giờ đây hàm hasPermission đã được định nghĩa trong scope này
+            disabled: !hasPermission("cash_ledger.view"),
+          },
+        ],
+      },
+      {
+        label: "Cấu hình",
+        key: "settings",
+        icon: <SettingOutlined />,
+        children: [
+          { label: "Quản lý Quỹ", key: "/settings/funds" },
+          { label: "Phân quyền & Vai trò", key: "/settings/roles" },
+          {
+            label: "Quản lý Bảng tin",
+            key: "/settings/newsfeed",
+            disabled: !hasPermission("posts.manage"),
+          },
+          {
+            label: "Kiểm duyệt Đề xuất",
+            key: "/settings/moderation",
+            disabled: !hasPermission("posts.manage"),
+          },
+          {
+            label: "Cấu hình Hệ thống",
+            key: "/settings/system",
+            disabled: !hasPermission("settings.manage"),
+          },
+          { label: "Quản lý Người dùng", key: "/settings/users" },
+        ],
+      },
+    ],
+    [hasPermission]
+  ); // <-- Phụ thuộc vào hasPermission
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate("/login");
   };
 
+  const userMenu: MenuProps["items"] = [
+    {
+      key: "profile",
+      label: "Thông tin cá nhân",
+      icon: <UserOutlined />,
+      onClick: () => navigate("/profile"),
+    },
+    {
+      key: "change_password",
+      label: "Đổi mật khẩu",
+      icon: <KeyOutlined />,
+      onClick: () => setIsPasswordModalOpen(true),
+    },
+    {
+      type: "divider",
+    },
+    {
+      key: "logout",
+      label: "Đăng xuất",
+      icon: <LogoutOutlined />,
+      danger: true,
+      onClick: handleLogout,
+    },
+  ];
+
+  const handleMenuClick: MenuProps["onClick"] = (e) => {
+    navigate(e.key);
+    if (isMobile) {
+      setMobileMenuOpen(false);
+    }
+  };
+
+  // Lọc menuItems dựa trên quyền hạn
+  const filteredMenuItems = useMemo(
+    () =>
+      menuItems.filter((item) => {
+        if (!item) return false;
+        // Lọc menu cha
+        if (item.key === "settings") {
+          // Chỉ hiển thị menu Cấu hình nếu user có ít nhất một quyền quản lý
+          return hasPermission("users.manage") || hasPermission("posts.manage");
+        }
+        return true;
+      }),
+    [hasPermission, menuItems]
+  );
+
+  const SiderContent: React.FC<{ onMenuClick: MenuProps["onClick"] }> = ({
+    onMenuClick,
+  }) => (
+    <>
+      <div
+        style={{
+          height: "48px",
+          display: "flex",
+          justifyContent: "center",
+          gap: "10px",
+        }}
+      >
+        <Avatar
+          src={logo}
+          shape="square"
+          size="large"
+          style={{ backgroundColor: "transparent" }}
+        />
+        <Title level={5} style={{ color: "white", margin: 0 }}>
+          Nam Việt EMS
+        </Title>
+      </div>
+      <Menu
+        theme="dark"
+        defaultSelectedKeys={["/"]}
+        mode="inline"
+        items={filteredMenuItems} // <-- Sử dụng menu đã được lọc
+        onClick={onMenuClick}
+        style={{ fontSize: "16px" }}
+      />
+    </>
+  );
+
   return (
     <ConfigProvider theme={namVietTheme} locale={viVN}>
       <Layout style={{ minHeight: "100vh" }}>
-        {/* === LOGIC RESPONSIVE BẮT ĐẦU TỪ ĐÂY === */}
-
-        {/* HIỂN THỊ SIDER CỐ ĐỊNH TRÊN DESKTOP */}
         {!isMobile && (
           <Sider
             collapsible
             collapsed={collapsed}
             onCollapse={(value) => setCollapsed(value)}
-            width={200} // Độ rộng Menu Bar bên trái
+            width={200}
             collapsedWidth={50}
             style={{
               overflow: "auto",
@@ -216,7 +284,6 @@ const AppLayout: React.FC = () => {
               bottom: 0,
             }}
           >
-            {/* Dùng lại SiderContent nhưng bỏ qua title vì đã có ở trên */}
             <div
               style={{
                 height: "48px",
@@ -249,7 +316,6 @@ const AppLayout: React.FC = () => {
           </Sider>
         )}
 
-        {/* HIỂN THỊ DRAWER (MENU TRƯỢT) TRÊN MOBILE */}
         {isMobile && (
           <Drawer
             placement="left"
@@ -270,8 +336,7 @@ const AppLayout: React.FC = () => {
 
         <Layout
           style={{
-            // Điều chỉnh lề trái tùy theo màn hình desktop hay mobile
-            marginLeft: isMobile ? 0 : collapsed ? 50 : 170,
+            marginLeft: isMobile ? 0 : collapsed ? 50 : 200,
             transition: "margin-left 0.2s",
           }}
         >
@@ -280,12 +345,11 @@ const AppLayout: React.FC = () => {
               padding: "0 24px",
               background: namVietTheme.components.Layout.headerBg,
               display: "flex",
-              justifyContent: isMobile ? "space-between" : "flex-end",
+              justifyContent: "space-between",
               alignItems: "center",
               height: 48,
             }}
           >
-            {/* Nút Hamburger chỉ hiển thị trên mobile */}
             {isMobile && (
               <Button
                 type="text"
@@ -293,19 +357,52 @@ const AppLayout: React.FC = () => {
                 onClick={() => setMobileMenuOpen(true)}
               />
             )}
-            <Button onClick={handleLogout}>Đăng xuất</Button>
+            <div />
+            <Space size="large" align="center">
+              <Badge count={5}>
+                <Button
+                  type="text"
+                  shape="circle"
+                  icon={<BellOutlined style={{ fontSize: "20px" }} />}
+                />
+              </Badge>
+              <Dropdown menu={{ items: userMenu }} trigger={["click"]}>
+                <a onClick={(e) => e.preventDefault()}>
+                  <Space style={{ cursor: "pointer" }}>
+                    <Avatar
+                      src={user?.user_metadata?.avatar_url}
+                      icon={<UserOutlined />}
+                    />
+                    {!isMobile && (
+                      <div>
+                        <Typography.Text strong>
+                          {user?.user_metadata?.full_name}
+                        </Typography.Text>
+                        <br />
+                        <Typography.Text type="secondary">
+                          {/* Sẽ cập nhật vai trò sau */}
+                        </Typography.Text>
+                      </div>
+                    )}
+                  </Space>
+                </a>
+              </Dropdown>
+            </Space>
           </Header>
           <Content style={{ margin: "16px", overflow: "initial" }}>
             <div
               style={{
-                padding: 16,
+                padding: 24,
                 background: "#ffffff",
                 borderRadius: namVietTheme.token.borderRadius,
-                minHeight: "calc(100vh - 128px)",
+                minHeight: "calc(100vh - 118px)",
               }}
             >
               <Routes>
                 <Route path="/" element={<Dashboard />} />
+                <Route path="/community" element={<Community />} />
+                <Route path="/community/:id" element={<PostDetail />} />
+                <Route path="/profile" element={<Profile />} />
                 <Route path="/products" element={<Products />} />
                 <Route path="/quick-quote" element={<QuickQuote />} />
                 <Route path="/promotions" element={<Promotions />} />
@@ -316,7 +413,16 @@ const AppLayout: React.FC = () => {
                   path="/financial-transactions"
                   element={<FinancialTransactions />}
                 />
-                <Route path="/cash-ledger" element={<CashLedger />} />
+                <Route
+                  path="/cash-ledger"
+                  element={
+                    hasPermission("cash_ledger.view") ? (
+                      <CashLedger />
+                    ) : (
+                      <ComingSoon />
+                    )
+                  }
+                />
                 <Route path="/settings/funds" element={<FundManagement />} />
                 <Route path="/purchase-orders" element={<PurchaseOrders />} />
                 <Route
@@ -324,15 +430,59 @@ const AppLayout: React.FC = () => {
                   element={<ReceivePurchaseOrder />}
                 />
                 <Route path="/settings/roles" element={<RolesPermissions />} />
-                <Route path="/settings/users" element={<UserManagement />} />
+                <Route
+                  path="/settings/moderation"
+                  element={
+                    hasPermission("posts.manage") ? (
+                      <ModerationQueue />
+                    ) : (
+                      <ComingSoon />
+                    )
+                  }
+                />
+                <Route
+                  path="/settings/system"
+                  element={
+                    hasPermission("settings.manage") ? (
+                      <SystemSettings />
+                    ) : (
+                      <ComingSoon />
+                    )
+                  }
+                />
+
+                <Route
+                  path="/settings/newsfeed"
+                  element={
+                    hasPermission("posts.manage") ? (
+                      <NewsfeedManagement />
+                    ) : (
+                      <ComingSoon />
+                    )
+                  }
+                />
+                <Route
+                  path="/settings/users"
+                  element={
+                    hasPermission("users.manage") ? (
+                      <UserManagement />
+                    ) : (
+                      <ComingSoon />
+                    )
+                  }
+                />
                 <Route path="*" element={<ComingSoon />} />
               </Routes>
             </div>
           </Content>
-          <Footer style={{ textAlign: "center", padding: "10px 0" }}>
-            Nam Việt ERP ©{new Date().getFullYear()} - LVH
+          <Footer style={{ textAlign: "center", padding: "12px 0" }}>
+            Nam Việt ERP ©{new Date().getFullYear()} - Vận hành bởi Senko V400
           </Footer>
         </Layout>
+        <ChangePasswordModal
+          open={isPasswordModalOpen}
+          onCancel={() => setIsPasswordModalOpen(false)}
+        />
       </Layout>
     </ConfigProvider>
   );

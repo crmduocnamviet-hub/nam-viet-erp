@@ -7,128 +7,130 @@ import {
   Col,
   Typography,
   App as AntApp,
-  Card,
   Spin,
-  Avatar,
-  Tag,
+  Divider,
   Empty,
 } from "antd";
-import { UserOutlined } from "@ant-design/icons";
+import { useAuth } from "../context/AuthContext";
 
-const { Title, Text, Paragraph } = Typography;
+// SỬA LỖI: Import dayjs và locale tiếng Việt
+import dayjs from "dayjs";
+import "dayjs/locale/vi";
 
-const Dashboard: React.FC = () => {
+// Import các widget
+import AnnouncementsWidget from "../features/dashboard/components/AnnouncementsWidget";
+import AwardsWidget from "../features/dashboard/components/AwardsWidget";
+import DoctorDashboard from "../features/dashboard/components/DoctorDashboard";
+import PharmacistDashboard from "../features/dashboard/components/PharmacistDashboard";
+import SuggestionBoxWidget from "../features/dashboard/components/SuggestionBoxWidget";
+
+const { Title, Paragraph } = Typography;
+
+const DashboardPageContent: React.FC = () => {
   const { notification } = AntApp.useApp();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [newEmployees, setNewEmployees] = useState<any[]>([]);
+  const [userRole, setUserRole] = useState<string | null>(null);
 
-  const fetchNewestEmployees = useCallback(async () => {
-    setLoading(true);
+  const fetchUserRole = useCallback(async () => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
     try {
-      // Lấy 3 nhân viên được duyệt gần đây nhất
       const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("employee_status", "Đang làm việc")
-        .order("updated_at", { ascending: false })
-        .limit(3);
+        .from("user_roles")
+        .select("roles(name)")
+        .eq("user_id", user.id)
+        .limit(1)
+        .single();
 
-      if (error) throw error;
-      setNewEmployees(data || []);
+      if (error && error.code !== "PGRST116") {
+        throw error;
+      }
+
+      if (data) {
+        const roleName = data.roles?.name;
+        switch (roleName) {
+          case "Bác sĩ":
+            setUserRole("doctor");
+            break;
+          case "Dược sĩ":
+            setUserRole("pharmacist");
+            break;
+          default:
+            setUserRole("default");
+            break;
+        }
+      } else {
+        setUserRole("default");
+      }
     } catch (error: any) {
       notification.error({
-        message: "Lỗi tải danh sách nhân viên mới",
+        message: "Lỗi tải vai trò người dùng",
         description: error.message,
       });
+      setUserRole("default");
     } finally {
       setLoading(false);
     }
-  }, [notification]);
+  }, [user, notification]);
 
   useEffect(() => {
-    fetchNewestEmployees();
+    fetchUserRole();
+  }, [fetchUserRole]);
 
-    // Lắng nghe thay đổi trên bảng profiles
-    const channel = supabase
-      .channel("profiles-dashboard-channel")
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "profiles" },
-        (payload) => {
-          // Nếu có một nhân viên được cập nhật sang trạng thái "Đang làm việc"
-          if (payload.new.employee_status === "Đang làm việc") {
-            notification.info({
-              message: "Có thành viên mới vừa được duyệt!",
-              description: "Dashboard sẽ được cập nhật.",
-            });
-            fetchNewestEmployees(); // Tải lại danh sách
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [fetchNewestEmployees]);
+  const renderRoleDashboard = () => {
+    switch (userRole) {
+      case "doctor":
+        return <DoctorDashboard />;
+      case "pharmacist":
+        return <PharmacistDashboard />;
+      default:
+        // Sếp có thể thay bằng một dashboard mặc định cho các vai trò khác ở đây
+        return <PharmacistDashboard />;
+    }
+  };
 
   return (
     <Spin spinning={loading}>
-      <Title level={2} style={{ marginBottom: 24 }}>
-        Dashboard Tổng quan
+      <Title level={2}>
+        Chào mừng trở lại, {user?.user_metadata?.full_name || "thành viên"}!
       </Title>
+      {/* SỬA LỖI: Sử dụng dayjs sau khi đã import */}
+      <Paragraph type="secondary">
+        Hôm nay là {dayjs().locale("vi").format("dddd, ngày DD/MM/YYYY")}.
+      </Paragraph>
 
-      <Card>
-        <Title level={4}>🌟 Chào mừng Thành viên mới</Title>
-        {newEmployees.length > 0 ? (
-          <Row gutter={[24, 24]}>
-            {newEmployees.map((employee) => (
-              <Col xs={24} md={12} lg={8} key={employee.id}>
-                <Card>
-                  <Card.Meta
-                    avatar={
-                      <Avatar
-                        size={64}
-                        src={employee.avatar_url}
-                        icon={<UserOutlined />}
-                      />
-                    }
-                    title={
-                      <Text strong style={{ fontSize: 16 }}>
-                        {employee.full_name}
-                      </Text>
-                    }
-                    description={
-                      <Tag color="blue">
-                        {/* Lấy vai trò sẽ được nâng cấp sau */}
-                      </Tag>
-                    }
-                  />
-                  <Paragraph
-                    ellipsis={{ rows: 3, expandable: true, symbol: "xem thêm" }}
-                    style={{ marginTop: 16 }}
-                  >
-                    <strong>Giới thiệu:</strong>{" "}
-                    {employee.self_introduction || "Chưa có thông tin."}
-                  </Paragraph>
-                  <Paragraph>
-                    <strong>Sở thích:</strong>{" "}
-                    {employee.hobbies || "Chưa có thông tin."}
-                  </Paragraph>
-                  <Paragraph>
-                    <strong>Giới hạn cá nhân:</strong>{" "}
-                    {employee.personal_boundaries || "Chưa có thông tin."}
-                  </Paragraph>
-                </Card>
-              </Col>
-            ))}
-          </Row>
-        ) : (
-          <Empty description="Chưa có nhân viên mới nào được duyệt gần đây." />
-        )}
-      </Card>
+      <Divider>Thông tin chung</Divider>
+
+      <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
+        <Col xs={24} lg={14} xl={10}>
+          <AnnouncementsWidget />
+        </Col>
+        <Col xs={24} lg={10} xl={7}>
+          <AwardsWidget />
+        </Col>
+        <Col xs={24} lg={24} xl={7}>
+          <SuggestionBoxWidget />
+        </Col>
+      </Row>
+
+      <Divider>Thông tin dành riêng cho bạn</Divider>
+
+      {!loading && userRole ? (
+        renderRoleDashboard()
+      ) : (
+        <Empty description="Không có không gian làm việc cá nhân nào được cấu hình cho vai trò của bạn." />
+      )}
     </Spin>
   );
 };
+
+const Dashboard: React.FC = () => (
+  <AntApp>
+    <DashboardPageContent />
+  </AntApp>
+);
 
 export default Dashboard;
