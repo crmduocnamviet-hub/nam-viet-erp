@@ -37,6 +37,37 @@ interface IProduct {
   unit?: string;
 }
 
+// Combo table - represents a product bundle/package deal
+interface ICombo {
+  id: number;
+  name: string;
+  description: string | null;
+  combo_price: number; // Discounted price for the bundle
+  is_active: boolean;
+  image_url: string | null;
+  created_at: string;
+  updated_at?: string;
+}
+
+// Combo items table - links combos to products with quantities
+interface IComboItem {
+  id: number;
+  combo_id: number;
+  product_id: number;
+  quantity: number; // How many of this product are needed for the combo
+  created_at?: string;
+}
+
+// Extended combo with items for display
+interface IComboWithItems extends ICombo {
+  combo_items: (IComboItem & {
+    products?: IProduct; // Joined product data
+  })[];
+  original_price?: number; // Calculated total price without discount
+  discount_amount?: number; // Calculated discount
+  discount_percentage?: number; // Calculated discount percentage
+}
+
 interface IPromotion {
   id: number;
   created_at?: string;
@@ -181,6 +212,11 @@ interface IInventory {
   quantity: number;
   min_stock: number;
   max_stock: number;
+}
+
+// Extended inventory with product details for display
+interface IInventoryWithProduct extends IInventory {
+  products?: IProduct; // Joined product data (plural due to Supabase join)
 }
 
 interface IPurchaseOrder {

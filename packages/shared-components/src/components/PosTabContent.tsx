@@ -31,7 +31,10 @@ import {
   QrcodeOutlined,
   DollarOutlined,
   WarningOutlined,
+  GiftOutlined,
 } from "@ant-design/icons";
+import { useInventory } from "@nam-viet-erp/store";
+import { calculateProductGlobalQuantities } from "@nam-viet-erp/services";
 
 const { Text } = Typography;
 const { Search } = Input;
@@ -75,6 +78,10 @@ interface PosTabContentProps {
   handleOpenPaymentModal: (method: "cash" | "card") => void;
   isProcessingPayment: boolean;
 
+  // Combos
+  detectedCombos?: IComboWithItems[];
+  handleAddCombo?: (combo: IComboWithItems) => void;
+
   // Mobile
   isMobile: boolean;
   isCartModalOpen: boolean;
@@ -106,15 +113,38 @@ const PosTabContent: React.FC<PosTabContentProps> = ({
   handleUpdateQuantity,
   handleOpenPaymentModal,
   isProcessingPayment,
+  detectedCombos = [],
+  handleAddCombo,
   isMobile,
-  isCartModalOpen,
-  setIsCartModalOpen,
 }) => {
+  const inventory = useInventory();
+  // Calculate global quantity for each product (including products in combos)
+  const productGlobalQuantities = useMemo(() => {
+    const quantities = calculateProductGlobalQuantities(cartDetails.items);
+    // Convert to simple Record<number, number> for easier usage
+    const simpleQuantities: Record<number, number> = {};
+    Object.entries(quantities).forEach(([productId, { quantity }]) => {
+      simpleQuantities[Number(productId)] = quantity;
+    });
+    return simpleQuantities;
+  }, [cartDetails.items]);
+
   // Check if any item exceeds stock
-  const hasStockViolation = cart.some(
-    (item) =>
-      item.stock_quantity !== undefined && item.quantity > item.stock_quantity
-  );
+  const hasStockViolation = useMemo(() => {
+    const filterProducts = inventory.filter(
+      (i) => !!productGlobalQuantities[i.products.id]
+    );
+    for (const prod of filterProducts) {
+      if (prod.quantity < productGlobalQuantities[prod.products.id]) {
+        return true;
+      }
+    }
+    return false;
+  }, [inventory, productGlobalQuantities]);
+  // cart.some(
+  //   (item) =>
+  //     item.stock_quantity !== undefined && item.quantity > item.stock_quantity
+  // );
 
   return (
     <div>
@@ -445,6 +475,106 @@ const PosTabContent: React.FC<PosTabContentProps> = ({
               body: { flex: 1, padding: 16, overflow: "hidden" },
             }}
           >
+            {/* Combo Suggestions */}
+            {detectedCombos.length > 0 && (
+              <Card
+                size="small"
+                style={{
+                  marginBottom: 12,
+                  background:
+                    "linear-gradient(135deg, #fff7e6 0%, #fffbf0 100%)",
+                  border: "2px solid #faad14",
+                }}
+              >
+                <Space direction="vertical" size={8} style={{ width: "100%" }}>
+                  <Text strong style={{ color: "#d46b08" }}>
+                    🎁 Combo khuyến mãi có sẵn!
+                  </Text>
+                  {detectedCombos.map((combo) => {
+                    const originalPrice =
+                      combo.combo_items?.reduce((sum, item) => {
+                        return (
+                          sum +
+                          (item.products?.retail_price || 0) * item.quantity
+                        );
+                      }, 0) || 0;
+                    const discountAmount = originalPrice - combo.combo_price;
+                    const discountPercentage =
+                      originalPrice > 0
+                        ? (discountAmount / originalPrice) * 100
+                        : 0;
+
+                    return (
+                      <Card
+                        key={combo.id}
+                        size="small"
+                        style={{
+                          background: "#fff",
+                          cursor: "pointer",
+                        }}
+                        hoverable
+                      >
+                        <Space
+                          direction="vertical"
+                          size={4}
+                          style={{ width: "100%" }}
+                        >
+                          <Text strong>{combo.name}</Text>
+                          {combo.description && (
+                            <Text type="secondary" style={{ fontSize: 12 }}>
+                              {combo.description}
+                            </Text>
+                          )}
+                          <Space>
+                            <Text
+                              delete
+                              style={{ color: "#999", fontSize: 12 }}
+                            >
+                              {originalPrice.toLocaleString()}đ
+                            </Text>
+                            <Tag color="orange">
+                              Giảm {discountPercentage.toFixed(0)}%
+                            </Tag>
+                            <Text
+                              strong
+                              style={{ color: "#52c41a", fontSize: 14 }}
+                            >
+                              {combo.combo_price.toLocaleString()}đ
+                            </Text>
+                          </Space>
+                          <div
+                            style={{
+                              fontSize: 11,
+                              color: "#666",
+                              marginTop: 4,
+                            }}
+                          >
+                            {combo.combo_items?.map((item, idx) => (
+                              <span key={idx}>
+                                {item.products?.name} x{item.quantity}
+                                {idx < (combo.combo_items?.length || 0) - 1 &&
+                                  ", "}
+                              </span>
+                            ))}
+                          </div>
+                          <Button
+                            type="primary"
+                            size="small"
+                            block
+                            style={{ marginTop: 8 }}
+                            onClick={() => handleAddCombo?.(combo)}
+                          >
+                            Thêm Combo (Tiết kiệm{" "}
+                            {discountAmount.toLocaleString()}đ)
+                          </Button>
+                        </Space>
+                      </Card>
+                    );
+                  })}
+                </Space>
+              </Card>
+            )}
+
             <div style={{ flex: 1, overflow: "auto" }}>
               {cart.length === 0 ? (
                 <div
@@ -463,111 +593,135 @@ const PosTabContent: React.FC<PosTabContentProps> = ({
                 <List
                   itemLayout="horizontal"
                   dataSource={cartDetails.items}
-                  renderItem={(item: any) => (
-                    <List.Item
-                      style={{
-                        padding: "12px 0",
-                        borderRadius: 8,
-                        marginBottom: 8,
-                        backgroundColor: "#f8f9fa",
-                        paddingLeft: 12,
-                        paddingRight: 12,
-                      }}
-                      actions={[
-                        <Tooltip title="Xóa khỏi giỏ hàng">
-                          <Button
-                            type="text"
-                            danger
-                            shape="circle"
-                            icon={<DeleteOutlined />}
-                            onClick={() => handleRemoveFromCart(item.id)}
-                          />
-                        </Tooltip>,
-                      ]}
-                    >
-                      <List.Item.Meta
-                        avatar={<Avatar src={item.image_url} size={48} />}
-                        title={<Text strong>{item.name}</Text>}
-                        description={
-                          <Space
-                            direction="vertical"
-                            size={4}
-                            style={{ width: "100%" }}
-                          >
-                            <Space align="center">
-                              {item.appliedPromotion && (
-                                <Text delete style={{ color: "#999" }}>
-                                  {item.originalPrice.toLocaleString()}đ
-                                </Text>
+                  renderItem={(item: any) => {
+                    return (
+                      <List.Item
+                        style={{
+                          padding: "12px 0",
+                          borderRadius: 8,
+                          marginBottom: 8,
+                          backgroundColor: item.isCombo ? "#fff7e6" : "#f8f9fa",
+                          paddingLeft: 12,
+                          paddingRight: 12,
+                          borderLeft: item.isCombo
+                            ? "4px solid #faad14"
+                            : "none",
+                        }}
+                        actions={[
+                          <Tooltip title="Xóa khỏi giỏ hàng">
+                            <Button
+                              type="text"
+                              danger
+                              shape="circle"
+                              icon={<DeleteOutlined />}
+                              onClick={() => handleRemoveFromCart(item.id)}
+                            />
+                          </Tooltip>,
+                        ]}
+                      >
+                        <List.Item.Meta
+                          avatar={<Avatar src={item.image_url} size={48} />}
+                          title={
+                            <Space>
+                              <Text strong>{item.name}</Text>
+                              {item.isCombo && (
+                                <Tag color="orange" icon={<GiftOutlined />}>
+                                  COMBO
+                                </Tag>
                               )}
-                              <Text strong style={{ color: "#52c41a" }}>
-                                {item.finalPrice.toLocaleString()}đ
-                              </Text>
-                              <InputNumber
-                                size="small"
-                                min={1}
-                                value={item.quantity}
-                                onChange={(val) =>
-                                  handleUpdateQuantity(item.id, val!)
-                                }
-                                style={{ width: 60 }}
-                              />
-                              <div style={{ textAlign: "right" }}>
-                                <Text strong style={{ fontSize: 16 }}>
-                                  {(
-                                    item.finalPrice * item.quantity
-                                  ).toLocaleString()}
-                                  đ
-                                </Text>
-                              </div>
                             </Space>
-                            {item.appliedPromotion && (
-                              <Tag icon={<TagOutlined />} color="success">
-                                {item.appliedPromotion.name}
-                              </Tag>
-                            )}
-                            {item.description && (
-                              <Text
-                                type="secondary"
-                                style={{
-                                  fontSize: 12,
-                                  display: "block",
-                                  marginTop: 4,
-                                }}
-                              >
-                                {item.description}
-                              </Text>
-                            )}
-                            {item.prescriptionNote && (
-                              <Text
-                                type="secondary"
-                                style={{
-                                  fontSize: "11px",
-                                  fontStyle: "italic",
-                                }}
-                              >
-                                📝 {item.prescriptionNote}
-                              </Text>
-                            )}
-                            {item.stock_quantity !== undefined &&
-                              item.quantity > item.stock_quantity && (
-                                <Space>
-                                  <WarningOutlined
-                                    style={{ color: "#ff4d4f" }}
-                                  />
-                                  <Text
-                                    type="danger"
-                                    style={{ fontSize: "11px" }}
-                                  >
-                                    Vượt tồn kho ({item.stock_quantity} có sẵn)
+                          }
+                          description={
+                            <Space
+                              direction="vertical"
+                              size={4}
+                              style={{ width: "100%" }}
+                            >
+                              <Space align="center">
+                                {item.appliedPromotion && (
+                                  <Text delete style={{ color: "#999" }}>
+                                    {item.originalPrice.toLocaleString()}đ
                                   </Text>
-                                </Space>
+                                )}
+                                <Text strong style={{ color: "#52c41a" }}>
+                                  {item.finalPrice.toLocaleString()}đ
+                                </Text>
+                                <InputNumber
+                                  size="small"
+                                  min={1}
+                                  value={item.quantity}
+                                  onChange={(val) =>
+                                    handleUpdateQuantity(item.id, val!)
+                                  }
+                                  style={{ width: 60 }}
+                                />
+                                <div style={{ textAlign: "right" }}>
+                                  <Text strong style={{ fontSize: 16 }}>
+                                    {(
+                                      item.finalPrice * item.quantity
+                                    ).toLocaleString()}
+                                    đ
+                                  </Text>
+                                </div>
+                              </Space>
+                              {item.appliedPromotion && !item.isCombo && (
+                                <Tag icon={<TagOutlined />} color="success">
+                                  {item.appliedPromotion.name}
+                                </Tag>
                               )}
-                          </Space>
-                        }
-                      />
-                    </List.Item>
-                  )}
+                              {item.isCombo && item.comboData && (
+                                <div
+                                  style={{
+                                    marginTop: 4,
+                                    fontSize: 11,
+                                    color: "#666",
+                                  }}
+                                >
+                                  <Text type="secondary">
+                                    Sản phẩm:{" "}
+                                    {item.comboData.combo_items
+                                      ?.map(
+                                        (
+                                          comboItem: IComboItem & {
+                                            products?: IProduct;
+                                          }
+                                        ) =>
+                                          `${comboItem.products?.name} x${comboItem.quantity}`
+                                      )
+                                      .join(", ")}
+                                  </Text>
+                                  <br />
+                                </div>
+                              )}
+                              {item.description && !item.isCombo && (
+                                <Text
+                                  type="secondary"
+                                  style={{
+                                    fontSize: 12,
+                                    display: "block",
+                                    marginTop: 4,
+                                  }}
+                                >
+                                  {item.description}
+                                </Text>
+                              )}
+                              {item.prescriptionNote && (
+                                <Text
+                                  type="secondary"
+                                  style={{
+                                    fontSize: "11px",
+                                    fontStyle: "italic",
+                                  }}
+                                >
+                                  📝 {item.prescriptionNote}
+                                </Text>
+                              )}
+                            </Space>
+                          }
+                        />
+                      </List.Item>
+                    );
+                  }}
                 />
               )}
             </div>

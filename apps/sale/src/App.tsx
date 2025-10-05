@@ -4,7 +4,12 @@ import Login from "./pages/Login";
 import { useAuth } from "./hooks/useAuth";
 import { Spin, Row } from "antd";
 import AuthenticatedApp from "./components/AuthenticatedApp";
-import { useInitializeEmployee, useAuthStore } from "@nam-viet-erp/store";
+import {
+  useInitializeEmployee,
+  useInitializeInventory,
+  useAuthStore,
+  useInventoryStore,
+} from "@nam-viet-erp/store";
 import { getEmployeeByUserId } from "@nam-viet-erp/services";
 
 const App: React.FC = () => {
@@ -26,6 +31,9 @@ const App: React.FC = () => {
 
   // Initialize employee data from store
   useInitializeEmployee(getEmployeeByUserId);
+
+  // Initialize inventory for employees with inventory permissions
+  useInitializeInventory();
 
   if (loading) {
     return (

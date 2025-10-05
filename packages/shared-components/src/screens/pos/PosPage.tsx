@@ -16,7 +16,6 @@ import {
 } from "antd";
 import { useDebounce, QRScanner } from "@nam-viet-erp/shared-components";
 import {
-  processSaleTransaction,
   searchProducts,
   getActivePromotions,
   getPatients,
@@ -27,6 +26,7 @@ import {
   getWarehouseById,
   searchProductInWarehouse,
   searchProductInWarehouseByBarcode,
+  calculateProductGlobalQuantities,
 } from "@nam-viet-erp/services";
 import {
   usePosStore,
@@ -36,6 +36,9 @@ import {
   usePosSelectedCustomer,
   usePosSelectedWarehouse,
   usePosIsProcessingPayment,
+  useComboStore,
+  useCombos,
+  useInventory,
 } from "@nam-viet-erp/store";
 import PaymentModal from "../../components/PaymentModal";
 import PosTabContent from "../../components/PosTabContent";
@@ -43,6 +46,7 @@ import PosTabContent from "../../components/PosTabContent";
 const getErrorMessage = (error: any): string => {
   return error?.message || "Đã xảy ra lỗi không xác định";
 };
+
 // Context will be passed via props from the app
 // import { useEmployee } from "../../context/EmployeeContext";
 
@@ -96,13 +100,19 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
     processPayment,
   } = usePosStore();
 
+  // Combo Store
+  const storedCombos = useCombos();
+  const { fetchCombos } = useComboStore();
+
+  // Inventory Store
+  const inventory = useInventory();
+
   // Local UI state (not tab-specific)
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<IProduct[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "card">("cash");
-  const [paymentTabIndex, setPaymentTabIndex] = useState<number | undefined>(undefined);
   const [promotions, setPromotions] = useState<IPromotion[]>([]);
 
   // Customer management
@@ -118,12 +128,7 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
     null
   );
   const [loadingWarehouse, setLoadingWarehouse] = useState(false);
-
-  // Keep prescription integration for backward compatibility (commented out unused variables)
-  // const [patientVisits, setPatientVisits] = useState<any[]>([]);
   const [selectedVisit, setSelectedVisit] = useState<any>(null);
-  // const [availablePrescriptions, setAvailablePrescriptions] = useState<PrescriptionWithProduct[]>([]);
-  // const [loadingPrescriptions, setLoadingPrescriptions] = useState(false);
 
   // Create customer modal
   const [isCreateCustomerModalOpen, setIsCreateCustomerModalOpen] =
@@ -192,6 +197,11 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
     fetchEmployeeWarehouse();
   }, [employee?.warehouse_id, notification, setStoreSelectedWarehouse]);
 
+  // Fetch combos on component mount
+  useEffect(() => {
+    fetchCombos();
+  }, [fetchCombos]);
+
   useEffect(() => {
     const fetchPromos = async () => {
       const { data, error } = await getActivePromotions();
@@ -206,6 +216,48 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
     };
     fetchPromos();
   }, [notification]);
+
+  // Detect combos whenever cart changes
+  const detectedCombos = useMemo(() => {
+    if (cart.length === 0 || storedCombos.length === 0) {
+      return [];
+    }
+
+    // Get only regular products (not combo items) from cart
+    const regularItems = cart
+      .filter((item) => !item.isCombo)
+      .map((item) => ({ id: item.id, quantity: item.quantity }));
+
+    if (regularItems.length === 0) {
+      return [];
+    }
+
+    // Check each combo to see if cart has all required products
+    const matchedCombos: IComboWithItems[] = [];
+
+    for (const combo of storedCombos) {
+      const comboItems = combo.combo_items || [];
+      let isMatch = true;
+
+      // Check if all combo items are in the cart with sufficient quantity
+      for (const comboItem of comboItems) {
+        const cartItem = regularItems.find(
+          (ci) => ci.id === comboItem.product_id
+        );
+
+        if (!cartItem || cartItem.quantity < comboItem.quantity) {
+          isMatch = false;
+          break;
+        }
+      }
+
+      if (isMatch && comboItems.length > 0) {
+        matchedCombos.push(combo);
+      }
+    }
+
+    return matchedCombos;
+  }, [cart, storedCombos]);
 
   // --- PROMOTION LOGIC START ---
   const calculateBestPrice = (
@@ -295,8 +347,37 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
     if (debouncedSearchTerm) {
       setIsSearching(true);
 
-      if (employeeWarehouse) {
-        // Search within selected warehouse
+      // Search in inventory store instead of making API calls
+      if (inventory.length > 0) {
+        const searchLower = debouncedSearchTerm.toLowerCase();
+
+        const filteredProducts = inventory
+          .filter((item: any) => {
+            const product = item.products;
+            if (!product) return false;
+
+            // Search by name, barcode, or product code
+            const matchName = product.name?.toLowerCase().includes(searchLower);
+            const matchBarcode = product.barcode
+              ?.toLowerCase()
+              .includes(searchLower);
+            const matchCode = product.product_code
+              ?.toLowerCase()
+              .includes(searchLower);
+            return (
+              (matchName || matchBarcode || matchCode) && item.quantity > 0
+            );
+          })
+          .map((item: any) => ({
+            ...item.products,
+            stock_quantity: item.quantity,
+          }))
+          .slice(0, 10); // Limit to 10 results
+
+        setSearchResults(filteredProducts);
+        setIsSearching(false);
+      } else if (employeeWarehouse) {
+        // Fallback to API if inventory is not loaded
         searchProductInWarehouse({
           search: debouncedSearchTerm,
           warehouseId: employeeWarehouse.id,
@@ -309,7 +390,7 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
               ) || []
             );
           })
-          .catch((error) => {
+          .catch(() => {
             notification.error({
               message: "Lỗi tìm kiếm",
               description: "Không thể tìm kiếm sản phẩm trong kho",
@@ -337,38 +418,10 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
           })
           .finally(() => setIsSearching(false));
       }
-      // searchProducts({
-      //   search: debouncedSearchTerm,
-      //   pageSize: 10,
-      //   status: "active",
-      // })
-      //   .then(({ data, error }) => {
-      //     if (error) {
-      //       notification.error({
-      //         message: "Lỗi tìm kiếm",
-      //         description: error.message,
-      //       });
-      //       setSearchResults([]);
-      //     } else {
-      //       // Filter products to only show those with available inventory
-      //       const productsWithInventory = (data || []).filter(
-      //         (product: any) => {
-      //           // If no warehouse is selected, show all products
-      //           if (!selectedWarehouse) return true;
-
-      //           // Check if product has stock quantity available
-      //           const stockQuantity = product.stock_quantity || 0;
-      //           return stockQuantity > 0;
-      //         }
-      //       );
-      //       setSearchResults(productsWithInventory);
-      //     }
-      //   })
-      //   .finally(() => setIsSearching(false));
     } else {
       setSearchResults([]);
     }
-  }, [debouncedSearchTerm, employeeWarehouse, notification]);
+  }, [debouncedSearchTerm, employeeWarehouse, notification, inventory]);
 
   useEffect(() => {
     if (debouncedCustomerSearchTerm) {
@@ -515,37 +568,94 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
     setSearchResults([]);
   };
 
-  // Commented out unused function - handleAddPrescriptionToCart
-  /*
-  const handleAddPrescriptionToCart = (prescription: any) => {
-    const product = prescription.products;
-    if (!product) return;
+  // Add combo to cart
+  const handleAddCombo = (combo: IComboWithItems) => {
+    if (!combo.combo_items || combo.combo_items.length === 0) {
+      notification.error({
+        message: "Combo không hợp lệ",
+        description: "Combo này không có sản phẩm",
+      });
+      return;
+    }
 
-    setCart((prevCart) => {
-      const existingItem = prevCart.find((item) => item.id === product.id);
-      const prescribedQuantity = prescription.quantity_ordered;
+    // Calculate how many combo sets we can make from cart
+    let maxComboSets = Infinity;
 
-      if (existingItem) {
-        return prevCart.map((item) =>
-          item.id === product.id
-            ? { ...item, quantity: item.quantity + prescribedQuantity }
-            : item
-        );
-      } else {
-        const priceInfo = calculateBestPrice(product, promotions);
-        return [
-          ...prevCart,
-          {
-            ...product,
-            quantity: prescribedQuantity,
-            ...priceInfo,
-            prescriptionNote: prescription.dosage_instruction,
-          },
-        ];
+    combo.combo_items.forEach((comboItem) => {
+      const cartItem = cart.find(
+        (item) => !item.isCombo && item.id === comboItem.product_id
+      );
+      if (cartItem) {
+        const possibleSets = Math.floor(cartItem.quantity / comboItem.quantity);
+        maxComboSets = Math.min(maxComboSets, possibleSets);
       }
     });
+
+    // If maxComboSets is still Infinity or 0, something is wrong
+    if (maxComboSets === Infinity || maxComboSets === 0) {
+      maxComboSets = 1;
+    }
+
+    // Remove products that are part of the combo from cart
+    combo.combo_items.forEach((comboItem) => {
+      const cartItem = cart.find(
+        (item) => !item.isCombo && item.id === comboItem.product_id
+      );
+      if (cartItem) {
+        const quantityToRemove = comboItem.quantity * maxComboSets;
+        const remainingQuantity = cartItem.quantity - quantityToRemove;
+
+        if (remainingQuantity <= 0) {
+          // Remove item completely
+          removeCartItem(cartItem.key);
+        } else {
+          // Update quantity
+          updateCartItem(cartItem.key, {
+            quantity: remainingQuantity,
+            total: cartItem.price * remainingQuantity,
+          });
+        }
+      }
+    });
+
+    // Calculate total original price
+    const originalPrice = combo.combo_items.reduce((sum, item) => {
+      return sum + (item.products?.retail_price || 0) * item.quantity;
+    }, 0);
+
+    // Add combo as a single cart item
+    const comboCartItem = {
+      key: `combo_${combo.id}_${Date.now()}`,
+      id: combo.id,
+      name: combo.name,
+      description: combo.description || undefined,
+      quantity: maxComboSets,
+      price: combo.combo_price,
+      total: combo.combo_price * maxComboSets,
+      finalPrice: combo.combo_price,
+      originalPrice: originalPrice,
+      image_url: combo.image_url,
+      product_id: `combo_${combo.id}`,
+      unit_price: originalPrice,
+      isCombo: true,
+      combo_id: combo.id,
+      comboData: combo,
+    };
+
+    addCartItem(comboCartItem);
+
+    notification.success({
+      message: "Đã thêm combo!",
+      description: `${combo.name} x${maxComboSets} - Tiết kiệm ${(
+        (originalPrice - combo.combo_price) *
+        maxComboSets
+      ).toLocaleString()}đ`,
+      duration: 3,
+    });
+
+    // Refetch combos to update the store
+    fetchCombos();
   };
-  */
 
   const handleCreateCustomer = async (values: any) => {
     try {
@@ -592,9 +702,54 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
     // Search for product directly by barcode
     try {
       let foundProduct = null;
-      let stockAvailable = false;
 
-      if (employeeWarehouse) {
+      // First, try to search in inventory store
+      if (inventory.length > 0) {
+        const scannedLower = scannedData.toLowerCase();
+        const inventoryItem = inventory.find((item: any) => {
+          const product = item.products;
+          if (!product) return false;
+
+          const matchBarcode = product.barcode?.toLowerCase() === scannedLower;
+          const matchCode =
+            product.product_code?.toLowerCase() === scannedLower;
+
+          return matchBarcode || matchCode;
+        });
+
+        if (inventoryItem) {
+          foundProduct = {
+            ...inventoryItem.products,
+            stock_quantity: inventoryItem.quantity,
+          };
+
+          // Check inventory before adding
+          if (
+            !foundProduct.stock_quantity ||
+            foundProduct.stock_quantity <= 0
+          ) {
+            notification.error({
+              message: "❌ Sản phẩm hết hàng",
+              description: `${foundProduct.name} đã hết hàng trong kho. Vui lòng nhập thêm hàng.`,
+              duration: 3,
+            });
+          } else {
+            handleAddToCart(foundProduct);
+            notification?.success({
+              message: "✅ Đã thêm vào giỏ hàng",
+              description: `${foundProduct.name} - Còn lại: ${foundProduct.stock_quantity}`,
+              duration: 2,
+            });
+          }
+        } else {
+          notification.warning({
+            message: "⚠️ Không tìm thấy sản phẩm",
+            description: `Mã: ${scannedData}`,
+            duration: 2,
+          });
+        }
+      } else if (employeeWarehouse) {
+        // Fallback to API if inventory is not loaded
         const { data } = await searchProductInWarehouseByBarcode({
           search: scannedData,
           warehouseId: employeeWarehouse.id,
@@ -616,7 +771,6 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
               description: `${foundProduct.name} đã hết hàng trong kho. Vui lòng nhập thêm hàng.`,
               duration: 3,
             });
-            stockAvailable = false;
           } else {
             handleAddToCart(foundProduct);
             notification?.success({
@@ -624,7 +778,6 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
               description: `${foundProduct.name} - Còn lại: ${foundProduct.stock_quantity}`,
               duration: 2,
             });
-            stockAvailable = true;
           }
         } else {
           notification.warning({
@@ -653,7 +806,6 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
               description: `${foundProduct.name} đã hết hàng trong kho. Vui lòng nhập thêm hàng.`,
               duration: 3,
             });
-            stockAvailable = false;
           } else {
             handleAddToCart(foundProduct);
             notification?.success({
@@ -661,7 +813,6 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
               description: `${foundProduct.name} - Còn lại: ${foundProduct.stock_quantity}`,
               duration: 2,
             });
-            stockAvailable = true;
           }
         } else {
           notification.warning({
@@ -756,10 +907,64 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
     setIsPaymentModalOpen(true);
   };
 
-  const handleFinishPayment = async (values: PaymentValues, tabIndex?: number) => {
+  const handleFinishPayment = async (
+    values: PaymentValues,
+    tabIndex?: number
+  ) => {
     try {
       // If tabIndex is provided, use it; otherwise use active tab
-      const targetTabIndex = tabIndex !== undefined ? tabIndex : tabs.findIndex(t => t.id === activeTabId);
+      const targetTabIndex =
+        tabIndex !== undefined
+          ? tabIndex
+          : tabs.findIndex((t) => t.id === activeTabId);
+
+      // Validate global inventory (including products in combos)
+      const productGlobalQuantities = calculateProductGlobalQuantities(
+        cartDetails.items || []
+      );
+
+      // Check if global quantities exceed inventory
+      const insufficientProducts: {
+        productName: string;
+        required: number;
+        available: number;
+      }[] = [];
+
+      Object.entries(productGlobalQuantities).forEach(
+        ([productId, { name, quantity }]) => {
+          const inventoryItem = inventory.find(
+            (inv: any) => inv.product_id === Number(productId)
+          );
+          const availableQuantity = inventoryItem?.quantity || 0;
+
+          if (quantity > availableQuantity) {
+            insufficientProducts.push({
+              productName: name,
+              required: quantity,
+              available: availableQuantity,
+            });
+          }
+        }
+      );
+
+      if (insufficientProducts.length > 0) {
+        const errorMessage = insufficientProducts
+          .map(
+            (p) => `- ${p.productName}: Cần ${p.required}, Còn ${p.available}`
+          )
+          .join("\n");
+
+        notification.error({
+          message: "Không đủ hàng trong kho",
+          description: (
+            <div style={{ whiteSpace: "pre-line" }}>
+              {`Các sản phẩm không đủ số lượng (bao gồm trong combo):\n${errorMessage}`}
+            </div>
+          ),
+          duration: 6,
+        });
+        return;
+      }
 
       await processPayment(
         {
@@ -772,7 +977,7 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
           customerId: selectedCustomer?.patient_id,
           tabIndex: targetTabIndex, // Pass tab index to processPayment
         },
-        processSaleTransaction
+        inventory
       );
 
       notification?.success({
@@ -871,6 +1076,8 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
               handleUpdateQuantity={handleUpdateQuantity}
               handleOpenPaymentModal={handleOpenPaymentModal}
               isProcessingPayment={isProcessingPayment}
+              detectedCombos={detectedCombos}
+              handleAddCombo={handleAddCombo}
               isMobile={isMobile}
               isCartModalOpen={isCartModalOpen}
               setIsCartModalOpen={setIsCartModalOpen}

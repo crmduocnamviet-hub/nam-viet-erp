@@ -2,6 +2,7 @@ import { supabase } from "./supabase";
 import { upsetInventory } from "./warehouse";
 import { createSalesOrder } from "./salesOrderService";
 import { createMultipleSalesOrderItems } from "./salesOrderItemService";
+import { createMultipleSalesComboItems } from "./salesComboItemService";
 
 interface IProcessSale {
   cart: CartItem[];
@@ -25,15 +26,18 @@ interface IProcessSale {
  * NOTE: This function is not atomic. A database RPC function would be a better approach
  * to ensure data consistency, but this is a good starting point for the prototype.
  */
-export const processSaleTransaction = async ({
-  cart,
-  total,
-  paymentMethod,
-  warehouseId,
-  createdBy,
-  fundId,
-  customerId,
-}: IProcessSale) => {
+export const processSaleTransaction = async (
+  {
+    cart,
+    total,
+    paymentMethod,
+    warehouseId,
+    createdBy,
+    fundId,
+    customerId,
+  }: IProcessSale,
+  inventory: IInventoryWithProduct[]
+) => {
   // Step 1: Create the sales order record.
   const salesOrder = {
     patient_id: customerId || null, // Default patient ID for walk-in customers
@@ -57,13 +61,40 @@ export const processSaleTransaction = async ({
     );
   }
 
-  // Step 2: Create sales order items.
-  const orderItems = (cart || []).map((item) => ({
-    product_id: item.id,
-    quantity: item.quantity,
-    unit_price: item.finalPrice || 0,
-    is_service: false,
-  }));
+  // Step 2: Create sales order items and track combo items separately
+  const orderItems: any[] = [];
+  const comboItems: any[] = [];
+
+  (cart || []).forEach((item) => {
+    if (item.isCombo && item.comboData) {
+      // Track individual products in sales_combo_items table
+      item.comboData.combo_items?.forEach((comboItem) => {
+        const itemQuantity = comboItem.quantity * item.quantity;
+        const itemPrice =
+          item.finalPrice /
+          (item.comboData?.combo_items?.reduce(
+            (sum, ci) => sum + ci.quantity,
+            0
+          ) || 1);
+
+        comboItems.push({
+          order_id: orderData.order_id,
+          combo_id: item.id,
+          product_id: comboItem.product_id,
+          quantity: itemQuantity,
+          unit_price: itemPrice,
+        });
+      });
+    } else {
+      // Regular product - unchanged
+      orderItems.push({
+        product_id: item.id,
+        quantity: item.quantity,
+        unit_price: item.finalPrice || 0,
+        is_service: false,
+      });
+    }
+  });
 
   const { error: itemsError } = await createMultipleSalesOrderItems(
     orderData.order_id,
@@ -80,6 +111,19 @@ export const processSaleTransaction = async ({
     throw new Error(
       `Failed to create sales order items: ${itemsError.message}`
     );
+  }
+
+  // Step 2.5: Create sales combo items records for tracking
+  if (comboItems.length > 0) {
+    const { error: comboItemsError } = await createMultipleSalesComboItems(
+      comboItems
+    );
+
+    if (comboItemsError) {
+      console.error("Sales Combo Items Creation Error:", comboItemsError);
+      // Continue with transaction - combo items tracking is supplementary
+      // We log the error but don't rollback the entire transaction
+    }
   }
 
   // Step 3: Create the financial transaction record.
@@ -113,14 +157,24 @@ export const processSaleTransaction = async ({
   }
 
   // Step 4: Prepare and execute inventory updates.
-  const inventoryUpdates = (cart || []).map((item) => {
-    const currentQuantity = item.stock_quantity || 0;
-    const newQuantity = (currentQuantity || 0) - item.quantity;
-    return {
-      product_id: item.id,
+  const quantities = calculateProductGlobalQuantities(cart);
+
+  const filterProducts = inventory.filter(
+    (i) => !!i.products?.id && !!quantities[i.products.id]
+  );
+
+  const inventoryUpdates: any[] = [];
+
+  filterProducts.forEach((inventory) => {
+    if (!inventory.products?.id) return;
+    const quantity = quantities[inventory.products.id].quantity;
+    const currentQuantity = inventory.quantity || 0;
+    const quantityToDeduct = currentQuantity - quantity;
+    inventoryUpdates.push({
+      product_id: inventory.products.id,
       warehouse_id: warehouseId,
-      quantity: newQuantity,
-    };
+      quantity: quantityToDeduct, // Negative to deduct
+    });
   });
 
   if (inventoryUpdates.length > 0) {
@@ -129,7 +183,6 @@ export const processSaleTransaction = async ({
     if (inventoryError) {
       // If inventory update fails, we should try to roll back the financial transaction and sales order
       // to avoid data inconsistency.
-      console.error("Inventory Update Error:", inventoryError);
       await supabase.from("transactions").delete().eq("id", transactionData.id);
       await supabase
         .from("sales_orders")
@@ -140,4 +193,42 @@ export const processSaleTransaction = async ({
   }
 
   return { transactionData, orderData };
+};
+
+/**
+ * Calculate global quantities for all products in cart (including products in combos)
+ * @param cartItems - The cart items to calculate from
+ * @returns Record of product ID to { name, quantity }
+ */
+export const calculateProductGlobalQuantities = (
+  cartItems: any[]
+): Record<number, { name: string; quantity: number }> => {
+  const quantities: Record<number, { name: string; quantity: number }> = {};
+
+  cartItems.forEach((item: any) => {
+    if (item.isCombo && item.comboData) {
+      // Add quantities from combo items
+      item.comboData.combo_items?.forEach((comboItem: any) => {
+        const productId = comboItem.product_id;
+        const qty = comboItem.quantity * item.quantity;
+        const productName = comboItem.products?.name || "Unknown";
+
+        if (!quantities[productId]) {
+          quantities[productId] = { name: productName, quantity: 0 };
+        }
+        quantities[productId].quantity += qty;
+      });
+    } else {
+      // Add quantities from individual products
+      const productId = item.id;
+      const productName = item.name || "Unknown";
+
+      if (!quantities[productId]) {
+        quantities[productId] = { name: productName, quantity: 0 };
+      }
+      quantities[productId].quantity += item.quantity;
+    }
+  });
+
+  return quantities;
 };

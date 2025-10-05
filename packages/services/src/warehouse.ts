@@ -31,3 +31,19 @@ export const upsetInventory = async (record: Partial<IInventory>[]) => {
   });
   return response;
 };
+
+/**
+ * Fetch all inventory items for a specific warehouse
+ * Includes product details via join
+ */
+export const getInventoryByWarehouse = async (warehouseId: number) => {
+  const response = await supabase
+    .from("inventory")
+    .select(`
+      *,
+      products (*)
+    `)
+    .eq("warehouse_id", warehouseId)
+    .order("created_at", { ascending: false });
+  return response;
+};

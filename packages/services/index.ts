@@ -10,6 +10,7 @@ export * from "./src/bankServices";
 export * from "./src/purchaseOrderService";
 export * from "./src/appointmentService";
 export * from "./src/posService";
+export * from "./src/comboService";
 
 // Scheduling & Medical Services
 export * from "./src/patientService";
@@ -20,6 +21,7 @@ export * from "./src/labOrderService";
 export * from "./src/prescriptionService";
 export * from "./src/salesOrderService";
 export * from "./src/salesOrderItemService";
+export * from "./src/salesComboItemService";
 export * from "./src/b2bQuoteService";
 export * from "./src/notificationService";
 

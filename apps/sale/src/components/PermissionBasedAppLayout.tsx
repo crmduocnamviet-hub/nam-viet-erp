@@ -431,6 +431,10 @@ const AppLayoutContent: React.FC = () => {
                   path="/products/create"
                   element={renderScreen("inventory.products.create")}
                 />
+                <Route
+                  path="/combos"
+                  element={renderScreen("inventory.combos")}
+                />
                 {/* Fallback route */}
                 <Route path="*" element={<ComingSoon />} />
               </Routes>

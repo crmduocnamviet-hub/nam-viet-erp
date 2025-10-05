@@ -4,6 +4,8 @@ export * from './employeeStore';
 export * from './uiStore';
 export * from './b2bOrderStore';
 export * from './posStore';
+export * from './comboStore';
+export * from './inventoryStore';
 
 // Export services
 export * from './services/employeeService';
@@ -11,6 +13,7 @@ export * from './services/employeeService';
 // Export hooks
 export * from './hooks/useInitializeEmployee';
 export * from './hooks/useInitializeB2BOrder';
+export * from './hooks/useInitializeInventory';
 
 // Re-export zustand for convenience
 export { create } from 'zustand';

@@ -80,10 +80,22 @@ export const SALE_APP_MENU: MenuItemConfig[] = [
   },
   {
     label: "📦 Sản phẩm",
-    key: "/products",
+    key: "products",
     icon: <MedicineBoxOutlined />,
-    screenKey: "inventory.products",
-    permissions: ["products.view"],
+    children: [
+      {
+        label: "Danh sách sản phẩm",
+        key: "/products",
+        screenKey: "inventory.products",
+        permissions: ["products.view"],
+      },
+      {
+        label: "Danh sách Combo",
+        key: "/combos",
+        screenKey: "inventory.combos",
+        permissions: ["products.view"],
+      },
+    ],
   },
   {
     label: "📅 Đặt lịch & Khám bệnh",
@@ -129,6 +141,11 @@ export const CMS_APP_MENU: MenuItemConfig[] = [
         key: "products",
         label: "Sản phẩm",
         screenKey: "inventory.products",
+      },
+      {
+        key: "combos",
+        label: "Combo khuyến mãi",
+        screenKey: "inventory.combos",
       },
       {
         key: "purchase-orders",

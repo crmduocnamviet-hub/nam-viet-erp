@@ -1,3 +1,4 @@
+import { processSaleTransaction } from "@nam-viet-erp/services/src/posService";
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
@@ -49,11 +50,14 @@ export interface PosState {
   // Async payment processing with tab cleanup
   processPayment: (
     paymentData: any,
-    processSaleTransaction: (data: any) => Promise<any>
-  ) => Promise<void>;
+    inventory?: IInventoryWithProduct[]
+  ) => Promise<unknown>;
 
   // Reset (operate on active tab)
   resetTab: () => void;
+
+  // Reset entire store
+  resetStore: () => void;
 }
 
 // Create store
@@ -414,7 +418,7 @@ export const usePosStore = create<PosState>()(
           ),
 
         // Process payment with automatic tab cleanup
-        processPayment: async (paymentData, processSaleTransaction) => {
+        processPayment: async (paymentData, inventory = []) => {
           const state = get();
 
           // Get target tab by index if provided, otherwise use active tab
@@ -442,11 +446,26 @@ export const usePosStore = create<PosState>()(
             });
 
             // Call payment processing API
-            const result = await processSaleTransaction(paymentData);
+            const result = await processSaleTransaction(paymentData, inventory);
 
-            if (result.error) {
-              throw new Error(result.error.message || "Payment failed");
-            }
+            // Update inventory store after successful payment
+            const { calculateProductGlobalQuantities } = await import(
+              "@nam-viet-erp/services"
+            );
+            const { useInventoryStore } = await import("./inventoryStore");
+
+            const cart = paymentData.cart || [];
+            const quantities = calculateProductGlobalQuantities(cart);
+
+            // Create updates array with negative quantities (deductions)
+            const inventoryUpdates = Object.entries(quantities).map(
+              ([productId, { quantity }]) => ({
+                productId: Number(productId),
+                quantityChange: -quantity, // Negative to deduct
+              })
+            );
+
+            useInventoryStore.getState().updateInventoryQuantities(inventoryUpdates);
 
             // Clear processing state
             set((state) => {
@@ -518,6 +537,18 @@ export const usePosStore = create<PosState>()(
             },
             false,
             "resetTab"
+          ),
+
+        // Reset entire store to initial state
+        resetStore: () =>
+          set(
+            (state) => {
+              const newTabId = `tab-${Date.now()}`;
+              state.tabs = [createEmptyTab(newTabId, "Đơn hàng 1")];
+              state.activeTabId = newTabId;
+            },
+            false,
+            "resetStore"
           ),
       };
 

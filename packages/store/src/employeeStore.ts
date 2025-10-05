@@ -12,6 +12,7 @@ interface Employee {
   department?: string;
   position?: string;
   is_active: boolean;
+  warehouse_id?: number;
 }
 
 interface EmployeeState {
