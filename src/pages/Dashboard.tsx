@@ -50,7 +50,7 @@ const DashboardPageContent: React.FC = () => {
       }
 
       if (data) {
-        const roleName = data.roles?.name;
+        const roleName = data.roles?.[0]?.name;
         switch (roleName) {
           case "Bác sĩ":
             setUserRole("doctor");

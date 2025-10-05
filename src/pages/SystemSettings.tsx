@@ -54,7 +54,7 @@ const SystemSettingsContent: React.FC = () => {
         value: values.moderation_mode,
       });
       if (error) throw error;
-      notification.success("Đã lưu cấu hình thành công!");
+      notification.success({ message: "Đã lưu cấu hình thành công!" });
     } catch (error: any) {
       notification.error({
         message: "Lưu thất bại",

@@ -52,10 +52,9 @@ const TransactionPageContent: React.FC = () => {
   const { user } = useAuth();
   const [creationForm] = Form.useForm();
   const [executionForm] = Form.useForm();
-  const [setIsSubmitting] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [transactions, setTransactions] = useState<any[]>([]);
-  // const [setIsSubmitting] = useState(false);
   const [funds, setFunds] = useState<any[]>([]);
   const [banks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -652,6 +651,7 @@ const TransactionPageContent: React.FC = () => {
           setIsCreationModalOpen(false);
           creationForm.resetFields();
         }}
+        isSubmitting={isSubmitting}
         onFinish={handleCreationFinish}
         transactionType={transactionType}
         form={creationForm}

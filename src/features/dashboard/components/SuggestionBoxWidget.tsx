@@ -1,7 +1,7 @@
 // src/features/dashboard/components/SuggestionBoxWidget.tsx
 
 import React, { useState } from "react";
-import { Card, Space, Button, Typography, App as AntApp } from "antd";
+import { Card, Space, Button, Typography } from "antd";
 import { Lightbulb, Send } from "lucide-react";
 import SuggestionModal from "../../community/components/SuggestionModal";
 

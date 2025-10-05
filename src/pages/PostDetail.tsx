@@ -2,8 +2,6 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import {
-  Row,
-  Col,
   Typography,
   App as AntApp,
   Spin,
@@ -23,7 +21,7 @@ import { useAuth } from "../context/AuthContext";
 import { Heart, MessageSquare, ArrowLeft } from "lucide-react";
 import dayjs from "dayjs";
 
-const { Title, Paragraph, Text } = Typography;
+const { Title, Text } = Typography;
 
 const PostDetailPageContent: React.FC = () => {
   const { notification } = AntApp.useApp();

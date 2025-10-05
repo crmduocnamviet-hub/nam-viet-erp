@@ -2,22 +2,18 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import {
-  Row,
-  Col,
   Typography,
   App as AntApp,
   Spin,
   Empty,
   List,
   Avatar,
-  Space,
   Button,
-  Tag,
 } from "antd";
 import { supabase } from "../lib/supabaseClient";
 import dayjs from "dayjs";
 
-const { Title, Text } = Typography;
+const { Title } = Typography;
 
 const ModerationQueueContent: React.FC = () => {
   const { notification, modal } = AntApp.useApp();
@@ -62,9 +58,9 @@ const ModerationQueueContent: React.FC = () => {
             .update({ status: newStatus })
             .eq("id", postId);
           if (error) throw error;
-          notification.success(
-            `Đã ${actionText.toLowerCase()} bài viết thành công.`
-          );
+          notification.success({
+            message: `Đã ${actionText.toLowerCase()} bài viết thành công.`,
+          });
           fetchPendingPosts(); // Tải lại danh sách
         } catch (error: any) {
           notification.error({

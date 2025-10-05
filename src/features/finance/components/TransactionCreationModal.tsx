@@ -31,6 +31,7 @@ interface BankOption {
 interface TransactionCreationModalProps {
   open: boolean;
   onCancel: () => void;
+  isSubmitting: boolean;
   onFinish: (values: any) => void;
   transactionType: "income" | "expense";
   form: FormInstance;
@@ -42,6 +43,7 @@ interface TransactionCreationModalProps {
 const TransactionCreationModal: React.FC<TransactionCreationModalProps> = ({
   open,
   onCancel,
+  isSubmitting,
   onFinish,
   transactionType,
   form,
@@ -128,6 +130,7 @@ const TransactionCreationModal: React.FC<TransactionCreationModalProps> = ({
         open={open}
         onCancel={onCancel}
         onOk={() => form.submit()}
+        confirmLoading={isSubmitting}
         okText="Gửi đi"
         cancelText="Hủy"
         width={

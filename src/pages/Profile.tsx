@@ -66,14 +66,13 @@ const ProfilePageContent: React.FC = () => {
     setSaving(true);
     try {
       // Cập nhật user_metadata trong auth
-      const { data: authData, error: authError } =
-        await supabase.auth.updateUser({
-          data: {
-            full_name: values.full_name,
-            avatar_url: values.avatar_url,
-            phone: values.phone,
-          },
-        });
+      const { error: authError } = await supabase.auth.updateUser({
+        data: {
+          full_name: values.full_name,
+          avatar_url: values.avatar_url,
+          phone: values.phone,
+        },
+      });
       if (authError) throw authError;
 
       // Cập nhật bảng profiles

@@ -1,6 +1,5 @@
 // src/features/community/components/PostItem.tsx
 
-import React from "react";
 import { Card, Avatar, Space, Typography, Tooltip } from "antd";
 import { MessageSquare, Heart } from "lucide-react";
 import dayjs from "dayjs";
