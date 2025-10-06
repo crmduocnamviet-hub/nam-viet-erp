@@ -35,6 +35,11 @@ interface IProduct {
   shelf_location: string | null;
   stock_quantity?: number;
   unit?: string;
+  min_stock?: number;
+  max_stock?: number;
+  batch_number?: string | null;
+  expiry_date?: string | null;
+  enable_lot_management?: boolean;
 }
 
 // Combo table - represents a product bundle/package deal
@@ -173,11 +178,17 @@ interface ITransaction {
 interface ISupplier {
   id: number;
   name: string;
+  code: string | null;
   contact_person: string | null;
   phone: string | null;
   email: string | null;
   address: string | null;
+  tax_code: string | null;
+  payment_terms: string | null;
+  notes: string | null;
+  is_active: boolean;
   created_at: string;
+  updated_at: string;
 }
 
 interface IPermission {
@@ -221,11 +232,22 @@ interface IInventoryWithProduct extends IInventory {
 
 interface IPurchaseOrder {
   id: number;
+  po_number: string;
   supplier_id: number;
-  status: string;
+  order_date: string;
+  expected_delivery_date: string | null;
+  status:
+    | "draft"
+    | "sent"
+    | "ordered"
+    | "partially_received"
+    | "received"
+    | "cancelled";
+  total_amount: number;
   notes: string | null;
-  created_by: string;
+  created_by: string | null;
   created_at: string;
+  updated_at: string;
 }
 
 interface IPurchaseWithInventory {
@@ -465,4 +487,142 @@ interface IB2BCustomer {
   created_at: string;
   updated_at: string;
   address?: string;
+}
+
+// =====================================================
+// WAREHOUSE MANAGEMENT INTERFACES
+// =====================================================
+
+// Product to Supplier mapping (for AI OCR matching)
+interface IProductSupplierMapping {
+  id: number;
+  product_id: number;
+  supplier_id: number;
+  supplier_product_code: string | null;
+  supplier_product_name: string | null;
+  cost_price: number | null;
+  lead_time_days: number | null;
+  min_order_quantity: number | null;
+  is_primary: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+// Purchase Order line items
+interface IPurchaseOrderItem {
+  id: number;
+  po_id: number;
+  product_id: number;
+  quantity: number;
+  unit_price: number;
+  received_quantity: number;
+  notes: string | null;
+  created_at: string;
+}
+
+// Extended PO with supplier and items
+interface IPurchaseOrderWithDetails extends IPurchaseOrder {
+  supplier?: ISupplier;
+  items?: IPurchaseOrderItem[];
+}
+
+// Extended PO Item with product details
+interface IPurchaseOrderItemWithProduct extends IPurchaseOrderItem {
+  product?: IProduct;
+}
+
+interface ProductLot {
+  id: number;
+  product_id: number;
+  warehouse_id: number;
+  lot_number: string;
+  batch_code?: string;
+  serial_number?: string;
+  manufacturing_date?: string;
+  expiry_date?: string;
+  received_date: string;
+  quantity_received: number;
+  quantity_available: number;
+  quantity_reserved: number;
+  quantity_sold: number;
+  quantity_damaged: number;
+  quantity_returned: number;
+  unit_price_before_vat: number;
+  vat_percent: number;
+  unit_price_with_vat: number;
+  discount_percent: number;
+  discount_amount: number;
+  final_unit_cost: number;
+  purchase_order_id?: number;
+  supplier_id?: number;
+  has_vat_invoice: boolean;
+  vat_invoice_received: number;
+  vat_invoice_sold: number;
+  barcode?: string;
+  qr_code?: string;
+  shelf_location?: string;
+  aisle?: string;
+  rack?: string;
+  level?: string;
+  status: string;
+  quality_status: string;
+  quality_notes?: string;
+  notes?: string;
+  created_by?: string;
+}
+
+interface VatInvoice {
+  id: number;
+  invoice_number: string;
+  invoice_series?: string;
+  invoice_symbol?: string;
+  invoice_type: "purchase" | "sales";
+  invoice_date: string;
+  supplier_id?: number;
+  customer_id?: number;
+  subtotal: number;
+  vat_rate: number;
+  vat_amount: number;
+  total_with_vat: number;
+  discount_amount: number;
+  pdf_url?: string;
+  ocr_status: string;
+  ocr_data?: any;
+  ocr_confidence?: number;
+  reconciliation_status: string;
+  discrepancy_notes?: string;
+  payment_status: string;
+}
+
+interface AvailableLot {
+  lot_id: number;
+  lot_number: string;
+  expiry_date?: string;
+  shelf_location?: string;
+  quantity_available: number;
+  vat_available: number;
+  unit_cost: number;
+  days_until_expiry?: number;
+  recommended_quantity: number;
+}
+
+interface BarcodeVerificationResult {
+  success: boolean;
+  match_status: string;
+  product_id?: number;
+  lot_id?: number;
+  in_order: boolean;
+  product?: {
+    id: number;
+    name: string;
+    sku: string;
+    barcode: string;
+  };
+}
+
+interface ProductLotWithDetails extends ProductLot {
+  product_name: string;
+  product_sku: string;
+  warehouse_name: string;
+  days_until_expiry?: number;
 }

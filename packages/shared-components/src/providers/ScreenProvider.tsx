@@ -61,6 +61,7 @@ export const ScreenProvider: React.FC<ScreenProviderProps> = ({
 
     // Check permissions
     if (!user || !hasScreenPermission(screenKey, user.permissions)) {
+      console.log(SCREEN_REGISTRY[screenKey], user.permissions, hasScreenPermission(screenKey, user.permissions));
       return (
         <div
           style={{

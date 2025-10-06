@@ -12,6 +12,8 @@ import {
   Divider,
   Spin,
   App,
+  Checkbox,
+  Alert,
 } from "antd"; // <-- Đã thêm 'Typography' vào đây
 import type { TabsProps } from "antd";
 import {
@@ -213,6 +215,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
           hdsd_2_6: initialData.hdsd_2_6 || "",
           hdsd_6_18: initialData.hdsd_6_18 || "",
           hdsd_over_18: initialData.hdsd_over_18 || "",
+          enable_lot_management: initialData.enable_lot_management || false,
           inventory_settings: inventorySettingsForForm,
         };
 
@@ -372,6 +375,26 @@ const ProductForm: React.FC<ProductFormProps> = ({
             <Form.Item name="disease" label="Bệnh áp dụng (Gợi ý từ AI)">
               <Input />
             </Form.Item>
+          </Col>
+
+          <Col span={24}>
+            <Divider>Quản lý Lô hàng</Divider>
+          </Col>
+          <Col span={24}>
+            <Form.Item
+              name="enable_lot_management"
+              valuePropName="checked"
+            >
+              <Checkbox>
+                <strong>Bật quản lý theo lô/batch</strong>
+              </Checkbox>
+            </Form.Item>
+            <Alert
+              message="Khi bật quản lý lô, sản phẩm này sẽ yêu cầu thông tin số lô, hạn sử dụng, và vị trí kệ khi nhập/xuất kho."
+              type="info"
+              showIcon
+              style={{ marginTop: 8 }}
+            />
           </Col>
         </Row>
       ),

@@ -14,40 +14,53 @@ import {
 } from "antd";
 import { PlusOutlined, RobotOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
-import { getPurchaseOrder } from "@nam-viet-erp/services";
+import { getPurchaseOrder, autoGeneratePurchaseOrders } from "@nam-viet-erp/services";
 
 const { Title } = Typography;
 const { Search } = Input;
 const { useBreakpoint } = Grid;
 
-const PurchaseOrdersContent: React.FC = () => {
+interface PurchaseOrdersPageProps {
+  employee?: any;
+}
+
+const PurchaseOrdersContent: React.FC<PurchaseOrdersPageProps> = ({ employee }) => {
   const { notification, modal } = AntApp.useApp();
   const [purchaseOrders, setPurchaseOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const screens = useBreakpoint();
   const isMobile = !screens.lg;
 
+  const fetchPOs = async () => {
+    setLoading(true);
+    try {
+      // Chúng ta cần join với bảng suppliers để lấy tên Nhà Cung Cấp
+      const { data, error } = await getPurchaseOrder();
+      if (error) throw error;
+      setPurchaseOrders(data || []);
+    } catch (error: any) {
+      notification.error({
+        message: "Lỗi tải đơn đặt hàng",
+        description: error.message,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchPOs = async () => {
-      setLoading(true);
-      try {
-        // Chúng ta cần join với bảng suppliers để lấy tên Nhà Cung Cấp
-        const { data, error } = await getPurchaseOrder();
-        if (error) throw error;
-        setPurchaseOrders(data || []);
-      } catch (error: any) {
-        notification.error({
-          message: "Lỗi tải đơn đặt hàng",
-          description: error.message,
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchPOs();
   }, [notification]);
 
   const handleAutoGenerate = async () => {
+    if (!employee?.warehouse_id) {
+      notification.error({
+        message: "Lỗi",
+        description: "Bạn chưa được gán kho hàng. Vui lòng liên hệ quản trị viên.",
+      });
+      return;
+    }
+
     modal.confirm({
       title: "Xác nhận Tạo Dự trù Tự động?",
       content:
@@ -57,17 +70,18 @@ const PurchaseOrdersContent: React.FC = () => {
       onOk: async () => {
         setLoading(true);
         try {
-          // Giả lập gọi một RPC function (sẽ xây dựng ở bước sau)
-          // const { error } = await supabase.rpc('generate_draft_purchase_orders');
-          // if (error) throw error;
+          const result = await autoGeneratePurchaseOrders(
+            employee.warehouse_id,
+            employee.employee_id || null
+          );
 
-          // Tạm thời, chúng ta sẽ thông báo thành công để kiểm tra luồng
-          await new Promise((resolve) => setTimeout(resolve, 2000)); // Giả lập thời gian xử lý
-
-          notification?.success({
-            message: "Đã tạo thành công các đơn hàng nháp!",
+          notification.success({
+            message: "Đã tạo thành công!",
+            description: result.message,
           });
-          // fetchData(); // Tải lại danh sách
+
+          // Reload purchase orders list
+          await fetchPOs();
         } catch (error: any) {
           notification.error({
             message: "Tạo dự trù thất bại",
@@ -149,9 +163,9 @@ const PurchaseOrdersContent: React.FC = () => {
   );
 };
 
-const PurchaseOrders: React.FC = () => (
+const PurchaseOrders: React.FC<PurchaseOrdersPageProps> = ({ employee }) => (
   <AntApp>
-    <PurchaseOrdersContent />
+    <PurchaseOrdersContent employee={employee} />
   </AntApp>
 );
 export default PurchaseOrders;

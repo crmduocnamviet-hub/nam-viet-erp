@@ -25,6 +25,11 @@ export * from "./src/salesComboItemService";
 export * from "./src/b2bQuoteService";
 export * from "./src/notificationService";
 
+// Warehouse Management Services
+export * from "./src/supplierService";
+export * from "./src/purchaseOrderService";
+export * from "./src/lotManagementService";
+
 // Room Management Services
 export * from "./src/roomService";
 

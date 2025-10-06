@@ -1,0 +1,44 @@
+B. Quản Lý KHO VẬN
+Quản Lý KHO VẬN: là để Quản lý Sản Phẩm như mô tả bên trên, đồng thời theo dõi vòng đời của sản phẩm từ lúc lên kế hoạch mua đến khi giao sản phẩm tới tay khách hàng. Phần này hỗ trợ tối đa cho Nhân Viên Kế toán và Nhân Viên Kho giảm bớt các thao tác thủ công. Bao gồm một số thao tác:
+
+Tạo thủ công các đơn Cần mua.
+Nhập lô - Hạn sử Dụng
+Đối chiếu thông tin sản phẩm với danh sách trong đơn hàng bán hoặc đơn hàng nhập.
+Nhập số lượng vào "Kho Hóa Đơn VAT", và Xuất Hóa Đơn VAT ra khỏi kho. Đối chiếu số hóa đơn VAT mua vào và bán ra của 1 sản phẩm.
+Vòng đời SP cơ bản như sau:
+
+Lên Kế hoạch mua => Nhập hàng vào Kho => Thực hiện hành động Bán Hàng => Giao tới Khách Hàng.
+
+Còn đây là luồng Thao tác thực tế của Nhân viên với Sản phẩm mong muốn:
+
+Kế Toán Nội Bộ tạo các đơn nhập hàng cần mua (Tự Động tạo bằng nút bấm) => Gửi thông tin tới nhà Cung Cấp để đặt hàng => Hàng Về Đến Kho, Nhân Viên Kho sẽ nhận và kiểm tra các thông tin: Số Lượng, Số Lô, Hạn Sử Dụng (tự động nhập) => Nhập hàng vào Kho và Xếp Lên Kệ => Khi Nhân Viên bán hàng tạo đơn => Lấy hàng Từ kệ và Đối chiếu Thông tin sản phẩm với danh sách trong đơn => Đóng hàng vào Thùng => Gửi Cho nhân viên Vận Chuyển => NV vận chuyển giao tới khách hàng thì bấm "Xác nhận giao thành công" | nếu không giao thành công thì bấm "Giao không thành công" và nhân viên Kho biết để sẵn sàng nhận lại hàng.
+
+Song song với đó, là Kế Toán sau khi gửi đơn cần mua với nhà cung cấp, sẽ phải tính ra giá Vốn của sản phẩm. Giá vốn là giá nhập vào kho sau khi trừ hết chiết khấu hoặc khuyến mại của nhà cung cấp.
+Ví dụ: Chai dầu gội đầu Clear có giá chưa bao gồm VAT là 100k | VAT = 10% | Tổng giá sản phẩm là 110k | Tháng này có chương trình mua 10 tặng 1 => Giá về 100k/chai | Hợp đồng chiết khấu trả sau: 5% của phần chưa VAT, tức là giảm 5k nữa | Như vậy, giá vốn cuối cùng nhập vào là 95k/chai Clear.
+
+Như trong mô tả ban đầu, a cần 1 số "Nút bấm" để giải quyết các Vấn đề "Thủ công" của nhân viên như sau:
+
+NÚT 1: TẠO CÁC ĐƠN CẦN MUA TỰ ĐỘNG
+
+Kế hoạch mua hàng sẽ được cụ thể bằng nút "Tạo Dự Trù Tự Động", khi bấm nút này, sẽ tạo ra hàng loạt các Đơn hàng cần mua, mỗi đơn hàng sẽ là danh sách sản phẩm cần mua của 1 Nhà Cung Cấp.
+Điều kiện để tạo ra đơn hàng tự động như sau:
+Tồn kho Thực tế của sản phẩm <= Tồn kho tối thiểu của sản phẩm (được nhập sẵn ở trong "Chi tiết sản phẩm"). Đây là điều kiện kích hoạt vấn đề sản phẩm đã cần mua chưa?
+Sản phẩm cần có Nhà Cung Cấp được điền sẵn dữ liệu trong chi tiết sản phẩm. Vì chúng ta gom các sản phẩm của cùng 1 nhà cung cấp vào trong 1 đơn hàng cần mua.
+Sản phẩm đang không ở trạng thái "Đã đặt hàng - Chờ nhận", Việc này để tránh mua 1 sản phẩm thành 2 lần, trong 2 đơn đặt hàng khác nhau
+Số lượng sản phẩm cần mua: Tồn Tối Đa - Tồn Thực Tế | Phần này để giải quyết câu hỏi: mua bao nhiêu. Tất nhiên là ô này, nhân viên mua hàng có thể sửa được số lượng tùy theo thực tế.
+NÚT 2: NHẬP SỐ LÔ VÀ HẠN SỬ DỤNG TỰ ĐỘNG
+
+Bình thường, để nhập Số Lô và Hạn Sử Dụng, thì nhân viên Kho phải cầm Sản phẩm lên, tìm đến phần thông tin in Lô Hạn để đọc và nhập liệu 1 cách thủ công. Khi có khoảng 150 hộp SP về thì việc nhập liệu tốn rất nhiều thời gian.
+Để giải quyết vấn đề này, anh đã sử dụng phương pháp Chụp ảnh phần Lô và Hạn Sử dụng trên vỏ hộp, rồi AI nó đọc và trả về kết quả. Nhưng cách này không nhanh và khá tốn công, chúng ta có thể sử dụng các thư viện giải mã OCR để đọc chữ và số qua camera điện thoại được không?
+1 Cách nữa, đó là, anh để nhân viên upload ảnh hoặc File PDF hóa đơn hoặc phiếu xuất kho từ nhà cung cấp, cho AI đọc và trả lại Lô - Hạn Sử Dụng hàng loạt. Dựa vào phần "Ánh Xạ" sản phẩm trong phần Quản lý NCC, hệ thống sẽ tự biết được, sản phẩm A của Nhà Cung Cấp trên hóa đơn, sẽ tương ứng với sản phẩm AA trong danh sách sản phẩm của chúng ta. Nên a nghĩ, nút này vẫn cần.
+NÚT 3: QUÉT MÃ VẠCH (Barcode / QR) trên vỏ hộp, Hệ Thống tự động đối chiếu với Barcode sản phẩm đã được nhập sẵn, từ đó đối chiếu sản phẩm có trong danh sách đơn bán hàng hoặc đơn nhập hàng hay không?
+
+NÚT 4: LÀ PHẦN CHÚNG TA ĐỐI CHIẾU HÓA ĐƠN MUA VÀO VÀ HÓA ĐƠN BÁN RA.
+Ví Dụ: hôm nay cần mua vào 100 chai dàu gội đầu Clear.
+
+Hàng về thực tế là 100 chai (đủ)
+Nhưng trên hóa đơn VAT, nhà cung cấp chỉ xuất cho anh 50 chai (Có thể họ xuất nhầm)
+Như vậy, trên kho Hóa Đơn VAT, thì anh chỉ có 50 chai Clear.
+Khi bán hàng, a bấm nút "Xuất Hóa Đơn VAT" thì hệ thống cần biết rằng, giới hạn số lượng cho sản phẩm này chỉ là 50 chai. Và anh sẽ không được xuất vượt quá số lượng này.
+Đồng thời, hệ thống tự ghi nhận: số hóa đơn mua vào tương ứng với sản phẩm này là "So_HD_Mua_0004" - còn số hóa đơn anh xuất ra khi bán là "So_HD_Ban_00010" (tất cả số hóa đơn là a ví dụ, thực tế số hóa đơn là 1 dãy các ký tự khác) => điều này giúp Kế toán không phải đối chiếu lại khi làm báo cáo Thuế nữa.
+Trên đây là 1 số tính năng a cần thêm để phục vụ cho phần "Quản lý KHO VẬN và SẢN PHẨM"

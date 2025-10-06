@@ -40,6 +40,9 @@ export interface ProductFormData {
   hdsd_6_18?: string;
   hdsd_over_18?: string;
 
+  // Lot Management
+  enable_lot_management?: boolean;
+
   // Inventory Settings (separate table)
   inventory_settings?: InventorySettings;
 }

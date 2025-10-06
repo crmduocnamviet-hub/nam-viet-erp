@@ -95,6 +95,12 @@ export const SALE_APP_MENU: MenuItemConfig[] = [
         screenKey: "inventory.combos",
         permissions: ["products.view"],
       },
+      {
+        label: "Đơn mua hàng",
+        key: "/purchase-orders",
+        screenKey: "inventory.purchase-orders",
+        permissions: ["inventory.purchase-orders.view"],
+      },
     ],
   },
   {
