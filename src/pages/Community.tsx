@@ -59,7 +59,7 @@ const CommunityPageContent: React.FC = () => {
             icon={<PlusOutlined />}
             onClick={() => setIsModalOpen(true)}
           >
-            Tạo Đề xuất
+            Tạo Bài Viết
           </Button>
         </Col>
       </Row>
