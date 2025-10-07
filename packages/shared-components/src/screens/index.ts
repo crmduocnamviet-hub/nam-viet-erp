@@ -23,6 +23,7 @@ import CreateProductPage from "./inventory/CreateProductPage";
 import EditProductPage from "./inventory/EditProductPage";
 import PurchaseOrdersPage from "./inventory/PurchaseOrdersPage";
 import ComboListPage from "./inventory/ComboListPage";
+import ProductLotDetailPage from "./inventory/ProductLotDetailPage";
 
 // Screen Imports - Financial
 import CashLedgerPage from "./financial/CashLedgerPage";
@@ -186,6 +187,13 @@ export const SCREEN_REGISTRY: ScreenRegistry = {
     category: "inventory",
     title: "Quản lý Combo",
     description: "Tạo và quản lý combo khuyến mãi sản phẩm",
+  },
+  "inventory.lot-detail": {
+    component: ProductLotDetailPage,
+    permissions: ["inventory.access", "products.view"],
+    category: "inventory",
+    title: "Chi tiết Lô hàng",
+    description: "Xem chi tiết thông tin lô hàng và tồn kho",
   },
 
   // ==================== FINANCIAL SCREENS ====================
@@ -598,6 +606,7 @@ export {
   EditProductPage,
   PurchaseOrdersPage,
   ComboListPage,
+  ProductLotDetailPage,
   // Financial
   CashLedgerPage,
   FinancialTransactionsPage,

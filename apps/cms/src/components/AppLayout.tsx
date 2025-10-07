@@ -323,6 +323,10 @@ const AppLayout: React.FC = () => {
                   element={<EditProductPage />}
                 />
                 <Route
+                  path="/lots/:lotId"
+                  element={<Screen screenKey="inventory.lot-detail" />}
+                />
+                <Route
                   path="/b2b-orders"
                   element={<Screen screenKey="b2b.orders" />}
                 />

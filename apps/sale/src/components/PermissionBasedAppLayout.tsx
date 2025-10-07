@@ -443,6 +443,10 @@ const AppLayoutContent: React.FC = () => {
                   path="/warehouse-lots"
                   element={renderScreen("warehouse.lot-management")}
                 />
+                <Route
+                  path="/lots/:lotId"
+                  element={renderScreen("inventory.lot-detail")}
+                />
                 {/* Fallback route */}
                 <Route path="*" element={<ComingSoon />} />
               </Routes>

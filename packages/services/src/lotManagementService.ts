@@ -715,6 +715,18 @@ export const getProductLots = async (params: {
 };
 
 /**
+ * Delete all lots for a product
+ */
+export const deleteAllProductLots = async (productId: number) => {
+  const { error } = await supabase
+    .from("product_lots")
+    .delete()
+    .eq("product_id", productId);
+
+  return { error };
+};
+
+/**
  * Get total quantities of a product across all warehouses from lots
  * Returns aggregated totals by warehouse and overall total
  */
@@ -878,4 +890,5 @@ export default {
   getProductLots,
   getProductLotTotals,
   getCOGSByLot,
+  deleteAllProductLots,
 };
