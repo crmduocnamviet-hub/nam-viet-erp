@@ -8,12 +8,11 @@ import {
   Input,
   DatePicker,
   InputNumber,
-  Checkbox,
   Button,
   App,
 } from "antd";
 import dayjs from "dayjs";
-import { createProductLot } from "@nam-viet-erp/services";
+import { createProductLotWithInventory } from "@nam-viet-erp/services";
 
 interface AddLotModalProps {
   open: boolean;
@@ -21,7 +20,6 @@ interface AddLotModalProps {
   onSuccess: () => void;
   productId: number;
   warehouses: any[];
-  defaultCostPrice?: number;
 }
 
 const AddLotModal: React.FC<AddLotModalProps> = ({
@@ -30,42 +28,30 @@ const AddLotModal: React.FC<AddLotModalProps> = ({
   onSuccess,
   productId,
   warehouses,
-  defaultCostPrice = 0,
 }) => {
   const [form] = Form.useForm();
   const { notification } = App.useApp();
   const [saving, setSaving] = useState(false);
+  const b2bWarehouse = warehouses.find((wh) => wh.is_b2b_warehouse === true);
 
   const handleFinish = async (values: any) => {
     setSaving(true);
     try {
-      const unitCost = values.final_unit_cost || 0;
-      // If has VAT, calculate unit_price_before_vat (divide by 1.1 to get pre-VAT price)
-      // Otherwise, they're the same
-      const hasVat = values.has_vat_invoice || false;
-      const unitPriceBeforeVat = hasVat ? unitCost / 1.1 : unitCost;
-      const unitPriceWithVat = unitCost;
-
       const lotData = {
         product_id: productId,
-        warehouse_id: values.warehouse_id,
+        warehouse_id: b2bWarehouse.id,
         lot_number: values.lot_number,
+        batch_code: values.batch_code || undefined,
         expiry_date: values.expiry_date
           ? dayjs(values.expiry_date).format("YYYY-MM-DD")
-          : null,
-        manufacturing_date: values.manufacturing_date
-          ? dayjs(values.manufacturing_date).format("YYYY-MM-DD")
-          : null,
-        quantity_received: values.quantity_received || 0,
-        quantity_available: values.quantity_received || 0,
-        unit_price_before_vat: unitPriceBeforeVat,
-        unit_price_with_vat: unitPriceWithVat,
-        final_unit_cost: unitCost,
-        shelf_location: values.shelf_location || null,
-        has_vat_invoice: hasVat,
+          : undefined,
+        received_date: values.received_date
+          ? dayjs(values.received_date).format("YYYY-MM-DD")
+          : undefined,
+        quantity: values.quantity || 0,
       };
 
-      const { error } = await createProductLot(lotData);
+      const { error } = await createProductLotWithInventory(lotData);
 
       if (error) throw error;
 
@@ -93,13 +79,6 @@ const AddLotModal: React.FC<AddLotModalProps> = ({
     onClose();
   };
 
-  // Set default cost price when modal opens
-  React.useEffect(() => {
-    if (open && defaultCostPrice) {
-      form.setFieldsValue({ final_unit_cost: defaultCostPrice });
-    }
-  }, [open, defaultCostPrice, form]);
-
   return (
     <Modal
       title="Thêm lô hàng mới"
@@ -112,21 +91,6 @@ const AddLotModal: React.FC<AddLotModalProps> = ({
         <Row gutter={[16, 16]}>
           <Col xs={24} sm={12}>
             <Form.Item
-              name="warehouse_id"
-              label="Kho"
-              rules={[{ required: true, message: "Vui lòng chọn kho" }]}
-            >
-              <Select
-                placeholder="Chọn kho"
-                options={warehouses.map((wh) => ({
-                  value: wh.id,
-                  label: wh.name,
-                }))}
-              />
-            </Form.Item>
-          </Col>
-          <Col xs={24} sm={12}>
-            <Form.Item
               name="lot_number"
               label="Số lô"
               rules={[{ required: true, message: "Vui lòng nhập số lô" }]}
@@ -135,54 +99,18 @@ const AddLotModal: React.FC<AddLotModalProps> = ({
             </Form.Item>
           </Col>
           <Col xs={24} sm={12}>
-            <Form.Item name="expiry_date" label="Hạn sử dụng (HSD)">
+            <Form.Item name="batch_code" label="Mã lô">
+              <Input placeholder="Ví dụ: BATCH001" />
+            </Form.Item>
+          </Col>
+          <Col xs={24} sm={12}>
+            <Form.Item name="received_date" label="Ngày nhận">
               <DatePicker style={{ width: "100%" }} format="DD/MM/YYYY" />
             </Form.Item>
           </Col>
           <Col xs={24} sm={12}>
-            <Form.Item name="manufacturing_date" label="Ngày sản xuất (NSX)">
+            <Form.Item name="expiry_date" label="Hạn sử dụng">
               <DatePicker style={{ width: "100%" }} format="DD/MM/YYYY" />
-            </Form.Item>
-          </Col>
-          <Col xs={24} sm={12}>
-            <Form.Item
-              name="quantity_received"
-              label="Số lượng nhập"
-              rules={[{ required: true, message: "Vui lòng nhập số lượng" }]}
-            >
-              <InputNumber
-                style={{ width: "100%" }}
-                min={0}
-                placeholder="0"
-              />
-            </Form.Item>
-          </Col>
-          <Col xs={24} sm={12}>
-            <Form.Item
-              name="final_unit_cost"
-              label="Giá vốn"
-              rules={[{ required: true, message: "Vui lòng nhập giá vốn" }]}
-            >
-              <InputNumber
-                style={{ width: "100%" }}
-                min={0}
-                placeholder="0"
-                addonAfter="VNĐ"
-                formatter={(value) =>
-                  `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ".")
-                }
-                parser={(value) => value!.replace(/\./g, "") as never}
-              />
-            </Form.Item>
-          </Col>
-          <Col xs={24} sm={12}>
-            <Form.Item name="shelf_location" label="Vị trí kệ">
-              <Input placeholder="Ví dụ: A1-R3-L2" />
-            </Form.Item>
-          </Col>
-          <Col xs={24} sm={12}>
-            <Form.Item name="has_vat_invoice" valuePropName="checked">
-              <Checkbox>Có hóa đơn VAT</Checkbox>
             </Form.Item>
           </Col>
         </Row>

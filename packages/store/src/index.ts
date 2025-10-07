@@ -6,6 +6,9 @@ export * from './b2bOrderStore';
 export * from './posStore';
 export * from './comboStore';
 export * from './inventoryStore';
+export * from './productStore';
+export * from './warehouseStore';
+export * from './lotManagementStore';
 
 // Export services
 export * from './services/employeeService';

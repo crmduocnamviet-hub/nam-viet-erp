@@ -220,6 +220,7 @@ interface IInventory {
   created_at?: string;
   product_id: number;
   warehouse_id: number;
+  lot_id?: number | null;
   quantity: number;
   min_stock: number;
   max_stock: number;
@@ -534,40 +535,12 @@ interface IPurchaseOrderItemWithProduct extends IPurchaseOrderItem {
 interface ProductLot {
   id: number;
   product_id: number;
-  warehouse_id: number;
   lot_number: string;
-  batch_code?: string;
-  serial_number?: string;
-  manufacturing_date?: string;
-  expiry_date?: string;
-  received_date: string;
-  quantity_received: number;
-  quantity_available: number;
-  quantity_reserved: number;
-  quantity_sold: number;
-  quantity_damaged: number;
-  quantity_returned: number;
-  unit_price_before_vat: number;
-  vat_percent: number;
-  unit_price_with_vat: number;
-  discount_percent: number;
-  discount_amount: number;
-  final_unit_cost: number;
-  purchase_order_id?: number;
-  supplier_id?: number;
-  has_vat_invoice: boolean;
-  vat_invoice_received: number;
-  vat_invoice_sold: number;
-  barcode?: string;
-  qr_code?: string;
-  shelf_location?: string;
-  aisle?: string;
-  rack?: string;
-  level?: string;
-  status: string;
-  quality_status: string;
-  quality_notes?: string;
-  notes?: string;
+  batch_code?: string | null;
+  expiry_date?: string | null;
+  received_date?: string | null;
+  created_at?: string;
+  updated_at?: string;
   created_by?: string;
 }
 
@@ -623,6 +596,8 @@ interface BarcodeVerificationResult {
 interface ProductLotWithDetails extends ProductLot {
   product_name: string;
   product_sku: string;
-  warehouse_name: string;
+  warehouse_id?: number;
+  warehouse_name?: string;
+  quantity_available?: number;
   days_until_expiry?: number;
 }

@@ -28,6 +28,7 @@ import {
   DollarCircleOutlined,
   HomeOutlined,
   QrcodeOutlined,
+  DeleteOutlined,
 } from "@ant-design/icons";
 import ImageUpload from "./ImageUpload";
 import {
@@ -37,6 +38,7 @@ import {
   getProductLots,
   createProductLot,
   deleteAllProductLots,
+  deleteProductLot,
 } from "@nam-viet-erp/services";
 import PdfUpload from "./PdfUpload";
 import QRScannerModal from "./QRScannerModal";
@@ -71,6 +73,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
   const [loadingWarehouses, setLoadingWarehouses] = useState(false);
   const [productLots, setProductLots] = useState<any[]>([]);
   const [isAddLotModalOpen, setIsAddLotModalOpen] = useState(false);
+  const [selectedWarehouseFilter, setSelectedWarehouseFilter] = useState<number | "all">("all");
 
   // Watch enable_lot_management field
   const enableLotManagement = Form.useWatch("enable_lot_management", form);
@@ -94,7 +97,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
   };
 
   // Fetch lots for product if it exists and has lot management enabled
-  const fetchProductLots = async () => {
+  const fetchProductLots = async (warehouseFilter?: number | "all") => {
     // Check both initial data and current form state
     const isLotManagementEnabled =
       enableLotManagement || initialData?.enable_lot_management;
@@ -105,8 +108,10 @@ const ProductForm: React.FC<ProductFormProps> = ({
     }
 
     try {
+      const filter = warehouseFilter ?? selectedWarehouseFilter;
       const { data, error } = await getProductLots({
         productId: initialData.id,
+        warehouseId: filter === "all" ? undefined : filter,
       });
 
       if (error) {
@@ -555,16 +560,35 @@ const ProductForm: React.FC<ProductFormProps> = ({
                   </Col>
                 )}
             </Row>
+
+            {/* Warehouse filter */}
+            {initialData?.id && enableLotManagement && (
+              <Row style={{ marginBottom: 16 }}>
+                <Col span={24}>
+                  <span style={{ marginRight: 8 }}>Lọc theo kho:</span>
+                  <Select
+                    value={selectedWarehouseFilter}
+                    onChange={async (value) => {
+                      setSelectedWarehouseFilter(value);
+                      await fetchProductLots(value);
+                    }}
+                    style={{ width: 200 }}
+                    options={[
+                      { value: "all", label: "Tất cả kho" },
+                      ...warehouses.map((wh) => ({
+                        value: wh.id,
+                        label: wh.name,
+                      })),
+                    ]}
+                  />
+                </Col>
+              </Row>
+            )}
+
             {/* Show lots section if product exists and lot management is enabled */}
             {initialData?.id && enableLotManagement && !!productLots.length && (
               <Table
-                dataSource={productLots.filter((lot) => {
-                  // Only show lots from B2B warehouses
-                  const warehouse = warehouses.find(
-                    (wh) => wh.id === lot.warehouse_id
-                  );
-                  return warehouse?.is_b2b_warehouse === true;
-                })}
+                dataSource={productLots}
                 rowKey="id"
                 pagination={false}
                 scroll={{ x: 600 }}
@@ -592,6 +616,16 @@ const ProductForm: React.FC<ProductFormProps> = ({
                         {text}
                       </Button>
                     ),
+                  },
+                  {
+                    title: "Kho",
+                    dataIndex: "warehouse_id",
+                    key: "warehouse",
+                    width: 150,
+                    render: (warehouseId) => {
+                      const warehouse = warehouses.find((wh) => wh.id === warehouseId);
+                      return warehouse?.name || "-";
+                    },
                   },
                   {
                     title: "Trạng thái",
@@ -634,6 +668,52 @@ const ProductForm: React.FC<ProductFormProps> = ({
                     align: "right" as const,
                     render: (qty) => (
                       <Tag color={qty > 0 ? "green" : "red"}>{qty}</Tag>
+                    ),
+                  },
+                  {
+                    title: "Thao tác",
+                    key: "action",
+                    width: 80,
+                    align: "center" as const,
+                    render: (_, record) => (
+                      <Button
+                        type="text"
+                        danger
+                        size="small"
+                        icon={<DeleteOutlined />}
+                        onClick={async () => {
+                          if (!initialData?.id) return;
+
+                          const confirmed = window.confirm(
+                            `Bạn có chắc chắn muốn xóa lô "${record.lot_number}"?`
+                          );
+
+                          if (!confirmed) return;
+
+                          try {
+                            const { error } = await deleteProductLot({
+                              lotId: record.id,
+                              productId: initialData.id,
+                              warehouseId: record.warehouse_id,
+                            });
+
+                            if (error) throw error;
+
+                            notification.success({
+                              message: "Đã xóa!",
+                              description: `Lô "${record.lot_number}" đã được xóa thành công.`,
+                            });
+
+                            // Refresh lots
+                            await fetchProductLots();
+                          } catch (error: any) {
+                            notification.error({
+                              message: "Lỗi xóa lô",
+                              description: error.message || "Không thể xóa lô hàng.",
+                            });
+                          }
+                        }}
+                      />
                     ),
                   },
                 ]}
@@ -817,7 +897,6 @@ const ProductForm: React.FC<ProductFormProps> = ({
           onSuccess={fetchProductLots}
           productId={initialData.id}
           warehouses={warehouses}
-          defaultCostPrice={form.getFieldValue("cost_price")}
         />
       )}
     </Form>
