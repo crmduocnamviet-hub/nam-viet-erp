@@ -1,6 +1,9 @@
 import React from "react";
 import useFetchStore, { fetchStore } from "../fetchStore";
 type Updater<T = any> = (data?: T) => T;
+
+export const getQueryKey = (key: any[]) => key.join("%2s");
+
 /**
  * @name useQuery
  * @param key string
@@ -15,14 +18,17 @@ const useQuery = <T = any>({
   gcTime = 300000,
   delayTime = 0,
 }: {
-  key: string[];
+  key: any[];
   queryFn?: () => Promise<T>;
   disableCache?: boolean;
   gcTime?: number;
   delayTime?: number;
 }) => {
-  const _key = key.join("%2s");
+  const _key = getQueryKey(key);
   const fetch = useFetchStore((state) => state.fetch);
+  const refetch = useFetchStore(
+    (state) => state.fetchData?.[_key]?.fetch ?? null
+  );
   const data = useFetchStore((state) => state.fetchData?.[_key]?.data ?? null);
   const isError = useFetchStore(
     (state) => state.fetchData?.[_key]?.isError ?? false
@@ -51,6 +57,17 @@ const useQuery = <T = any>({
     }
   };
 
+  const refetchData = async () => {
+    if (
+      (!data ||
+        disableCache ||
+        (lastFetch !== null && Date.now() - lastFetch.getTime() > gcTime)) &&
+      !!refetch
+    ) {
+      refetch();
+    }
+  };
+
   React.useEffect(() => {
     if (delayTime) {
       setTimeout(() => {
@@ -67,7 +84,7 @@ const useQuery = <T = any>({
     isError,
     isRefreshing,
     error,
-    refetch: fetchData,
+    refetch: refetchData,
   };
 };
 

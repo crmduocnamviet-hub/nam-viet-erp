@@ -25,6 +25,3 @@ export * from "./providers/ScreenProvider";
 // Utils
 export * from "./utils/menuGenerator";
 export * from "./utils/b2bOrder";
-
-// Types
-export * from "./types/product";

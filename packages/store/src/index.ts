@@ -1,3 +1,9 @@
+import {
+  default as _useQuery,
+  setQueryData as _setQueryData,
+  getQueryData as _getQueryData,
+} from "./hooks/useQuery";
+
 // Export all stores
 export * from "./authStore";
 export * from "./employeeStore";
@@ -10,6 +16,7 @@ export * from "./productStore";
 export * from "./warehouseStore";
 export * from "./lotManagementStore";
 export * from "./fetchStore";
+export * from "./fetchSubmitStore";
 
 export { FETCH_QUERY_KEY } from "./constants";
 
@@ -20,7 +27,14 @@ export * from "./services/employeeService";
 export * from "./hooks/useInitializeEmployee";
 export * from "./hooks/useInitializeB2BOrder";
 export * from "./hooks/useInitializeInventory";
-export * from "./hooks/useQuery";
+export * from "./hooks/useInventory";
+export * from "./hooks/useProductLot";
+export * from "./hooks/useProduct";
+export * from "./hooks/useSubmitQuery";
+
+export const useQuery = _useQuery;
+export const setQueryData = _setQueryData;
+export const getQueryData = _getQueryData;
 
 // Re-export zustand for convenience
 export { create } from "zustand";

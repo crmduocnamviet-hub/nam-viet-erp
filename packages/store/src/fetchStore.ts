@@ -8,6 +8,7 @@ interface QueriesData<T = any> {
   isError: boolean;
   error: any;
   lastFetch: Date | null;
+  fetch?: () => Promise<any>;
 }
 
 type FetchStore = {
@@ -38,6 +39,7 @@ export const fetchStore = create<FetchStore, any>(
           isError: false,
           error: null,
           lastFetch: null,
+          fetch: callback,
         };
       });
       try {
@@ -71,6 +73,7 @@ export const fetchStore = create<FetchStore, any>(
             isRefreshing: oldData?.isRefreshing || false,
             lastFetch: new Date(),
             data: data,
+            fetch: oldData?.fetch,
           };
         });
       } catch (e) {}

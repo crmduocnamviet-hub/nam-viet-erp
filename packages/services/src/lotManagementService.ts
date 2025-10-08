@@ -808,6 +808,39 @@ export const getLotById = async (lotId: number) => {
   return { data, error };
 };
 
+export const fetchProductLot = async (lotId: number) => {
+  const { data: lotData } = await supabase
+    .from("product_lots")
+    .select(
+      `
+      *,
+      products (
+        name,
+        sku
+      )
+    `
+    )
+    .eq("id", lotId)
+    .single();
+  return lotData;
+};
+
+export const fetchInventoryByLotId = async (lotId: number) => {
+  const { data: inventoryData } = await supabase
+    .from("inventory")
+    .select(
+      `*,
+      warehouses (
+        name
+      )
+    `
+    )
+    .eq("lot_id", lotId)
+    .order("warehouse_id");
+
+  return inventoryData;
+};
+
 /**
  * Fetch lot detail with inventory across all warehouses
  * Shows inventory quantities for this lot in each warehouse

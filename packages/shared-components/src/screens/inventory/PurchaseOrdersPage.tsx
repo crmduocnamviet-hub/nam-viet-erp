@@ -14,7 +14,10 @@ import {
 } from "antd";
 import { PlusOutlined, RobotOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
-import { getPurchaseOrder, autoGeneratePurchaseOrders } from "@nam-viet-erp/services";
+import {
+  getPurchaseOrder,
+  autoGeneratePurchaseOrders,
+} from "@nam-viet-erp/services";
 
 const { Title } = Typography;
 const { Search } = Input;
@@ -24,7 +27,9 @@ interface PurchaseOrdersPageProps {
   employee?: any;
 }
 
-const PurchaseOrdersContent: React.FC<PurchaseOrdersPageProps> = ({ employee }) => {
+const PurchaseOrdersContent: React.FC<PurchaseOrdersPageProps> = ({
+  employee,
+}) => {
   const { notification, modal } = AntApp.useApp();
   const [purchaseOrders, setPurchaseOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -56,7 +61,8 @@ const PurchaseOrdersContent: React.FC<PurchaseOrdersPageProps> = ({ employee }) 
     if (!employee?.warehouse_id) {
       notification.error({
         message: "Lỗi",
-        description: "Bạn chưa được gán kho hàng. Vui lòng liên hệ quản trị viên.",
+        description:
+          "Bạn chưa được gán kho hàng. Vui lòng liên hệ quản trị viên.",
       });
       return;
     }

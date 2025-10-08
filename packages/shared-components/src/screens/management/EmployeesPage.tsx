@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Card,
   Table,
@@ -17,7 +17,7 @@ import {
   Popconfirm,
   Avatar,
   Tooltip,
-} from 'antd';
+} from "antd";
 import {
   UserOutlined,
   PlusOutlined,
@@ -27,13 +27,13 @@ import {
   MedicineBoxOutlined,
   CustomerServiceOutlined,
   UserAddOutlined,
-} from '@ant-design/icons';
+} from "@ant-design/icons";
 import {
   getEmployees,
   createEmployee,
   updateEmployee,
   deleteEmployee,
-} from '@nam-viet-erp/services';
+} from "@nam-viet-erp/services";
 
 const { Title, Text } = Typography;
 const { Search } = Input;
@@ -49,17 +49,19 @@ const EmployeesPage: React.FC = () => {
   const { notification } = App.useApp();
   const [employees, setEmployees] = useState<IEmployee[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedRole, setSelectedRole] = useState<string>('all');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedRole, setSelectedRole] = useState<string>("all");
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingEmployee, setEditingEmployee] = useState<IEmployee | null>(null);
+  const [editingEmployee, setEditingEmployee] = useState<IEmployee | null>(
+    null
+  );
   const [stats, setStats] = useState({
     total: 0,
     inventoryStaff: 0,
     medicalStaff: 0,
     deliveryStaff: 0,
     salesStaff: 0,
-    active: 0
+    active: 0,
   });
   const [form] = Form.useForm();
 
@@ -72,13 +74,13 @@ const EmployeesPage: React.FC = () => {
       setLoading(true);
       const { data, error } = await getEmployees({
         search: searchTerm,
-        roleName: selectedRole !== 'all' ? selectedRole : undefined,
+        roleName: selectedRole !== "all" ? selectedRole : undefined,
         limit: 100,
       });
 
       if (error) {
         notification.error({
-          message: 'Lỗi tải dữ liệu',
+          message: "Lỗi tải dữ liệu",
           description: error.message,
         });
       } else {
@@ -87,8 +89,8 @@ const EmployeesPage: React.FC = () => {
       }
     } catch (error) {
       notification.error({
-        message: 'Lỗi hệ thống',
-        description: 'Không thể tải danh sách nhân viên',
+        message: "Lỗi hệ thống",
+        description: "Không thể tải danh sách nhân viên",
       });
     } finally {
       setLoading(false);
@@ -97,11 +99,19 @@ const EmployeesPage: React.FC = () => {
 
   const calculateStats = (employeeData: IEmployee[]) => {
     const total = employeeData.length;
-    const inventoryStaff = employeeData.filter(emp => emp.role_name === 'inventory-staff').length;
-    const medicalStaff = employeeData.filter(emp => emp.role_name === 'medical-staff').length;
-    const deliveryStaff = employeeData.filter(emp => emp.role_name === 'delivery-staff').length;
-    const salesStaff = employeeData.filter(emp => emp.role_name === 'sales-staff').length;
-    const active = employeeData.filter(emp => emp.is_active).length;
+    const inventoryStaff = employeeData.filter(
+      (emp) => emp.role_name === "inventory-staff"
+    ).length;
+    const medicalStaff = employeeData.filter(
+      (emp) => emp.role_name === "medical-staff"
+    ).length;
+    const deliveryStaff = employeeData.filter(
+      (emp) => emp.role_name === "delivery-staff"
+    ).length;
+    const salesStaff = employeeData.filter(
+      (emp) => emp.role_name === "sales-staff"
+    ).length;
+    const active = employeeData.filter((emp) => emp.is_active).length;
 
     setStats({
       total,
@@ -109,7 +119,7 @@ const EmployeesPage: React.FC = () => {
       medicalStaff,
       deliveryStaff,
       salesStaff,
-      active
+      active,
     });
   };
 
@@ -119,12 +129,12 @@ const EmployeesPage: React.FC = () => {
 
       if (error) {
         notification.error({
-          message: 'Lỗi tạo nhân viên',
+          message: "Lỗi tạo nhân viên",
           description: error.message,
         });
       } else {
         notification?.success({
-          message: 'Tạo nhân viên thành công!',
+          message: "Tạo nhân viên thành công!",
           description: `Đã tạo nhân viên ${values.full_name}`,
         });
         setIsModalOpen(false);
@@ -133,8 +143,8 @@ const EmployeesPage: React.FC = () => {
       }
     } catch (error) {
       notification.error({
-        message: 'Lỗi hệ thống',
-        description: 'Không thể tạo nhân viên mới',
+        message: "Lỗi hệ thống",
+        description: "Không thể tạo nhân viên mới",
       });
     }
   };
@@ -143,16 +153,19 @@ const EmployeesPage: React.FC = () => {
     if (!editingEmployee) return;
 
     try {
-      const { error } = await updateEmployee(editingEmployee.employee_id, values);
+      const { error } = await updateEmployee(
+        editingEmployee.employee_id,
+        values
+      );
 
       if (error) {
         notification.error({
-          message: 'Lỗi cập nhật nhân viên',
+          message: "Lỗi cập nhật nhân viên",
           description: error.message,
         });
       } else {
         notification?.success({
-          message: 'Cập nhật nhân viên thành công!',
+          message: "Cập nhật nhân viên thành công!",
           description: `Đã cập nhật thông tin ${values.full_name}`,
         });
         setIsModalOpen(false);
@@ -162,32 +175,35 @@ const EmployeesPage: React.FC = () => {
       }
     } catch (error) {
       notification.error({
-        message: 'Lỗi hệ thống',
-        description: 'Không thể cập nhật nhân viên',
+        message: "Lỗi hệ thống",
+        description: "Không thể cập nhật nhân viên",
       });
     }
   };
 
-  const handleDeleteEmployee = async (employeeId: string, employeeName: string) => {
+  const handleDeleteEmployee = async (
+    employeeId: string,
+    employeeName: string
+  ) => {
     try {
       const { error } = await deleteEmployee(employeeId);
 
       if (error) {
         notification.error({
-          message: 'Lỗi xóa nhân viên',
+          message: "Lỗi xóa nhân viên",
           description: error.message,
         });
       } else {
         notification?.success({
-          message: 'Xóa nhân viên thành công!',
+          message: "Xóa nhân viên thành công!",
           description: `Đã xóa nhân viên ${employeeName}`,
         });
         loadEmployees();
       }
     } catch (error) {
       notification.error({
-        message: 'Lỗi hệ thống',
-        description: 'Không thể xóa nhân viên',
+        message: "Lỗi hệ thống",
+        description: "Không thể xóa nhân viên",
       });
     }
   };
@@ -210,20 +226,20 @@ const EmployeesPage: React.FC = () => {
 
   const getRoleIcon = (role: string) => {
     switch (role) {
-      case 'BacSi':
-        return <UserOutlined style={{ color: '#1890ff' }} />;
-      case 'DuocSi':
-        return <MedicineBoxOutlined style={{ color: '#52c41a' }} />;
-      case 'LeTan':
-        return <CustomerServiceOutlined style={{ color: '#fa8c16' }} />;
-      case 'inventory-staff':
-        return <MedicineBoxOutlined style={{ color: '#722ed1' }} />;
-      case 'medical-staff':
-        return <UserOutlined style={{ color: '#13c2c2' }} />;
-      case 'delivery-staff':
-        return <CustomerServiceOutlined style={{ color: '#eb2f96' }} />;
-      case 'sales-staff':
-        return <UserOutlined style={{ color: '#f5222d' }} />;
+      case "BacSi":
+        return <UserOutlined style={{ color: "#1890ff" }} />;
+      case "DuocSi":
+        return <MedicineBoxOutlined style={{ color: "#52c41a" }} />;
+      case "LeTan":
+        return <CustomerServiceOutlined style={{ color: "#fa8c16" }} />;
+      case "inventory-staff":
+        return <MedicineBoxOutlined style={{ color: "#722ed1" }} />;
+      case "medical-staff":
+        return <UserOutlined style={{ color: "#13c2c2" }} />;
+      case "delivery-staff":
+        return <CustomerServiceOutlined style={{ color: "#eb2f96" }} />;
+      case "sales-staff":
+        return <UserOutlined style={{ color: "#f5222d" }} />;
       default:
         return <UserOutlined />;
     }
@@ -231,41 +247,41 @@ const EmployeesPage: React.FC = () => {
 
   const getRoleColor = (role: string) => {
     switch (role) {
-      case 'BacSi':
-        return 'blue';
-      case 'DuocSi':
-        return 'green';
-      case 'LeTan':
-        return 'orange';
-      case 'inventory-staff':
-        return 'purple';
-      case 'medical-staff':
-        return 'cyan';
-      case 'delivery-staff':
-        return 'magenta';
-      case 'sales-staff':
-        return 'red';
+      case "BacSi":
+        return "blue";
+      case "DuocSi":
+        return "green";
+      case "LeTan":
+        return "orange";
+      case "inventory-staff":
+        return "purple";
+      case "medical-staff":
+        return "cyan";
+      case "delivery-staff":
+        return "magenta";
+      case "sales-staff":
+        return "red";
       default:
-        return 'default';
+        return "default";
     }
   };
 
   const getRoleName = (role: string) => {
     switch (role) {
-      case 'BacSi':
-        return 'Bác sĩ';
-      case 'DuocSi':
-        return 'Dược sĩ';
-      case 'LeTan':
-        return 'Lễ tân';
-      case 'inventory-staff':
-        return 'Nhân Viên Kho';
-      case 'medical-staff':
-        return 'Nhân Viên Y Tế';
-      case 'delivery-staff':
-        return 'Nhân Viên Giao Hàng';
-      case 'sales-staff':
-        return 'Nhân Viên Kinh Doanh';
+      case "BacSi":
+        return "Bác sĩ";
+      case "DuocSi":
+        return "Dược sĩ";
+      case "LeTan":
+        return "Lễ tân";
+      case "inventory-staff":
+        return "Nhân Viên Kho";
+      case "medical-staff":
+        return "Nhân Viên Y Tế";
+      case "delivery-staff":
+        return "Nhân Viên Giao Hàng";
+      case "sales-staff":
+        return "Nhân Viên Kinh Doanh";
       default:
         return role;
     }
@@ -273,8 +289,8 @@ const EmployeesPage: React.FC = () => {
 
   const columns = [
     {
-      title: 'Nhân viên',
-      key: 'employee',
+      title: "Nhân viên",
+      key: "employee",
       render: (record: IEmployee) => (
         <Space>
           <Avatar size={40} icon={getRoleIcon(record.role_name)} />
@@ -287,43 +303,43 @@ const EmployeesPage: React.FC = () => {
       ),
     },
     {
-      title: 'Vai trò',
-      dataIndex: 'role_name',
-      key: 'role_name',
+      title: "Vai trò",
+      dataIndex: "role_name",
+      key: "role_name",
       render: (role: string) => (
         <Tag color={getRoleColor(role)} icon={getRoleIcon(role)}>
           {getRoleName(role)}
         </Tag>
       ),
       filters: [
-        { text: 'Bác sĩ', value: 'BacSi' },
-        { text: 'Dược sĩ', value: 'DuocSi' },
-        { text: 'Lễ tân', value: 'LeTan' },
-        { text: 'Nhân Viên Kho', value: 'inventory-staff' },
-        { text: 'Nhân Viên Y Tế', value: 'medical-staff' },
-        { text: 'Nhân Viên Giao Hàng', value: 'delivery-staff' },
-        { text: 'Nhân Viên Kinh Doanh', value: 'sales-staff' },
+        { text: "Bác sĩ", value: "BacSi" },
+        { text: "Dược sĩ", value: "DuocSi" },
+        { text: "Lễ tân", value: "LeTan" },
+        { text: "Nhân Viên Kho", value: "inventory-staff" },
+        { text: "Nhân Viên Y Tế", value: "medical-staff" },
+        { text: "Nhân Viên Giao Hàng", value: "delivery-staff" },
+        { text: "Nhân Viên Kinh Doanh", value: "sales-staff" },
       ],
       onFilter: (value: any, record: IEmployee) => record.role_name === value,
     },
     {
-      title: 'Trạng thái',
-      dataIndex: 'is_active',
-      key: 'is_active',
+      title: "Trạng thái",
+      dataIndex: "is_active",
+      key: "is_active",
       render: (isActive: boolean) => (
-        <Tag color={isActive ? 'success' : 'error'}>
-          {isActive ? 'Hoạt động' : 'Không hoạt động'}
+        <Tag color={isActive ? "success" : "error"}>
+          {isActive ? "Hoạt động" : "Không hoạt động"}
         </Tag>
       ),
       filters: [
-        { text: 'Hoạt động', value: true },
-        { text: 'Không hoạt động', value: false },
+        { text: "Hoạt động", value: true },
+        { text: "Không hoạt động", value: false },
       ],
       onFilter: (value: any, record: IEmployee) => record.is_active === value,
     },
     {
-      title: 'Thao tác',
-      key: 'actions',
+      title: "Thao tác",
+      key: "actions",
       render: (record: IEmployee) => (
         <Space>
           <Tooltip title="Chỉnh sửa">
@@ -336,7 +352,9 @@ const EmployeesPage: React.FC = () => {
           <Popconfirm
             title="Xóa nhân viên"
             description={`Bạn có chắc chắn muốn xóa nhân viên ${record.full_name}?`}
-            onConfirm={() => handleDeleteEmployee(record.employee_id, record.full_name)}
+            onConfirm={() =>
+              handleDeleteEmployee(record.employee_id, record.full_name)
+            }
             okText="Xóa"
             cancelText="Hủy"
             okType="danger"
@@ -359,15 +377,15 @@ const EmployeesPage: React.FC = () => {
             Quản lý Nhân viên
           </Title>
         </Col>
-        <Col span={12} style={{ textAlign: 'right' }}>
+        <Col span={12} style={{ textAlign: "right" }}>
           <Button
             type="primary"
             size="large"
             icon={<PlusOutlined />}
             onClick={() => handleOpenModal()}
             style={{
-              background: 'linear-gradient(45deg, #1890ff, #40a9ff)',
-              border: 'none',
+              background: "linear-gradient(45deg, #1890ff, #40a9ff)",
+              border: "none",
             }}
           >
             Thêm nhân viên mới
@@ -383,7 +401,7 @@ const EmployeesPage: React.FC = () => {
               title="Tổng số nhân viên"
               value={stats.total}
               prefix={<UserOutlined />}
-              valueStyle={{ color: '#1890ff' }}
+              valueStyle={{ color: "#1890ff" }}
             />
           </Card>
         </Col>
@@ -393,7 +411,7 @@ const EmployeesPage: React.FC = () => {
               title="NV Kho"
               value={stats.inventoryStaff}
               prefix={<MedicineBoxOutlined />}
-              valueStyle={{ color: '#722ed1' }}
+              valueStyle={{ color: "#722ed1" }}
             />
           </Card>
         </Col>
@@ -403,7 +421,7 @@ const EmployeesPage: React.FC = () => {
               title="NV Y Tế"
               value={stats.medicalStaff}
               prefix={<UserOutlined />}
-              valueStyle={{ color: '#13c2c2' }}
+              valueStyle={{ color: "#13c2c2" }}
             />
           </Card>
         </Col>
@@ -416,7 +434,7 @@ const EmployeesPage: React.FC = () => {
               title="NV Giao Hàng"
               value={stats.deliveryStaff}
               prefix={<CustomerServiceOutlined />}
-              valueStyle={{ color: '#eb2f96' }}
+              valueStyle={{ color: "#eb2f96" }}
             />
           </Card>
         </Col>
@@ -426,7 +444,7 @@ const EmployeesPage: React.FC = () => {
               title="NV Kinh Doanh"
               value={stats.salesStaff}
               prefix={<UserOutlined />}
-              valueStyle={{ color: '#f5222d' }}
+              valueStyle={{ color: "#f5222d" }}
             />
           </Card>
         </Col>
@@ -436,7 +454,7 @@ const EmployeesPage: React.FC = () => {
               title="Đang hoạt động"
               value={stats.active}
               prefix={<UserOutlined />}
-              valueStyle={{ color: '#52c41a' }}
+              valueStyle={{ color: "#52c41a" }}
             />
           </Card>
         </Col>
@@ -458,7 +476,7 @@ const EmployeesPage: React.FC = () => {
             <Select
               placeholder="Lọc theo vai trò"
               size="large"
-              style={{ width: '100%' }}
+              style={{ width: "100%" }}
               value={selectedRole}
               onChange={setSelectedRole}
             >
@@ -466,10 +484,18 @@ const EmployeesPage: React.FC = () => {
               <Select.Option value="BacSi">🩺 Bác sĩ</Select.Option>
               <Select.Option value="DuocSi">💊 Dược sĩ</Select.Option>
               <Select.Option value="LeTan">📞 Lễ tân</Select.Option>
-              <Select.Option value="inventory-staff">📦 Nhân Viên Kho</Select.Option>
-              <Select.Option value="medical-staff">🏥 Nhân Viên Y Tế</Select.Option>
-              <Select.Option value="delivery-staff">🚚 Nhân Viên Giao Hàng</Select.Option>
-              <Select.Option value="sales-staff">💼 Nhân Viên Kinh Doanh</Select.Option>
+              <Select.Option value="inventory-staff">
+                📦 Nhân Viên Kho
+              </Select.Option>
+              <Select.Option value="medical-staff">
+                🏥 Nhân Viên Y Tế
+              </Select.Option>
+              <Select.Option value="delivery-staff">
+                🚚 Nhân Viên Giao Hàng
+              </Select.Option>
+              <Select.Option value="sales-staff">
+                💼 Nhân Viên Kinh Doanh
+              </Select.Option>
             </Select>
           </Col>
         </Row>
@@ -496,7 +522,7 @@ const EmployeesPage: React.FC = () => {
         title={
           <Space>
             <UserAddOutlined />
-            {editingEmployee ? 'Chỉnh sửa nhân viên' : 'Thêm nhân viên mới'}
+            {editingEmployee ? "Chỉnh sửa nhân viên" : "Thêm nhân viên mới"}
           </Space>
         }
         open={isModalOpen}
@@ -507,13 +533,15 @@ const EmployeesPage: React.FC = () => {
         }}
         onOk={form.submit}
         width={600}
-        okText={editingEmployee ? 'Cập nhật' : 'Tạo mới'}
+        okText={editingEmployee ? "Cập nhật" : "Tạo mới"}
         cancelText="Hủy"
       >
         <Form
           form={form}
           layout="vertical"
-          onFinish={editingEmployee ? handleUpdateEmployee : handleCreateEmployee}
+          onFinish={
+            editingEmployee ? handleUpdateEmployee : handleCreateEmployee
+          }
           style={{ marginTop: 16 }}
         >
           <Row gutter={16}>
@@ -521,7 +549,7 @@ const EmployeesPage: React.FC = () => {
               <Form.Item
                 name="full_name"
                 label="Họ và tên"
-                rules={[{ required: true, message: 'Vui lòng nhập họ và tên' }]}
+                rules={[{ required: true, message: "Vui lòng nhập họ và tên" }]}
               >
                 <Input placeholder="Nhập họ và tên" />
               </Form.Item>
@@ -531,8 +559,11 @@ const EmployeesPage: React.FC = () => {
                 name="employee_code"
                 label="Mã nhân viên"
                 rules={[
-                  { required: true, message: 'Vui lòng nhập mã nhân viên' },
-                  { pattern: /^[A-Z0-9]+$/, message: 'Mã nhân viên chỉ chứa chữ hoa và số' }
+                  { required: true, message: "Vui lòng nhập mã nhân viên" },
+                  {
+                    pattern: /^[A-Z0-9]+$/,
+                    message: "Mã nhân viên chỉ chứa chữ hoa và số",
+                  },
                 ]}
               >
                 <Input placeholder="VD: DOC001, PHAR001" />
@@ -545,16 +576,24 @@ const EmployeesPage: React.FC = () => {
               <Form.Item
                 name="role_name"
                 label="Vai trò"
-                rules={[{ required: true, message: 'Vui lòng chọn vai trò' }]}
+                rules={[{ required: true, message: "Vui lòng chọn vai trò" }]}
               >
                 <Select placeholder="Chọn vai trò">
                   <Select.Option value="BacSi">🩺 Bác sĩ</Select.Option>
                   <Select.Option value="DuocSi">💊 Dược sĩ</Select.Option>
                   <Select.Option value="LeTan">📞 Lễ tân</Select.Option>
-                  <Select.Option value="inventory-staff">📦 Nhân Viên Kho</Select.Option>
-                  <Select.Option value="medical-staff">🏥 Nhân Viên Y Tế</Select.Option>
-                  <Select.Option value="delivery-staff">🚚 Nhân Viên Giao Hàng</Select.Option>
-                  <Select.Option value="sales-staff">💼 Nhân Viên Kinh Doanh</Select.Option>
+                  <Select.Option value="inventory-staff">
+                    📦 Nhân Viên Kho
+                  </Select.Option>
+                  <Select.Option value="medical-staff">
+                    🏥 Nhân Viên Y Tế
+                  </Select.Option>
+                  <Select.Option value="delivery-staff">
+                    🚚 Nhân Viên Giao Hàng
+                  </Select.Option>
+                  <Select.Option value="sales-staff">
+                    💼 Nhân Viên Kinh Doanh
+                  </Select.Option>
                 </Select>
               </Form.Item>
             </Col>

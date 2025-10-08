@@ -1,11 +1,11 @@
-export interface InventorySettings {
+interface InventorySettings {
   [warehouseId: number]: {
     min_stock: number;
     max_stock: number;
   };
 }
 
-export interface ProductFormData {
+interface ProductFormData {
   // Basic Info
   name: string;
   sku?: string;
@@ -47,7 +47,7 @@ export interface ProductFormData {
   inventory_settings?: InventorySettings;
 }
 
-export interface ProductData extends Omit<ProductFormData, 'inventory_settings'> {
+interface ProductData extends Omit<ProductFormData, 'inventory_settings'> {
   id?: number;
   is_active?: boolean;
   created_at?: string;

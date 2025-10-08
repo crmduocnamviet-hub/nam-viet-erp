@@ -17,7 +17,6 @@ import {
 } from "@ant-design/icons";
 import ProductForm from "../../components/ProductForm";
 import { createProduct, upsetInventory } from "@nam-viet-erp/services";
-import { ProductFormData } from "../../types/product";
 
 const { Title, Text } = Typography;
 const { useBreakpoint } = Grid;
@@ -62,14 +61,20 @@ const CreateProductPage: React.FC<CreateProductPageProps> = ({
       console.log("Product data:", productData);
 
       // Create product first
-      const { data: createdProduct, error: productError } = await createProduct(productData);
+      const { data: createdProduct, error: productError } = await createProduct(
+        productData
+      );
       if (productError) throw productError;
 
       // Save inventory_settings to inventory table if product was created and settings exist
-      if (createdProduct?.id && inventory_settings && Object.keys(inventory_settings).length > 0) {
+      if (
+        createdProduct?.id &&
+        inventory_settings &&
+        Object.keys(inventory_settings).length > 0
+      ) {
         // Convert inventory_settings to array format for upsert
         const inventoryData = Object.entries(inventory_settings)
-          .filter(([_, settings]) => settings && typeof settings === 'object')
+          .filter(([_, settings]) => settings && typeof settings === "object")
           .map(([warehouseId, settings]) => ({
             product_id: createdProduct.id,
             warehouse_id: parseInt(warehouseId),
@@ -84,7 +89,8 @@ const CreateProductPage: React.FC<CreateProductPageProps> = ({
           console.error("Inventory create error:", inventoryError);
           notification.warning({
             message: "Cảnh báo!",
-            description: "Sản phẩm đã được tạo nhưng có lỗi khi cập nhật tồn kho.",
+            description:
+              "Sản phẩm đã được tạo nhưng có lỗi khi cập nhật tồn kho.",
           });
         }
       }

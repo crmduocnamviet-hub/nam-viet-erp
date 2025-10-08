@@ -1,6 +1,7 @@
 import { useEffect, useCallback } from "react";
 import { useEmployeeStore } from "../employeeStore";
 import { useAuthStore } from "../authStore";
+import { getEmployeeByUserId } from "@nam-viet-erp/services";
 
 /**
  * Hook to initialize employee data on app mount
@@ -17,9 +18,7 @@ import { useAuthStore } from "../authStore";
  * }
  * ```
  */
-export function useInitializeEmployee(
-  getEmployeeAPI: (userId: string) => Promise<{ data: any; error?: any }>
-) {
+export function useInitializeEmployee() {
   const user = useAuthStore((state) => state.user);
   const isAuthenticated = !!user?.id;
   const setEmployee = useEmployeeStore((state) => state.setEmployee);
@@ -36,9 +35,8 @@ export function useInitializeEmployee(
       setLoading(true);
       setError(null);
 
-      const { data: employee, error: employeeError } = await getEmployeeAPI(
-        user.id
-      );
+      const { data: employee, error: employeeError } =
+        await getEmployeeByUserId(user.id);
 
       if (employeeError || !employee) {
         throw new Error(
@@ -59,11 +57,11 @@ export function useInitializeEmployee(
       setError(error.message || "Failed to fetch employee data");
       setLoading(false);
     }
-  }, [user?.id, isAuthenticated, getEmployeeAPI]);
+  }, [user?.id, isAuthenticated]);
 
   useEffect(() => {
     fetchEmployee();
-  }, [fetchEmployee]);
+  }, []);
 
   return { refetch: fetchEmployee };
 }

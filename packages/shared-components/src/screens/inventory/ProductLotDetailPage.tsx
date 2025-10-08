@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useState } from "react";
 import {
   Card,
   Row,
@@ -12,41 +12,27 @@ import {
   Space,
 } from "antd";
 import { HomeOutlined, AppstoreOutlined } from "@ant-design/icons";
-import { useParams, useNavigate } from "react-router-dom";
-import dayjs from "dayjs";
-import { useLotManagementStore } from "@nam-viet-erp/store";
+import { useParams } from "react-router-dom";
+import {
+  useInventoryOfWarehouseByLotId,
+  useLotManagementStore,
+  useProductLot,
+} from "@nam-viet-erp/store";
 import PageLayout from "../../components/PageLayout";
-import { updateProductLot } from "@nam-viet-erp/services";
 import ProductLotDetailForm from "../../components/ProductLotDetailForm";
 
 const ProductLotDetailPage: React.FC = () => {
   const { lotId } = useParams<{ lotId: string }>();
   const { notification } = App.useApp();
-
   // Store
-  const { updateLotQuantity, fetchLotDetailWithInventory } =
-    useLotManagementStore();
+  const { updateLotQuantity } = useLotManagementStore();
 
-  const [loading, setLoading] = useState(true);
-  const [lotDetail, setLotDetail] = useState<IProductLot | null>(null);
-  const [lotInventory, setLotInventory] = useState<IInventory[]>([]);
+  const { data: lotDetail, isLoading: loading } = useProductLot(Number(lotId));
+  const { data: lotInventory, refetch } = useInventoryOfWarehouseByLotId(
+    Number(lotId)
+  );
   const [editingKey, setEditingKey] = useState<number | null>(null);
   const [quantity, setQuantityValue] = useState<number>(0);
-
-  // Calculate days until expiry
-  const daysUntilExpiry = useMemo(
-    () =>
-      lotDetail?.expiry_date
-        ? dayjs(lotDetail.expiry_date).diff(dayjs(), "day")
-        : null,
-    [lotDetail]
-  );
-
-  useEffect(() => {
-    if (lotId) {
-      fetchLotDetails();
-    }
-  }, [lotId]);
 
   const handleEdit = (record: IInventory) => {
     setEditingKey(record.lot_id);
@@ -68,13 +54,7 @@ const ProductLotDetailPage: React.FC = () => {
       if (error) throw error;
 
       // Refresh data first
-      await fetchLotDetails();
-
-      // Then show success notification and exit edit mode
-      // notification.success({
-      //   message: "Cập nhật thành công!",
-      //   description: `Đã cập nhật lô hàng tại ${record.warehouse_name}`,
-      // });
+      await refetch();
 
       setEditingKey(null);
     } catch (error: any) {
@@ -82,51 +62,6 @@ const ProductLotDetailPage: React.FC = () => {
         message: "Lỗi cập nhật",
         description: error.message || "Không thể cập nhật lô hàng.",
       });
-    } finally {
-    }
-  };
-
-  const fetchLotDetails = async () => {
-    if (!lotId) {
-      notification.error({
-        message: "Lỗi",
-        description: "Không tìm thấy ID lô hàng.",
-      });
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    try {
-      // Fetch lot details and inventory using store
-      const {
-        lotDetail: lotData,
-        inventory,
-        error,
-      } = await fetchLotDetailWithInventory(parseInt(lotId));
-
-      if (error) throw error;
-
-      if (!lotData) {
-        throw new Error("Không tìm thấy thông tin lô hàng");
-      }
-
-      setLotDetail({
-        ...lotData,
-        lot_number: lotData.lot_number,
-        batch_code: lotData.batch_code,
-        expiry_date: lotData.expiry_date,
-        received_date: lotData.received_date,
-      });
-
-      setLotInventory(inventory);
-    } catch (error: any) {
-      notification.error({
-        message: "Lỗi tải dữ liệu",
-        description: error.message || "Không thể tải thông tin lô hàng.",
-      });
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -176,13 +111,16 @@ const ProductLotDetailPage: React.FC = () => {
       <Row gutter={[16, 16]}>
         {/* Lot Information Card */}
         <Col xs={24} lg={12}>
-          {!!lotDetail && <ProductLotDetailForm lot={lotDetail} />}
+          {!!lotDetail && <ProductLotDetailForm lotId={Number(lotId)} />}
         </Col>
         {/* Inventory by Warehouse Table */}
         <Col xs={24} lg={12}>
           <Card title="Thông tin kho lưu trữ">
             <Table
-              dataSource={lotInventory}
+              dataSource={(lotInventory || []).map((i) => ({
+                ...i,
+                warehouse_name: i.warehouses?.name,
+              }))}
               rowKey="lot_id"
               pagination={false}
               columns={[

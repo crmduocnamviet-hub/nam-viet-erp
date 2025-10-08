@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Table, Button, Select, Row, Col, Tag, App, Spin } from "antd";
 import { DeleteOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
@@ -48,7 +48,7 @@ const ProductLotManagement: React.FC<ProductLotManagementProps> = ({
         });
       } else {
         console.log("Fetched product lots:", data);
-        setProductLots(data || []);
+        setProductLots(data ?? []);
       }
     } catch (error: any) {
       console.error("Error:", error);
@@ -64,6 +64,37 @@ const ProductLotManagement: React.FC<ProductLotManagementProps> = ({
 
   if (!isEnabled) {
     return null;
+  }
+
+  const aggregatedLots = useMemo(() => {
+    if (selectedWarehouseFilter !== "all") {
+      return productLots;
+    }
+
+    const lotMap = new Map<number, IProductLot & { quantity: number }>();
+
+    productLots.forEach((lot: IProductLot & { quantity: number }) => {
+      // Use lot.id as the unique key for aggregation
+      const key = lot.id;
+      if (lotMap.has(key)) {
+        const existingLot = lotMap.get(key)!;
+        existingLot.quantity += lot.quantity;
+      } else {
+        // Create a new entry in the map
+        lotMap.set(key, { ...lot });
+      }
+    });
+
+    return Array.from(lotMap.values());
+  }, [productLots, selectedWarehouseFilter]);
+
+  const isAggregatedView = selectedWarehouseFilter === "all";
+
+  const dataSource = isAggregatedView ? aggregatedLots : productLots;
+
+  // Handle case where default lot (id=null) might exist across warehouses
+  if (isAggregatedView) {
+    // This logic can be expanded if default lots need special aggregation
   }
 
   const handleDeleteLot = async (record: any) => {
@@ -99,7 +130,7 @@ const ProductLotManagement: React.FC<ProductLotManagementProps> = ({
     }
   };
 
-  const lotTableColumns = React.useMemo(
+  const lotTableColumns = useMemo(
     () => [
       {
         title: "Lô sản phẩm",
@@ -125,16 +156,17 @@ const ProductLotManagement: React.FC<ProductLotManagementProps> = ({
           </Button>
         ),
       },
-      {
-        title: "Kho",
-        dataIndex: "warehouse_id",
-        key: "warehouse",
-        width: 150,
-        render: (warehouseId: number) => {
-          const warehouse = warehouses.find((wh) => wh.id === warehouseId);
-          return warehouse?.name || "-";
-        },
-      },
+      ...(isAggregatedView
+        ? []
+        : [
+            {
+              title: "Kho",
+              dataIndex: "warehouse_name",
+              key: "warehouse",
+              width: 150,
+              render: (text: string) => text || "-",
+            },
+          ]),
       {
         title: "Trạng thái",
         dataIndex: "expiry_date",
@@ -170,7 +202,7 @@ const ProductLotManagement: React.FC<ProductLotManagementProps> = ({
       },
       {
         title: "Tồn kho",
-        dataIndex: "quantity",
+        dataIndex: "quantity", // This will now show aggregated quantity in the "all" view
         key: "quantity",
         width: 100,
         align: "right" as const,
@@ -194,7 +226,7 @@ const ProductLotManagement: React.FC<ProductLotManagementProps> = ({
         ),
       },
     ],
-    []
+    [isAggregatedView, warehouses]
   );
 
   return (
@@ -230,10 +262,9 @@ const ProductLotManagement: React.FC<ProductLotManagementProps> = ({
       </Row>
 
       <Spin spinning={isFetching} style={{ marginTop: 16 }}>
-        {productLots.length > 0 && !isFetching && (
+        {dataSource.length > 0 && (
           <Table
-            dataSource={productLots.concat()}
-            rowKey="id"
+            dataSource={dataSource}
             pagination={false}
             scroll={{ x: 600 }}
             columns={lotTableColumns}

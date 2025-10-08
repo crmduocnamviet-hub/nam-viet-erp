@@ -35,7 +35,6 @@ import PdfUpload from "./PdfUpload";
 import QRScannerModal from "./QRScannerModal";
 import { getErrorMessage } from "../utils";
 import ProductLotManagement from "./ProductLotManagement";
-import { ProductFormData } from "../types/product";
 import ConfirmButton from "./SubmitButton";
 
 const { Title } = Typography;

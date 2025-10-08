@@ -8,9 +8,7 @@ import {
   useInitializeEmployee,
   useInitializeInventory,
   useAuthStore,
-  useInventoryStore,
 } from "@nam-viet-erp/store";
-import { getEmployeeByUserId } from "@nam-viet-erp/services";
 
 const App: React.FC = () => {
   const { session, loading } = useAuth();
@@ -30,7 +28,7 @@ const App: React.FC = () => {
   }, [session, setUser, setSession]);
 
   // Initialize employee data from store
-  useInitializeEmployee(getEmployeeByUserId);
+  useInitializeEmployee();
 
   // Initialize inventory for employees with inventory permissions
   useInitializeInventory();

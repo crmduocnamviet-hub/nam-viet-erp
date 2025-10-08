@@ -11,6 +11,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import dayjs from "dayjs";
 import ConfirmButton from "./SubmitButton";
 import { updateProductLot } from "@nam-viet-erp/services";
+import { FETCH_QUERY_KEY, useQuery } from "@nam-viet-erp/store";
 
 type ProductLotForm = Omit<
   IProductLot,
@@ -20,28 +21,31 @@ type ProductLotForm = Omit<
   received_date: Date | dayjs.Dayjs | any;
 };
 
-const ProductLotDetailForm: React.FC<{ lot: IProductLot }> = ({ lot }) => {
+const ProductLotDetailForm: React.FC<{ lotId: number }> = ({ lotId }) => {
+  const { data, refetch } = useQuery<IProductLot>({
+    key: [FETCH_QUERY_KEY.PRODUCT_LOT, lotId],
+  });
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [form] = Form.useForm<ProductLotForm>();
   // Calculate days until expiry
   const daysUntilExpiry = useMemo(
     () =>
-      lot?.expiry_date ? dayjs(lot.expiry_date).diff(dayjs(), "day") : null,
-    [lot]
+      data?.expiry_date ? dayjs(data.expiry_date).diff(dayjs(), "day") : null,
+    [data]
   );
 
   useEffect(() => {
     form.setFieldsValue({
-      batch_code: lot?.batch_code,
-      lot_number: lot?.lot_number,
-      expiry_date: dayjs(lot?.expiry_date),
-      received_date: dayjs(lot?.received_date),
+      batch_code: data?.batch_code,
+      lot_number: data?.lot_number,
+      expiry_date: dayjs(data?.expiry_date),
+      received_date: dayjs(data?.received_date),
     });
-  }, [lot]);
+  }, [data]);
 
   // Calculate status
   const getStatus = () => {
-    if (!lot.expiry_date) {
+    if (!data.expiry_date) {
       return { text: "Còn hạn", color: "green" };
     }
     const isExpired = daysUntilExpiry !== null && daysUntilExpiry <= 0;
@@ -56,7 +60,7 @@ const ProductLotDetailForm: React.FC<{ lot: IProductLot }> = ({ lot }) => {
   const onFinish = async (values: ProductLotForm) => {
     setIsSaving(true);
     try {
-      const { error } = await updateProductLot(lot.id, {
+      const { error } = await updateProductLot(data.id, {
         expiry_date: values.expiry_date
           ? dayjs(values.expiry_date).format("YYYY-MM-DD")
           : null,
@@ -66,6 +70,8 @@ const ProductLotDetailForm: React.FC<{ lot: IProductLot }> = ({ lot }) => {
       });
 
       if (error) throw error;
+
+      await refetch();
 
       notification.success({ message: "Thông tin lô hàng đã được cập nhật!" });
     } catch (e) {}
@@ -77,13 +83,13 @@ const ProductLotDetailForm: React.FC<{ lot: IProductLot }> = ({ lot }) => {
       <Card title="Thông tin lô">
         <Descriptions bordered column={1}>
           <Descriptions.Item label="Số lô">
-            <p>{lot?.lot_number || "--"}</p>
+            <p>{data?.lot_number || "--"}</p>
           </Descriptions.Item>
           <Descriptions.Item label="Sản phẩm">
-            <b>{lot?.products?.name}</b>
+            <b>{data?.products?.name}</b>
           </Descriptions.Item>
           <Descriptions.Item label="Mã lô">
-            <p>{lot?.batch_code || "--"}</p>
+            <p>{data?.batch_code || "--"}</p>
           </Descriptions.Item>
           <Descriptions.Item label="Trạng thái">
             <Tag color={status.color}>{status.text}</Tag>
