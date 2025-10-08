@@ -21,7 +21,10 @@ export interface LotManagementState {
   setError: (error: string | null) => void;
 
   // API Actions
-  fetchProductLots: (params: { productId: number; warehouseId?: number }) => Promise<{ data: any[] | null; error: any }>;
+  fetchProductLots: (params: {
+    productId: number;
+    warehouseId?: number;
+  }) => Promise<{ data: any[] | null; error: any }>;
   fetchLotById: (lotId: number) => Promise<{ data: any | null; error: any }>;
   createLot: (lotData: any) => Promise<{ data: any | null; error: any }>;
   updateLotQuantity: (params: {
@@ -30,17 +33,28 @@ export interface LotManagementState {
     warehouseId: number;
     newQuantityAvailable: number;
   }) => Promise<{ error: any }>;
-  deleteLot: (params: { lotId: number; productId: number; warehouseId: number }) => Promise<{ error: any }>;
+  deleteLot: (params: {
+    lotId: number;
+    productId: number;
+    warehouseId: number;
+  }) => Promise<{ error: any }>;
   deleteAllLots: (productId: number) => Promise<{ error: any }>;
-  updateInventoryQuantity: (params: { productId: number; warehouseId: number; quantity: number }) => Promise<{ error: any }>;
+  updateInventoryQuantity: (params: {
+    productId: number;
+    warehouseId: number;
+    quantity: number;
+  }) => Promise<{ error: any }>;
   fetchLotDetailWithInventory: (lotId: number) => Promise<{
-    lotDetail: any | null;
-    inventory: any[];
-    error: any
+    lotDetail: IProductLot | null;
+    inventory: IInventory[];
+    error: any;
   }>;
-  syncLotQuantityToInventory: (params: { productId: number; warehouseId: number }) => Promise<{
+  syncLotQuantityToInventory: (params: {
+    productId: number;
+    warehouseId: number;
+  }) => Promise<{
     totalQuantity: number;
-    error: any
+    error: any;
   }>;
 
   // Utility
@@ -179,7 +193,9 @@ export const useLotManagementStore = create<LotManagementState>()(
         setError(null);
 
         try {
-          const { createProductLotWithInventory } = await import("@nam-viet-erp/services");
+          const { createProductLotWithInventory } = await import(
+            "@nam-viet-erp/services"
+          );
           const { data, error } = await createProductLotWithInventory({
             lot_number: lotData.lot_number,
             product_id: lotData.product_id,
@@ -212,7 +228,9 @@ export const useLotManagementStore = create<LotManagementState>()(
         setError(null);
 
         try {
-          const { updateProductLotQuantity } = await import("@nam-viet-erp/services");
+          const { updateProductLotQuantity } = await import(
+            "@nam-viet-erp/services"
+          );
           const { error } = await updateProductLotQuantity({
             lotId: params.lotId,
             productId: params.productId,
@@ -267,7 +285,9 @@ export const useLotManagementStore = create<LotManagementState>()(
         setError(null);
 
         try {
-          const { deleteAllProductLots } = await import("@nam-viet-erp/services");
+          const { deleteAllProductLots } = await import(
+            "@nam-viet-erp/services"
+          );
           const { error } = await deleteAllProductLots(productId);
 
           if (error) {
@@ -292,7 +312,9 @@ export const useLotManagementStore = create<LotManagementState>()(
         setError(null);
 
         try {
-          const { updateInventoryQuantity } = await import("@nam-viet-erp/services");
+          const { updateInventoryQuantity } = await import(
+            "@nam-viet-erp/services"
+          );
           const { error } = await updateInventoryQuantity(params);
 
           if (error) {
@@ -317,8 +339,11 @@ export const useLotManagementStore = create<LotManagementState>()(
         setError(null);
 
         try {
-          const { fetchLotDetailWithInventory } = await import("@nam-viet-erp/services");
-          const { lotDetail, inventory, error } = await fetchLotDetailWithInventory(lotId);
+          const { fetchLotDetailWithInventory: fetchLotDetail } = await import(
+            "@nam-viet-erp/services"
+          );
+          const { lotDetail, inventory, error } =
+            await fetchLotDetail(lotId);
 
           if (error) {
             setError(error.message || "Failed to fetch lot details");
@@ -329,7 +354,7 @@ export const useLotManagementStore = create<LotManagementState>()(
         } catch (error: any) {
           const errorMsg = error?.message || "Failed to fetch lot details";
           setError(errorMsg);
-          return { lotDetail: null, inventory: [], error };
+          return { lotDetail: null, inventory: [], error } as any;
         } finally {
           setLoadingLot(false);
         }
@@ -339,17 +364,24 @@ export const useLotManagementStore = create<LotManagementState>()(
         const { setError } = get();
 
         try {
-          const { syncLotQuantityToInventory } = await import("@nam-viet-erp/services");
-          const { totalQuantity, error } = await syncLotQuantityToInventory(params);
+          const { syncLotQuantityToInventory } = await import(
+            "@nam-viet-erp/services"
+          );
+          const { totalQuantity, error } = await syncLotQuantityToInventory(
+            params
+          );
 
           if (error) {
-            setError(error.message || "Failed to sync lot quantity to inventory");
+            setError(
+              error.message || "Failed to sync lot quantity to inventory"
+            );
             return { totalQuantity: 0, error };
           }
 
           return { totalQuantity, error: null };
         } catch (error: any) {
-          const errorMsg = error?.message || "Failed to sync lot quantity to inventory";
+          const errorMsg =
+            error?.message || "Failed to sync lot quantity to inventory";
           setError(errorMsg);
           return { totalQuantity: 0, error };
         }
@@ -382,8 +414,12 @@ export const useLotManagementStore = create<LotManagementState>()(
 
 // Selectors
 export const useLots = () => useLotManagementStore((state) => state.lots);
-export const useCurrentLot = () => useLotManagementStore((state) => state.currentLot);
-export const useIsLoadingLots = () => useLotManagementStore((state) => state.isLoadingLots);
-export const useIsLoadingLot = () => useLotManagementStore((state) => state.isLoadingLot);
-export const useIsSavingLot = () => useLotManagementStore((state) => state.isSaving);
+export const useCurrentLot = () =>
+  useLotManagementStore((state) => state.currentLot);
+export const useIsLoadingLots = () =>
+  useLotManagementStore((state) => state.isLoadingLots);
+export const useIsLoadingLot = () =>
+  useLotManagementStore((state) => state.isLoadingLot);
+export const useIsSavingLot = () =>
+  useLotManagementStore((state) => state.isSaving);
 export const useLotError = () => useLotManagementStore((state) => state.error);

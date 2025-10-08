@@ -20,3 +20,10 @@ WHERE enable_lot_management = TRUE;
 -- WHERE category IN ('Thuốc', 'Thực phẩm chức năng', 'Mỹ phẩm')
 -- OR name ILIKE '%thuốc%'
 -- OR name ILIKE '%vitamin%';
+
+ALTER TABLE inventory
+DROP CONSTRAINT inventory_product_id_warehouse_id_key;
+
+DROP INDEX IF EXISTS inventory_product_id_warehouse_id_key;
+
+CREATE UNIQUE INDEX inventory_product_id_warehouse_id_key ON public.inventory USING btree (product_id, warehouse_id, lot_id)

@@ -532,7 +532,7 @@ interface IPurchaseOrderItemWithProduct extends IPurchaseOrderItem {
   product?: IProduct;
 }
 
-interface ProductLot {
+interface IProductLot {
   id: number;
   product_id: number;
   lot_number: string;
@@ -542,6 +542,7 @@ interface ProductLot {
   created_at?: string;
   updated_at?: string;
   created_by?: string;
+  products?: IProduct;
 }
 
 interface VatInvoice {
@@ -593,7 +594,7 @@ interface BarcodeVerificationResult {
   };
 }
 
-interface ProductLotWithDetails extends ProductLot {
+interface ProductLotWithDetails extends IProductLot {
   product_name: string;
   product_sku: string;
   warehouse_id?: number;

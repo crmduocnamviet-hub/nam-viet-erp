@@ -1,60 +1,46 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Card,
   Row,
   Col,
-  Descriptions,
   Table,
   Tag,
   Spin,
   Typography,
   App,
-  Button,
   InputNumber,
   Space,
 } from "antd";
-import { SaveOutlined, CloseOutlined, HomeOutlined, AppstoreOutlined } from "@ant-design/icons";
-import { useParams } from "react-router-dom";
+import { HomeOutlined, AppstoreOutlined } from "@ant-design/icons";
+import { useParams, useNavigate } from "react-router-dom";
 import dayjs from "dayjs";
 import { useLotManagementStore } from "@nam-viet-erp/store";
 import PageLayout from "../../components/PageLayout";
-
-interface LotInventory {
-  lot_id: number;
-  warehouse_id: number;
-  warehouse_name: string;
-  quantity_available: number;
-}
-
-interface ProductLotDetail {
-  id: number;
-  product_id: number;
-  product_name: string;
-  product_sku: string;
-  lot_number: string;
-  batch_code: string | null;
-  expiry_date: string | null;
-  received_date: string | null;
-  days_until_expiry: number | null;
-  created_at: string;
-}
+import { updateProductLot } from "@nam-viet-erp/services";
+import ProductLotDetailForm from "../../components/ProductLotDetailForm";
 
 const ProductLotDetailPage: React.FC = () => {
   const { lotId } = useParams<{ lotId: string }>();
   const { notification } = App.useApp();
 
   // Store
-  const {
-    updateLotQuantity,
-    fetchLotDetailWithInventory,
-  } = useLotManagementStore();
+  const { updateLotQuantity, fetchLotDetailWithInventory } =
+    useLotManagementStore();
 
   const [loading, setLoading] = useState(true);
-  const [lotDetail, setLotDetail] = useState<ProductLotDetail | null>(null);
-  const [lotInventory, setLotInventory] = useState<LotInventory[]>([]);
+  const [lotDetail, setLotDetail] = useState<IProductLot | null>(null);
+  const [lotInventory, setLotInventory] = useState<IInventory[]>([]);
   const [editingKey, setEditingKey] = useState<number | null>(null);
-  const [editingValue, setEditingValue] = useState<number>(0);
-  const [saving, setSaving] = useState(false);
+  const [quantity, setQuantityValue] = useState<number>(0);
+
+  // Calculate days until expiry
+  const daysUntilExpiry = useMemo(
+    () =>
+      lotDetail?.expiry_date
+        ? dayjs(lotDetail.expiry_date).diff(dayjs(), "day")
+        : null,
+    [lotDetail]
+  );
 
   useEffect(() => {
     if (lotId) {
@@ -62,27 +48,21 @@ const ProductLotDetailPage: React.FC = () => {
     }
   }, [lotId]);
 
-  const handleEdit = (record: LotInventory) => {
+  const handleEdit = (record: IInventory) => {
     setEditingKey(record.lot_id);
-    setEditingValue(record.quantity_available);
+    setQuantityValue(record.quantity || 0);
   };
 
-  const handleCancel = () => {
-    setEditingKey(null);
-    setEditingValue(0);
-  };
-
-  const handleSave = async (record: LotInventory) => {
+  const handleSave = async (record: IInventory) => {
     if (!lotDetail) return;
 
-    setSaving(true);
     try {
       // Update inventory quantity using store
       const { error } = await updateLotQuantity({
         lotId: record.lot_id,
         productId: lotDetail.product_id,
         warehouseId: record.warehouse_id,
-        newQuantityAvailable: editingValue,
+        newQuantityAvailable: quantity,
       });
 
       if (error) throw error;
@@ -91,10 +71,10 @@ const ProductLotDetailPage: React.FC = () => {
       await fetchLotDetails();
 
       // Then show success notification and exit edit mode
-      notification.success({
-        message: "Cập nhật thành công!",
-        description: `Đã cập nhật lô hàng tại ${record.warehouse_name}`,
-      });
+      // notification.success({
+      //   message: "Cập nhật thành công!",
+      //   description: `Đã cập nhật lô hàng tại ${record.warehouse_name}`,
+      // });
 
       setEditingKey(null);
     } catch (error: any) {
@@ -103,7 +83,6 @@ const ProductLotDetailPage: React.FC = () => {
         description: error.message || "Không thể cập nhật lô hàng.",
       });
     } finally {
-      setSaving(false);
     }
   };
 
@@ -120,7 +99,11 @@ const ProductLotDetailPage: React.FC = () => {
     setLoading(true);
     try {
       // Fetch lot details and inventory using store
-      const { lotDetail: lotData, inventory, error } = await fetchLotDetailWithInventory(parseInt(lotId));
+      const {
+        lotDetail: lotData,
+        inventory,
+        error,
+      } = await fetchLotDetailWithInventory(parseInt(lotId));
 
       if (error) throw error;
 
@@ -128,22 +111,12 @@ const ProductLotDetailPage: React.FC = () => {
         throw new Error("Không tìm thấy thông tin lô hàng");
       }
 
-      // Calculate days until expiry
-      const daysUntilExpiry = lotData.expiry_date
-        ? dayjs(lotData.expiry_date).diff(dayjs(), "day")
-        : null;
-
       setLotDetail({
-        id: lotData.id,
-        product_id: lotData.product_id,
-        product_name: (lotData.products as any)?.name || "",
-        product_sku: (lotData.products as any)?.sku || "",
+        ...lotData,
         lot_number: lotData.lot_number,
         batch_code: lotData.batch_code,
         expiry_date: lotData.expiry_date,
         received_date: lotData.received_date,
-        days_until_expiry: daysUntilExpiry,
-        created_at: lotData.created_at,
       });
 
       setLotInventory(inventory);
@@ -177,20 +150,6 @@ const ProductLotDetailPage: React.FC = () => {
     );
   }
 
-  // Calculate status
-  const getStatus = () => {
-    if (!lotDetail.expiry_date) {
-      return { text: "Còn hạn", color: "green" };
-    }
-    const isExpired = lotDetail.days_until_expiry !== null && lotDetail.days_until_expiry <= 0;
-    return {
-      text: isExpired ? "Hết hạn" : "Còn hạn",
-      color: isExpired ? "red" : "green",
-    };
-  };
-
-  const status = getStatus();
-
   return (
     <PageLayout
       title={`Chi tiết Lô hàng: ${lotDetail.lot_number}`}
@@ -206,7 +165,7 @@ const ProductLotDetailPage: React.FC = () => {
           icon: <AppstoreOutlined />,
         },
         {
-          title: lotDetail.product_name,
+          title: lotDetail.products?.name,
           href: `/products/edit/${lotDetail.product_id}`,
         },
         {
@@ -217,47 +176,11 @@ const ProductLotDetailPage: React.FC = () => {
       <Row gutter={[16, 16]}>
         {/* Lot Information Card */}
         <Col xs={24} lg={12}>
-          <Card title="Thông tin Lô hàng">
-            <Descriptions bordered column={1}>
-              <Descriptions.Item label="Số lô">
-                <strong>{lotDetail.lot_number}</strong>
-              </Descriptions.Item>
-              <Descriptions.Item label="Sản phẩm">
-                {lotDetail.product_name}
-                <br />
-                <Tag>{lotDetail.product_sku}</Tag>
-              </Descriptions.Item>
-              <Descriptions.Item label="Mã lô">
-                {lotDetail.batch_code || "-"}
-              </Descriptions.Item>
-              <Descriptions.Item label="Trạng thái">
-                <Tag color={status.color}>{status.text}</Tag>
-              </Descriptions.Item>
-              <Descriptions.Item label="Ngày nhận">
-                {lotDetail.received_date
-                  ? dayjs(lotDetail.received_date).format("DD/MM/YYYY")
-                  : "-"}
-              </Descriptions.Item>
-              <Descriptions.Item label="Hạn sử dụng">
-                {lotDetail.expiry_date
-                  ? dayjs(lotDetail.expiry_date).format("DD/MM/YYYY")
-                  : "-"}
-              </Descriptions.Item>
-              <Descriptions.Item label="Còn lại">
-                {lotDetail.days_until_expiry !== null
-                  ? `${lotDetail.days_until_expiry} ngày`
-                  : "-"}
-              </Descriptions.Item>
-              <Descriptions.Item label="Ngày tạo">
-                {dayjs(lotDetail.created_at).format("DD/MM/YYYY HH:mm")}
-              </Descriptions.Item>
-            </Descriptions>
-          </Card>
+          {!!lotDetail && <ProductLotDetailForm lot={lotDetail} />}
         </Col>
-
         {/* Inventory by Warehouse Table */}
         <Col xs={24} lg={12}>
-          <Card title="Tồn kho">
+          <Card title="Thông tin kho lưu trữ">
             <Table
               dataSource={lotInventory}
               rowKey="lot_id"
@@ -271,8 +194,8 @@ const ProductLotDetailPage: React.FC = () => {
                 },
                 {
                   title: "Tồn kho",
-                  dataIndex: "quantity_available",
-                  key: "quantity_available",
+                  dataIndex: "quantity",
+                  key: "quantity",
                   align: "right",
                   render: (qty, record) => {
                     const isEditing = editingKey === record.lot_id;
@@ -281,25 +204,12 @@ const ProductLotDetailPage: React.FC = () => {
                       return (
                         <Space>
                           <InputNumber
-                            value={editingValue}
-                            onChange={(value) => setEditingValue(value || 0)}
+                            value={quantity}
+                            onChange={(value) => setQuantityValue(value || 0)}
                             min={0}
                             style={{ width: 100 }}
                             autoFocus
                             onPressEnter={() => handleSave(record)}
-                          />
-                          <Button
-                            type="primary"
-                            size="small"
-                            icon={<SaveOutlined />}
-                            onClick={() => handleSave(record)}
-                            loading={saving}
-                          />
-                          <Button
-                            size="small"
-                            icon={<CloseOutlined />}
-                            onClick={handleCancel}
-                            disabled={saving}
                           />
                         </Space>
                       );

@@ -13,14 +13,9 @@ import {
   Spin,
   App,
   Checkbox,
-  Alert,
-  Table,
-  Tag,
   Grid,
 } from "antd";
 import type { TabsProps } from "antd";
-import { useNavigate } from "react-router-dom";
-import dayjs from "dayjs";
 
 const { useBreakpoint } = Grid;
 import {
@@ -28,23 +23,20 @@ import {
   DollarCircleOutlined,
   HomeOutlined,
   QrcodeOutlined,
-  DeleteOutlined,
 } from "@ant-design/icons";
 import ImageUpload from "./ImageUpload";
 import {
   enrichProductData,
   extractFromPdf,
   getWarehouse,
-  getProductLots,
-  createProductLot,
   deleteAllProductLots,
-  deleteProductLot,
 } from "@nam-viet-erp/services";
 import PdfUpload from "./PdfUpload";
 import QRScannerModal from "./QRScannerModal";
-import AddLotModal from "./AddLotModal";
 import { getErrorMessage } from "../utils";
+import ProductLotManagement from "./ProductLotManagement";
 import { ProductFormData } from "../types/product";
+import ConfirmButton from "./SubmitButton";
 
 const { Title } = Typography;
 
@@ -63,17 +55,13 @@ const ProductForm: React.FC<ProductFormProps> = ({
 }) => {
   const [form] = Form.useForm();
   const { notification } = App.useApp();
-  const navigate = useNavigate();
   const screens = useBreakpoint();
   const [aiLoading, setAiLoading] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [isQRScannerOpen, setIsQRScannerOpen] = useState(false);
 
-  const [warehouses, setWarehouses] = useState<any[]>([]);
+  const [warehouses, setWarehouses] = useState<IWarehouse[]>([]);
   const [loadingWarehouses, setLoadingWarehouses] = useState(false);
-  const [productLots, setProductLots] = useState<any[]>([]);
-  const [isAddLotModalOpen, setIsAddLotModalOpen] = useState(false);
-  const [selectedWarehouseFilter, setSelectedWarehouseFilter] = useState<number | "all">("all");
 
   // Watch enable_lot_management field
   const enableLotManagement = Form.useWatch("enable_lot_management", form);
@@ -96,52 +84,10 @@ const ProductForm: React.FC<ProductFormProps> = ({
     setLoadingWarehouses(false);
   };
 
-  // Fetch lots for product if it exists and has lot management enabled
-  const fetchProductLots = async (warehouseFilter?: number | "all") => {
-    // Check both initial data and current form state
-    const isLotManagementEnabled =
-      enableLotManagement || initialData?.enable_lot_management;
-
-    if (!initialData?.id || !isLotManagementEnabled) {
-      setProductLots([]);
-      return;
-    }
-
-    try {
-      const filter = warehouseFilter ?? selectedWarehouseFilter;
-      const { data, error } = await getProductLots({
-        productId: initialData.id,
-        warehouseId: filter === "all" ? undefined : filter,
-      });
-
-      if (error) {
-        console.error("Error fetching product lots:", error);
-        notification.error({
-          message: "Lỗi tải danh sách lô",
-          description: error.message,
-        });
-      } else {
-        console.log("Fetched product lots:", data);
-        setProductLots(data || []);
-      }
-    } catch (error: any) {
-      console.error("Error:", error);
-    }
-  };
-
   // Tự động hỏi danh sách kho mỗi khi form được mở
   useEffect(() => {
     fetchWarehouses();
   }, []);
-
-  // Fetch lots when initialData changes or when lot management is toggled
-  useEffect(() => {
-    fetchProductLots();
-  }, [
-    initialData?.id,
-    initialData?.enable_lot_management,
-    enableLotManagement,
-  ]);
 
   const handleExtractFromPdf = async (
     fileContent: string,
@@ -333,9 +279,6 @@ const ProductForm: React.FC<ProductFormProps> = ({
           message: "Đã xóa tất cả lô hàng!",
           description: "Tất cả lô hàng của sản phẩm này đã được xóa.",
         });
-
-        // Clear lots list
-        setProductLots([]);
       } catch (error: any) {
         notification.error({
           message: "Lỗi xóa lô hàng",
@@ -343,7 +286,6 @@ const ProductForm: React.FC<ProductFormProps> = ({
         });
       }
     }
-
     // If lot management is being ENABLED for existing product with inventory
     if (
       initialData?.id &&
@@ -352,58 +294,11 @@ const ProductForm: React.FC<ProductFormProps> = ({
       initialData.inventory_data &&
       Array.isArray(initialData.inventory_data)
     ) {
-      // Create default lots only for B2B warehouses with existing inventory
-      const costPrice = values.cost_price || 0;
-      const hasVat = false; // Default lots don't have VAT
-      const unitPriceBeforeVat = costPrice;
-      const unitPriceWithVat = costPrice;
-
-      // Filter for B2B warehouses only
-      const b2bInventoryData = initialData.inventory_data.filter((inv: any) => {
-        if (inv.quantity <= 0) return false; // Skip warehouses with no stock
-
-        // Find the warehouse in the warehouses list
-        const warehouse = warehouses.find((wh) => wh.id === inv.warehouse_id);
-        return warehouse?.is_b2b_warehouse === true;
+      notification.info({
+        message: "Quản lý lô đã được bật",
+        description:
+          "Lô hàng mặc định sẽ được tạo tự động cho hàng tồn kho hiện có nếu cần.",
       });
-
-      const defaultLotsPromises = b2bInventoryData.map(async (inv: any) => {
-        const lotData = {
-          product_id: initialData.id,
-          warehouse_id: inv.warehouse_id,
-          lot_number: `Mặc định`,
-          expiry_date: null,
-          manufacturing_date: null,
-          quantity_received: inv.quantity,
-          quantity_available: inv.quantity,
-          unit_price_before_vat: unitPriceBeforeVat,
-          unit_price_with_vat: unitPriceWithVat,
-          final_unit_cost: costPrice,
-          shelf_location: null,
-          has_vat_invoice: hasVat,
-        };
-
-        return createProductLot(lotData);
-      });
-
-      try {
-        if (defaultLotsPromises.length > 0) {
-          await Promise.all(defaultLotsPromises);
-          notification.success({
-            message: "Đã tạo lô mặc định!",
-            description: `Đã tạo ${defaultLotsPromises.length} lô mặc định cho kho B2B.`,
-          });
-          // Refresh lots list after creating default lots
-          setTimeout(() => {
-            fetchProductLots();
-          }, 500);
-        }
-      } catch (error: any) {
-        notification.error({
-          message: "Lỗi tạo lô mặc định",
-          description: error.message || "Không thể tạo lô mặc định.",
-        });
-      }
     }
 
     onFinish(finalValues);
@@ -546,177 +441,13 @@ const ProductForm: React.FC<ProductFormProps> = ({
                   </Checkbox>
                 </Form.Item>
               </Col>
-              {initialData?.id &&
-                enableLotManagement &&
-                !!productLots.length && (
-                  <Col>
-                    <Button
-                      type="primary"
-                      size="small"
-                      onClick={() => setIsAddLotModalOpen(true)}
-                    >
-                      Thêm lô hàng mới
-                    </Button>
-                  </Col>
-                )}
             </Row>
 
-            {/* Warehouse filter */}
             {initialData?.id && enableLotManagement && (
-              <Row style={{ marginBottom: 16 }}>
-                <Col span={24}>
-                  <span style={{ marginRight: 8 }}>Lọc theo kho:</span>
-                  <Select
-                    value={selectedWarehouseFilter}
-                    onChange={async (value) => {
-                      setSelectedWarehouseFilter(value);
-                      await fetchProductLots(value);
-                    }}
-                    style={{ width: 200 }}
-                    options={[
-                      { value: "all", label: "Tất cả kho" },
-                      ...warehouses.map((wh) => ({
-                        value: wh.id,
-                        label: wh.name,
-                      })),
-                    ]}
-                  />
-                </Col>
-              </Row>
-            )}
-
-            {/* Show lots section if product exists and lot management is enabled */}
-            {initialData?.id && enableLotManagement && !!productLots.length && (
-              <Table
-                dataSource={productLots}
-                rowKey="id"
-                pagination={false}
-                scroll={{ x: 600 }}
-                columns={[
-                  {
-                    title: "Lô sản phẩm",
-                    dataIndex: "lot_number",
-                    key: "lot_number",
-                    width: 150,
-                    render: (text, record) => (
-                      <Button
-                        type="link"
-                        onClick={() => {
-                          if (record.id) {
-                            navigate(`/lots/${record.id}`);
-                          } else {
-                            notification.error({
-                              message: "Lỗi",
-                              description: "Không tìm thấy ID lô hàng",
-                            });
-                          }
-                        }}
-                        style={{ padding: 0, fontWeight: "bold" }}
-                      >
-                        {text}
-                      </Button>
-                    ),
-                  },
-                  {
-                    title: "Kho",
-                    dataIndex: "warehouse_id",
-                    key: "warehouse",
-                    width: 150,
-                    render: (warehouseId) => {
-                      const warehouse = warehouses.find((wh) => wh.id === warehouseId);
-                      return warehouse?.name || "-";
-                    },
-                  },
-                  {
-                    title: "Trạng thái",
-                    dataIndex: "expiry_date",
-                    key: "status",
-                    width: 120,
-                    render: (date, record) => {
-                      if (!date) return <Tag color="green">Còn hạn</Tag>;
-                      const daysLeft = record.days_until_expiry;
-                      const isExpired = daysLeft <= 0;
-
-                      return (
-                        <Tag color={isExpired ? "red" : "green"}>
-                          {isExpired ? "Hết hạn" : "Còn hạn"}
-                        </Tag>
-                      );
-                    },
-                  },
-                  {
-                    title: "Ngày sản xuất",
-                    dataIndex: "manufacturing_date",
-                    key: "manufacturing_date",
-                    width: 130,
-                    render: (date) =>
-                      date ? dayjs(date).format("DD/MM/YYYY") : "-",
-                  },
-                  {
-                    title: "Hạn sử dụng",
-                    dataIndex: "expiry_date",
-                    key: "expiry_date",
-                    width: 130,
-                    render: (date) =>
-                      date ? dayjs(date).format("DD/MM/YYYY") : "-",
-                  },
-                  {
-                    title: "Tồn kho",
-                    dataIndex: "quantity_available",
-                    key: "quantity_available",
-                    width: 100,
-                    align: "right" as const,
-                    render: (qty) => (
-                      <Tag color={qty > 0 ? "green" : "red"}>{qty}</Tag>
-                    ),
-                  },
-                  {
-                    title: "Thao tác",
-                    key: "action",
-                    width: 80,
-                    align: "center" as const,
-                    render: (_, record) => (
-                      <Button
-                        type="text"
-                        danger
-                        size="small"
-                        icon={<DeleteOutlined />}
-                        onClick={async () => {
-                          if (!initialData?.id) return;
-
-                          const confirmed = window.confirm(
-                            `Bạn có chắc chắn muốn xóa lô "${record.lot_number}"?`
-                          );
-
-                          if (!confirmed) return;
-
-                          try {
-                            const { error } = await deleteProductLot({
-                              lotId: record.id,
-                              productId: initialData.id,
-                              warehouseId: record.warehouse_id,
-                            });
-
-                            if (error) throw error;
-
-                            notification.success({
-                              message: "Đã xóa!",
-                              description: `Lô "${record.lot_number}" đã được xóa thành công.`,
-                            });
-
-                            // Refresh lots
-                            await fetchProductLots();
-                          } catch (error: any) {
-                            notification.error({
-                              message: "Lỗi xóa lô",
-                              description: error.message || "Không thể xóa lô hàng.",
-                            });
-                          }
-                        }}
-                      />
-                    ),
-                  },
-                ]}
+              <ProductLotManagement
+                productId={initialData.id}
+                isEnabled={enableLotManagement}
+                warehouses={warehouses}
               />
             )}
           </Col>
@@ -857,30 +588,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
       </Row>
       <Tabs defaultActiveKey="1" items={items} />
 
-      {/* Submit button */}
-      <div
-        style={{
-          marginTop: 24,
-          paddingTop: 16,
-          borderTop: "1px solid #f0f0f0",
-          display: "flex",
-          justifyContent: "flex-end",
-          gap: "8px",
-        }}
-      >
-        <Button onClick={onClose} size="large">
-          Hủy
-        </Button>
-        <Button
-          type="primary"
-          htmlType="submit"
-          loading={loading}
-          onClick={() => console.log("Submit button clicked")}
-          size="large"
-        >
-          Lưu
-        </Button>
-      </div>
+      <ConfirmButton loading={loading} onClose={onClose} />
 
       {/* QR Scanner Modal */}
       <QRScannerModal
@@ -888,17 +596,6 @@ const ProductForm: React.FC<ProductFormProps> = ({
         onClose={() => setIsQRScannerOpen(false)}
         onScan={handleQRScan}
       />
-
-      {/* Add Lot Modal */}
-      {initialData?.id && (
-        <AddLotModal
-          open={isAddLotModalOpen}
-          onClose={() => setIsAddLotModalOpen(false)}
-          onSuccess={fetchProductLots}
-          productId={initialData.id}
-          warehouses={warehouses}
-        />
-      )}
     </Form>
   );
 };

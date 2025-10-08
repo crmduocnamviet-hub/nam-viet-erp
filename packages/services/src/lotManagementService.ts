@@ -36,8 +36,8 @@ export const getAvailableLots = async (params: {
  * Note: After schema change, product_lots only stores lot metadata
  * Quantities are tracked in inventory table with lot_id foreign key
  */
-export const createProductLot = async (lot: Partial<ProductLot>) => {
-  // Only insert lot metadata fields
+export const createProductLot = async (lot: Partial<IProductLot>) => {
+  // Only insert lot metadata fields. This is a helper for the more complete createProductLotWithInventory.
   const lotData = {
     lot_number: lot.lot_number,
     product_id: lot.product_id,
@@ -52,7 +52,7 @@ export const createProductLot = async (lot: Partial<ProductLot>) => {
     .select()
     .single();
 
-  return { data: data as ProductLot, error };
+  return { data: data as IProductLot, error };
 };
 
 /**
@@ -69,21 +69,19 @@ export const createProductLotWithInventory = async (params: {
   quantity: number;
 }) => {
   // Step 1: Create lot metadata
-  const lotData = {
-    lot_number: params.lot_number,
-    product_id: params.product_id,
-    batch_code: params.batch_code,
-    expiry_date: params.expiry_date,
-    received_date: params.received_date,
-  };
-
-  const { data: lot, error: lotError } = await supabase
-    .from("product_lots")
-    .insert(lotData)
-    .select()
-    .single();
+  const { data: lot, error: lotError } = await createProductLot(params);
 
   if (lotError) return { data: null, error: lotError };
+  if (!lot)
+    return {
+      data: null,
+      error: {
+        message: "Failed to create lot metadata.",
+        details: "",
+        hint: "",
+        code: "500",
+      },
+    };
 
   // Step 2: Update or create inventory record with lot_id and quantity
   const { error: inventoryError } = await supabase
@@ -103,7 +101,7 @@ export const createProductLotWithInventory = async (params: {
     return { data: null, error: inventoryError };
   }
 
-  return { data: lot as ProductLot, error: null };
+  return { data: lot as IProductLot, error: null };
 };
 
 /**
@@ -111,7 +109,7 @@ export const createProductLotWithInventory = async (params: {
  */
 export const updateProductLot = async (
   lotId: number,
-  updates: Partial<ProductLot>
+  updates: Partial<IProductLot>
 ) => {
   const { data, error } = await supabase
     .from("product_lots")
@@ -120,7 +118,7 @@ export const updateProductLot = async (
     .select()
     .single();
 
-  return { data: data as ProductLot, error };
+  return { data: data as IProductLot, error };
 };
 
 /**
@@ -660,7 +658,7 @@ export const getProductLots = async (params: {
         updated_at: null,
         warehouse_id: inv.warehouse_id,
         warehouse_name: inv.warehouses?.name || "",
-        quantity_available: inv.quantity,
+        quantity: inv.quantity,
         days_until_expiry: undefined,
       };
     }
@@ -686,7 +684,7 @@ export const getProductLots = async (params: {
       updated_at: lot.updated_at,
       warehouse_id: inv.warehouse_id,
       warehouse_name: inv.warehouses?.name || "",
-      quantity_available: inv.quantity,
+      quantity: inv.quantity,
       days_until_expiry: daysUntilExpiry,
     };
   });
@@ -856,99 +854,99 @@ export const fetchLotDetailWithInventory = async (lotId: number) => {
     lot_id: inv.lot_id,
     warehouse_id: inv.warehouse_id,
     warehouse_name: inv.warehouses?.name || "",
-    quantity_available: inv.quantity,
+    quantity: inv.quantity,
   }));
 
   return { lotDetail: lotData, inventory: formattedInventory, error: null };
 };
 
-/**
- * Get total quantities of a product across all warehouses from lots
- * Returns aggregated totals by warehouse and overall total
- */
-export const getProductLotTotals = async (params: {
-  productId: number;
-  warehouseId?: number;
-}) => {
-  let query = supabase
-    .from("product_lots")
-    .select(
-      `
-      warehouse_id,
-      quantity_received,
-      quantity_available,
-      quantity_reserved,
-      quantity_sold,
-      warehouse:warehouse_id(id, name)
-    `
-    )
-    .eq("product_id", params.productId);
+// /**
+//  * Get total quantities of a product across all warehouses from lots
+//  * Returns aggregated totals by warehouse and overall total
+//  */
+// export const getProductLotTotals = async (params: {
+//   productId: number;
+//   warehouseId?: number;
+// }) => {
+//   let query = supabase
+//     .from("product_lots")
+//     .select(
+//       `
+//       warehouse_id,
+//       quantity_received,
+//       quantity_reserved,
+//       quantity_sold,
+//       warehouse:warehouse_id(id, name)
+//     `
+//     )
+//     .eq("product_id", params.productId);
 
-  if (params.warehouseId) {
-    query = query.eq("warehouse_id", params.warehouseId);
-  }
+//   // Only filter by warehouse if a valid warehouseId is provided
+//   if (params.warehouseId) {
+//     query = query.eq("warehouse_id", params.warehouseId);
+//   }
 
-  const { data, error } = await query;
+//   const { data, error } = await query;
 
-  if (error) return { data: null, error };
+//   if (error) return { data: null, error };
 
-  // Group by warehouse and calculate totals
-  const warehouseTotals = (data || []).reduce((acc: any, lot: any) => {
-    const warehouseId = lot.warehouse_id;
+//   // Group by warehouse and calculate totals
+//   const warehouseTotals = (data || []).reduce((acc: any, lot: any) => {
+//     const warehouseId = lot.warehouse_id;
 
-    if (!acc[warehouseId]) {
-      acc[warehouseId] = {
-        warehouse_id: warehouseId,
-        warehouse_name: lot.warehouse?.name || "",
-        total_received: 0,
-        total_available: 0,
-        total_reserved: 0,
-        total_sold: 0,
-        lots_count: 0,
-      };
-    }
+//     if (!acc[warehouseId]) {
+//       acc[warehouseId] = {
+//         warehouse_id: warehouseId,
+//         warehouse_name: lot.warehouse?.name || "",
+//         total_received: 0,
+//         total_available: 0,
+//         total_reserved: 0,
+//         total_sold: 0,
+//         lots_count: 0,
+//       };
+//     }
 
-    acc[warehouseId].total_received += lot.quantity_received || 0;
-    acc[warehouseId].total_available += lot.quantity_available || 0;
-    acc[warehouseId].total_reserved += lot.quantity_reserved || 0;
-    acc[warehouseId].total_sold += lot.quantity_sold || 0;
-    acc[warehouseId].lots_count += 1;
+//     acc[warehouseId].total_received += lot.quantity_received || 0;
+//     acc[warehouseId].total_available += lot.quantity_available || 0;
+//     acc[warehouseId].total_reserved += lot.quantity_reserved || 0;
+//     acc[warehouseId].total_sold += lot.quantity_sold || 0;
+//     acc[warehouseId].lots_count += 1;
 
-    return acc;
-  }, {});
+//     return acc;
+//   }, {});
 
-  const warehouseList = Object.values(warehouseTotals);
+//   const warehouseList = Object.values(warehouseTotals);
 
-  // Calculate overall totals
-  const overallTotals = {
-    total_received: (data || []).reduce(
-      (sum, lot) => sum + (lot.quantity_received || 0),
-      0
-    ),
-    total_available: (data || []).reduce(
-      (sum, lot) => sum + (lot.quantity_available || 0),
-      0
-    ),
-    total_reserved: (data || []).reduce(
-      (sum, lot) => sum + (lot.quantity_reserved || 0),
-      0
-    ),
-    total_sold: (data || []).reduce(
-      (sum, lot) => sum + (lot.quantity_sold || 0),
-      0
-    ),
-    total_lots: (data || []).length,
-    warehouses_count: Object.keys(warehouseTotals).length,
-  };
+//   // Calculate overall totals
+//   const overallTotals = {
+//     total_received: (data || []).reduce(
+//       (sum, lot) => sum + (lot.quantity_received || 0),
+//       0
+//     ),
+//     total_available: (data || []).reduce(
+//       (sum, lot) => sum + (lot.quantity || 0),
+//       0
+//     ),
+//     total_reserved: (data || []).reduce(
+//       (sum, lot) => sum + (lot.quantity_reserved || 0),
+//       0
+//     ),
+//     total_sold: (data || []).reduce(
+//       (sum, lot) => sum + (lot.quantity_sold || 0),
+//       0
+//     ),
+//     total_lots: (data || []).length,
+//     warehouses_count: Object.keys(warehouseTotals).length,
+//   };
 
-  return {
-    data: {
-      by_warehouse: warehouseList,
-      overall: overallTotals,
-    },
-    error: null,
-  };
-};
+//   return {
+//     data: {
+//       by_warehouse: warehouseList,
+//       overall: overallTotals,
+//     },
+//     error: null,
+//   };
+// };
 
 /**
  * Get cost of goods sold (COGS) by lot
@@ -1023,7 +1021,7 @@ export default {
   // Reporting
   getLotInventorySummary,
   getProductLots,
-  getProductLotTotals,
+  // getProductLotTotals,
   getCOGSByLot,
   deleteProductLot,
   deleteAllProductLots,

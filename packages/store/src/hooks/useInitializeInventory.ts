@@ -26,9 +26,7 @@ export function useInitializeInventory() {
   useEffect(() => {
     // Only fetch if employee data is loaded
     if (!employee?.warehouse_id) {
-      console.log(
-        "[useInitializeInventory] No warehouse assigned to employee"
-      );
+      console.log("[useInitializeInventory] No warehouse assigned to employee");
       return;
     }
 
