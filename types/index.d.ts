@@ -544,6 +544,7 @@ interface IProductLot {
   created_by?: string;
   products?: IProduct;
   quantity?: number;
+  warehouse_id?: number;
 }
 
 interface VatInvoice {

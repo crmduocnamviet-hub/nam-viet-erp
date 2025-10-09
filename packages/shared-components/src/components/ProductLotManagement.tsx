@@ -1,17 +1,13 @@
 import React, { useState, useMemo } from "react";
 import { Table, Button, Select, Row, Col, Tag, App, Spin, Tooltip } from "antd";
-import { DeleteOutlined, ShopOutlined } from "@ant-design/icons";
+import { DeleteOutlined, PlusOutlined, ShopOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import dayjs from "dayjs";
 import { deleteProductLot } from "@nam-viet-erp/services";
 import AddLotModal from "./AddLotModal";
 import WarehouseQuantityModal from "./WarehouseQuantityModal";
 import { useSubmitQuery, useFilterProductLot } from "@nam-viet-erp/store";
-import {
-  FETCH_QUERY_KEY,
-  FETCH_SUBMIT_QUERY_KEY,
-} from "@nam-viet-erp/store/src/constants";
-import { refreshQuery } from "@nam-viet-erp/store/src/hooks/useQuery";
+import { FETCH_SUBMIT_QUERY_KEY } from "@nam-viet-erp/store/src/constants";
 
 interface ProductLotManagementProps {
   productId: number;
@@ -185,17 +181,13 @@ const ProductLotManagement: React.FC<ProductLotManagementProps> = ({
           );
         },
       },
-      ...(isAggregatedView
-        ? []
-        : [
-            {
-              title: "Kho",
-              dataIndex: "warehouse_name",
-              key: "warehouse",
-              width: 150,
-              render: (text: string) => text || "-",
-            },
-          ]),
+      {
+        title: "Kho",
+        dataIndex: "warehouse_name",
+        key: "warehouse",
+        width: 150,
+        render: (text: string) => text || "-",
+      },
       {
         title: "Trạng thái",
         dataIndex: "expiry_date",
@@ -215,8 +207,8 @@ const ProductLotManagement: React.FC<ProductLotManagementProps> = ({
       },
       {
         title: "Ngày sản xuất",
-        dataIndex: "manufacturing_date",
-        key: "manufacturing_date",
+        dataIndex: "received_date",
+        key: "received_date",
         width: 130,
         render: (date: string) =>
           date ? dayjs(date).format("DD/MM/YYYY") : "-",
@@ -295,15 +287,21 @@ const ProductLotManagement: React.FC<ProductLotManagementProps> = ({
 
   return (
     <>
-      <Row style={{ marginBottom: 16 }} justify="space-between" align="middle">
-        <Col>
+      <Row
+        style={{ marginBottom: 16 }}
+        gutter={16}
+        justify="start"
+        align="bottom"
+      >
+        <Col xs={18} sm={15} md={10} lg={6} xl={5}>
           <span style={{ marginRight: 8 }}>Lọc theo kho:</span>
           <Select
+            size="large"
             value={selectedWarehouseFilter}
             onChange={async (value) => {
               setSelectedWarehouseFilter(value); // This will trigger the useQuery to refetch
             }}
-            style={{ width: 200 }}
+            style={{ width: "100%" }}
             options={[
               { value: "all", label: "Tất cả kho" },
               ...warehouses.map((wh) => ({
@@ -316,11 +314,10 @@ const ProductLotManagement: React.FC<ProductLotManagementProps> = ({
         <Col>
           <Button
             type="primary"
-            size="small"
+            size="large"
+            icon={<PlusOutlined />}
             onClick={() => setIsAddLotModalOpen(true)}
-          >
-            Thêm lô hàng mới
-          </Button>
+          ></Button>
         </Col>
       </Row>
 

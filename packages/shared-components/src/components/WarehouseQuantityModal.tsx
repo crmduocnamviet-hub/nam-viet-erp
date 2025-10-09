@@ -9,6 +9,8 @@ import {
   InputNumber,
   App,
   Select,
+  Row,
+  Col,
 } from "antd";
 import { ShopOutlined, SaveOutlined, PlusOutlined } from "@ant-design/icons";
 import { useUpdateQuantityByLot } from "@nam-viet-erp/store";
@@ -41,15 +43,11 @@ const WarehouseQuantityModal: React.FC<WarehouseQuantityModalProps> = ({
   lotNumber,
   productId,
   warehouseQuantities,
-  warehouses = [],
   onSuccess,
 }) => {
   const { notification } = App.useApp();
   const [editingKey, setEditingKey] = useState<number | null>(null);
   const [quantity, setQuantity] = useState<number>(0);
-  const [isAddingWarehouse, setIsAddingWarehouse] = useState(false);
-  const [newWarehouseId, setNewWarehouseId] = useState<number | null>(null);
-  const [newWarehouseQuantity, setNewWarehouseQuantity] = useState<number>(0);
 
   const { submit: updateQuantity, isLoading: isSaving } =
     useUpdateQuantityByLot({
@@ -84,33 +82,6 @@ const WarehouseQuantityModal: React.FC<WarehouseQuantityModalProps> = ({
     });
   };
 
-  const handleAddWarehouse = async () => {
-    if (!newWarehouseId) {
-      notification.warning({
-        message: "Vui lòng chọn kho",
-      });
-      return;
-    }
-
-    await updateQuantity({
-      lotId,
-      productId,
-      warehouseId: newWarehouseId,
-      newQuantityAvailable: newWarehouseQuantity,
-    });
-
-    // Reset form
-    setIsAddingWarehouse(false);
-    setNewWarehouseId(null);
-    setNewWarehouseQuantity(0);
-  };
-
-  const handleCancelAdd = () => {
-    setIsAddingWarehouse(false);
-    setNewWarehouseId(null);
-    setNewWarehouseQuantity(0);
-  };
-
   // Deduplicate by warehouse_id and sum quantities, then filter to only show warehouses with quantity > 0
   const filteredWarehouseQuantities = Object.values(
     warehouseQuantities.reduce(
@@ -125,16 +96,6 @@ const WarehouseQuantityModal: React.FC<WarehouseQuantityModalProps> = ({
       },
       {} as Record<number, WarehouseQuantity>,
     ),
-  );
-
-  console.log(filteredWarehouseQuantities);
-
-  // Get warehouses that are not in the current list
-  const existingWarehouseIds = new Set(
-    filteredWarehouseQuantities.map((wh) => wh.warehouse_id),
-  );
-  const availableWarehouses = warehouses.filter(
-    (wh) => !existingWarehouseIds.has(wh.id),
   );
 
   const columns = [
@@ -201,11 +162,6 @@ const WarehouseQuantityModal: React.FC<WarehouseQuantityModalProps> = ({
     },
   ];
 
-  const totalQuantity = filteredWarehouseQuantities.reduce(
-    (sum, wh) => sum + wh.quantity,
-    0,
-  );
-
   return (
     <Modal
       title={
@@ -221,40 +177,8 @@ const WarehouseQuantityModal: React.FC<WarehouseQuantityModalProps> = ({
       }
       open={visible}
       onCancel={onClose}
+      footer={null}
       width={600}
-      footer={[
-        <div
-          key="footer"
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            width: "100%",
-          }}
-        >
-          <Space>
-            <Text strong>Tổng tồn kho:</Text>
-            <Tag color="blue" style={{ fontSize: 14, padding: "4px 12px" }}>
-              {totalQuantity} đơn vị
-            </Tag>
-          </Space>
-          <Space>
-            {availableWarehouses.length > 0 && !isAddingWarehouse && (
-              <Button
-                key="add"
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={() => setIsAddingWarehouse(true)}
-              >
-                Thêm kho
-              </Button>
-            )}
-            <Button key="close" onClick={onClose}>
-              Đóng
-            </Button>
-          </Space>
-        </div>,
-      ]}
     >
       {!lotId && (
         <div style={{ marginBottom: 16 }}>
@@ -269,49 +193,6 @@ const WarehouseQuantityModal: React.FC<WarehouseQuantityModalProps> = ({
           💡 Nhấp vào số lượng để chỉnh sửa
         </Text>
       </div>
-
-      {isAddingWarehouse && (
-        <div
-          style={{
-            marginBottom: 16,
-            padding: 16,
-            background: "#f5f5f5",
-            borderRadius: 8,
-          }}
-        >
-          <Space direction="vertical" style={{ width: "100%" }}>
-            <Text strong>Thêm kho mới</Text>
-            <Space style={{ width: "100%" }}>
-              <Select
-                placeholder="Chọn kho"
-                style={{ width: 200 }}
-                value={newWarehouseId}
-                onChange={setNewWarehouseId}
-                options={availableWarehouses.map((wh) => ({
-                  value: wh.id,
-                  label: wh.name,
-                }))}
-              />
-              <InputNumber
-                placeholder="Số lượng"
-                value={newWarehouseQuantity}
-                onChange={(value) => setNewWarehouseQuantity(value || 0)}
-                min={0}
-                style={{ width: 150 }}
-              />
-              <Button
-                type="primary"
-                icon={<SaveOutlined />}
-                onClick={handleAddWarehouse}
-                loading={isSaving}
-              >
-                Lưu
-              </Button>
-              <Button onClick={handleCancelAdd}>Hủy</Button>
-            </Space>
-          </Space>
-        </div>
-      )}
 
       {filteredWarehouseQuantities.length > 0 ? (
         <Table

@@ -42,6 +42,7 @@ import {
 } from "@nam-viet-erp/store";
 import PaymentModal from "../../components/PaymentModal";
 import PosTabContent from "../../components/PosTabContent";
+import LotSelectionModal from "../../components/LotSelectionModal";
 
 const getErrorMessage = (error: any): string => {
   return error?.message || "Đã xảy ra lỗi không xác định";
@@ -125,7 +126,7 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
 
   // Employee's assigned warehouse
   const [employeeWarehouse, setEmployeeWarehouse] = useState<IWarehouse | null>(
-    null
+    null,
   );
   const [loadingWarehouse, setLoadingWarehouse] = useState(false);
   const [selectedVisit, setSelectedVisit] = useState<any>(null);
@@ -141,6 +142,11 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
 
   // Cart modal for mobile
   const [isCartModalOpen, setIsCartModalOpen] = useState(false);
+
+  // Lot selection modal
+  const [isLotSelectionModalOpen, setIsLotSelectionModalOpen] = useState(false);
+  const [selectedProductForLot, setSelectedProductForLot] =
+    useState<IProduct | null>(null);
 
   const selectedLocation = "dh1"; // Default location
   const { warehouseId, fundId } = employeeWarehouse
@@ -242,7 +248,7 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
       // Check if all combo items are in the cart with sufficient quantity
       for (const comboItem of comboItems) {
         const cartItem = regularItems.find(
-          (ci) => ci.id === comboItem.product_id
+          (ci) => ci.id === comboItem.product_id,
         );
 
         if (!cartItem || cartItem.quantity < comboItem.quantity) {
@@ -262,7 +268,7 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
   // --- PROMOTION LOGIC START ---
   const calculateBestPrice = (
     product: IProduct,
-    promotions: IPromotion[]
+    promotions: IPromotion[],
   ): PriceInfo => {
     let bestPrice = product.retail_price;
     let appliedPromotion: IPromotion | null = null;
@@ -386,8 +392,8 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
             setSearchResults(
               data?.map(
                 (v) =>
-                  ({ ...v.products, stock_quantity: v.quantity } as IProduct)
-              ) || []
+                  ({ ...v.products, stock_quantity: v.quantity }) as IProduct,
+              ) || [],
             );
           })
           .catch(() => {
@@ -485,7 +491,7 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
         try {
           // setLoadingPrescriptions(true);
           const { error } = await getPrescriptionsByVisitId(
-            selectedVisit.visit_id
+            selectedVisit.visit_id,
           );
           if (error) {
             notification.error({
@@ -522,8 +528,17 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
       return;
     }
 
+    // Check if product has lot management enabled
+    if (product.enable_lot_management && employeeWarehouse) {
+      setSelectedProductForLot(product);
+      setIsLotSelectionModalOpen(true);
+      return;
+    }
+
     // Check if product already exists in cart
-    const existingItem = cart.find((item) => item.id === product.id);
+    const existingItem = cart.find(
+      (item) => item.id === product.id && !item.lot_id,
+    );
 
     if (existingItem) {
       const newQuantity = existingItem.quantity + 1;
@@ -568,6 +583,68 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
     setSearchResults([]);
   };
 
+  // Handle lot selection from modal
+  const handleLotSelect = (lot: IProductLot, quantity: number) => {
+    if (!selectedProductForLot) return;
+
+    // Check if this specific lot already exists in cart
+    const existingItem = cart.find(
+      (item) => item.id === selectedProductForLot.id && item.lot_id === lot.id,
+    );
+
+    if (existingItem) {
+      const newQuantity = existingItem.quantity + quantity;
+
+      // Check if new quantity exceeds lot stock
+      if (lot.quantity && newQuantity > lot.quantity) {
+        notification.error({
+          message: "Vượt quá tồn kho lô",
+          description: `Lô ${lot.lot_number} chỉ còn ${lot.quantity} sản phẩm. Hiện tại giỏ hàng đã có ${existingItem.quantity}.`,
+          duration: 4,
+        });
+        return;
+      }
+
+      // Update quantity
+      updateCartItem(existingItem.key, {
+        quantity: newQuantity,
+        total: existingItem.price * newQuantity,
+      });
+    } else {
+      // Add new item with lot information
+      const priceInfo = calculateBestPrice(selectedProductForLot, promotions);
+      const cartItem = {
+        key: `${selectedProductForLot.id}_${lot.id}_${Date.now()}`,
+        id: selectedProductForLot.id,
+        name: selectedProductForLot.name,
+        description: selectedProductForLot.description,
+        quantity: quantity,
+        price: priceInfo.finalPrice,
+        total: priceInfo.finalPrice * quantity,
+        ...priceInfo,
+        stock_quantity: lot.quantity,
+        image_url: selectedProductForLot.image_url,
+        product_id: String(selectedProductForLot.id),
+        unit_price: priceInfo.originalPrice,
+        lot_id: lot.id,
+        lot_number: lot.lot_number,
+        batch_code: lot.batch_code,
+        expiry_date: lot.expiry_date,
+      };
+
+      addCartItem(cartItem);
+    }
+
+    notification.success({
+      message: "Đã thêm vào giỏ hàng",
+      description: `${selectedProductForLot.name} - Lô: ${lot.lot_number} (${quantity})`,
+      duration: 2,
+    });
+
+    setSearchTerm("");
+    setSearchResults([]);
+  };
+
   // Add combo to cart
   const handleAddCombo = (combo: IComboWithItems) => {
     if (!combo.combo_items || combo.combo_items.length === 0) {
@@ -583,7 +660,7 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
 
     combo.combo_items.forEach((comboItem) => {
       const cartItem = cart.find(
-        (item) => !item.isCombo && item.id === comboItem.product_id
+        (item) => !item.isCombo && item.id === comboItem.product_id,
       );
       if (cartItem) {
         const possibleSets = Math.floor(cartItem.quantity / comboItem.quantity);
@@ -599,7 +676,7 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
     // Remove products that are part of the combo from cart
     combo.combo_items.forEach((comboItem) => {
       const cartItem = cart.find(
-        (item) => !item.isCombo && item.id === comboItem.product_id
+        (item) => !item.isCombo && item.id === comboItem.product_id,
       );
       if (cartItem) {
         const quantityToRemove = comboItem.quantity * maxComboSets;
@@ -882,11 +959,11 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
 
     const itemTotal = items.reduce(
       (total, item) => total + item.finalPrice * item.quantity,
-      0
+      0,
     );
     const originalTotal = items.reduce(
       (total, item) => total + item.originalPrice * item.quantity,
-      0
+      0,
     );
 
     return {
@@ -909,7 +986,7 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
 
   const handleFinishPayment = async (
     values: PaymentValues,
-    tabIndex?: number
+    tabIndex?: number,
   ) => {
     try {
       // If tabIndex is provided, use it; otherwise use active tab
@@ -920,7 +997,7 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
 
       // Validate global inventory (including products in combos)
       const productGlobalQuantities = calculateProductGlobalQuantities(
-        cartDetails.items || []
+        cartDetails.items || [],
       );
 
       // Check if global quantities exceed inventory
@@ -933,7 +1010,7 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
       Object.entries(productGlobalQuantities).forEach(
         ([productId, { name, quantity }]) => {
           const inventoryItem = inventory.find(
-            (inv: any) => inv.product_id === Number(productId)
+            (inv: any) => inv.product_id === Number(productId),
           );
           const availableQuantity = inventoryItem?.quantity || 0;
 
@@ -944,13 +1021,13 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
               available: availableQuantity,
             });
           }
-        }
+        },
       );
 
       if (insufficientProducts.length > 0) {
         const errorMessage = insufficientProducts
           .map(
-            (p) => `- ${p.productName}: Cần ${p.required}, Còn ${p.available}`
+            (p) => `- ${p.productName}: Cần ${p.required}, Còn ${p.available}`,
           )
           .join("\n");
 
@@ -977,7 +1054,7 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
           customerId: selectedCustomer?.patient_id,
           tabIndex: targetTabIndex, // Pass tab index to processPayment
         },
-        inventory
+        inventory,
       );
 
       notification?.success({
@@ -995,22 +1072,22 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
   };
 
   return (
-    <div style={{ padding: "24px", minHeight: "100vh" }}>
+    <div
+      style={{
+        padding: isMobile ? "12px" : "16px",
+        minHeight: "100vh",
+        backgroundColor: "#f5f5f5",
+      }}
+    >
       <Row
         justify="space-between"
         align="middle"
-        style={{ marginBottom: isMobile ? 16 : 24 }}
+        style={{ marginBottom: isMobile ? 12 : 16 }}
       >
         <Col>
-          <Title level={isMobile ? 3 : 2} style={{ margin: 0 }}>
+          <Title level={isMobile ? 4 : 3} style={{ margin: 0 }}>
             💰 POS Bán Lẻ
           </Title>
-          <Text
-            type="secondary"
-            style={{ fontSize: isMobile ? "14px" : "16px" }}
-          >
-            Quản lý bán hàng và thanh toán tại quầy
-          </Text>
         </Col>
       </Row>
 
@@ -1084,7 +1161,10 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
             />
           ),
         }))}
-        style={{ marginBottom: 16 }}
+        style={{
+          marginBottom: 0,
+          backgroundColor: "transparent",
+        }}
       />
       {/* Modals */}
       <PaymentModal
@@ -1208,6 +1288,18 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
           />
         </div>
       </Modal>
+
+      {/* Lot Selection Modal */}
+      <LotSelectionModal
+        open={isLotSelectionModalOpen}
+        onClose={() => {
+          setIsLotSelectionModalOpen(false);
+          setSelectedProductForLot(null);
+        }}
+        onSelect={handleLotSelect}
+        product={selectedProductForLot}
+        warehouseId={employeeWarehouse?.id || null}
+      />
     </div>
   );
 };

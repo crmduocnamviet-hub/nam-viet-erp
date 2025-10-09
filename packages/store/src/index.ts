@@ -19,6 +19,7 @@ export * from "./warehouseStore";
 export * from "./lotManagementStore";
 export * from "./fetchStore";
 export * from "./fetchSubmitStore";
+export * from "./entityStore"; // New normalized entity store
 
 export { FETCH_QUERY_KEY } from "./constants";
 

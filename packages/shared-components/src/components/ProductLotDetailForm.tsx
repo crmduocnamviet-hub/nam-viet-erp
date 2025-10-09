@@ -28,24 +28,34 @@ const ProductLotDetailForm: React.FC<{ lotId: number }> = ({ lotId }) => {
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [form] = Form.useForm<ProductLotForm>();
   // Calculate days until expiry
-  const daysUntilExpiry = useMemo(
-    () =>
-      data?.expiry_date ? dayjs(data.expiry_date).diff(dayjs(), "day") : null,
-    [data]
-  );
+  const daysUntilExpiry = useMemo(() => {
+    if (!data?.expiry_date) return null;
+    const expiryDate = dayjs(data.expiry_date);
+    return expiryDate.isValid() ? expiryDate.diff(dayjs(), "day") : null;
+  }, [data]);
 
   useEffect(() => {
+    // Only set date if valid
+    const expiryDate =
+      data?.expiry_date && dayjs(data.expiry_date).isValid()
+        ? dayjs(data.expiry_date)
+        : null;
+    const receivedDate =
+      data?.received_date && dayjs(data.received_date).isValid()
+        ? dayjs(data.received_date)
+        : null;
+
     form.setFieldsValue({
       batch_code: data?.batch_code,
       lot_number: data?.lot_number,
-      expiry_date: dayjs(data?.expiry_date),
-      received_date: dayjs(data?.received_date),
+      expiry_date: expiryDate,
+      received_date: receivedDate,
     });
   }, [data]);
 
   // Calculate status
   const getStatus = () => {
-    if (!data.expiry_date) {
+    if (!data?.expiry_date || !dayjs(data.expiry_date).isValid()) {
       return { text: "Còn hạn", color: "green" };
     }
     const isExpired = daysUntilExpiry !== null && daysUntilExpiry <= 0;
@@ -55,7 +65,7 @@ const ProductLotDetailForm: React.FC<{ lotId: number }> = ({ lotId }) => {
     };
   };
 
-  const status = getStatus();
+  const status = data ? getStatus() : { text: "Còn hạn", color: "green" };
 
   const onFinish = async (values: ProductLotForm) => {
     setIsSaving(true);

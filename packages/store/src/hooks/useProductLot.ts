@@ -7,23 +7,24 @@ import {
 import { FETCH_SUBMIT_QUERY_KEY } from "../constants";
 
 export const useProductLot = (lotId: number | null) => {
-  const { data, isLoading, isError, error } = useQuery<IProductLot | null>({
-    key: [FETCH_QUERY_KEY.PRODUCT_LOT, lotId!],
-    queryFn: async () => {
-      // Handle default lot (lotId is null)
-      if (!lotId) {
-        return null;
-      }
+  const { data, isLoading, isError, error, refetch } =
+    useQuery<IProductLot | null>({
+      key: [FETCH_QUERY_KEY.PRODUCT_LOT, lotId!],
+      queryFn: async () => {
+        // Handle default lot (lotId is null)
+        if (!lotId) {
+          return null;
+        }
 
-      const result = await fetchProductLot(lotId);
-      if (!result) throw new Error("Không tìm thấy thông tin lô hàng");
-      return result;
-    },
-    // Don't fetch if lotId is null (default lot)
-    disableCache: !lotId,
-  });
+        const result = await fetchProductLot(lotId);
+        if (!result) throw new Error("Không tìm thấy thông tin lô hàng");
+        return result;
+      },
+      // Don't fetch if lotId is null (default lot)
+      disableCache: !lotId,
+    });
 
-  return { data, isLoading, isError, error };
+  return { data, isLoading, isError, error, refetch };
 };
 
 export const useFilterProductLot = (

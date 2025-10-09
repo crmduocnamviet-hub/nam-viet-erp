@@ -603,18 +603,10 @@ export const getProductLots = async (params: {
     // If lot_id is null, show as "Mặc Định" (Default) lot
     if (!inv.product_lots) {
       return {
-        id: inv.id,
-        lot_number: inv.lot_number,
-        product_id: params.productId,
-        batch_code: null,
-        expiry_date: null,
-        received_date: null,
-        created_at: null,
-        updated_at: null,
+        ...inv,
         warehouse_id: inv.warehouse_id,
         warehouse_name: inv.warehouses?.name || "",
         quantity: inv.quantity,
-        days_until_expiry: undefined,
       };
     }
 
@@ -868,22 +860,6 @@ export const fetchProductLot = async (lotId: number) => {
     .eq("id", lotId)
     .single();
   return lotData;
-};
-
-export const fetchInventoryByLotId = async (lotId: number) => {
-  const { data: inventoryData } = await supabase
-    .from("inventory")
-    .select(
-      `*,
-      warehouses (
-        name
-      )
-    `,
-    )
-    .eq("lot_id", lotId)
-    .order("warehouse_id");
-
-  return inventoryData;
 };
 
 /**

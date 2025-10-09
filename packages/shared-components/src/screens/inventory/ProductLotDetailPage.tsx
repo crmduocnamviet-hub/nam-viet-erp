@@ -3,39 +3,36 @@ import {
   Card,
   Row,
   Col,
-  Table,
   Tag,
   Spin,
   Typography,
-  App,
   InputNumber,
   Space,
   Button,
+  Descriptions,
+  App,
 } from "antd";
 import {
   HomeOutlined,
   AppstoreOutlined,
   SaveOutlined,
+  EditOutlined,
 } from "@ant-design/icons";
 import { useParams } from "react-router-dom";
-import {
-  useInventoryOfWarehouseByLotId,
-  useProductLot,
-  useUpdateQuantityByLot,
-} from "@nam-viet-erp/store";
+import { useProductLot, useUpdateQuantityByLot } from "@nam-viet-erp/store";
 import PageLayout from "../../components/PageLayout";
 import ProductLotDetailForm from "../../components/ProductLotDetailForm";
 
 const ProductLotDetailPage: React.FC = () => {
   const { lotId } = useParams<{ lotId: string }>();
   const { notification } = App.useApp();
-  // Store
 
-  const { data: lotDetail, isLoading: loading } = useProductLot(Number(lotId));
-  const { data: lotInventory, refetch } = useInventoryOfWarehouseByLotId(
-    Number(lotId),
-  );
-  const [editingKey, setEditingKey] = useState<string | null>(null);
+  const {
+    data: lotDetail,
+    isLoading: loading,
+    refetch,
+  } = useProductLot(Number(lotId));
+  const [isEditing, setIsEditing] = useState<boolean>(false);
   const [quantity, setQuantityValue] = useState<number>(0);
 
   const { submit: updateQuantity, isLoading: isSaving } =
@@ -43,23 +40,32 @@ const ProductLotDetailPage: React.FC = () => {
       lotId: parseInt(lotId),
       onSuccess: () => {
         refetch();
-        setEditingKey(null);
+        setIsEditing(false);
+        notification.success({
+          message: "Cập nhật thành công",
+          description: "Số lượng tồn kho đã được cập nhật",
+        });
       },
     });
 
-  const handleEdit = (record: IInventory) => {
-    setEditingKey(`${record.warehouse_id}-${record.lot_id}`);
-    setQuantityValue(record.quantity || 0);
+  const handleEdit = () => {
+    setIsEditing(true);
+    setQuantityValue(lotDetail?.quantity || 0);
   };
 
-  const handleSave = async (record: IInventory) => {
+  const handleSave = async () => {
     if (!lotDetail) return;
     updateQuantity({
-      lotId: record.lot_id,
+      lotId: lotDetail.id,
       productId: lotDetail.product_id,
-      warehouseId: record.warehouse_id,
+      warehouseId: lotDetail.warehouse_id,
       newQuantityAvailable: quantity,
     });
+  };
+
+  const handleCancel = () => {
+    setIsEditing(false);
+    setQuantityValue(lotDetail?.quantity || 0);
   };
 
   if (loading) {
@@ -110,65 +116,58 @@ const ProductLotDetailPage: React.FC = () => {
         <Col xs={24} lg={12}>
           {!!lotDetail && <ProductLotDetailForm lotId={Number(lotId)} />}
         </Col>
-        {/* Inventory by Warehouse Table */}
+        {/* Inventory Information Card */}
         <Col xs={24} lg={12}>
-          <Card title="Thông tin kho lưu trữ">
-            <Table
-              dataSource={(lotInventory || []).map((i) => ({
-                ...i,
-                key: `${i.warehouse_id}-${i.lot_id}`,
-              }))}
-              rowKey="lot_id"
-              pagination={false}
-              columns={[
-                {
-                  title: "Kho",
-                  dataIndex: "warehouse_name",
-                  key: "warehouse",
-                  render: (text) => <strong>{text}</strong>,
-                },
-                {
-                  title: "Tồn kho",
-                  dataIndex: "quantity",
-                  key: "quantity",
-                  align: "right",
-                  render: (qty, record) => {
-                    const isEditing = editingKey === record.key;
-
-                    if (isEditing) {
-                      return (
-                        <Space>
-                          <InputNumber
-                            value={quantity}
-                            onChange={(value) => setQuantityValue(value || 0)}
-                            min={0}
-                            style={{ width: 100 }}
-                            autoFocus
-                            onPressEnter={() => handleSave(record)}
-                          />
-                          <Button
-                            icon={<SaveOutlined />}
-                            type="primary"
-                            loading={isSaving}
-                            onClick={() => handleSave(record)}
-                          />
-                        </Space>
-                      );
-                    }
-
-                    return (
-                      <Tag
-                        color={qty > 0 ? "green" : "red"}
-                        style={{ cursor: "pointer" }}
-                        onClick={() => handleEdit(record)}
-                      >
-                        {qty}
-                      </Tag>
-                    );
-                  },
-                },
-              ]}
-            />
+          <Card title="Thông tin tồn kho">
+            <Descriptions bordered column={1}>
+              <Descriptions.Item label="Kho">
+                <strong>Kho ID: {lotDetail?.warehouse_id || "-"}</strong>
+              </Descriptions.Item>
+              <Descriptions.Item label="Số lượng">
+                {isEditing ? (
+                  <Space>
+                    <InputNumber
+                      value={quantity}
+                      onChange={(value) => setQuantityValue(value || 0)}
+                      min={0}
+                      style={{ width: 120 }}
+                      autoFocus
+                      onPressEnter={handleSave}
+                    />
+                    <Button
+                      icon={<SaveOutlined />}
+                      type="primary"
+                      size="small"
+                      loading={isSaving}
+                      onClick={handleSave}
+                    >
+                      Lưu
+                    </Button>
+                    <Button
+                      size="small"
+                      onClick={handleCancel}
+                      disabled={isSaving}
+                    >
+                      Hủy
+                    </Button>
+                  </Space>
+                ) : (
+                  <Space>
+                    <Tag color={lotDetail?.quantity > 0 ? "green" : "red"}>
+                      {lotDetail?.quantity || 0}
+                    </Tag>
+                    <Button
+                      icon={<EditOutlined />}
+                      size="small"
+                      type="link"
+                      onClick={handleEdit}
+                    >
+                      Chỉnh sửa
+                    </Button>
+                  </Space>
+                )}
+              </Descriptions.Item>
+            </Descriptions>
           </Card>
         </Col>
       </Row>
