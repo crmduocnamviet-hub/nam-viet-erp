@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Modal,
   Form,
@@ -34,12 +34,18 @@ const AddLotModal: React.FC<AddLotModalProps> = ({
   const [saving, setSaving] = useState(false);
   const b2bWarehouse = warehouses.find((wh) => wh.is_b2b_warehouse === true);
 
+  useEffect(() => {
+    if (b2bWarehouse) {
+      form.setFieldValue("warehouse_id", b2bWarehouse.id);
+    }
+  }, [b2bWarehouse]);
+
   const handleFinish = async (values: any) => {
     setSaving(true);
     try {
       const lotData = {
         product_id: productId,
-        warehouse_id: b2bWarehouse.id,
+        warehouse_id: values.warehouse_id,
         lot_number: values.lot_number,
         batch_code: values.batch_code || undefined,
         expiry_date: values.expiry_date
@@ -57,13 +63,19 @@ const AddLotModal: React.FC<AddLotModalProps> = ({
 
       notification.success({
         message: "Thành công!",
-        description: "Lô hàng đã được tạo thành công.",
+        description: "Lô hàng đã được tạo và đồng bộ tồn kho.",
       });
 
-      // Reset form and close modal
+      // Reset form
       form.resetFields();
-      onClose();
+
+      // Call onSuccess first (triggers loading state)
       onSuccess();
+
+      // Close modal after a short delay
+      setTimeout(() => {
+        onClose();
+      }, 100);
     } catch (error: any) {
       notification.error({
         message: "Lỗi tạo lô hàng",
@@ -91,6 +103,21 @@ const AddLotModal: React.FC<AddLotModalProps> = ({
         <Row gutter={[16, 16]}>
           <Col xs={24} sm={12}>
             <Form.Item
+              name="warehouse_id"
+              label="Kho"
+              rules={[{ required: true, message: "Vui lòng chọn kho" }]}
+            >
+              <Select
+                placeholder="Chọn kho"
+                options={warehouses.map((wh) => ({
+                  value: wh.id,
+                  label: wh.name,
+                }))}
+              />
+            </Form.Item>
+          </Col>
+          <Col xs={24} sm={12}>
+            <Form.Item
               name="lot_number"
               label="Số lô"
               rules={[{ required: true, message: "Vui lòng nhập số lô" }]}
@@ -111,6 +138,20 @@ const AddLotModal: React.FC<AddLotModalProps> = ({
           <Col xs={24} sm={12}>
             <Form.Item name="expiry_date" label="Hạn sử dụng">
               <DatePicker style={{ width: "100%" }} format="DD/MM/YYYY" />
+            </Form.Item>
+          </Col>
+          <Col xs={24} sm={12}>
+            <Form.Item
+              name="quantity"
+              label="Số lượng"
+              rules={[{ required: true, message: "Vui lòng nhập số lượng" }]}
+              initialValue={0}
+            >
+              <InputNumber
+                placeholder="Nhập số lượng"
+                style={{ width: "100%" }}
+                min={0}
+              />
             </Form.Item>
           </Col>
         </Row>

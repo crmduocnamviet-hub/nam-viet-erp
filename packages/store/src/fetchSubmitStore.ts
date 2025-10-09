@@ -7,7 +7,7 @@ interface QueriesData<TData = any, TResponse = any> {
   isError: boolean;
   error: any;
   lastFetch: Date | null;
-  onSuccess?: () => void;
+  onSuccess?: (data: TResponse) => void;
   onError?: (e: any) => void;
   onSubmit?: (data?: TData) => Promise<TResponse>;
 }
@@ -16,7 +16,7 @@ type FetchStore = {
   fetchData: Record<string, QueriesData>;
   register: <TParams = any, TResponse = any>(params: {
     key: string;
-    onSuccess?: () => void;
+    onSuccess?: (data?: TResponse) => void;
     onError?: (e: any) => void;
     onSubmit?: (data?: TParams) => Promise<TResponse>;
   }) => void;
@@ -46,6 +46,7 @@ export const fetchSubmitStore = create<FetchStore, any>(
     async sendRequest(key, data) {
       const { onSubmit, onError, onSuccess } = get().fetchData[key];
       if (!onSubmit) return;
+      console.log("[QUERY_SUBMIT_KEY] ", key);
       set((state) => {
         state.fetchData[key].isLoading = true;
       });
@@ -56,7 +57,7 @@ export const fetchSubmitStore = create<FetchStore, any>(
           state.fetchData[key].isError = false;
           state.fetchData[key].error = null;
         });
-        onSuccess?.();
+        onSuccess?.(res);
       } catch (e) {
         set((state) => {
           state.fetchData[key].isError = true;
@@ -69,7 +70,7 @@ export const fetchSubmitStore = create<FetchStore, any>(
         state.fetchData[key].lastFetch = new Date();
       });
     },
-  }))
+  })),
 );
 
 const useFetchSubmitStore = fetchSubmitStore;

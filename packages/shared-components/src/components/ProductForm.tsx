@@ -29,7 +29,8 @@ import {
   enrichProductData,
   extractFromPdf,
   getWarehouse,
-  deleteAllProductLots,
+  enableLotManagement,
+  disableLotManagement,
 } from "@nam-viet-erp/services";
 import PdfUpload from "./PdfUpload";
 import QRScannerModal from "./QRScannerModal";
@@ -43,7 +44,7 @@ interface ProductFormProps {
   onClose: () => void;
   onFinish: (values: ProductFormData) => void;
   loading: boolean;
-  initialData?: any | null;
+  initialData?: ProductWithInventoryData | null;
 }
 
 const ProductForm: React.FC<ProductFormProps> = ({
@@ -63,7 +64,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
   const [loadingWarehouses, setLoadingWarehouses] = useState(false);
 
   // Watch enable_lot_management field
-  const enableLotManagement = Form.useWatch("enable_lot_management", form);
+  // const enableLotManagement = Form.useWatch("enable_lot_management", form);
 
   // Responsive column spans
   const isMobile = !screens.md;
@@ -90,7 +91,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
 
   const handleExtractFromPdf = async (
     fileContent: string,
-    mimeType: string
+    mimeType: string,
   ) => {
     setPdfLoading(true);
     try {
@@ -202,7 +203,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
               }
               return acc;
             },
-            {}
+            {},
           );
         }
 
@@ -268,36 +269,43 @@ const ProductForm: React.FC<ProductFormProps> = ({
     const wasLotManagementEnabled = initialData?.enable_lot_management;
     const isLotManagementEnabled = values.enable_lot_management;
 
+    console.log(wasLotManagementEnabled, isLotManagementEnabled);
+
     // If lot management is being DISABLED, delete all lots
     if (initialData?.id && wasLotManagementEnabled && !isLotManagementEnabled) {
       try {
-        const { error } = await deleteAllProductLots(initialData.id);
-        if (error) throw error;
+        const result = await disableLotManagement(initialData.id);
+        if (!result.success) throw result.error;
 
         notification.success({
-          message: "Đã xóa tất cả lô hàng!",
+          message: "Đã tắt quản lý lô!",
           description: "Tất cả lô hàng của sản phẩm này đã được xóa.",
         });
       } catch (error: any) {
         notification.error({
-          message: "Lỗi xóa lô hàng",
-          description: error.message || "Không thể xóa lô hàng.",
+          message: "Lỗi tắt quản lý lô",
+          description: error.message || "Không thể tắt quản lý lô.",
         });
       }
     }
-    // If lot management is being ENABLED for existing product with inventory
-    if (
-      initialData?.id &&
-      !wasLotManagementEnabled &&
-      isLotManagementEnabled &&
-      initialData.inventory_data &&
-      Array.isArray(initialData.inventory_data)
-    ) {
-      notification.info({
-        message: "Quản lý lô đã được bật",
-        description:
-          "Lô hàng mặc định sẽ được tạo tự động cho hàng tồn kho hiện có nếu cần.",
-      });
+
+    // If lot management is being ENABLED for existing product
+    if (initialData?.id && !wasLotManagementEnabled && isLotManagementEnabled) {
+      try {
+        const result = await enableLotManagement(initialData.id);
+        if (!result.success) throw result.error;
+
+        notification.success({
+          message: "Đã bật quản lý lô!",
+          description:
+            "Số lượng từ kho đã được chuyển thành lô mặc định. Bạn có thể quản lý lô trong tab 'Lô hàng'.",
+        });
+      } catch (error: any) {
+        notification.error({
+          message: "Lỗi bật quản lý lô",
+          description: error.message || "Không thể bật quản lý lô.",
+        });
+      }
     }
 
     onFinish(finalValues);
@@ -442,10 +450,10 @@ const ProductForm: React.FC<ProductFormProps> = ({
               </Col>
             </Row>
 
-            {initialData?.id && enableLotManagement && (
+            {initialData?.id && initialData.enable_lot_management && (
               <ProductLotManagement
                 productId={initialData.id}
-                isEnabled={enableLotManagement}
+                isEnabled={initialData.enable_lot_management}
                 warehouses={warehouses}
               />
             )}

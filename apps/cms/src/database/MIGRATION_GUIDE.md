@@ -1,146 +1,109 @@
-# Warehouse Management Migration Guide
+# Product Lot Management Migration Guide
 
 ## Overview
-This guide explains how to run the warehouse management features migration to add auto-generate purchase orders functionality.
 
-## Migration File
-- **File**: `add-warehouse-management-fields.sql`
-- **Purpose**: Adds warehouse management fields to existing tables without creating new tables or affecting existing data
+This guide explains how to migrate your Supabase database to support the new lot management system where quantities are stored in `product_lots` table per warehouse.
 
-## What This Migration Does
+## Migration Steps
 
-### 1. Updates `products` table
-- Adds `min_stock` (minimum stock level that triggers auto-ordering)
-- Adds `max_stock` (target stock level for restocking)
-- Adds `batch_number` (current batch/lot number)
-- Adds `expiry_date` (expiry date for current batch)
-- Adds `supplier_id` (reference to primary supplier)
+### Method 1: Using Supabase Dashboard (Recommended)
 
-### 2. Updates `suppliers` table
-- Adds missing fields: `code`, `phone`, `email`, `address`, `tax_code`, `contact_person`, `payment_terms`, `notes`, `is_active`, `updated_at`
+1. **Open Supabase Dashboard**
+   - Go to https://supabase.com/dashboard
+   - Select your project
 
-### 3. Creates `product_supplier_mapping` table (NEW)
-- Maps internal products to supplier product codes
-- Supports AI OCR matching for invoice processing
-- Tracks cost price, lead time, and minimum order quantity per supplier
+2. **Navigate to SQL Editor**
+   - Click on "SQL Editor" in the left sidebar
+   - Click "New Query"
 
-### 4. Updates `purchase_orders` table
-- Adds `po_number` (unique PO number in format PO-00001)
-- Adds `order_date`, `expected_delivery_date`, `total_amount`, `updated_at`
-- Auto-generates PO numbers for existing orders
+3. **Run the Migration Script**
+   - Copy the entire content from `migrate-lot-management-refactor.sql`
+   - Paste into the SQL editor
+   - Click "Run" or press `Ctrl/Cmd + Enter`
 
-### 5. Creates `purchase_order_items` table (NEW)
-- Line items for purchase orders
-- Tracks ordered quantity vs received quantity
-- Links to products and purchase orders
+4. **Verify the Migration**
 
-## How to Run the Migration
+   ```sql
+   -- Check if indexes were created
+   SELECT indexname, indexdef
+   FROM pg_indexes
+   WHERE tablename IN ('product_lots', 'products')
+   AND indexname LIKE '%lot%';
 
-### Option 1: Supabase SQL Editor (Recommended)
-1. Log in to your Supabase project dashboard
-2. Go to the SQL Editor
-3. Copy the entire contents of `add-warehouse-management-fields.sql`
-4. Paste into a new query
-5. Click "Run" to execute
+   -- Check if functions were created
+   SELECT routine_name, routine_type
+   FROM information_schema.routines
+   WHERE routine_name IN ('migrate_inventory_to_lots', 'remove_all_lots');
+   ```
 
-### Option 2: psql Command Line
+5. **Optional: Migrate Existing Products**
+   If you have products with `enable_lot_management = TRUE`:
+   ```sql
+   DO $$
+   DECLARE
+     v_product RECORD;
+     v_result JSON;
+   BEGIN
+     FOR v_product IN
+       SELECT id, name
+       FROM products
+       WHERE enable_lot_management = TRUE
+     LOOP
+       v_result := migrate_inventory_to_lots(v_product.id);
+       RAISE NOTICE 'Product %: % - Result: %',
+         v_product.id,
+         v_product.name,
+         v_result::text;
+     END LOOP;
+   END $$;
+   ```
+
+### Method 2: Using Supabase CLI
+
+1. **Install Supabase CLI**
+
+   ```bash
+   npm install -g supabase
+   ```
+
+2. **Apply migration**
+   ```bash
+   supabase db push --file apps/cms/src/database/migrate-lot-management-refactor.sql
+   ```
+
+### Method 3: Using psql
+
 ```bash
-psql -h your-db-host -U postgres -d your-database -f add-warehouse-management-fields.sql
+psql "your-connection-string" -f apps/cms/src/database/migrate-lot-management-refactor.sql
 ```
 
-## Post-Migration Steps
+## What the Migration Does
 
-### 1. Set Min/Max Stock Levels
-After running the migration, you need to set min_stock and max_stock values for products:
-
-```sql
--- Example: Set min/max stock for specific products
-UPDATE products
-SET min_stock = 10, max_stock = 50
-WHERE id = 1;
-
--- Or bulk update based on product type
-UPDATE products
-SET min_stock = 5, max_stock = 30
-WHERE product_type = 'medicine';
-```
-
-### 2. Assign Suppliers to Products
-```sql
--- Assign primary supplier to products
-UPDATE products
-SET supplier_id = 1
-WHERE category = 'Thuốc kháng sinh';
-```
-
-### 3. Test Auto-Generate Function
-1. Navigate to Purchase Orders page in the app
-2. Click "Tạo Dự trù & Lên Đơn hàng Loạt" button
-3. System will scan inventory and create draft purchase orders for products below min_stock
+1. **Creates Indexes** for better performance
+2. **Creates Helper Functions**:
+   - `migrate_inventory_to_lots(product_id)` - Copy inventory to lots
+   - `remove_all_lots(product_id)` - Delete all lots
 
 ## Verification
 
-After migration, verify the changes:
-
 ```sql
--- Check if new columns exist in products table
-SELECT column_name, data_type
-FROM information_schema.columns
-WHERE table_name = 'products'
-  AND column_name IN ('min_stock', 'max_stock', 'batch_number', 'expiry_date', 'supplier_id');
+-- Check products with lot management
+SELECT id, name, enable_lot_management
+FROM products
+WHERE enable_lot_management = TRUE;
 
--- Check if new tables were created
-SELECT table_name
-FROM information_schema.tables
-WHERE table_name IN ('product_supplier_mapping', 'purchase_order_items');
-
--- Check if PO numbers were generated
-SELECT id, po_number, created_at
-FROM purchase_orders
-LIMIT 10;
+-- Check created lots
+SELECT pl.*, p.name, w.name
+FROM product_lots pl
+JOIN products p ON pl.product_id = p.id
+JOIN warehouses w ON pl.warehouse_id = w.id;
 ```
 
-## Rollback (if needed)
+## Troubleshooting
 
-If you need to rollback the migration:
+**Error: "product_lots table missing warehouse_id"**
+→ Run `lot-management-v2.sql` first
 
-```sql
--- Remove added columns from products
-ALTER TABLE products
-DROP COLUMN IF EXISTS min_stock,
-DROP COLUMN IF EXISTS max_stock,
-DROP COLUMN IF EXISTS batch_number,
-DROP COLUMN IF EXISTS expiry_date,
-DROP COLUMN IF EXISTS supplier_id;
-
--- Drop new tables
-DROP TABLE IF EXISTS purchase_order_items;
-DROP TABLE IF EXISTS product_supplier_mapping;
-
--- Remove added columns from purchase_orders
-ALTER TABLE purchase_orders
-DROP COLUMN IF EXISTS po_number,
-DROP COLUMN IF EXISTS order_date,
-DROP COLUMN IF EXISTS expected_delivery_date,
-DROP COLUMN IF EXISTS total_amount,
-DROP COLUMN IF EXISTS updated_at;
-```
-
-## Next Steps
-
-After successful migration:
-1. Configure min/max stock levels for your products
-2. Assign primary suppliers to products
-3. Test the auto-generate purchase orders feature
-4. Proceed with implementing the remaining warehouse features:
-   - NÚT 2: OCR/AI for batch number and expiry date input
-   - NÚT 3: Barcode scanning for order verification
-   - NÚT 4: VAT invoice reconciliation
-
-## Support
-
-If you encounter any issues during migration:
-1. Check the Supabase logs for detailed error messages
-2. Verify that all referenced tables exist (products, suppliers, purchase_orders)
-3. Ensure you have proper database permissions
-4. Review the migration file for any syntax errors
+**Lots not appearing**
+→ Check if inventory has quantity > 0
+→ Verify `enable_lot_management = TRUE`

@@ -36,6 +36,7 @@ import {
   useIsCreatingOrder,
   useOrderItemsByIndex,
   useSelectedCustomerByIndex,
+  useCreateB2BQuoteHandler,
 } from "@nam-viet-erp/store";
 
 import { exportB2BOrderToPdf, formatCurrency } from "../utils";
@@ -58,8 +59,6 @@ interface CreateOrderFormProps {
   index: number;
   onSuccess?: () => void;
   onNavigateToList?: () => void;
-  createB2BQuote: (data: any) => Promise<any>;
-  addQuoteItem: (data: any) => Promise<any>;
 }
 
 const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
@@ -68,11 +67,9 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
   index,
   onSuccess,
   onNavigateToList,
-  createB2BQuote,
-  addQuoteItem,
 }) => {
   const screens = useBreakpoint();
-  const isMobile = !screens.lg;
+  const isMd = screens.md;
   const [form] = Form.useForm();
   const selectedClient = useSelectedCustomerByIndex(index);
   const isCreatingOrder = useIsCreatingOrder();
@@ -83,11 +80,25 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
     tabs,
     setSelectedCustomerByIndex,
     updateFormDataByIndex,
-    createOrder: createStoreOrder,
     updateOrderItemByIndex,
     removeOrderItemByIndex,
     addOrderItemByIndex,
   } = useB2BOrderStore();
+
+  // Use the new useCreateB2BQuoteHandler hook
+  const { submit: createOrder } = useCreateB2BQuoteHandler({
+    onError: (error) => {
+      notification.error({
+        message: "Lỗi tạo đơn hàng",
+        description:
+          error.message || "Không thể tạo đơn hàng. Vui lòng thử lại.",
+      });
+    },
+    onSuccess: () => {
+      // Success notification is handled in handleCreateOrderWithStatus
+      // This callback is mainly for refetching data if needed
+    },
+  });
 
   React.useEffect(() => {
     if (selectedClient) {
@@ -112,7 +123,7 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
   const totals = React.useMemo(() => {
     const subtotal = orderItems.reduce(
       (sum, item) => sum + item.total_price,
-      0
+      0,
     );
     const discountAmount = (subtotal * discountPercent) / 100;
     const taxableAmount = subtotal - discountAmount;
@@ -217,15 +228,11 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
         quote_stage: quoteStage, // Set the status
       };
 
-      // Create order via zustand store
-      await createStoreOrder(
-        {
-          formData: orderData,
-          items: orderItems,
-        },
-        createB2BQuote,
-        addQuoteItem
-      );
+      // Create order via useCreateB2BQuoteHandler hook
+      await createOrder({
+        quoteData: orderData,
+        orderItems: orderItems,
+      });
 
       // Show success notification based on status
       const statusMessages: Record<QuoteStage, string> = {
@@ -251,11 +258,8 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
         onNavigateToList();
       }
     } catch (err: any) {
+      // Error notification is handled by the hook's onError callback
       console.error("Error creating order:", err);
-      notification.error({
-        message: "Lỗi",
-        description: err.message || "Không thể lưu đơn hàng. Vui lòng thử lại.",
-      });
     }
   };
 
@@ -304,7 +308,7 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
     productArray.forEach((product, index) => {
       // Check if product already exists in order
       const existingItem = orderItems.find(
-        (item) => item.product_id === product.id
+        (item) => item.product_id === product.id,
       );
 
       if (existingItem) {
@@ -323,7 +327,7 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
         console.error(
           "Invalid product id when adding product:",
           product.id,
-          product
+          product,
         );
         return;
       }
@@ -369,8 +373,8 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
       title: "Sản phẩm",
       dataIndex: "product_name",
       key: "product_name",
-      width: isMobile ? 150 : "40%",
-      fixed: isMobile ? "left" : undefined,
+      width: isMd ? 150 : "40%",
+      fixed: isMd ? "left" : undefined,
       render: (text, record) => (
         <div>
           <Text strong>{text}</Text>
@@ -385,7 +389,7 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
       title: "Đơn giá",
       dataIndex: "unit_price",
       key: "unit_price",
-      width: isMobile ? 100 : "15%",
+      width: isMd ? 100 : "15%",
       render: (value, record) => (
         <InputNumber
           value={value}
@@ -405,7 +409,7 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
       title: "Số lượng",
       dataIndex: "quantity",
       key: "quantity",
-      width: isMobile ? 80 : "15%",
+      width: isMd ? 80 : "15%",
       render: (value, record) => (
         <InputNumber
           value={value}
@@ -419,15 +423,15 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
       title: "Đơn vị",
       dataIndex: "unit",
       key: "unit",
-      width: isMobile ? 60 : "10%",
+      width: isMd ? 60 : "10%",
       render: (text) => <Text>{text}</Text>,
-      responsive: isMobile ? ["lg"] : undefined,
+      responsive: isMd ? ["lg"] : undefined,
     },
     {
       title: "Thành tiền",
       dataIndex: "total_price",
       key: "total_price",
-      width: isMobile ? 100 : "15%",
+      width: isMd ? 100 : "15%",
       render: (value) => (
         <Text strong style={{ color: "#52c41a" }}>
           {formatCurrency(value)}
@@ -437,8 +441,8 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
     {
       title: "Thao tác",
       key: "actions",
-      width: isMobile ? 50 : "5%",
-      fixed: isMobile ? "right" : undefined,
+      width: isMd ? 50 : "5%",
+      fixed: isMd ? "right" : undefined,
       render: (_, record) => (
         <Button
           type="text"
@@ -462,50 +466,50 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
           zIndex: 10,
         }}
       >
-        <Space
-          direction={isMobile ? "vertical" : "horizontal"}
-          style={{ width: "100%" }}
-          size="middle"
-        >
-          <Button
-            type="primary"
-            icon={<SendOutlined />}
-            onClick={handleSaveAndSend}
-            loading={isCreatingOrder}
-            size="large"
-            style={isMobile ? { width: "100%" } : {}}
-          >
-            Gửi đi
-          </Button>
-          <Button
-            type="default"
-            icon={<CheckOutlined />}
-            onClick={handleSaveAndAccept}
-            loading={isCreatingOrder}
-            size="large"
-            style={isMobile ? { width: "100%" } : {}}
-          >
-            Chấp nhận
-          </Button>
-          <Button
-            icon={<SaveOutlined />}
-            onClick={handleSaveDraft}
-            loading={isCreatingOrder}
-            size="large"
-            style={isMobile ? { width: "100%" } : {}}
-          >
-            Lưu nháp
-          </Button>
-          <Button
-            icon={<FilePdfOutlined />}
-            onClick={handleExportPDF}
-            disabled={orderItems.length === 0}
-            size="large"
-            style={isMobile ? { width: "100%" } : {}}
-          >
-            Xuất PDF
-          </Button>
-        </Space>
+        <Row gutter={[8, 8]}>
+          <Col>
+            <Button
+              type="primary"
+              icon={<SendOutlined />}
+              onClick={handleSaveAndSend}
+              loading={isCreatingOrder}
+              size="large"
+            >
+              {!screens.xs && "Gửi đi"}
+            </Button>
+          </Col>
+          <Col>
+            <Button
+              type="default"
+              icon={<CheckOutlined />}
+              onClick={handleSaveAndAccept}
+              loading={isCreatingOrder}
+              size="large"
+            >
+              {!screens.xs && "Chấp nhận"}
+            </Button>
+          </Col>
+          <Col>
+            <Button
+              icon={<SaveOutlined />}
+              onClick={handleSaveDraft}
+              loading={isCreatingOrder}
+              size="large"
+            >
+              {!screens.xs && "Lưu nháp"}
+            </Button>
+          </Col>
+          <Col>
+            <Button
+              icon={<FilePdfOutlined />}
+              onClick={handleExportPDF}
+              disabled={orderItems.length === 0}
+              size="large"
+            >
+              {!screens.xs && "Xuất PDF"}
+            </Button>
+          </Col>
+        </Row>
       </Card>
 
       <Form
@@ -599,7 +603,7 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
                     title: "",
                     dataIndex: "label",
                     key: "label",
-                    width: isMobile ? "40%" : "30%",
+                    width: isMd ? "40%" : "30%",
                     render: (text) => (
                       <div
                         style={{
@@ -808,8 +812,8 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
               columns={orderColumns}
               dataSource={orderItems}
               pagination={false}
-              scroll={{ x: isMobile ? 600 : 800 }}
-              size={isMobile ? "small" : "middle"}
+              scroll={{ x: isMd ? 600 : 800 }}
+              size={isMd ? "small" : "middle"}
               locale={{
                 emptyText:
                   "Chưa có sản phẩm nào được thêm vào đơn hàng. Sử dụng ô tìm kiếm ở trên để thêm sản phẩm.",
@@ -826,7 +830,7 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
                 Tổng kết Đơn hàng
               </Space>
             }
-            style={{ position: isMobile ? "static" : "sticky", top: 24 }}
+            style={{ position: isMd ? "static" : "sticky", top: 24 }}
           >
             <Descriptions column={1} size="small">
               <Descriptions.Item label="Số lượng sản phẩm">

@@ -38,22 +38,18 @@ export function useInitializeInventory() {
 
     if (!hasInventoryPermission) {
       console.log(
-        "[useInitializeInventory] Employee does not have inventory permissions"
+        "[useInitializeInventory] Employee does not have inventory permissions",
       );
       return;
     }
 
     const initializeInventory = async () => {
       try {
-        console.log(
-          `[useInitializeInventory] Fetching inventory for warehouse ${employee.warehouse_id}`
-        );
-
         await fetchInventory(employee.warehouse_id);
       } catch (error: any) {
         console.error(
           "[useInitializeInventory] Error fetching inventory:",
-          error
+          error,
         );
         setError(error.message || "Failed to fetch inventory");
       }

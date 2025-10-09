@@ -3,30 +3,30 @@ import useFetchSubmitStore from "../fetchSubmitStore";
 
 const useSubmitQuery = <TParams = any, TResponse = any>(params: {
   key: any[];
-  onSuccess?: () => any;
+  onSuccess?: (data?: TResponse) => any;
   onSubmit?: (data?: TParams) => Promise<TResponse>;
   onError?: (e: any) => any;
 }) => {
   const _key = params.key.join("%2s");
 
   const data = useFetchSubmitStore(
-    (state) => state.fetchData?.[_key]?.data ?? null
+    (state) => state.fetchData?.[_key]?.data ?? null,
   );
 
   const isError = useFetchSubmitStore(
-    (state) => state.fetchData?.[_key]?.isError ?? false
+    (state) => state.fetchData?.[_key]?.isError ?? false,
   );
 
   const isLoading = useFetchSubmitStore(
-    (state) => state.fetchData?.[_key]?.isLoading ?? false
+    (state) => state.fetchData?.[_key]?.isLoading ?? false,
   );
 
   const error = useFetchSubmitStore(
-    (state) => state.fetchData?.[_key]?.error ?? null
+    (state) => state.fetchData?.[_key]?.error ?? null,
   );
 
   const lastFetch = useFetchSubmitStore(
-    (state) => state.fetchData?.[_key]?.lastFetch ?? null
+    (state) => state.fetchData?.[_key]?.lastFetch ?? null,
   );
 
   const register = useFetchSubmitStore((state) => state.register);

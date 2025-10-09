@@ -27,23 +27,23 @@ const useQuery = <T = any>({
   const _key = getQueryKey(key);
   const fetch = useFetchStore((state) => state.fetch);
   const refetch = useFetchStore(
-    (state) => state.fetchData?.[_key]?.fetch ?? null
+    (state) => state.fetchData?.[_key]?.fetch ?? null,
   );
   const data = useFetchStore((state) => state.fetchData?.[_key]?.data ?? null);
   const isError = useFetchStore(
-    (state) => state.fetchData?.[_key]?.isError ?? false
+    (state) => state.fetchData?.[_key]?.isError ?? false,
   );
   const isLoading = useFetchStore(
-    (state) => state.fetchData?.[_key]?.isLoading ?? false
+    (state) => state.fetchData?.[_key]?.isLoading ?? false,
   );
   const isRefreshing = useFetchStore(
-    (state) => state.fetchData?.[_key]?.isRefreshing ?? false
+    (state) => state.fetchData?.[_key]?.isRefreshing ?? false,
   );
   const error = useFetchStore(
-    (state) => state.fetchData?.[_key]?.error ?? null
+    (state) => state.fetchData?.[_key]?.error ?? null,
   );
   const lastFetch = useFetchStore(
-    (state) => state.fetchData?.[_key]?.lastFetch ?? null
+    (state) => state.fetchData?.[_key]?.lastFetch ?? null,
   );
 
   const fetchData = async () => {
@@ -59,12 +59,14 @@ const useQuery = <T = any>({
 
   const refetchData = async () => {
     if (
-      (!data ||
-        disableCache ||
-        (lastFetch !== null && Date.now() - lastFetch.getTime() > gcTime)) &&
-      !!refetch
+      !data ||
+      disableCache ||
+      (lastFetch !== null && Date.now() - lastFetch.getTime() > gcTime)
     ) {
-      refetch();
+      const _refetch = !!queryFn ? queryFn : refetch;
+      if (!!_refetch) {
+        fetch(_key, _refetch);
+      }
     }
   };
 
@@ -76,7 +78,7 @@ const useQuery = <T = any>({
     } else {
       fetchData();
     }
-  }, []);
+  }, [_key]);
 
   return {
     data: data as T,
@@ -88,10 +90,15 @@ const useQuery = <T = any>({
   };
 };
 
+export const refreshQuery = async (key: any[]) => {
+  const fetch = fetchStore.getState().fetchData[getQueryKey(key)]?.fetch;
+  return fetch();
+};
+
 export const setQueryData = async <T = any>(
   key: string,
   updater?: T | Updater<T | undefined>,
-  validator?: (data: T | undefined) => Promise<boolean>
+  validator?: (data: T | undefined) => Promise<boolean>,
 ) => {
   const setData = fetchStore.getState().setData;
   const oldData = fetchStore.getState().fetchData[key]?.data;

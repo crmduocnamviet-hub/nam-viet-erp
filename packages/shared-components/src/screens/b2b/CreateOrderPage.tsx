@@ -1,11 +1,7 @@
 import React, { useState } from "react";
 import { Row, Col, Typography, Grid, notification, Tabs } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
-import {
-  createB2BQuote,
-  addQuoteItem,
-  getB2BWarehouseProductByBarCode,
-} from "@nam-viet-erp/services";
+import { getB2BWarehouseProductByBarCode } from "@nam-viet-erp/services";
 import {
   B2BCustomerSearchModal,
   B2BOrderPreviewModal,
@@ -82,7 +78,9 @@ const CreateOrderPage: React.FC<CreateOrderPageProps> = ({
   // Handle QR scan result
   const handleQRScan = async (scannedData: string) => {
     try {
-      const { data } = await getB2BWarehouseProductByBarCode({ barcode: scannedData });
+      const { data } = await getB2BWarehouseProductByBarCode({
+        barcode: scannedData,
+      });
 
       if (data && data.length) {
         const product = {
@@ -141,7 +139,7 @@ const CreateOrderPage: React.FC<CreateOrderPageProps> = ({
 
       // Check if product already exists in order
       const existingItem = orderItems.find(
-        (item) => item.product_id === product.id
+        (item) => item.product_id === product.id,
       );
 
       if (existingItem) {
@@ -149,7 +147,10 @@ const CreateOrderPage: React.FC<CreateOrderPageProps> = ({
         const newQuantity = existingItem.quantity + 1;
 
         // Check if new quantity exceeds stock
-        if (product.stock_quantity !== undefined && newQuantity > product.stock_quantity) {
+        if (
+          product.stock_quantity !== undefined &&
+          newQuantity > product.stock_quantity
+        ) {
           notification.error({
             message: "Vượt quá tồn kho",
             description: `${product.name} chỉ còn ${product.stock_quantity} sản phẩm trong kho. Hiện tại đơn hàng đã có ${existingItem.quantity}.`,
@@ -171,7 +172,7 @@ const CreateOrderPage: React.FC<CreateOrderPageProps> = ({
         console.error(
           "Invalid product id when adding product:",
           product.id,
-          product
+          product,
         );
         return;
       }
@@ -197,7 +198,7 @@ const CreateOrderPage: React.FC<CreateOrderPageProps> = ({
       notification.error({
         message: "Không thể thêm sản phẩm hết hàng",
         description: `Các sản phẩm sau đã hết hàng: ${outOfStockItems.join(
-          ", "
+          ", ",
         )}. Vui lòng nhập thêm hàng.`,
         duration: 4,
       });
@@ -269,8 +270,6 @@ const CreateOrderPage: React.FC<CreateOrderPageProps> = ({
                 employee={employee}
                 onOpenClientSelectModal={() => setClientSelectVisible(true)}
                 onNavigateToList={onNavigateToList}
-                createB2BQuote={createB2BQuote}
-                addQuoteItem={addQuoteItem}
               />
             </div>
           ),

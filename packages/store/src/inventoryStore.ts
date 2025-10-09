@@ -18,10 +18,12 @@ export interface InventoryState {
   fetchInventory: (warehouseId: number) => Promise<void>;
   refreshInventory: () => Promise<void>;
   clearInventory: () => void;
-  updateInventoryQuantities: (updates: {
-    productId: number;
-    quantityChange: number;
-  }[]) => void;
+  updateInventoryQuantities: (
+    updates: {
+      productId: number;
+      quantityChange: number;
+    }[],
+  ) => void;
 }
 
 // Create store
@@ -42,7 +44,7 @@ export const useInventoryStore = create<InventoryState>()(
               state.inventory = inventory;
             },
             false,
-            "setInventory"
+            "setInventory",
           ),
 
         setLoadingInventory: (isLoading) =>
@@ -51,7 +53,7 @@ export const useInventoryStore = create<InventoryState>()(
               state.isLoadingInventory = isLoading;
             },
             false,
-            "setLoadingInventory"
+            "setLoadingInventory",
           ),
 
         setError: (error) =>
@@ -60,7 +62,7 @@ export const useInventoryStore = create<InventoryState>()(
               state.error = error;
             },
             false,
-            "setError"
+            "setError",
           ),
 
         setWarehouseId: (warehouseId) =>
@@ -69,7 +71,7 @@ export const useInventoryStore = create<InventoryState>()(
               state.warehouseId = warehouseId;
             },
             false,
-            "setWarehouseId"
+            "setWarehouseId",
           ),
 
         fetchInventory: async (warehouseId: number) => {
@@ -83,9 +85,6 @@ export const useInventoryStore = create<InventoryState>()(
 
           // Prevent duplicate requests if already loading
           if (state.isLoadingInventory) {
-            console.log(
-              "[fetchInventory] Request already in progress, skipping..."
-            );
             return;
           }
 
@@ -98,9 +97,8 @@ export const useInventoryStore = create<InventoryState>()(
             const { getInventoryByWarehouse } = await import(
               "@nam-viet-erp/services"
             );
-            const { data: inventory, error } = await getInventoryByWarehouse(
-              warehouseId
-            );
+            const { data: inventory, error } =
+              await getInventoryByWarehouse(warehouseId);
 
             if (error) {
               console.error("Error fetching inventory:", error);
@@ -124,7 +122,7 @@ export const useInventoryStore = create<InventoryState>()(
           // Prevent duplicate requests if already loading
           if (state.isLoadingInventory) {
             console.log(
-              "[refreshInventory] Request already in progress, skipping..."
+              "[refreshInventory] Request already in progress, skipping...",
             );
             return;
           }
@@ -145,9 +143,8 @@ export const useInventoryStore = create<InventoryState>()(
             const { getInventoryByWarehouse } = await import(
               "@nam-viet-erp/services"
             );
-            const { data: inventory, error } = await getInventoryByWarehouse(
-              warehouseId
-            );
+            const { data: inventory, error } =
+              await getInventoryByWarehouse(warehouseId);
 
             if (error) {
               console.error("Error refreshing inventory:", error);
@@ -171,7 +168,7 @@ export const useInventoryStore = create<InventoryState>()(
               state.error = null;
             },
             false,
-            "clearInventory"
+            "clearInventory",
           ),
 
         updateInventoryQuantities: (updates) =>
@@ -179,7 +176,7 @@ export const useInventoryStore = create<InventoryState>()(
             (state) => {
               updates.forEach(({ productId, quantityChange }) => {
                 const inventoryItem = state.inventory.find(
-                  (item) => item.products?.id === productId
+                  (item) => item.products?.id === productId,
                 );
                 if (inventoryItem) {
                   inventoryItem.quantity =
@@ -188,7 +185,7 @@ export const useInventoryStore = create<InventoryState>()(
               });
             },
             false,
-            "updateInventoryQuantities"
+            "updateInventoryQuantities",
           ),
       })),
       {
@@ -198,12 +195,12 @@ export const useInventoryStore = create<InventoryState>()(
           inventory: state.inventory,
           warehouseId: state.warehouseId,
         }),
-      }
+      },
     ),
     {
       name: "InventoryStore",
-    }
-  )
+    },
+  ),
 );
 
 // Selectors

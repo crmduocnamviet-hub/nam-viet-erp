@@ -220,7 +220,6 @@ interface IInventory {
   created_at?: string;
   product_id: number;
   warehouse_id: number;
-  lot_id?: number | null;
   quantity: number;
   min_stock: number;
   max_stock: number;
@@ -544,6 +543,7 @@ interface IProductLot {
   updated_at?: string;
   created_by?: string;
   products?: IProduct;
+  quantity?: number;
 }
 
 interface VatInvoice {
@@ -603,3 +603,7 @@ interface ProductLotWithDetails extends IProductLot {
   quantity_available?: number;
   days_until_expiry?: number;
 }
+
+type ProductWithInventoryData = IProduct & {
+  inventory_data: IInventory[];
+};

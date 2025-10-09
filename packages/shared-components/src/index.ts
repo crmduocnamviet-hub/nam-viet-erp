@@ -16,6 +16,7 @@ export { default as QRScannerVerificationModal } from "./components/QRScannerVer
 export { default as PosTabContent } from "./components/PosTabContent";
 export { default as ComboFormModal } from "./components/ComboFormModal";
 export { default as PageLayout } from "./components/PageLayout";
+export { default as WarehouseQuantityModal } from "./components/WarehouseQuantityModal";
 export * from "./hooks/useDebounce";
 
 // Screens and Permission System

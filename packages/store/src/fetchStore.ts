@@ -30,6 +30,7 @@ export const fetchStore = create<FetchStore, any>(
       });
     },
     async fetch(key, callback) {
+      console.log("[QUERY_KEY] ", key);
       const isRefresh = !!get().fetchData[key];
       set((state) => {
         state.fetchData[key] = {
@@ -78,7 +79,7 @@ export const fetchStore = create<FetchStore, any>(
         });
       } catch (e) {}
     },
-  }))
+  })),
 );
 
 const useFetchStore = fetchStore;

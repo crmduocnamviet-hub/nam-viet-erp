@@ -4,6 +4,8 @@ import {
   getQueryData as _getQueryData,
 } from "./hooks/useQuery";
 
+import { default as _useSubmitQuery } from "./hooks/useSubmitQuery";
+
 // Export all stores
 export * from "./authStore";
 export * from "./employeeStore";
@@ -30,11 +32,12 @@ export * from "./hooks/useInitializeInventory";
 export * from "./hooks/useInventory";
 export * from "./hooks/useProductLot";
 export * from "./hooks/useProduct";
-export * from "./hooks/useSubmitQuery";
+export * from "./hooks/useB2BOrder";
 
 export const useQuery = _useQuery;
 export const setQueryData = _setQueryData;
 export const getQueryData = _getQueryData;
+export const useSubmitQuery = _useSubmitQuery;
 
 // Re-export zustand for convenience
 export { create } from "zustand";

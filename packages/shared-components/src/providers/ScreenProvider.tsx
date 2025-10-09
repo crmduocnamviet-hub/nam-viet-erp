@@ -26,7 +26,7 @@ interface ScreenContextType {
   context: Record<string, any>;
   renderScreen: (
     screenKey: string,
-    props?: Record<string, any>
+    props?: Record<string, any>,
   ) => React.ReactElement | null;
   hasPermission: (screenKey: string) => boolean;
   getAvailableScreensForUser: () => Record<string, ScreenConfig>;
@@ -55,13 +55,11 @@ export const ScreenProvider: React.FC<ScreenProviderProps> = ({
   const renderScreen = (screenKey: string, props: Record<string, any> = {}) => {
     const screen = SCREEN_REGISTRY[screenKey];
     if (!screen) {
-      console.warn(`Screen '${screenKey}' not found in registry`);
       return null;
     }
 
     // Check permissions
     if (!user || !hasScreenPermission(screenKey, user.permissions)) {
-      console.log(SCREEN_REGISTRY[screenKey], user.permissions, hasScreenPermission(screenKey, user.permissions));
       return (
         <div
           style={{
@@ -100,7 +98,7 @@ export const ScreenProvider: React.FC<ScreenProviderProps> = ({
   };
 
   const getScreenComponent = (
-    screenKey: string
+    screenKey: string,
   ): React.ComponentType<any> | null => {
     const screen = SCREEN_REGISTRY[screenKey];
     return screen ? screen.component : null;

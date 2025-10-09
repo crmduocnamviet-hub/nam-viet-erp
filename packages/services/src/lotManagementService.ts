@@ -32,18 +32,23 @@ export const getAvailableLots = async (params: {
 };
 
 /**
- * Create a new product lot (metadata only)
- * Note: After schema change, product_lots only stores lot metadata
- * Quantities are tracked in inventory table with lot_id foreign key
+ * Create a new product lot
+ * Stores lot metadata with warehouse and quantity in product_lots table
  */
-export const createProductLot = async (lot: Partial<IProductLot>) => {
-  // Only insert lot metadata fields. This is a helper for the more complete createProductLotWithInventory.
+export const createProductLot = async (
+  lot: Partial<IProductLot> & {
+    warehouse_id?: number;
+    quantity?: number;
+  },
+) => {
   const lotData = {
     lot_number: lot.lot_number,
     product_id: lot.product_id,
+    warehouse_id: lot.warehouse_id,
     batch_code: lot.batch_code,
     expiry_date: lot.expiry_date,
     received_date: lot.received_date,
+    quantity: lot.quantity || 0,
   };
 
   const { data, error } = await supabase
@@ -56,8 +61,8 @@ export const createProductLot = async (lot: Partial<IProductLot>) => {
 };
 
 /**
- * Create a new product lot with inventory
- * Creates lot metadata and links it to inventory record
+ * Create a new product lot with inventory sync
+ * Creates lot in product_lots table and syncs to inventory
  */
 export const createProductLotWithInventory = async (params: {
   lot_number: string;
@@ -68,40 +73,31 @@ export const createProductLotWithInventory = async (params: {
   received_date?: string;
   quantity: number;
 }) => {
-  // Step 1: Create lot metadata
-  const { data: lot, error: lotError } = await createProductLot(params);
-
-  if (lotError) return { data: null, error: lotError };
-  if (!lot)
-    return {
-      data: null,
-      error: {
-        message: "Failed to create lot metadata.",
-        details: "",
-        hint: "",
-        code: "500",
-      },
-    };
-
-  // Step 2: Update or create inventory record with lot_id and quantity
-  const { error: inventoryError } = await supabase
-    .from("inventory")
-    .insert({
+  try {
+    // Step 1: Create lot in product_lots table
+    const { data: lot, error: lotError } = await createProductLot({
+      lot_number: params.lot_number,
       product_id: params.product_id,
       warehouse_id: params.warehouse_id,
-      lot_id: lot.id,
+      batch_code: params.batch_code,
+      expiry_date: params.expiry_date,
+      received_date: params.received_date,
       quantity: params.quantity,
-    })
-    .select()
-    .single();
+    });
 
-  if (inventoryError) {
-    // Rollback: delete the created lot
-    await supabase.from("product_lots").delete().eq("id", lot.id);
-    return { data: null, error: inventoryError };
+    if (lotError) throw lotError;
+    if (!lot) throw new Error("Failed to create lot");
+
+    // Step 2: Sync to inventory table
+    await syncLotQuantityToInventory({
+      productId: params.product_id,
+      warehouseId: params.warehouse_id,
+    });
+
+    return { data: lot as IProductLot, error: null };
+  } catch (error: any) {
+    return { data: null, error };
   }
-
-  return { data: lot as IProductLot, error: null };
 };
 
 /**
@@ -109,7 +105,7 @@ export const createProductLotWithInventory = async (params: {
  */
 export const updateProductLot = async (
   lotId: number,
-  updates: Partial<IProductLot>
+  updates: Partial<IProductLot>,
 ) => {
   const { data, error } = await supabase
     .from("product_lots")
@@ -181,7 +177,7 @@ export const getLotMovements = async (lotId: number) => {
       to_warehouse:to_warehouse_id(name),
       purchase_vat:purchase_vat_invoice_id(invoice_number),
       sales_vat:sales_vat_invoice_id(invoice_number)
-    `
+    `,
     )
     .eq("lot_id", lotId)
     .order("created_at", { ascending: false });
@@ -224,7 +220,7 @@ export const addVatInvoiceItems = async (
     total_with_vat: number;
     lot_number?: string;
     expiry_date?: string;
-  }>
+  }>,
 ) => {
   const { data, error } = await supabase
     .from("vat_invoice_items")
@@ -278,7 +274,7 @@ export const getVatReconciliation = async (params?: {
         invoice_date,
         customer:customer_id(customer_name)
       )
-    `
+    `,
     )
     .not("purchase_vat_invoice_id", "is", null)
     .not("sales_vat_invoice_id", "is", null);
@@ -336,7 +332,7 @@ export const getBarcodeVerificationHistory = async (params?: {
       product:product_id(id, name, sku),
       lot:lot_id(lot_number, expiry_date),
       scanned_by_employee:scanned_by(full_name)
-    `
+    `,
     )
     .order("scanned_at", { ascending: false });
 
@@ -479,35 +475,6 @@ export const bulkCreateLotsFromOCR = async (params: {
 };
 
 /**
- * Get lots by shelf location
- */
-export const getLotsByShelfLocation = async (params: {
-  warehouseId: number;
-  aisle?: string;
-  rack?: string;
-  level?: string;
-}) => {
-  let query = supabase
-    .from("product_lots")
-    .select(
-      `
-      *,
-      product:product_id(id, name, sku, barcode),
-      warehouse:warehouse_id(name)
-    `
-    )
-    .eq("warehouse_id", params.warehouseId)
-    .eq("status", "on_shelf");
-
-  if (params.aisle) query = query.eq("aisle", params.aisle);
-  if (params.rack) query = query.eq("rack", params.rack);
-  if (params.level) query = query.eq("level", params.level);
-
-  const { data, error } = await query;
-  return { data, error };
-};
-
-/**
  * Get expiring lots
  */
 export const getExpiringLots = async (params: {
@@ -524,7 +491,7 @@ export const getExpiringLots = async (params: {
       *,
       product:product_id(id, name, sku),
       warehouse:warehouse_id(name)
-    `
+    `,
     )
     .lte("expiry_date", expiryDate.toISOString().split("T")[0])
     .gt("quantity_available", 0)
@@ -580,7 +547,7 @@ export const getLotInventorySummary = async (params?: {
       const today = new Date();
       const daysUntilExpiry = expiryDate
         ? Math.floor(
-            (expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+            (expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
           )
         : undefined;
 
@@ -591,7 +558,7 @@ export const getLotInventorySummary = async (params?: {
         warehouse_name: lot.warehouse?.name || "",
         days_until_expiry: daysUntilExpiry,
       };
-    }
+    },
   );
 
   return { data: transformedData, error: null };
@@ -610,24 +577,12 @@ export const getProductLots = async (params: {
 }) => {
   // Fetch all inventory records (including those with null lot_id)
   let query = supabase
-    .from("inventory")
+    .from("product_lots")
     .select(
       `
-      quantity,
-      warehouse_id,
-      lot_id,
-      product_lots(
-        id,
-        lot_number,
-        product_id,
-        batch_code,
-        expiry_date,
-        received_date,
-        created_at,
-        updated_at
-      ),
+      *,
       warehouses(id, name)
-    `
+    `,
     )
     .eq("product_id", params.productId);
 
@@ -646,10 +601,10 @@ export const getProductLots = async (params: {
   // Transform and calculate days until expiry
   const lotsWithExpiry = (data || []).map((inv: any) => {
     // If lot_id is null, show as "Mặc Định" (Default) lot
-    if (!inv.lot_id || !inv.product_lots) {
+    if (!inv.product_lots) {
       return {
-        id: null,
-        lot_number: "Mặc Định",
+        id: inv.id,
+        lot_number: inv.lot_number,
         product_id: params.productId,
         batch_code: null,
         expiry_date: null,
@@ -669,7 +624,7 @@ export const getProductLots = async (params: {
     const today = new Date();
     const daysUntilExpiry = expiryDate
       ? Math.floor(
-          (expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+          (expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
         )
       : undefined;
 
@@ -684,7 +639,7 @@ export const getProductLots = async (params: {
       updated_at: lot.updated_at,
       warehouse_id: inv.warehouse_id,
       warehouse_name: inv.warehouses?.name || "",
-      quantity: inv.quantity,
+      quantity: lot.quantity,
       days_until_expiry: daysUntilExpiry,
     };
   });
@@ -693,8 +648,8 @@ export const getProductLots = async (params: {
 };
 
 /**
- * Delete a product lot
- * Foreign key constraint will set lot_id to NULL in inventory records
+ * Delete a product lot and resync inventory
+ * Deletes the lot and recalculates inventory quantities
  */
 export const deleteProductLot = async (params: {
   lotId: number;
@@ -703,23 +658,33 @@ export const deleteProductLot = async (params: {
 }) => {
   const { lotId, productId, warehouseId } = params;
 
-  // First, set lot_id to NULL for inventory records linked to this lot
-  const { error: unlinkError } = await supabase
-    .from("inventory")
-    .update({ lot_id: null })
-    .eq("lot_id", lotId)
-    .eq("product_id", productId)
-    .eq("warehouse_id", warehouseId);
+  try {
+    // Delete the lot from product_lots table
+    const { error: deleteError } = await supabase
+      .from("product_lots")
+      .delete()
+      .eq("id", lotId);
 
-  if (unlinkError) return { error: unlinkError };
+    if (deleteError) throw deleteError;
 
-  // Delete the lot
-  const { error: deleteError } = await supabase
-    .from("product_lots")
-    .delete()
-    .eq("id", lotId);
+    // Resync inventory quantities using database function
+    const syncResult = await syncLotQuantityToInventory({
+      productId,
+      warehouseId,
+    });
 
-  return { error: deleteError };
+    if (syncResult.error) {
+      console.error("Failed to sync inventory after delete:", syncResult.error);
+    }
+
+    return {
+      error: null,
+      syncedQuantity: syncResult.totalQuantity,
+      success: true,
+    };
+  } catch (error: any) {
+    return { error, success: false };
+  }
 };
 
 /**
@@ -736,25 +701,47 @@ export const deleteAllProductLots = async (productId: number) => {
 
 /**
  * Update inventory quantity for a specific lot
- * Updates inventory table directly where lot_id matches
+ * Updates product_lots table and syncs to inventory
+ * Supports null lot_id for default lots
  */
 export const updateProductLotQuantity = async (params: {
-  lotId: number;
+  lotId: number | null;
   productId: number;
   warehouseId: number;
   newQuantityAvailable: number;
 }) => {
   const { lotId, productId, warehouseId, newQuantityAvailable } = params;
 
-  // Update inventory table quantity for this lot
-  const { error } = await supabase
-    .from("inventory")
-    .update({ quantity: newQuantityAvailable })
-    .eq("lot_id", lotId)
-    .eq("product_id", productId)
-    .eq("warehouse_id", warehouseId);
+  try {
+    // Update product_lots table
+    if (lotId) {
+      const { error: updateError } = await supabase
+        .from("product_lots")
+        .update({ quantity: newQuantityAvailable })
+        .eq("id", lotId)
+        .eq("product_id", productId)
+        .eq("warehouse_id", warehouseId);
 
-  return { error };
+      if (updateError) throw updateError;
+    } else {
+      // Handle default lot (lot_id is null) - update by product and warehouse
+      const { error: updateError } = await supabase
+        .from("product_lots")
+        .update({ quantity: newQuantityAvailable })
+        .eq("product_id", productId)
+        .eq("warehouse_id", warehouseId)
+        .eq("lot_number", "Lô mặc định");
+
+      if (updateError) throw updateError;
+    }
+
+    // Sync to inventory table
+    await syncLotQuantityToInventory({ productId, warehouseId });
+
+    return { error: null };
+  } catch (error: any) {
+    return { error };
+  }
 };
 
 /**
@@ -775,16 +762,66 @@ export const updateInventoryQuantity = async (params: {
 };
 
 /**
- * No longer needed - quantities are tracked directly in inventory table
- * Kept for backward compatibility but does nothing
+ * Sync product lot quantities to inventory table
+ * Uses database function for efficient server-side calculation
  */
 export const syncLotQuantityToInventory = async (params: {
   productId: number;
   warehouseId: number;
 }) => {
-  // With new schema, inventory table has lot_id and tracks quantities directly
-  // No need to sync from product_lots to inventory
-  return { totalQuantity: 0, error: null };
+  try {
+    // Call database function to sync all lots for this product
+    // This will sync all warehouses including the specified one
+    const { error } = await supabase.rpc("sync_lots_to_inventory", {
+      p_product_id: params.productId,
+    });
+
+    if (error) throw error;
+
+    // Get the updated quantity for this specific warehouse
+    const { data: inventory } = await supabase
+      .from("inventory")
+      .select("quantity")
+      .eq("product_id", params.productId)
+      .eq("warehouse_id", params.warehouseId)
+      .single();
+
+    const totalQuantity = inventory?.quantity || 0;
+
+    return { totalQuantity, error: null };
+  } catch (error: any) {
+    return { totalQuantity: 0, error };
+  }
+};
+
+/**
+ * Sync all product lots to inventory for a specific product
+ * Uses database function for efficient server-side calculation
+ */
+export const syncAllLotsToInventory = async (productId: number) => {
+  try {
+    // Call database function to sync all lots
+    const { data, error } = await supabase.rpc("sync_lots_to_inventory", {
+      p_product_id: productId,
+    });
+
+    if (error) throw error;
+
+    // Parse the JSON result from database function
+    const result = data as {
+      success: boolean;
+      warehouses_synced: number;
+      product_id: number;
+    };
+
+    return {
+      success: result.success,
+      warehousesSynced: result.warehouses_synced,
+      error: null,
+    };
+  } catch (error: any) {
+    return { success: false, warehousesSynced: 0, error };
+  }
 };
 
 /**
@@ -799,8 +836,12 @@ export const getLotById = async (lotId: number) => {
       products (
         name,
         sku
+      ),
+      warehouses (
+        name,
+        id
       )
-    `
+    `,
     )
     .eq("id", lotId)
     .single();
@@ -817,8 +858,12 @@ export const fetchProductLot = async (lotId: number) => {
       products (
         name,
         sku
+      ),
+      warehouses (
+        name,
+        id
       )
-    `
+    `,
     )
     .eq("id", lotId)
     .single();
@@ -833,7 +878,7 @@ export const fetchInventoryByLotId = async (lotId: number) => {
       warehouses (
         name
       )
-    `
+    `,
     )
     .eq("lot_id", lotId)
     .order("warehouse_id");
@@ -856,7 +901,7 @@ export const fetchLotDetailWithInventory = async (lotId: number) => {
         name,
         sku
       )
-    `
+    `,
     )
     .eq("id", lotId)
     .single();
@@ -874,7 +919,7 @@ export const fetchLotDetailWithInventory = async (lotId: number) => {
       warehouses (
         name
       )
-    `
+    `,
     )
     .eq("lot_id", lotId)
     .order("warehouse_id");
@@ -999,7 +1044,7 @@ export const getCOGSByLot = async (params: {
         final_unit_cost,
         product:product_id(id, name, sku)
       )
-    `
+    `,
     )
     .eq("movement_type", "sold")
     .gte("created_at", params.startDate)
@@ -1019,6 +1064,75 @@ export const getCOGSByLot = async (params: {
   }, 0);
 
   return { data: { cogs, movements: data }, error: null };
+};
+
+/**
+ * Enable lot management for a product
+ * Copies quantities from inventory table to product_lots as default lots
+ */
+export const enableLotManagement = async (productId: number) => {
+  try {
+    // Get all inventory records for this product
+    const { data: inventoryRecords, error: fetchError } = await supabase
+      .from("inventory")
+      .select("*")
+      .eq("product_id", productId);
+
+    if (fetchError) throw fetchError;
+    if (!inventoryRecords || inventoryRecords.length === 0) {
+      return { success: true, message: "No inventory to convert" };
+    }
+
+    // Create default lots for each warehouse with inventory
+    const lotPromises = inventoryRecords
+      .filter((inv) => inv.quantity > 0)
+      .map(async (inv) => {
+        // Create default lot in product_lots table
+        const { error: lotError } = await supabase.from("product_lots").insert({
+          product_id: productId,
+          warehouse_id: inv.warehouse_id,
+          lot_number: "Lô mặc định",
+          received_date: new Date().toISOString().split("T")[0],
+          quantity: inv.quantity,
+        });
+
+        return { success: !lotError, error: lotError };
+      });
+
+    const results = await Promise.all(lotPromises);
+    const failed = results.filter((r) => !r.success);
+
+    if (failed.length > 0) {
+      throw new Error(`Failed to create ${failed.length} default lots`);
+    }
+
+    // Sync all lots to inventory (inventory should already have the values, but this ensures consistency)
+    await syncAllLotsToInventory(productId);
+
+    return { success: true, message: "Lot management enabled successfully" };
+  } catch (error: any) {
+    return { success: false, error };
+  }
+};
+
+/**
+ * Disable lot management for a product
+ * Deletes all product_lots for this product
+ */
+export const disableLotManagement = async (productId: number) => {
+  try {
+    // Delete all lots for this product
+    const { error } = await supabase
+      .from("product_lots")
+      .delete()
+      .eq("product_id", productId);
+
+    if (error) throw error;
+
+    return { success: true, message: "Lot management disabled successfully" };
+  } catch (error: any) {
+    return { success: false, error };
+  }
 };
 
 export default {
@@ -1048,7 +1162,6 @@ export default {
   bulkCreateLotsFromOCR,
 
   // Warehouse operations
-  getLotsByShelfLocation,
   getExpiringLots,
 
   // Reporting
@@ -1061,6 +1174,11 @@ export default {
   updateProductLotQuantity,
   updateInventoryQuantity,
   syncLotQuantityToInventory,
+  syncAllLotsToInventory,
   getLotById,
   fetchLotDetailWithInventory,
+
+  // Enable/Disable lot management
+  enableLotManagement,
+  disableLotManagement,
 };

@@ -10,13 +10,18 @@ import {
   App,
   InputNumber,
   Space,
+  Button,
 } from "antd";
-import { HomeOutlined, AppstoreOutlined } from "@ant-design/icons";
+import {
+  HomeOutlined,
+  AppstoreOutlined,
+  SaveOutlined,
+} from "@ant-design/icons";
 import { useParams } from "react-router-dom";
 import {
   useInventoryOfWarehouseByLotId,
-  useLotManagementStore,
   useProductLot,
+  useUpdateQuantityByLot,
 } from "@nam-viet-erp/store";
 import PageLayout from "../../components/PageLayout";
 import ProductLotDetailForm from "../../components/ProductLotDetailForm";
@@ -25,44 +30,36 @@ const ProductLotDetailPage: React.FC = () => {
   const { lotId } = useParams<{ lotId: string }>();
   const { notification } = App.useApp();
   // Store
-  const { updateLotQuantity } = useLotManagementStore();
 
   const { data: lotDetail, isLoading: loading } = useProductLot(Number(lotId));
   const { data: lotInventory, refetch } = useInventoryOfWarehouseByLotId(
-    Number(lotId)
+    Number(lotId),
   );
-  const [editingKey, setEditingKey] = useState<number | null>(null);
+  const [editingKey, setEditingKey] = useState<string | null>(null);
   const [quantity, setQuantityValue] = useState<number>(0);
 
+  const { submit: updateQuantity, isLoading: isSaving } =
+    useUpdateQuantityByLot({
+      lotId: parseInt(lotId),
+      onSuccess: () => {
+        refetch();
+        setEditingKey(null);
+      },
+    });
+
   const handleEdit = (record: IInventory) => {
-    setEditingKey(record.lot_id);
+    setEditingKey(`${record.warehouse_id}-${record.lot_id}`);
     setQuantityValue(record.quantity || 0);
   };
 
   const handleSave = async (record: IInventory) => {
     if (!lotDetail) return;
-
-    try {
-      // Update inventory quantity using store
-      const { error } = await updateLotQuantity({
-        lotId: record.lot_id,
-        productId: lotDetail.product_id,
-        warehouseId: record.warehouse_id,
-        newQuantityAvailable: quantity,
-      });
-
-      if (error) throw error;
-
-      // Refresh data first
-      await refetch();
-
-      setEditingKey(null);
-    } catch (error: any) {
-      notification.error({
-        message: "Lỗi cập nhật",
-        description: error.message || "Không thể cập nhật lô hàng.",
-      });
-    }
+    updateQuantity({
+      lotId: record.lot_id,
+      productId: lotDetail.product_id,
+      warehouseId: record.warehouse_id,
+      newQuantityAvailable: quantity,
+    });
   };
 
   if (loading) {
@@ -119,7 +116,7 @@ const ProductLotDetailPage: React.FC = () => {
             <Table
               dataSource={(lotInventory || []).map((i) => ({
                 ...i,
-                warehouse_name: i.warehouses?.name,
+                key: `${i.warehouse_id}-${i.lot_id}`,
               }))}
               rowKey="lot_id"
               pagination={false}
@@ -127,7 +124,7 @@ const ProductLotDetailPage: React.FC = () => {
                 {
                   title: "Kho",
                   dataIndex: "warehouse_name",
-                  key: "warehouse_name",
+                  key: "warehouse",
                   render: (text) => <strong>{text}</strong>,
                 },
                 {
@@ -136,7 +133,7 @@ const ProductLotDetailPage: React.FC = () => {
                   key: "quantity",
                   align: "right",
                   render: (qty, record) => {
-                    const isEditing = editingKey === record.lot_id;
+                    const isEditing = editingKey === record.key;
 
                     if (isEditing) {
                       return (
@@ -148,6 +145,12 @@ const ProductLotDetailPage: React.FC = () => {
                             style={{ width: 100 }}
                             autoFocus
                             onPressEnter={() => handleSave(record)}
+                          />
+                          <Button
+                            icon={<SaveOutlined />}
+                            type="primary"
+                            loading={isSaving}
+                            onClick={() => handleSave(record)}
                           />
                         </Space>
                       );
