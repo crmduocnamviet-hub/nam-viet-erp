@@ -29,6 +29,20 @@ type CartItem = BaseCartItem & {
 
   //product lot
   lot_id?: number;
+  lot_number?: string;
+  batch_code?: string;
+  expiry_date?: string;
+
+  // Lot selections for combo items (array of lot info for each product in combo)
+  lotSelections?: Array<{
+    product_id: number;
+    lot_id: number;
+    lot_number: string;
+    batch_code?: string;
+    expiry_date?: string;
+    quantity: number;
+    maxQuantity: number;
+  }>;
 };
 
 type CartDetails = {

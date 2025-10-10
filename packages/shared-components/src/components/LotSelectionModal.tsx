@@ -11,7 +11,11 @@ import {
   Spin,
   App,
 } from "antd";
-import { CheckCircleOutlined, WarningOutlined } from "@ant-design/icons";
+import {
+  CheckCircleOutlined,
+  WarningOutlined,
+  InfoCircleOutlined,
+} from "@ant-design/icons";
 import { getProductLots } from "@nam-viet-erp/services";
 import dayjs from "dayjs";
 
@@ -111,9 +115,82 @@ const LotSelectionModal: React.FC<LotSelectionModalProps> = ({
     onClose();
   };
 
-  const getDaysUntilExpiry = (expiryDate?: string | null) => {
-    if (!expiryDate) return null;
-    return dayjs(expiryDate).diff(dayjs(), "day");
+  const getExpiryStatus = (expiryDate?: string | null) => {
+    if (!expiryDate || !dayjs(expiryDate).isValid()) {
+      return {
+        color: "default",
+        text: "Không có HSD",
+        icon: null,
+        priority: 999, // Low priority
+      };
+    }
+
+    const daysUntilExpiry = dayjs(expiryDate).diff(dayjs(), "day");
+
+    if (daysUntilExpiry < 0) {
+      return {
+        color: "error",
+        text: "❌ Đã hết hạn",
+        icon: <WarningOutlined />,
+        priority: 1000, // Lowest priority (expired)
+      };
+    } else if (daysUntilExpiry === 0) {
+      return {
+        color: "error",
+        text: "🔥 Hết hạn hôm nay",
+        icon: <WarningOutlined />,
+        priority: 1, // Highest priority
+      };
+    } else if (daysUntilExpiry === 1) {
+      return {
+        color: "error",
+        text: "🔥 Hết hạn ngày mai",
+        icon: <WarningOutlined />,
+        priority: 2,
+      };
+    } else if (daysUntilExpiry <= 3) {
+      return {
+        color: "error",
+        text: `🔥 Còn ${daysUntilExpiry} ngày`,
+        icon: <WarningOutlined />,
+        priority: 3,
+      };
+    } else if (daysUntilExpiry <= 7) {
+      return {
+        color: "warning",
+        text: `⚠️ Còn ${daysUntilExpiry} ngày`,
+        icon: <WarningOutlined />,
+        priority: 4,
+      };
+    } else if (daysUntilExpiry <= 14) {
+      return {
+        color: "warning",
+        text: `⚠️ Còn ${daysUntilExpiry} ngày`,
+        icon: <WarningOutlined />,
+        priority: 5,
+      };
+    } else if (daysUntilExpiry <= 30) {
+      return {
+        color: "warning",
+        text: `Còn ${daysUntilExpiry} ngày`,
+        icon: <InfoCircleOutlined />,
+        priority: 6,
+      };
+    } else if (daysUntilExpiry <= 90) {
+      return {
+        color: "processing",
+        text: `Còn ${daysUntilExpiry} ngày`,
+        icon: <CheckCircleOutlined />,
+        priority: 7,
+      };
+    } else {
+      return {
+        color: "success",
+        text: `Còn ${daysUntilExpiry} ngày`,
+        icon: <CheckCircleOutlined />,
+        priority: 8,
+      };
+    }
   };
 
   return (
@@ -147,11 +224,7 @@ const LotSelectionModal: React.FC<LotSelectionModalProps> = ({
             dataSource={lots}
             renderItem={(lot) => {
               const isSelected = lot.id === selectedLotId;
-              const daysUntilExpiry = getDaysUntilExpiry(lot.expiry_date);
-              const isExpiringSoon =
-                daysUntilExpiry !== null && daysUntilExpiry <= 30;
-              const isExpired =
-                daysUntilExpiry !== null && daysUntilExpiry <= 0;
+              const expiryStatus = getExpiryStatus(lot.expiry_date);
 
               return (
                 <List.Item
@@ -196,23 +269,16 @@ const LotSelectionModal: React.FC<LotSelectionModalProps> = ({
                       </Text>
                     )}
 
-                    {lot.expiry_date && (
-                      <Space>
-                        {isExpired ? (
-                          <Tag color="red" icon={<WarningOutlined />}>
-                            Đã hết hạn
-                          </Tag>
-                        ) : isExpiringSoon ? (
-                          <Tag color="orange" icon={<WarningOutlined />}>
-                            Sắp hết hạn ({daysUntilExpiry} ngày)
-                          </Tag>
-                        ) : (
-                          <Tag color="green">
-                            HSD: {dayjs(lot.expiry_date).format("DD/MM/YYYY")}
-                          </Tag>
-                        )}
-                      </Space>
-                    )}
+                    <Space wrap>
+                      <Tag color={expiryStatus.color} icon={expiryStatus.icon}>
+                        {expiryStatus.text}
+                      </Tag>
+                      {lot.expiry_date && (
+                        <Text type="secondary" style={{ fontSize: 12 }}>
+                          HSD: {dayjs(lot.expiry_date).format("DD/MM/YYYY")}
+                        </Text>
+                      )}
+                    </Space>
 
                     {lot.received_date && (
                       <Text type="secondary" style={{ fontSize: 12 }}>

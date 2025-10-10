@@ -39,6 +39,55 @@ export const processSaleTransaction = async (
   }: IProcessSale,
   inventory: IInventoryWithProduct[],
 ) => {
+  // Step 0: Pre-flight check for lot quantities to fail fast
+  const lotQuantitiesRequired: Record<number, number> = {};
+
+  (cart || []).forEach((item) => {
+    if (item.isCombo && item.comboData) {
+      // Handle lot-managed products within combos using lotSelections
+      if (item.lotSelections && item.lotSelections.length > 0) {
+        const comboData = item.comboData; // Type narrowing
+        item.lotSelections.forEach((lotSelection: any) => {
+          const comboItem = comboData.combo_items?.find(
+            (ci: any) => ci.product_id === lotSelection.product_id,
+          );
+          if (comboItem) {
+            const required = comboItem.quantity * item.quantity;
+            lotQuantitiesRequired[lotSelection.lot_id] =
+              (lotQuantitiesRequired[lotSelection.lot_id] || 0) + required;
+          }
+        });
+      }
+    } else {
+      // Handle regular lot-managed products
+      if (item.lot_id) {
+        lotQuantitiesRequired[item.lot_id] =
+          (lotQuantitiesRequired[item.lot_id] || 0) + item.quantity;
+      }
+    }
+  });
+
+  if (Object.keys(lotQuantitiesRequired).length > 0) {
+    const lotIds = Object.keys(lotQuantitiesRequired).map(Number);
+    const { data: lotsData, error: lotsError } = await supabase
+      .from("product_lots")
+      .select("id, quantity, lot_number")
+      .in("id", lotIds);
+
+    if (lotsError) throw new Error("Could not verify lot quantities.");
+
+    for (const lot of lotsData) {
+      const required = lotQuantitiesRequired[lot.id];
+      if ((lot.quantity || 0) < required) {
+        throw new Error(
+          `Không đủ số lượng cho lô "${lot.lot_number}". Cần: ${required}, Tồn kho: ${
+            lot.quantity || 0
+          }`,
+        );
+      }
+    }
+  }
+
   // Step 1: Create the sales order record.
   const salesOrder = {
     patient_id: customerId || null, // Default patient ID for walk-in customers
@@ -64,20 +113,20 @@ export const processSaleTransaction = async (
   // Step 2: Create sales order items and track combo items separately
   const orderItems: any[] = [];
   const comboItems: any[] = [];
+  const productLotItems: any[] = []; // Track lot items for sales_order_product_lot_items table
 
   (cart || []).forEach((item) => {
     if (item.isCombo && item.comboData) {
       // Track individual products in sales_combo_items table
-      item.comboData.combo_items?.forEach((comboItem) => {
+      const comboData = item.comboData; // Type narrowing
+      comboData.combo_items?.forEach((comboItem) => {
         const itemQuantity = comboItem.quantity * item.quantity;
         const itemPrice =
           item.finalPrice /
-          (item.comboData?.combo_items?.reduce(
-            (sum, ci) => sum + ci.quantity,
-            0,
-          ) || 1);
+          (comboData.combo_items?.reduce((sum, ci) => sum + ci.quantity, 0) ||
+            1);
 
-        // Find lot information from lotSelections if available
+        // Find lot selection for this specific product in combo
         const lotSelection = item.lotSelections?.find(
           (ls: any) => ls.product_id === comboItem.product_id,
         );
@@ -88,8 +137,17 @@ export const processSaleTransaction = async (
           product_id: comboItem.product_id,
           quantity: itemQuantity,
           unit_price: itemPrice,
-          lot_id: lotSelection?.lot_id || null, // Include lot_id if available
+          lot_id: lotSelection?.lot_id || null, // Use lot_id from lotSelections
         });
+
+        // Add to product lot items tracking if lot is selected
+        if (lotSelection?.lot_id) {
+          productLotItems.push({
+            order_id: orderData.order_id,
+            lot_id: lotSelection.lot_id,
+            quantity: itemQuantity,
+          });
+        }
       });
     } else {
       // Regular product - unchanged
@@ -100,6 +158,15 @@ export const processSaleTransaction = async (
         is_service: false,
         lot_id: item.lot_id || null, // Include lot_id if available
       });
+
+      // Add to product lot items tracking if lot is selected
+      if (item.lot_id) {
+        productLotItems.push({
+          order_id: orderData.order_id,
+          lot_id: item.lot_id,
+          quantity: item.quantity,
+        });
+      }
     }
   });
 
@@ -128,6 +195,19 @@ export const processSaleTransaction = async (
     if (comboItemsError) {
       console.error("Sales Combo Items Creation Error:", comboItemsError);
       // Continue with transaction - combo items tracking is supplementary
+      // We log the error but don't rollback the entire transaction
+    }
+  }
+
+  // Step 2.6: Store product lot items to sales_order_product_lot_items table
+  if (productLotItems.length > 0) {
+    const { error: productLotItemsError } = await supabase
+      .from("sales_order_product_lot_items")
+      .insert(productLotItems);
+
+    if (productLotItemsError) {
+      console.error("Product Lot Items Creation Error:", productLotItemsError);
+      // Continue with transaction - lot tracking is supplementary
       // We log the error but don't rollback the entire transaction
     }
   }
@@ -201,24 +281,12 @@ export const processSaleTransaction = async (
   // Step 5: Deduct quantities from product lots for lot-managed products
   const lotDeductions: Array<{ lotId: number; quantityToDeduct: number }> = [];
 
-  // Collect lot deductions from regular order items
-  orderItems.forEach((item) => {
-    if (item.lot_id) {
-      lotDeductions.push({
-        lotId: item.lot_id,
-        quantityToDeduct: item.quantity,
-      });
-    }
-  });
-
-  // Collect lot deductions from combo items
-  comboItems.forEach((item) => {
-    if (item.lot_id) {
-      lotDeductions.push({
-        lotId: item.lot_id,
-        quantityToDeduct: item.quantity,
-      });
-    }
+  // Collect lot deductions from product lot items (includes both regular items and combo items)
+  productLotItems.forEach((item) => {
+    lotDeductions.push({
+      lotId: item.lot_id,
+      quantityToDeduct: item.quantity,
+    });
   });
 
   // Execute lot quantity deductions if any
@@ -249,7 +317,8 @@ export const calculateProductGlobalQuantities = (
   cartItems.forEach((item: any) => {
     if (item.isCombo && item.comboData) {
       // Add quantities from combo items
-      item.comboData.combo_items?.forEach((comboItem: any) => {
+      const comboData = item.comboData; // Type narrowing
+      comboData.combo_items?.forEach((comboItem: any) => {
         const productId = comboItem.product_id;
         const qty = comboItem.quantity * item.quantity;
         const productName = comboItem.products?.name || "Unknown";

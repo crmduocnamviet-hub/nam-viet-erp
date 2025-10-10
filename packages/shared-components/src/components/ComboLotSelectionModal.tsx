@@ -184,7 +184,12 @@ const ComboLotSelectionModal: React.FC<ComboLotSelectionModalProps> = ({
 
   const getExpiryStatus = (expiryDate?: string) => {
     if (!expiryDate || !dayjs(expiryDate).isValid()) {
-      return { color: "default", text: "Không có HSD", icon: null };
+      return {
+        color: "default",
+        text: "Không có HSD",
+        icon: null,
+        priority: 999, // Low priority
+      };
     }
 
     const daysUntilExpiry = dayjs(expiryDate).diff(dayjs(), "day");
@@ -192,20 +197,65 @@ const ComboLotSelectionModal: React.FC<ComboLotSelectionModalProps> = ({
     if (daysUntilExpiry < 0) {
       return {
         color: "error",
-        text: "Đã hết hạn",
+        text: "❌ Đã hết hạn",
         icon: <WarningOutlined />,
+        priority: 1000, // Lowest priority (expired)
+      };
+    } else if (daysUntilExpiry === 0) {
+      return {
+        color: "error",
+        text: "🔥 Hết hạn hôm nay",
+        icon: <WarningOutlined />,
+        priority: 1, // Highest priority
+      };
+    } else if (daysUntilExpiry === 1) {
+      return {
+        color: "error",
+        text: "🔥 Hết hạn ngày mai",
+        icon: <WarningOutlined />,
+        priority: 2,
+      };
+    } else if (daysUntilExpiry <= 3) {
+      return {
+        color: "error",
+        text: `🔥 Còn ${daysUntilExpiry} ngày`,
+        icon: <WarningOutlined />,
+        priority: 3,
+      };
+    } else if (daysUntilExpiry <= 7) {
+      return {
+        color: "warning",
+        text: `⚠️ Còn ${daysUntilExpiry} ngày`,
+        icon: <WarningOutlined />,
+        priority: 4,
+      };
+    } else if (daysUntilExpiry <= 14) {
+      return {
+        color: "warning",
+        text: `⚠️ Còn ${daysUntilExpiry} ngày`,
+        icon: <WarningOutlined />,
+        priority: 5,
       };
     } else if (daysUntilExpiry <= 30) {
       return {
         color: "warning",
         text: `Còn ${daysUntilExpiry} ngày`,
-        icon: <WarningOutlined />,
+        icon: <InfoCircleOutlined />,
+        priority: 6,
+      };
+    } else if (daysUntilExpiry <= 90) {
+      return {
+        color: "processing",
+        text: `Còn ${daysUntilExpiry} ngày`,
+        icon: <CheckCircleOutlined />,
+        priority: 7,
       };
     } else {
       return {
         color: "success",
         text: `Còn ${daysUntilExpiry} ngày`,
         icon: <CheckCircleOutlined />,
+        priority: 8,
       };
     }
   };

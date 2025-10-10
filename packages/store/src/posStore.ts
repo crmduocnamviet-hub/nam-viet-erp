@@ -1,7 +1,11 @@
-import { processSaleTransaction } from "@nam-viet-erp/services/src/posService";
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
+import {
+  addSaleOrderProductLotItem,
+  calculateProductGlobalQuantities,
+  processSaleTransaction,
+} from "@nam-viet-erp/services";
 
 // State interface
 export interface PosState {
@@ -453,13 +457,23 @@ export const usePosStore = create<PosState>()(
             // Call payment processing API
             const result = await processSaleTransaction(paymentData, inventory);
 
-            // Update inventory store after successful payment
-            const { calculateProductGlobalQuantities } = await import(
-              "@nam-viet-erp/services"
-            );
             const { useInventoryStore } = await import("./inventoryStore");
 
             const cart = paymentData.cart || [];
+
+            // NEW: Record lot items used in the sale
+            const lotItemsToRecord = cart.filter(
+              (item: CartItem) => !!item.lot_id,
+            );
+
+            for (const lotItem of lotItemsToRecord) {
+              await addSaleOrderProductLotItem({
+                order_id: result.orderData.order_id, // Assuming the result contains the new order ID
+                lot_id: lotItem.lot_id,
+                quantity: lotItem.quantity,
+              });
+            }
+
             const quantities = calculateProductGlobalQuantities(cart);
 
             // Create updates array with negative quantities (deductions)

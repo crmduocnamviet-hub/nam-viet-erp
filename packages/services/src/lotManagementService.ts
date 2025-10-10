@@ -565,6 +565,21 @@ export const getLotInventorySummary = async (params?: {
 };
 
 /**
+ * Get lots for a specific product and warehouse
+ * Wrapper function for getProductLots with simplified parameters
+ */
+export const getProductLotsByWarehouse = async (
+  productId: number,
+  warehouseId: number,
+) => {
+  return getProductLots({
+    productId,
+    warehouseId,
+    onlyAvailable: true,
+  });
+};
+
+/**
  * Get lots for a specific product with inventory data
  * Calculates from inventory table:
  * - If lot_id is NULL → show as "Mặc Định" (Default) lot with no dates
@@ -636,7 +651,26 @@ export const getProductLots = async (params: {
     };
   });
 
-  return { data: lotsWithExpiry, error: null };
+  // Sort by expiry date (FEFO - First Expired First Out)
+  // Lots expiring soonest appear first
+  // Lots without expiry dates appear last
+  const sortedLots = lotsWithExpiry.sort((a, b) => {
+    // If both have no expiry date, maintain original order
+    if (
+      a.days_until_expiry === undefined &&
+      b.days_until_expiry === undefined
+    ) {
+      return 0;
+    }
+    // Lots without expiry date go to the end
+    if (a.days_until_expiry === undefined) return 1;
+    if (b.days_until_expiry === undefined) return -1;
+
+    // Sort by days until expiry (ascending - nearest expiry first)
+    return a.days_until_expiry - b.days_until_expiry;
+  });
+
+  return { data: sortedLots, error: null };
 };
 
 /**
@@ -1197,6 +1231,26 @@ export const disableLotManagement = async (productId: number) => {
   }
 };
 
+/**
+ * Add a record to track which product lot is used in a sales order.
+ * This is used for auditing and checking purposes.
+ */
+export const addSaleOrderProductLotItem = async (
+  item: Omit<SaleOrderProductLotItem, "id" | "created_at">,
+) => {
+  const { data, error } = await supabase
+    .from("sales_order_product_lot_items")
+    .insert({
+      order_id: item.order_id,
+      lot_id: item.lot_id,
+      quantity: item.quantity,
+    })
+    .select()
+    .single();
+
+  return { data, error };
+};
+
 export default {
   // Lot operations
   getAvailableLots,
@@ -1229,6 +1283,7 @@ export default {
   // Reporting
   getLotInventorySummary,
   getProductLots,
+  getProductLotsByWarehouse,
   // getProductLotTotals,
   getCOGSByLot,
   deleteProductLot,
@@ -1245,4 +1300,7 @@ export default {
   // Enable/Disable lot management
   enableLotManagement,
   disableLotManagement,
+
+  // Sales order lot tracking
+  addSaleOrderProductLotItem,
 };

@@ -27,6 +27,7 @@ import {
   searchProductInWarehouse,
   searchProductInWarehouseByBarcode,
   calculateProductGlobalQuantities,
+  supabase,
 } from "@nam-viet-erp/services";
 import {
   usePosStore,
@@ -955,18 +956,59 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
     removeCartItem(itemKey);
   };
 
-  const handleUpdateQuantity = (itemKey: string, newQuantity: number) => {
+  const handleUpdateQuantity = async (itemKey: string, newQuantity: number) => {
     const item = cart.find((i) => i.key === itemKey);
     if (!item) return;
 
     if (newQuantity <= 0) {
       removeCartItem(itemKey);
-    } else {
-      updateCartItem(itemKey, {
-        quantity: newQuantity,
-        total: item.price * newQuantity,
-      });
+      return;
     }
+
+    // Check lot quantities for combo items when increasing
+    if (item.isCombo && item.lotSelections && newQuantity > item.quantity) {
+      const quantityIncrease = newQuantity - item.quantity;
+
+      // Check each lot selection has enough quantity
+      for (const lotSelection of item.lotSelections) {
+        const comboItem = item.comboData?.combo_items?.find(
+          (ci: any) => ci.product_id === lotSelection.product_id,
+        );
+        if (comboItem) {
+          const requiredIncrease = comboItem.quantity * quantityIncrease;
+          const totalRequired = lotSelection.quantity + requiredIncrease;
+
+          // Fetch current lot quantity
+          const { data: lotData, error } = await supabase
+            .from("product_lots")
+            .select("quantity, lot_number")
+            .eq("id", lotSelection.lot_id)
+            .single();
+
+          if (error || !lotData) {
+            notification.error({
+              message: "Lỗi kiểm tra lô hàng",
+              description: "Không thể kiểm tra số lượng lô hàng",
+            });
+            return;
+          }
+
+          if ((lotData.quantity || 0) < totalRequired) {
+            notification.error({
+              message: "Không đủ số lượng lô",
+              description: `Lô "${lotData.lot_number}" chỉ còn ${lotData.quantity || 0} sản phẩm. Cần ${totalRequired} để tăng combo lên ${newQuantity}.`,
+            });
+            return;
+          }
+        }
+      }
+    }
+
+    // Update quantity if all checks pass
+    updateCartItem(itemKey, {
+      quantity: newQuantity,
+      total: item.price * newQuantity,
+    });
   };
 
   const cartDetails = useMemo((): CartDetails => {

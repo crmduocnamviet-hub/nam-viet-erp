@@ -86,11 +86,18 @@ export const getSalesOrderItemsByOrderId = async (orderId: string) => {
 
 // Create new sales order item
 export const createSalesOrderItem = async (
-  item: Omit<ISalesOrderItem, "item_id">,
+  i: Omit<ISalesOrderItem, "item_id">,
 ): Promise<PostgrestSingleResponse<ISalesOrderItem | null>> => {
   const response = await supabase
     .from("sales_order_items")
-    .insert(item)
+    .insert({
+      dosage_printed: i.dosage_printed,
+      is_service: i.is_service,
+      order_id: i.order_id,
+      product_id: i.product_id,
+      quantity: i.quantity,
+      unit_price: i.unit_price,
+    })
     .select()
     .single();
 
@@ -121,7 +128,16 @@ export const createMultipleSalesOrderItems = async (
 
   const response = await supabase
     .from("sales_order_items")
-    .insert(salesOrderItems)
+    .insert(
+      salesOrderItems.map((i) => ({
+        dosage_printed: i.dosage_printed,
+        is_service: i.is_service,
+        order_id: i.order_id,
+        product_id: i.product_id,
+        quantity: i.quantity,
+        unit_price: i.unit_price,
+      })),
+    )
     .select();
 
   return response;
