@@ -15,6 +15,7 @@ export { default as BulkUpdateModal } from "./components/BulkUpdateModal";
 export { default as QRScannerVerificationModal } from "./components/QRScannerVerificationModal";
 export { default as PosTabContent } from "./components/PosTabContent";
 export { default as ComboFormModal } from "./components/ComboFormModal";
+export { default as ComboLotSelectionModal } from "./components/ComboLotSelectionModal";
 export { default as PageLayout } from "./components/PageLayout";
 export { default as WarehouseQuantityModal } from "./components/WarehouseQuantityModal";
 export * from "./hooks/useDebounce";

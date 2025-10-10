@@ -737,6 +737,92 @@ export const updateProductLotQuantity = async (params: {
 };
 
 /**
+ * Deduct quantity from a product lot
+ * Used when selling products from a specific lot
+ */
+export const deductProductLotQuantity = async (params: {
+  lotId: number;
+  quantityToDeduct: number;
+}) => {
+  const { lotId, quantityToDeduct } = params;
+
+  try {
+    // Get current lot data
+    const { data: lot, error: fetchError } = await supabase
+      .from("product_lots")
+      .select("quantity, product_id, warehouse_id")
+      .eq("id", lotId)
+      .single();
+
+    if (fetchError) throw fetchError;
+    if (!lot) throw new Error(`Lot ${lotId} not found`);
+
+    // Calculate new quantity
+    const newQuantity = (lot.quantity || 0) - quantityToDeduct;
+
+    if (newQuantity < 0) {
+      throw new Error(
+        `Insufficient quantity in lot ${lotId}. Available: ${lot.quantity}, Required: ${quantityToDeduct}`,
+      );
+    }
+
+    // Update lot quantity
+    const { error: updateError } = await supabase
+      .from("product_lots")
+      .update({ quantity: newQuantity })
+      .eq("id", lotId);
+
+    if (updateError) throw updateError;
+
+    // Sync to inventory table
+    await syncLotQuantityToInventory({
+      productId: lot.product_id,
+      warehouseId: lot.warehouse_id,
+    });
+
+    return { newQuantity, error: null };
+  } catch (error: any) {
+    return { newQuantity: 0, error };
+  }
+};
+
+/**
+ * Batch deduct quantities from multiple product lots
+ * Used when processing orders with multiple lot-managed products
+ */
+export const batchDeductLotQuantities = async (
+  lotDeductions: Array<{
+    lotId: number;
+    quantityToDeduct: number;
+  }>,
+) => {
+  const results = [];
+  const errors = [];
+
+  for (const deduction of lotDeductions) {
+    const { error } = await deductProductLotQuantity(deduction);
+
+    if (error) {
+      errors.push({
+        lotId: deduction.lotId,
+        error: error.message || "Unknown error",
+      });
+    } else {
+      results.push({
+        lotId: deduction.lotId,
+        success: true,
+      });
+    }
+  }
+
+  return {
+    results,
+    errors,
+    success: errors.length === 0,
+  };
+};
+
+/**
  * Update inventory quantity directly
  */
 export const updateInventoryQuantity = async (params: {
@@ -1148,6 +1234,8 @@ export default {
   deleteProductLot,
   deleteAllProductLots,
   updateProductLotQuantity,
+  deductProductLotQuantity,
+  batchDeductLotQuantities,
   updateInventoryQuantity,
   syncLotQuantityToInventory,
   syncAllLotsToInventory,

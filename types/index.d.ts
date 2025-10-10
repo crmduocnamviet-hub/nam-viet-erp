@@ -608,3 +608,11 @@ interface ProductLotWithDetails extends IProductLot {
 type ProductWithInventoryData = IProduct & {
   inventory_data: IInventory[];
 };
+
+interface SaleOrderProductLotItem {
+  id: number;
+  created_at: string;
+  quantity: number;
+  order_id: string;
+  lot_id: number;
+}

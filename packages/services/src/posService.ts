@@ -3,6 +3,7 @@ import { upsetInventory } from "./warehouse";
 import { createSalesOrder } from "./salesOrderService";
 import { createMultipleSalesOrderItems } from "./salesOrderItemService";
 import { createMultipleSalesComboItems } from "./salesComboItemService";
+import { batchDeductLotQuantities } from "./lotManagementService";
 
 interface IProcessSale {
   cart: CartItem[];
@@ -36,7 +37,7 @@ export const processSaleTransaction = async (
     fundId,
     customerId,
   }: IProcessSale,
-  inventory: IInventoryWithProduct[]
+  inventory: IInventoryWithProduct[],
 ) => {
   // Step 1: Create the sales order record.
   const salesOrder = {
@@ -50,14 +51,13 @@ export const processSaleTransaction = async (
     created_by_employee_id: createdBy || null, // Allow null when no employee context available
   };
 
-  const { data: orderData, error: orderError } = await createSalesOrder(
-    salesOrder
-  );
+  const { data: orderData, error: orderError } =
+    await createSalesOrder(salesOrder);
 
   if (orderError || !orderData) {
     console.error("Sales Order Creation Error:", orderError);
     throw new Error(
-      `Failed to create sales order: ${orderError?.message || "Unknown error"}`
+      `Failed to create sales order: ${orderError?.message || "Unknown error"}`,
     );
   }
 
@@ -74,8 +74,13 @@ export const processSaleTransaction = async (
           item.finalPrice /
           (item.comboData?.combo_items?.reduce(
             (sum, ci) => sum + ci.quantity,
-            0
+            0,
           ) || 1);
+
+        // Find lot information from lotSelections if available
+        const lotSelection = item.lotSelections?.find(
+          (ls: any) => ls.product_id === comboItem.product_id,
+        );
 
         comboItems.push({
           order_id: orderData.order_id,
@@ -83,6 +88,7 @@ export const processSaleTransaction = async (
           product_id: comboItem.product_id,
           quantity: itemQuantity,
           unit_price: itemPrice,
+          lot_id: lotSelection?.lot_id || null, // Include lot_id if available
         });
       });
     } else {
@@ -92,13 +98,14 @@ export const processSaleTransaction = async (
         quantity: item.quantity,
         unit_price: item.finalPrice || 0,
         is_service: false,
+        lot_id: item.lot_id || null, // Include lot_id if available
       });
     }
   });
 
   const { error: itemsError } = await createMultipleSalesOrderItems(
     orderData.order_id,
-    orderItems
+    orderItems,
   );
 
   if (itemsError) {
@@ -109,15 +116,14 @@ export const processSaleTransaction = async (
       .delete()
       .eq("order_id", orderData.order_id);
     throw new Error(
-      `Failed to create sales order items: ${itemsError.message}`
+      `Failed to create sales order items: ${itemsError.message}`,
     );
   }
 
   // Step 2.5: Create sales combo items records for tracking
   if (comboItems.length > 0) {
-    const { error: comboItemsError } = await createMultipleSalesComboItems(
-      comboItems
-    );
+    const { error: comboItemsError } =
+      await createMultipleSalesComboItems(comboItems);
 
     if (comboItemsError) {
       console.error("Sales Combo Items Creation Error:", comboItemsError);
@@ -152,7 +158,7 @@ export const processSaleTransaction = async (
       .delete()
       .eq("order_id", orderData.order_id);
     throw new Error(
-      `Failed to create transaction: ${transactionError.message}`
+      `Failed to create transaction: ${transactionError.message}`,
     );
   }
 
@@ -160,7 +166,7 @@ export const processSaleTransaction = async (
   const quantities = calculateProductGlobalQuantities(cart);
 
   const filterProducts = inventory.filter(
-    (i) => !!i.products?.id && !!quantities[i.products.id]
+    (i) => !!i.products?.id && !!quantities[i.products.id],
   );
 
   const inventoryUpdates: any[] = [];
@@ -192,6 +198,41 @@ export const processSaleTransaction = async (
     }
   }
 
+  // Step 5: Deduct quantities from product lots for lot-managed products
+  const lotDeductions: Array<{ lotId: number; quantityToDeduct: number }> = [];
+
+  // Collect lot deductions from regular order items
+  orderItems.forEach((item) => {
+    if (item.lot_id) {
+      lotDeductions.push({
+        lotId: item.lot_id,
+        quantityToDeduct: item.quantity,
+      });
+    }
+  });
+
+  // Collect lot deductions from combo items
+  comboItems.forEach((item) => {
+    if (item.lot_id) {
+      lotDeductions.push({
+        lotId: item.lot_id,
+        quantityToDeduct: item.quantity,
+      });
+    }
+  });
+
+  // Execute lot quantity deductions if any
+  if (lotDeductions.length > 0) {
+    const { errors, success } = await batchDeductLotQuantities(lotDeductions);
+
+    if (!success) {
+      console.error("Lot Quantity Deduction Errors:", errors);
+      // Log the errors but don't rollback - inventory was already updated
+      // The lot quantities will be synced during next inventory sync
+      // This is a soft failure to prevent order loss
+    }
+  }
+
   return { transactionData, orderData };
 };
 
@@ -201,7 +242,7 @@ export const processSaleTransaction = async (
  * @returns Record of product ID to { name, quantity }
  */
 export const calculateProductGlobalQuantities = (
-  cartItems: any[]
+  cartItems: any[],
 ): Record<number, { name: string; quantity: number }> => {
   const quantities: Record<number, { name: string; quantity: number }> = {};
 

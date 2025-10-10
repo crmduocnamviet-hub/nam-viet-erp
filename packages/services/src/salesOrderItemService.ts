@@ -9,9 +9,7 @@ export const getSalesOrderItems = async (filters?: {
   limit?: number;
   offset?: number;
 }) => {
-  let query = supabase
-    .from("sales_order_items")
-    .select(`
+  let query = supabase.from("sales_order_items").select(`
       *,
       sales_orders!inner(
         order_datetime,
@@ -37,7 +35,10 @@ export const getSalesOrderItems = async (filters?: {
   }
 
   if (filters?.offset) {
-    query = query.range(filters.offset, (filters.offset + (filters.limit || 10)) - 1);
+    query = query.range(
+      filters.offset,
+      filters.offset + (filters.limit || 10) - 1,
+    );
   }
 
   const response = await query.order("created_at", { ascending: false });
@@ -45,10 +46,13 @@ export const getSalesOrderItems = async (filters?: {
 };
 
 // Get sales order item by ID
-export const getSalesOrderItemById = async (itemId: string): Promise<PostgrestSingleResponse<ISalesOrderItem | null>> => {
+export const getSalesOrderItemById = async (
+  itemId: string,
+): Promise<PostgrestSingleResponse<ISalesOrderItem | null>> => {
   const response = await supabase
     .from("sales_order_items")
-    .select(`
+    .select(
+      `
       *,
       sales_orders!inner(
         order_datetime,
@@ -56,7 +60,8 @@ export const getSalesOrderItemById = async (itemId: string): Promise<PostgrestSi
         patients(full_name, phone_number)
       ),
       products!inner(name, manufacturer, retail_price, route, hdsd_over_18)
-    `)
+    `,
+    )
     .eq("item_id", itemId)
     .single();
 
@@ -67,10 +72,12 @@ export const getSalesOrderItemById = async (itemId: string): Promise<PostgrestSi
 export const getSalesOrderItemsByOrderId = async (orderId: string) => {
   const response = await supabase
     .from("sales_order_items")
-    .select(`
+    .select(
+      `
       *,
       products!inner(name, manufacturer, retail_price, route)
-    `)
+    `,
+    )
     .eq("order_id", orderId)
     .order("created_at", { ascending: true });
 
@@ -79,7 +86,7 @@ export const getSalesOrderItemsByOrderId = async (orderId: string) => {
 
 // Create new sales order item
 export const createSalesOrderItem = async (
-  item: Omit<ISalesOrderItem, "item_id">
+  item: Omit<ISalesOrderItem, "item_id">,
 ): Promise<PostgrestSingleResponse<ISalesOrderItem | null>> => {
   const response = await supabase
     .from("sales_order_items")
@@ -99,15 +106,17 @@ export const createMultipleSalesOrderItems = async (
     unit_price: number;
     is_service?: boolean;
     dosage_printed?: string;
-  }>
+    lot_id?: number | null;
+  }>,
 ): Promise<PostgrestSingleResponse<ISalesOrderItem[]>> => {
-  const salesOrderItems = items.map(item => ({
+  const salesOrderItems = items.map((item) => ({
     order_id: orderId,
     product_id: item.product_id,
     quantity: item.quantity,
     unit_price: item.unit_price,
     is_service: item.is_service || false,
-    dosage_printed: item.dosage_printed || null
+    dosage_printed: item.dosage_printed || null,
+    lot_id: item.lot_id || null,
   }));
 
   const response = await supabase
@@ -121,28 +130,30 @@ export const createMultipleSalesOrderItems = async (
 // Create sales order items from prescriptions
 export const createSalesOrderItemsFromPrescriptions = async (
   orderId: string,
-  visitId: string
+  visitId: string,
 ): Promise<PostgrestSingleResponse<ISalesOrderItem[]>> => {
   // First get prescriptions with product prices
   const { data: prescriptions } = await supabase
     .from("prescriptions")
-    .select(`
+    .select(
+      `
       *,
       products!inner(retail_price)
-    `)
+    `,
+    )
     .eq("visit_id", visitId);
 
   if (!prescriptions?.length) {
     throw new Error("No prescriptions found for this visit");
   }
 
-  const items = prescriptions.map(prescription => ({
+  const items = prescriptions.map((prescription) => ({
     order_id: orderId,
     product_id: parseInt(prescription.product_id),
     quantity: prescription.quantity_ordered,
     unit_price: prescription.products?.retail_price || 0,
     is_service: false,
-    dosage_printed: prescription.dosage_instruction
+    dosage_printed: prescription.dosage_instruction,
   }));
 
   return createMultipleSalesOrderItems(orderId, items);
@@ -151,7 +162,7 @@ export const createSalesOrderItemsFromPrescriptions = async (
 // Update sales order item
 export const updateSalesOrderItem = async (
   itemId: string,
-  updates: Partial<Omit<ISalesOrderItem, "item_id">>
+  updates: Partial<Omit<ISalesOrderItem, "item_id">>,
 ): Promise<PostgrestSingleResponse<ISalesOrderItem | null>> => {
   const response = await supabase
     .from("sales_order_items")
@@ -164,7 +175,9 @@ export const updateSalesOrderItem = async (
 };
 
 // Delete sales order item
-export const deleteSalesOrderItem = async (itemId: string): Promise<PostgrestSingleResponse<null>> => {
+export const deleteSalesOrderItem = async (
+  itemId: string,
+): Promise<PostgrestSingleResponse<null>> => {
   const response = await supabase
     .from("sales_order_items")
     .delete()
@@ -174,7 +187,9 @@ export const deleteSalesOrderItem = async (itemId: string): Promise<PostgrestSin
 };
 
 // Delete all items for an order
-export const deleteSalesOrderItemsByOrderId = async (orderId: string): Promise<PostgrestSingleResponse<null>> => {
+export const deleteSalesOrderItemsByOrderId = async (
+  orderId: string,
+): Promise<PostgrestSingleResponse<null>> => {
   const response = await supabase
     .from("sales_order_items")
     .delete()
@@ -187,16 +202,18 @@ export const deleteSalesOrderItemsByOrderId = async (orderId: string): Promise<P
 export const getProductSalesStats = async (
   productId?: number,
   startDate?: string,
-  endDate?: string
+  endDate?: string,
 ) => {
   let query = supabase
     .from("sales_order_items")
-    .select(`
+    .select(
+      `
       quantity,
       unit_price,
       is_service,
       sales_orders!inner(order_datetime, operational_status)
-    `)
+    `,
+    )
     .eq("sales_orders.operational_status", "Hoàn tất");
 
   if (productId) {
@@ -219,7 +236,8 @@ export const getProductSalesStats = async (
 
   const stats = response.data?.reduce((acc, item) => {
     acc.totalQuantity = (acc.totalQuantity || 0) + item.quantity;
-    acc.totalRevenue = (acc.totalRevenue || 0) + (item.quantity * item.unit_price);
+    acc.totalRevenue =
+      (acc.totalRevenue || 0) + item.quantity * item.unit_price;
     acc.totalOrders = (acc.totalOrders || 0) + 1;
 
     if (item.is_service) {
@@ -238,17 +256,19 @@ export const getProductSalesStats = async (
 export const getBestSellingProducts = async (
   limit: number = 10,
   startDate?: string,
-  endDate?: string
+  endDate?: string,
 ) => {
   let query = supabase
     .from("sales_order_items")
-    .select(`
+    .select(
+      `
       product_id,
       quantity,
       unit_price,
       products!inner(name, manufacturer),
       sales_orders!inner(order_datetime, operational_status)
-    `)
+    `,
+    )
     .eq("sales_orders.operational_status", "Hoàn tất")
     .eq("is_service", false);
 
@@ -266,26 +286,29 @@ export const getBestSellingProducts = async (
     return response;
   }
 
-  const productStats = response.data?.reduce((acc, item) => {
-    const productId = item.product_id;
+  const productStats = response.data?.reduce(
+    (acc, item) => {
+      const productId = item.product_id;
 
-    if (!acc[productId]) {
-      acc[productId] = {
-        product_id: productId,
-        name: (item.products as any)?.name,
-        manufacturer: (item.products as any)?.manufacturer,
-        total_quantity: 0,
-        total_revenue: 0,
-        order_count: 0
-      };
-    }
+      if (!acc[productId]) {
+        acc[productId] = {
+          product_id: productId,
+          name: (item.products as any)?.name,
+          manufacturer: (item.products as any)?.manufacturer,
+          total_quantity: 0,
+          total_revenue: 0,
+          order_count: 0,
+        };
+      }
 
-    acc[productId].total_quantity += item.quantity;
-    acc[productId].total_revenue += (item.quantity * item.unit_price);
-    acc[productId].order_count += 1;
+      acc[productId].total_quantity += item.quantity;
+      acc[productId].total_revenue += item.quantity * item.unit_price;
+      acc[productId].order_count += 1;
 
-    return acc;
-  }, {} as Record<number, any>);
+      return acc;
+    },
+    {} as Record<number, any>,
+  );
 
   const sortedProducts = Object.values(productStats || {})
     .sort((a: any, b: any) => b.total_quantity - a.total_quantity)
@@ -295,14 +318,19 @@ export const getBestSellingProducts = async (
 };
 
 // Get service items statistics
-export const getServiceItemStats = async (startDate?: string, endDate?: string) => {
+export const getServiceItemStats = async (
+  startDate?: string,
+  endDate?: string,
+) => {
   let query = supabase
     .from("sales_order_items")
-    .select(`
+    .select(
+      `
       quantity,
       unit_price,
       sales_orders!inner(order_datetime, operational_status)
-    `)
+    `,
+    )
     .eq("is_service", true)
     .eq("sales_orders.operational_status", "Hoàn tất");
 
@@ -322,7 +350,8 @@ export const getServiceItemStats = async (startDate?: string, endDate?: string) 
 
   const stats = response.data?.reduce((acc, item) => {
     acc.totalServiceItems = (acc.totalServiceItems || 0) + item.quantity;
-    acc.totalServiceRevenue = (acc.totalServiceRevenue || 0) + (item.quantity * item.unit_price);
+    acc.totalServiceRevenue =
+      (acc.totalServiceRevenue || 0) + item.quantity * item.unit_price;
     acc.serviceOrderCount = (acc.serviceOrderCount || 0) + 1;
 
     return acc;
@@ -342,9 +371,10 @@ export const calculateOrderTotal = async (orderId: string) => {
     return response;
   }
 
-  const total = response.data?.reduce((sum, item) => {
-    return sum + (item.quantity * item.unit_price);
-  }, 0) || 0;
+  const total =
+    response.data?.reduce((sum, item) => {
+      return sum + item.quantity * item.unit_price;
+    }, 0) || 0;
 
   return { data: { total }, error: null };
 };
@@ -352,7 +382,7 @@ export const calculateOrderTotal = async (orderId: string) => {
 // Update dosage instructions for prescription items
 export const updateDosageInstructions = async (
   itemId: string,
-  dosageInstructions: string
+  dosageInstructions: string,
 ): Promise<PostgrestSingleResponse<ISalesOrderItem | null>> => {
   return updateSalesOrderItem(itemId, { dosage_printed: dosageInstructions });
 };
@@ -361,11 +391,13 @@ export const updateDosageInstructions = async (
 export const getItemsNeedingDosagePrint = async () => {
   const response = await supabase
     .from("sales_order_items")
-    .select(`
+    .select(
+      `
       *,
       products!inner(name),
       sales_orders!inner(order_datetime, patients!inner(full_name))
-    `)
+    `,
+    )
     .eq("is_service", false)
     .not("dosage_printed", "is", null)
     .order("created_at", { ascending: true });

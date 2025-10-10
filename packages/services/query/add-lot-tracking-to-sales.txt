@@ -1,0 +1,53 @@
+-- Migration: Add lot tracking to sales tables
+-- Date: 2025-10-10
+-- Description: Add lot_id column to sales_order_items and sales_combo_items tables
+-- to support lot-managed products in POS sales and combos
+
+-- Add lot_id to sales_order_items table
+ALTER TABLE sales_order_items
+ADD COLUMN lot_id INTEGER REFERENCES product_lots(id) ON DELETE SET NULL;
+
+-- Add comment
+COMMENT ON COLUMN sales_order_items.lot_id IS 'Optional product lot ID for lot-managed products. Null for non-lot-managed products.';
+
+-- Add index for faster lot-based queries
+CREATE INDEX idx_sales_order_items_lot_id ON sales_order_items(lot_id) WHERE lot_id IS NOT NULL;
+
+-- Add lot_id to sales_combo_items table
+ALTER TABLE sales_combo_items
+ADD COLUMN lot_id INTEGER REFERENCES product_lots(id) ON DELETE SET NULL;
+
+-- Add comment
+COMMENT ON COLUMN sales_combo_items.lot_id IS 'Optional product lot ID for lot-managed products within combos. Null for non-lot-managed products.';
+
+-- Add index for faster lot-based queries
+CREATE INDEX idx_sales_combo_items_lot_id ON sales_combo_items(lot_id) WHERE lot_id IS NOT NULL;
+
+-- Update the sales_combo_items_detailed view (if exists) to include lot information
+DROP VIEW IF EXISTS sales_combo_items_detailed;
+
+CREATE VIEW sales_combo_items_detailed AS
+SELECT
+  sci.id,
+  sci.order_id,
+  sci.combo_id,
+  sci.product_id,
+  sci.lot_id,
+  sci.quantity,
+  sci.unit_price,
+  sci.created_at,
+  c.name AS combo_name,
+  c.description AS combo_description,
+  c.combo_price,
+  p.name AS product_name,
+  p.sku,
+  p.barcode,
+  pl.lot_number,
+  pl.batch_code,
+  pl.expiry_date
+FROM sales_combo_items sci
+LEFT JOIN combos c ON sci.combo_id = c.id
+LEFT JOIN products p ON sci.product_id = p.product_id
+LEFT JOIN product_lots pl ON sci.lot_id = pl.id;
+
+COMMENT ON VIEW sales_combo_items_detailed IS 'Detailed view of sales combo items with combo, product, and lot information';
