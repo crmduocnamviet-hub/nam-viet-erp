@@ -26,6 +26,9 @@ type CartItem = BaseCartItem & {
   isCombo?: boolean; // True if this is a combo item (not a regular product)
   combo_id?: number; // ID of the combo
   comboData?: IComboWithItems; // Full combo data including items
+
+  //product lot
+  lot_id?: number;
 };
 
 type CartDetails = {

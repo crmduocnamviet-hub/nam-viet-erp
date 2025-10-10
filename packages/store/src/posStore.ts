@@ -16,7 +16,7 @@ export interface PosState {
   updateTabTitle: (tabId: string, title: string) => void;
 
   // Cart actions (operate on active tab)
-  addCartItem: (item: CartItem) => void;
+  addCartItem: (item: CartItem, forcePush?: boolean) => void;
   updateCartItem: (key: string, updates: Partial<CartItem>) => void;
   removeCartItem: (key: string) => void;
   clearCart: () => void;
@@ -26,7 +26,7 @@ export interface PosState {
   updateCartItemByIndex: (
     index: number,
     key: string,
-    updates: Partial<CartItem>
+    updates: Partial<CartItem>,
   ) => void;
   removeCartItemByIndex: (index: number, key: string) => void;
   clearCartByIndex: (index: number) => void;
@@ -50,7 +50,7 @@ export interface PosState {
   // Async payment processing with tab cleanup
   processPayment: (
     paymentData: any,
-    inventory?: IInventoryWithProduct[]
+    inventory?: IInventoryWithProduct[],
   ) => Promise<unknown>;
 
   // Reset (operate on active tab)
@@ -98,7 +98,7 @@ export const usePosStore = create<PosState>()(
               state.activeTabId = newTabId;
             },
             false,
-            "createTab"
+            "createTab",
           );
 
           return newTabId;
@@ -124,13 +124,13 @@ export const usePosStore = create<PosState>()(
               if (state.activeTabId === tabId) {
                 const newActiveIndex = Math.min(
                   tabIndex,
-                  state.tabs.length - 1
+                  state.tabs.length - 1,
                 );
                 state.activeTabId = state.tabs[newActiveIndex].id;
               }
             },
             false,
-            "closeTab"
+            "closeTab",
           ),
 
         switchTab: (tabId) =>
@@ -141,7 +141,7 @@ export const usePosStore = create<PosState>()(
               }
             },
             false,
-            "switchTab"
+            "switchTab",
           ),
 
         updateTabTitle: (tabId, title) =>
@@ -153,15 +153,20 @@ export const usePosStore = create<PosState>()(
               }
             },
             false,
-            "updateTabTitle"
+            "updateTabTitle",
           ),
 
         // Cart actions (operate on active tab)
-        addCartItem: (item) =>
+        addCartItem: (item, forcePush = false) =>
           set(
             (state) => {
               const tab = state.tabs.find((t) => t.id === state.activeTabId);
               if (!tab) return;
+
+              if (forcePush) {
+                tab.cart.push(item);
+                return;
+              }
 
               const existingIndex = tab.cart.findIndex((i) => i.id === item.id);
 
@@ -177,7 +182,7 @@ export const usePosStore = create<PosState>()(
               }
             },
             false,
-            "addCartItem"
+            "addCartItem",
           ),
 
         updateCartItem: (key, updates) =>
@@ -198,7 +203,7 @@ export const usePosStore = create<PosState>()(
               }
             },
             false,
-            "updateCartItem"
+            "updateCartItem",
           ),
 
         removeCartItem: (key) =>
@@ -210,7 +215,7 @@ export const usePosStore = create<PosState>()(
               tab.cart = tab.cart.filter((i) => i.key !== key);
             },
             false,
-            "removeCartItem"
+            "removeCartItem",
           ),
 
         clearCart: () =>
@@ -222,7 +227,7 @@ export const usePosStore = create<PosState>()(
               tab.cart = [];
             },
             false,
-            "clearCart"
+            "clearCart",
           ),
 
         // Customer actions (operate on active tab)
@@ -235,7 +240,7 @@ export const usePosStore = create<PosState>()(
               tab.selectedCustomer = customer;
             },
             false,
-            "setSelectedCustomer"
+            "setSelectedCustomer",
           ),
 
         setSelectedWarehouse: (warehouse) =>
@@ -247,7 +252,7 @@ export const usePosStore = create<PosState>()(
               tab.selectedWarehouse = warehouse;
             },
             false,
-            "setSelectedWarehouse"
+            "setSelectedWarehouse",
           ),
 
         setSelectedLocation: (location) =>
@@ -259,7 +264,7 @@ export const usePosStore = create<PosState>()(
               tab.selectedLocation = location;
             },
             false,
-            "setSelectedLocation"
+            "setSelectedLocation",
           ),
 
         setPaymentMethod: (method) =>
@@ -271,7 +276,7 @@ export const usePosStore = create<PosState>()(
               tab.paymentMethod = method;
             },
             false,
-            "setPaymentMethod"
+            "setPaymentMethod",
           ),
 
         // Cart actions by index
@@ -295,7 +300,7 @@ export const usePosStore = create<PosState>()(
               }
             },
             false,
-            "addCartItemByIndex"
+            "addCartItemByIndex",
           ),
 
         updateCartItemByIndex: (index, key, updates) =>
@@ -316,7 +321,7 @@ export const usePosStore = create<PosState>()(
               }
             },
             false,
-            "updateCartItemByIndex"
+            "updateCartItemByIndex",
           ),
 
         removeCartItemByIndex: (index, key) =>
@@ -328,7 +333,7 @@ export const usePosStore = create<PosState>()(
               tab.cart = tab.cart.filter((i) => i.key !== key);
             },
             false,
-            "removeCartItemByIndex"
+            "removeCartItemByIndex",
           ),
 
         clearCartByIndex: (index) =>
@@ -340,7 +345,7 @@ export const usePosStore = create<PosState>()(
               tab.cart = [];
             },
             false,
-            "clearCartByIndex"
+            "clearCartByIndex",
           ),
 
         // Customer actions by index
@@ -353,7 +358,7 @@ export const usePosStore = create<PosState>()(
               tab.selectedCustomer = customer;
             },
             false,
-            "setSelectedCustomerByIndex"
+            "setSelectedCustomerByIndex",
           ),
 
         setSelectedWarehouseByIndex: (index, warehouse) =>
@@ -365,7 +370,7 @@ export const usePosStore = create<PosState>()(
               tab.selectedWarehouse = warehouse;
             },
             false,
-            "setSelectedWarehouseByIndex"
+            "setSelectedWarehouseByIndex",
           ),
 
         setSelectedLocationByIndex: (index, location) =>
@@ -377,7 +382,7 @@ export const usePosStore = create<PosState>()(
               tab.selectedLocation = location;
             },
             false,
-            "setSelectedLocationByIndex"
+            "setSelectedLocationByIndex",
           ),
 
         setPaymentMethodByIndex: (index, method) =>
@@ -389,7 +394,7 @@ export const usePosStore = create<PosState>()(
               tab.paymentMethod = method;
             },
             false,
-            "setPaymentMethodByIndex"
+            "setPaymentMethodByIndex",
           ),
 
         // Processing state
@@ -402,7 +407,7 @@ export const usePosStore = create<PosState>()(
               tab.isProcessingPayment = isProcessing;
             },
             false,
-            "setProcessingPayment"
+            "setProcessingPayment",
           ),
 
         setError: (error) =>
@@ -414,7 +419,7 @@ export const usePosStore = create<PosState>()(
               tab.error = error;
             },
             false,
-            "setError"
+            "setError",
           ),
 
         // Process payment with automatic tab cleanup
@@ -462,10 +467,12 @@ export const usePosStore = create<PosState>()(
               ([productId, { quantity }]) => ({
                 productId: Number(productId),
                 quantityChange: -quantity, // Negative to deduct
-              })
+              }),
             );
 
-            useInventoryStore.getState().updateInventoryQuantities(inventoryUpdates);
+            useInventoryStore
+              .getState()
+              .updateInventoryQuantities(inventoryUpdates);
 
             // Clear processing state
             set((state) => {
@@ -488,7 +495,7 @@ export const usePosStore = create<PosState>()(
                 if (targetTabId === state.activeTabId) {
                   const newActiveIndex = Math.min(
                     targetTabIndex,
-                    state.tabs.length - 1
+                    state.tabs.length - 1,
                   );
                   state.activeTabId = state.tabs[newActiveIndex].id;
                 }
@@ -536,7 +543,7 @@ export const usePosStore = create<PosState>()(
               tab.error = null;
             },
             false,
-            "resetTab"
+            "resetTab",
           ),
 
         // Reset entire store to initial state
@@ -548,7 +555,7 @@ export const usePosStore = create<PosState>()(
               state.activeTabId = newTabId;
             },
             false,
-            "resetStore"
+            "resetStore",
           ),
       };
 
@@ -556,8 +563,8 @@ export const usePosStore = create<PosState>()(
     }),
     {
       name: "PosStore",
-    }
-  )
+    },
+  ),
 );
 
 // Selectors (return data from active tab)

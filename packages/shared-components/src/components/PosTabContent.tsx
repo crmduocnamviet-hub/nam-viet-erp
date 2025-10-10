@@ -77,8 +77,8 @@ interface PosTabContentProps {
     originalTotal: number;
     totalDiscount: number;
   };
-  handleRemoveFromCart: (productId: number) => void;
-  handleUpdateQuantity: (productId: number, quantity: number) => void;
+  handleRemoveFromCart: (itemKey: string) => void;
+  handleUpdateQuantity: (itemKey: string, quantity: number) => void;
   handleOpenPaymentModal: (method: "cash" | "card") => void;
   isProcessingPayment: boolean;
 
@@ -170,13 +170,20 @@ const PosTabContent: React.FC<PosTabContentProps> = ({
   }, [searchResults, selectedCategory]);
 
   return (
-    <div style={{ backgroundColor: "#f5f5f5", minHeight: "100vh", padding: 0 }}>
+    <div
+      style={{
+        backgroundColor: "#f5f5f5",
+        minHeight: "100vh",
+        padding: "8px",
+        height: "100%",
+      }}
+    >
       {/* Top Bar - Customer & Warehouse Info */}
       <div
         style={{
           backgroundColor: "#fff",
-          padding: "12px 16px",
-          marginBottom: 16,
+          padding: "8px 12px",
+          marginBottom: 8,
           borderRadius: 8,
           boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
         }}
@@ -217,7 +224,7 @@ const PosTabContent: React.FC<PosTabContentProps> = ({
                   ) : null
                 }
               />
-              {showCustomerDropdown && customerSearchResults.length > 0 && (
+              {showCustomerDropdown && (
                 <Card
                   size="small"
                   style={{
@@ -231,34 +238,53 @@ const PosTabContent: React.FC<PosTabContentProps> = ({
                     marginTop: 4,
                   }}
                 >
-                  <List
-                    size="small"
-                    dataSource={customerSearchResults}
-                    renderItem={(customer: IPatient) => (
-                      <List.Item
-                        style={{
-                          cursor: "pointer",
-                          padding: "8px 12px",
-                        }}
-                        onClick={() => {
-                          setStoreSelectedCustomer(customer);
-                          setCustomerSearchTerm("");
-                          setShowCustomerDropdown(false);
-                        }}
-                      >
-                        <div>
-                          <Text strong>{customer.full_name}</Text>
-                          <br />
-                          <Text type="secondary">{customer.phone_number}</Text>
-                          {customer.loyalty_points > 0 && (
-                            <Tag color="gold" style={{ marginLeft: 8 }}>
-                              {customer.loyalty_points} điểm
-                            </Tag>
-                          )}
-                        </div>
-                      </List.Item>
-                    )}
-                  />
+                  {customerSearchResults.length > 0 ? (
+                    <List
+                      size="small"
+                      dataSource={customerSearchResults}
+                      renderItem={(customer: IPatient) => (
+                        <List.Item
+                          style={{
+                            cursor: "pointer",
+                            padding: "8px 12px",
+                          }}
+                          onClick={() => {
+                            setStoreSelectedCustomer(customer);
+                            setCustomerSearchTerm("");
+                            setShowCustomerDropdown(false);
+                          }}
+                        >
+                          <div>
+                            <Text strong>{customer.full_name}</Text>
+                            <br />
+                            <Text type="secondary">
+                              {customer.phone_number}
+                            </Text>
+                            {customer.loyalty_points > 0 && (
+                              <Tag color="gold" style={{ marginLeft: 8 }}>
+                                {customer.loyalty_points} điểm
+                              </Tag>
+                            )}
+                          </div>
+                        </List.Item>
+                      )}
+                    />
+                  ) : (
+                    <div style={{ padding: "8px 12px", textAlign: "center" }}>
+                      <Text type="secondary">Không tìm thấy khách hàng</Text>
+                    </div>
+                  )}
+                  <Button
+                    type="primary"
+                    block
+                    style={{ marginTop: 8 }}
+                    onClick={() => {
+                      setIsCreateCustomerModalOpen(true);
+                      setShowCustomerDropdown(false);
+                    }}
+                  >
+                    + Tạo khách hàng mới
+                  </Button>
                 </Card>
               )}
             </div>
@@ -272,7 +298,7 @@ const PosTabContent: React.FC<PosTabContentProps> = ({
           <Card
             style={{
               borderRadius: 8,
-              height: isMobile ? "auto" : "calc(100vh - 200px)",
+              height: isMobile ? "auto" : "calc(100vh - 120px)",
               display: "flex",
               flexDirection: "column",
             }}
@@ -451,7 +477,7 @@ const PosTabContent: React.FC<PosTabContentProps> = ({
             }
             style={{
               borderRadius: 8,
-              height: "calc(100vh - 200px)",
+              height: "calc(100vh - 120px)",
               display: "flex",
               flexDirection: "column",
             }}
@@ -582,7 +608,7 @@ const PosTabContent: React.FC<PosTabContentProps> = ({
                                 min={1}
                                 value={item.quantity}
                                 onChange={(val) =>
-                                  handleUpdateQuantity(item.id, val!)
+                                  handleUpdateQuantity(item.key, val!)
                                 }
                                 style={{ width: 55 }}
                               />
@@ -591,7 +617,7 @@ const PosTabContent: React.FC<PosTabContentProps> = ({
                                 danger
                                 size="small"
                                 icon={<DeleteOutlined />}
-                                onClick={() => handleRemoveFromCart(item.id)}
+                                onClick={() => handleRemoveFromCart(item.key)}
                               />
                             </Space>
                             <Text strong style={{ fontSize: 14 }}>
@@ -842,7 +868,7 @@ const PosTabContent: React.FC<PosTabContentProps> = ({
                             min={1}
                             value={item.quantity}
                             onChange={(val) =>
-                              handleUpdateQuantity(item.id, val!)
+                              handleUpdateQuantity(item.key, val!)
                             }
                             style={{ width: 55 }}
                           />
@@ -851,7 +877,7 @@ const PosTabContent: React.FC<PosTabContentProps> = ({
                             danger
                             size="small"
                             icon={<DeleteOutlined />}
-                            onClick={() => handleRemoveFromCart(item.id)}
+                            onClick={() => handleRemoveFromCart(item.key)}
                           />
                         </Space>
                         <Text strong style={{ fontSize: 14 }}>

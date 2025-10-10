@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Routes, Route, useNavigate } from "react-router-dom";
+import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import {
   Layout,
   Menu,
@@ -58,11 +58,15 @@ const AppLayoutContent: React.FC = () => {
   const [collapsed, setCollapsed] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const screens = useBreakpoint();
   const isMobile = !screens.lg;
   const { user, renderScreen } = useScreens();
 
   const menuItems = user ? generateMenu(SALE_APP_MENU, user.permissions) : [];
+
+  // Check if current route is POS - show fullscreen
+  const isFullscreenRoute = location.pathname === "/pos";
 
   const handleMenuClick = (e: any) => {
     navigate(e.key);
@@ -81,6 +85,17 @@ const AppLayoutContent: React.FC = () => {
       <h1>Tính năng này sắp ra mắt!</h1>
     </div>
   );
+
+  // Fullscreen mode for POS
+  if (isFullscreenRoute) {
+    return (
+      <div style={{ width: "100vw", height: "100vh", overflow: "hidden" }}>
+        <Routes>
+          <Route path="/pos" element={renderScreen("pos.main")} />
+        </Routes>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -372,10 +387,10 @@ const AppLayoutContent: React.FC = () => {
                     user?.role.includes("inventory")
                       ? renderScreen("staff.inventory-dashboard")
                       : user?.role.includes("delivery")
-                      ? renderScreen("staff.delivery-dashboard")
-                      : user?.role.includes("sales")
-                      ? renderScreen("staff.sales-dashboard")
-                      : renderScreen("pos.main")
+                        ? renderScreen("staff.delivery-dashboard")
+                        : user?.role.includes("sales")
+                          ? renderScreen("staff.sales-dashboard")
+                          : renderScreen("pos.main")
                   }
                 />
                 <Route path="/pos" element={renderScreen("pos.main")} />

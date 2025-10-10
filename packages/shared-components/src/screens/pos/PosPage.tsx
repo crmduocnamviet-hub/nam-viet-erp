@@ -632,7 +632,7 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
         expiry_date: lot.expiry_date,
       };
 
-      addCartItem(cartItem);
+      addCartItem(cartItem, true);
     }
 
     notification.success({
@@ -908,21 +908,18 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
     }
   };
 
-  const handleRemoveFromCart = (productId: number) => {
-    const item = cart.find((i) => i.id === productId);
-    if (item) {
-      removeCartItem(item.key);
-    }
+  const handleRemoveFromCart = (itemKey: string) => {
+    removeCartItem(itemKey);
   };
 
-  const handleUpdateQuantity = (productId: number, newQuantity: number) => {
-    const item = cart.find((i) => i.id === productId);
+  const handleUpdateQuantity = (itemKey: string, newQuantity: number) => {
+    const item = cart.find((i) => i.key === itemKey);
     if (!item) return;
 
     if (newQuantity <= 0) {
-      removeCartItem(item.key);
+      removeCartItem(itemKey);
     } else {
-      updateCartItem(item.key, {
+      updateCartItem(itemKey, {
         quantity: newQuantity,
         total: item.price * newQuantity,
       });
@@ -1074,23 +1071,13 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
   return (
     <div
       style={{
-        padding: isMobile ? "12px" : "16px",
+        padding: 0,
         minHeight: "100vh",
+        height: "100vh",
         backgroundColor: "#f5f5f5",
+        overflow: "hidden",
       }}
     >
-      <Row
-        justify="space-between"
-        align="middle"
-        style={{ marginBottom: isMobile ? 12 : 16 }}
-      >
-        <Col>
-          <Title level={isMobile ? 4 : 3} style={{ margin: 0 }}>
-            💰 POS Bán Lẻ
-          </Title>
-        </Col>
-      </Row>
-
       {/* Multi-tab navigation */}
       <Tabs
         type="editable-card"
