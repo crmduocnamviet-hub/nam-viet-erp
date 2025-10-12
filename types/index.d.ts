@@ -515,9 +515,7 @@ interface IPurchaseOrderItem {
   po_id: number;
   product_id: number;
   quantity: number;
-  unit_price: number;
   received_quantity: number;
-  notes: string | null;
   created_at: string;
 }
 

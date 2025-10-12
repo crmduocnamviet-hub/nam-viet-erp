@@ -29,15 +29,15 @@ const getErrorMessage = (error: unknown): string => {
     return error.message;
   }
 
-  if (typeof error === 'string') {
+  if (typeof error === "string") {
     return error;
   }
 
-  if (typeof error === 'object' && error !== null && 'message' in error) {
+  if (typeof error === "object" && error !== null && "message" in error) {
     return (error as any).message;
   }
 
-  return 'An unknown error occurred';
+  return "An unknown error occurred";
 };
 
 const { Title } = Typography;
@@ -232,7 +232,7 @@ const FundManagementContent: React.FC = () => {
         open={isModalOpen}
         onCancel={handleCancel}
         onOk={() => form.submit()}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form
           form={form}

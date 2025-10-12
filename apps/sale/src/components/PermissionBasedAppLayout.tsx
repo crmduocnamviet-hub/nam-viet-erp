@@ -462,6 +462,31 @@ const AppLayoutContent: React.FC = () => {
                   path="/lots/:lotId"
                   element={renderScreen("inventory.lot-detail")}
                 />
+                {/* Warehouse Routes */}
+                <Route
+                  path="/warehouse/purchase-orders"
+                  element={renderScreen("warehouse.purchase-orders")}
+                />
+                <Route
+                  path="/warehouse/receiving"
+                  element={renderScreen("warehouse.receiving")}
+                />
+                <Route
+                  path="/warehouse/picking"
+                  element={renderScreen("warehouse.picking")}
+                />
+                <Route
+                  path="/warehouse/suppliers"
+                  element={renderScreen("warehouse.suppliers")}
+                />
+                <Route
+                  path="/warehouse/vat-inventory"
+                  element={renderScreen("warehouse.vat-inventory")}
+                />
+                <Route
+                  path="/warehouse/vat-reconciliation"
+                  element={renderScreen("warehouse.vat-reconciliation")}
+                />
                 {/* Fallback route */}
                 <Route path="*" element={<ComingSoon />} />
               </Routes>
