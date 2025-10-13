@@ -28,7 +28,7 @@ export const getPurchaseOrder = async () => {
 };
 
 export const getPurchaseOrders = async (filters?: {
-  status?: string;
+  status?: string | string[];
   supplierId?: number;
   startDate?: string;
   endDate?: string;
@@ -48,7 +48,11 @@ export const getPurchaseOrders = async (filters?: {
     .order("order_date", { ascending: false });
 
   if (filters?.status) {
-    query = query.eq("status", filters.status);
+    if (Array.isArray(filters.status)) {
+      query = query.in("status", filters.status);
+    } else {
+      query = query.eq("status", filters.status);
+    }
   }
 
   if (filters?.supplierId) {
@@ -174,6 +178,109 @@ export const updateReceivedQuantity = async (
     .eq("id", itemId)
     .select()
     .single();
+};
+
+/**
+ * Receive purchase order items (NHẬP KHO)
+ * Updates received quantities, lot numbers, expiration dates
+ * Updates inventory
+ * Updates PO status based on completion
+ */
+export const receivePurchaseOrderItems = async (
+  poId: number,
+  items: Array<{
+    itemId: number;
+    quantityToReceive: number;
+    lotNumber?: string;
+    expirationDate?: string;
+    shelfLocation?: string;
+  }>,
+  receivedBy: string | null,
+) => {
+  try {
+    // Get the PO and its items
+    const { data: poData, error: poError } = await getPurchaseOrderById(poId);
+    if (poError || !poData) {
+      throw new Error(`Purchase order not found: ${poError?.message}`);
+    }
+
+    // Update each item
+    const updatePromises = items.map(async (receiveData) => {
+      const poItem = poData.items.find((i: any) => i.id === receiveData.itemId);
+      if (!poItem) {
+        throw new Error(`Item ${receiveData.itemId} not found in PO`);
+      }
+
+      const newReceivedQuantity =
+        (poItem.received_quantity || 0) + receiveData.quantityToReceive;
+
+      // Update purchase order item
+      const { error: itemError } = await supabase
+        .from("purchase_order_items")
+        .update({
+          received_quantity: newReceivedQuantity,
+          lot_number: receiveData.lotNumber,
+          expiration_date: receiveData.expirationDate,
+          shelf_location: receiveData.shelfLocation,
+        })
+        .eq("id", receiveData.itemId);
+
+      if (itemError) {
+        throw new Error(`Failed to update item: ${itemError.message}`);
+      }
+
+      // Update inventory - add received quantity to current stock
+      const { data: inventoryData } = await supabase
+        .from("inventory")
+        .select("*")
+        .eq("product_id", poItem.product_id)
+        .single();
+
+      if (inventoryData) {
+        await supabase
+          .from("inventory")
+          .update({
+            quantity: inventoryData.quantity + receiveData.quantityToReceive,
+          })
+          .eq("id", inventoryData.id);
+      }
+
+      return { success: true, itemId: receiveData.itemId };
+    });
+
+    await Promise.all(updatePromises);
+
+    // Check if PO is fully received
+    const { data: updatedPO } = await getPurchaseOrderById(poId);
+    if (updatedPO) {
+      const allItemsFullyReceived = updatedPO.items.every(
+        (item: any) => item.received_quantity >= item.quantity,
+      );
+
+      const someItemsReceived = updatedPO.items.some(
+        (item: any) => item.received_quantity > 0,
+      );
+
+      let newStatus: IPurchaseOrder["status"];
+      if (allItemsFullyReceived) {
+        newStatus = "received";
+      } else if (someItemsReceived) {
+        newStatus = "partially_received";
+      } else {
+        newStatus = poData.status; // Keep current status
+      }
+
+      // Update PO status if changed
+      if (newStatus !== poData.status) {
+        await updatePurchaseOrderStatus(poId, newStatus);
+      }
+    }
+
+    return { success: true, message: "Items received successfully" };
+  } catch (error: any) {
+    console.error("Error receiving items:", error);
+    throw error;
+  }
 };
 
 /**
@@ -398,6 +505,151 @@ export const createPurchaseOrdersFromProducts = async (
     purchaseOrders: createdPurchaseOrders,
     productsOrdered: products,
   };
+};
+
+/**
+ * CREATE DIRECT PURCHASE IMPORT (NHẬP HÀNG TRỰC TIẾP)
+ *
+ * Creates a new purchase order with status "received" (done)
+ * Automatically updates inventory and handles lot management
+ *
+ * @param order - Purchase order details
+ * @param items - Items with lot and expiration info
+ * @param warehouseId - Warehouse where goods are received
+ * @returns Created purchase order with items
+ */
+export const createDirectPurchaseImport = async (
+  order: Omit<
+    IPurchaseOrder,
+    "id" | "created_at" | "updated_at" | "po_number" | "status"
+  >,
+  items: Array<{
+    product_id: number;
+    quantity: number;
+    lot_number?: string;
+    expiration_date?: string;
+    shelf_location?: string;
+  }>,
+  warehouseId: number,
+) => {
+  try {
+    // Generate PO number
+    const poNumber = await generatePONumber();
+
+    // Create the purchase order with status "received"
+    const { data: orderData, error: orderError } = await supabase
+      .from("purchase_orders")
+      .insert({
+        ...order,
+        po_number: poNumber,
+        status: "received",
+      })
+      .select()
+      .single();
+
+    if (orderError || !orderData) {
+      throw new Error(
+        `Failed to create purchase order: ${orderError?.message}`,
+      );
+    }
+
+    // Create purchase order items with received_quantity = quantity
+    const itemsWithPoId = items.map((item) => ({
+      po_id: orderData.id,
+      product_id: item.product_id,
+      quantity: item.quantity,
+      received_quantity: item.quantity, // Mark as fully received
+      lot_number: item.lot_number,
+      expiration_date: item.expiration_date,
+      shelf_location: item.shelf_location,
+    }));
+
+    const { data: itemsData, error: itemsError } = await supabase
+      .from("purchase_order_items")
+      .insert(itemsWithPoId)
+      .select();
+
+    if (itemsError) {
+      // Rollback the order if items creation fails
+      await supabase.from("purchase_orders").delete().eq("id", orderData.id);
+      throw new Error(
+        `Failed to create purchase order items: ${itemsError.message}`,
+      );
+    }
+
+    // Update inventory and product lots for each item
+    const updatePromises = items.map(async (item) => {
+      // 1. Check if lot exists for this product + warehouse + lot_number
+      if (item.lot_number) {
+        const { data: existingLot } = await supabase
+          .from("product_lots")
+          .select("*")
+          .eq("product_id", item.product_id)
+          .eq("warehouse_id", warehouseId)
+          .eq("lot_number", item.lot_number)
+          .single();
+
+        if (existingLot) {
+          // Update existing lot quantity
+          await supabase
+            .from("product_lots")
+            .update({
+              quantity: existingLot.quantity + item.quantity,
+              expiry_date: item.expiration_date || existingLot.expiry_date,
+            })
+            .eq("id", existingLot.id);
+        } else {
+          // Create new lot
+          await supabase.from("product_lots").insert({
+            product_id: item.product_id,
+            warehouse_id: warehouseId,
+            lot_number: item.lot_number,
+            expiry_date: item.expiration_date,
+            received_date: new Date().toISOString().split("T")[0],
+            quantity: item.quantity,
+          });
+        }
+      }
+
+      // 2. Update inventory - add received quantity to current stock
+      const { data: inventoryData } = await supabase
+        .from("inventory")
+        .select("*")
+        .eq("product_id", item.product_id)
+        .eq("warehouse_id", warehouseId)
+        .single();
+
+      if (inventoryData) {
+        await supabase
+          .from("inventory")
+          .update({
+            quantity: inventoryData.quantity + item.quantity,
+          })
+          .eq("id", inventoryData.id);
+      } else {
+        // Create inventory record if it doesn't exist
+        await supabase.from("inventory").insert({
+          product_id: item.product_id,
+          warehouse_id: warehouseId,
+          quantity: item.quantity,
+          min_stock: 0,
+          max_stock: 0,
+        });
+      }
+    });
+
+    await Promise.all(updatePromises);
+
+    return {
+      success: true,
+      order: orderData,
+      items: itemsData,
+      message: "Purchase import created successfully",
+    };
+  } catch (error: any) {
+    console.error("Error creating direct purchase import:", error);
+    throw error;
+  }
 };
 
 /**

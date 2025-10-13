@@ -11,7 +11,16 @@ Lên Kế hoạch mua => Nhập hàng vào Kho => Thực hiện hành động B�
 
 Còn đây là luồng Thao tác thực tế của Nhân viên với Sản phẩm mong muốn:
 
-Kế Toán Nội Bộ tạo các đơn nhập hàng cần mua (Tự Động tạo bằng nút bấm) => Gửi thông tin tới nhà Cung Cấp để đặt hàng => Hàng Về Đến Kho, Nhân Viên Kho sẽ nhận và kiểm tra các thông tin: Số Lượng, Số Lô, Hạn Sử Dụng (tự động nhập) => Nhập hàng vào Kho và Xếp Lên Kệ => Khi Nhân Viên bán hàng tạo đơn => Lấy hàng Từ kệ và Đối chiếu Thông tin sản phẩm với danh sách trong đơn => Đóng hàng vào Thùng => Gửi Cho nhân viên Vận Chuyển => NV vận chuyển giao tới khách hàng thì bấm "Xác nhận giao thành công" | nếu không giao thành công thì bấm "Giao không thành công" và nhân viên Kho biết để sẵn sàng nhận lại hàng.
+B1: Kế Toán Nội Bộ tạo các đơn nhập hàng cần mua (Tự Động tạo bằng nút bấm)
+B2: Gửi thông tin tới nhà Cung Cấp để đặt hàng
+B3: Hàng Về Đến Kho, Nhân Viên Kho sẽ nhận và kiểm tra các thông tin: Số Lượng, Số Lô, Hạn Sử Dụng (tự động nhập) 
+B4: Nhập hàng vào Kho và Xếp Lên Kệ => 
+
+Khi Nhân Viên bán hàng tạo đơn:
+B1: Lấy hàng Từ kệ và Đối chiếu Thông tin sản phẩm với danh sách trong đơn
+B2: Đóng hàng vào Thùng
+B3: Gửi Cho nhân viên Vận Chuyển
+B4: NV vận chuyển giao tới khách hàng thì bấm "Xác nhận giao thành công" | nếu không giao thành công thì bấm "Giao không thành công" và nhân viên Kho biết để sẵn sàng nhận lại hàng.
 
 Song song với đó, là Kế Toán sau khi gửi đơn cần mua với nhà cung cấp, sẽ phải tính ra giá Vốn của sản phẩm. Giá vốn là giá nhập vào kho sau khi trừ hết chiết khấu hoặc khuyến mại của nhà cung cấp.
 Ví dụ: Chai dầu gội đầu Clear có giá chưa bao gồm VAT là 100k | VAT = 10% | Tổng giá sản phẩm là 110k | Tháng này có chương trình mua 10 tặng 1 => Giá về 100k/chai | Hợp đồng chiết khấu trả sau: 5% của phần chưa VAT, tức là giảm 5k nữa | Như vậy, giá vốn cuối cùng nhập vào là 95k/chai Clear.

@@ -20,10 +20,6 @@ import {
   FileTextOutlined,
   FilePdfOutlined,
 } from "@ant-design/icons";
-import type { ColumnsType } from "antd/es/table";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
-import { RobotoRegular } from "../utils/RobotoFont";
 
 const { Text, Title } = Typography;
 
@@ -32,6 +28,13 @@ interface ViewPurchaseOrderModalProps {
   onClose: () => void;
   purchaseOrder: any | null;
 }
+
+const formatCurrency = (amount: number): string => {
+  return new Intl.NumberFormat("vi-VN", {
+    style: "currency",
+    currency: "VND",
+  }).format(amount || 0);
+};
 
 const ViewPurchaseOrderModal: React.FC<ViewPurchaseOrderModalProps> = ({
   open,
@@ -54,7 +57,7 @@ const ViewPurchaseOrderModal: React.FC<ViewPurchaseOrderModalProps> = ({
     text: purchaseOrder.status,
   };
 
-  const itemColumns: ColumnsType<any> = [
+  const itemColumns: any[] = [
     {
       title: "STT",
       key: "index",
@@ -150,143 +153,125 @@ const ViewPurchaseOrderModal: React.FC<ViewPurchaseOrderModalProps> = ({
       0,
     ) || 0;
 
-  // Export to PDF function
+  const generatePurchaseOrderPdfContent = (
+    purchaseOrder: IPurchaseOrderWithDetails,
+  ): string => {
+    if (!purchaseOrder) return "";
+
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <title>Đơn đặt hàng - ${purchaseOrder.po_number}</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 20px; font-size: 14px; }
+          .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 20px; }
+          .header h1 { margin: 0; color: #1890ff; }
+          .info-section { margin: 20px 0; }
+          .info-row { display: flex; margin-bottom: 10px; }
+          .info-label { font-weight: bold; width: 150px; }
+          table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+          th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+          th { background-color: #1890ff; color: white; }
+          .total-section { margin-top: 30px; text-align: right; }
+          .total-row { margin: 10px 0; font-size: 16px; }
+          .total-row.final { font-size: 20px; font-weight: bold; color: #cf1322; }
+          .footer { margin-top: 50px; text-align: center; font-size: 12px; color: #666; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>ĐƠN ĐẶT HÀNG</h1>
+          <p>Số: ${purchaseOrder.po_number || ""}</p>
+        </div>
+
+        <div class="info-section">
+          <h3>Thông tin chung</h3>
+          <div class="info-row">
+            <div class="info-label">Nhà cung cấp:</div>
+            <div>${purchaseOrder.supplier?.name || "-"}</div>
+          </div>
+          <div class="info-row">
+            <div class="info-label">Ngày đặt hàng:</div>
+            <div>${
+              purchaseOrder.order_date
+                ? new Date(purchaseOrder.order_date).toLocaleDateString("vi-VN")
+                : "-"
+            }</div>
+          </div>
+          <div class="info-row">
+            <div class="info-label">Trạng thái:</div>
+            <div>${status.text}</div>
+          </div>
+          <div class="info-row">
+            <div class="info-label">Người tạo:</div>
+            <div>${purchaseOrder.created_by || "-"}</div>
+          </div>
+        </div>
+
+        <div class="info-section">
+          <h3>Danh sách sản phẩm</h3>
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 50px;">STT</th>
+                <th>Tên sản phẩm</th>
+                <th style="width: 100px;">Đơn vị</th>
+                <th style="width: 100px;">Số lượng</th>
+                <th style="width: 120px;">Đơn giá</th>
+                <th style="width: 150px;">Thành tiền</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${(purchaseOrder.items || [])
+                .map(
+                  (item: any, index: number) => `
+                <tr>
+                  <td style="text-align: center;">${index + 1}</td>
+                  <td>${item.product?.name || "-"}</td>
+                  <td>${item.product?.unit || "-"}</td>
+                  <td style="text-align: center;">${item.quantity}</td>
+                  <td style="text-align: right;">${formatCurrency(
+                    item.product?.wholesale_price || 0,
+                  )}</td>
+                  <td style="text-align: right;">${formatCurrency(
+                    item.quantity * (item.product?.wholesale_price || 0),
+                  )}</td>
+                </tr>
+              `,
+                )
+                .join("")}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="total-section">
+          <div class="total-row final">Tổng cộng: ${formatCurrency(
+            purchaseOrder.total_amount || 0,
+          )}</div>
+        </div>
+
+        <div class="footer">
+          <p>Ngày xuất: ${new Date().toLocaleString("vi-VN")}</p>
+          <p>Cảm ơn quý khách đã hợp tác!</p>
+        </div>
+      </body>
+      </html>
+    `;
+  };
+
   const handleExportPDF = () => {
-    const doc = new jsPDF();
-
-    // Add Vietnamese font
-    doc.addFileToVFS("Roboto-Regular.ttf", RobotoRegular);
-    doc.addFont("Roboto-Regular.ttf", "Roboto", "normal");
-    doc.setFont("Roboto");
-
-    // Add title
-    doc.setFontSize(18);
-    doc.text("ĐỚN ĐẶT HÀNG", 105, 20, { align: "center" });
-
-    doc.setFontSize(14);
-    doc.text(purchaseOrder.po_number || "", 105, 28, { align: "center" });
-
-    // Add order info
-    doc.setFontSize(10);
-    let yPos = 40;
-
-    doc.text(`Nhà cung cấp: ${purchaseOrder.supplier?.name || "-"}`, 15, yPos);
-    yPos += 7;
-    doc.text(
-      `Ngày đặt hàng: ${
-        purchaseOrder.order_date
-          ? new Date(purchaseOrder.order_date).toLocaleDateString("vi-VN")
-          : "-"
-      }`,
-      15,
-      yPos,
-    );
-    yPos += 7;
-    doc.text(
-      `Ngày dự kiến giao: ${
-        purchaseOrder.expected_delivery_date
-          ? new Date(purchaseOrder.expected_delivery_date).toLocaleDateString(
-              "vi-VN",
-            )
-          : "-"
-      }`,
-      15,
-      yPos,
-    );
-    yPos += 7;
-    doc.text(`Trạng thái: ${status.text}`, 15, yPos);
-    yPos += 7;
-    doc.text(`Người tạo: ${purchaseOrder.created_by || "-"}`, 15, yPos);
-    yPos += 10;
-
-    if (purchaseOrder.notes) {
-      doc.setFontSize(9);
-      doc.text(`Ghi chú: ${purchaseOrder.notes}`, 15, yPos);
-      yPos += 10;
+    const printContent = generatePurchaseOrderPdfContent(purchaseOrder);
+    const printWindow = window.open("", "_blank");
+    if (printWindow) {
+      printWindow.document.write(printContent);
+      printWindow.document.close();
+      printWindow.focus();
+      setTimeout(() => {
+        printWindow.print();
+      }, 250);
     }
-
-    // Add items table
-    const tableData = (purchaseOrder.items || []).map(
-      (item: any, index: number) => [
-        index + 1,
-        item.product?.name || "-",
-        item.product?.unit || "-",
-        item.quantity,
-        item.received_quantity || 0,
-        (item.product?.wholesale_price || 0).toLocaleString("vi-VN"),
-        (item.quantity * (item.product?.wholesale_price || 0)).toLocaleString(
-          "vi-VN",
-        ),
-      ],
-    );
-
-    autoTable(doc, {
-      startY: yPos,
-      head: [
-        [
-          "STT",
-          "Sản phẩm",
-          "Đơn vị",
-          "SL đặt",
-          "Đã nhận",
-          "Đơn giá",
-          "Thành tiền",
-        ],
-      ],
-      body: tableData,
-      foot: [
-        [
-          "",
-          "",
-          "TỔNG CỘNG:",
-          totalQuantity,
-          totalReceived,
-          "",
-          (purchaseOrder.total_amount || 0).toLocaleString("vi-VN") + " đ",
-        ],
-      ],
-      theme: "grid",
-      headStyles: {
-        fillColor: [66, 139, 202],
-        textColor: 255,
-        fontStyle: "bold",
-        halign: "center",
-        font: "Roboto",
-      },
-      footStyles: {
-        fillColor: [240, 240, 240],
-        textColor: 0,
-        fontStyle: "bold",
-        font: "Roboto",
-      },
-      columnStyles: {
-        0: { halign: "center", cellWidth: 15 },
-        1: { halign: "left", cellWidth: 50 },
-        2: { halign: "center", cellWidth: 20 },
-        3: { halign: "center", cellWidth: 20 },
-        4: { halign: "center", cellWidth: 20 },
-        5: { halign: "right", cellWidth: 30 },
-        6: { halign: "right", cellWidth: 35 },
-      },
-      styles: {
-        fontSize: 9,
-        cellPadding: 3,
-        font: "Roboto",
-      },
-    });
-
-    // Add footer
-    const finalY = (doc as any).lastAutoTable.finalY || yPos + 50;
-    doc.setFontSize(8);
-    doc.setTextColor(128, 128, 128);
-    doc.text(
-      `Ngày xuất: ${new Date().toLocaleString("vi-VN")}`,
-      15,
-      finalY + 10,
-    );
-
-    // Save PDF
-    doc.save(`Don_Dat_Hang_${purchaseOrder.po_number || "PO"}.pdf`);
   };
 
   return (

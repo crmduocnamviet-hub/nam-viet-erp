@@ -10,6 +10,8 @@ import {
   DatePicker,
   Space,
   notification,
+  Collapse,
+  Spin,
 } from "antd";
 import {
   PlusOutlined,
@@ -17,7 +19,10 @@ import {
   SyncOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
+  BarChartOutlined,
 } from "@ant-design/icons";
+import Chart from "react-apexcharts";
+import type { ApexOptions } from "apexcharts";
 import PageLayout from "../../components/PageLayout";
 import AutoGeneratePOModal from "../../components/AutoGeneratePOModal";
 import EditPurchaseOrderModal from "../../components/EditPurchaseOrderModal";
@@ -54,6 +59,22 @@ const PurchaseOrdersPage: React.FC = () => {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [selectedPO, setSelectedPO] = useState<any>(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [inventoryAnalytics, setInventoryAnalytics] = useState<any>(null);
+
+  // Fetch inventory analytics
+  const fetchInventoryAnalytics = async () => {
+    setAnalyticsLoading(true);
+    try {
+      const warehouseId = 1; // TODO: Get actual warehouseId
+      const result = await analyzeProductsNeedingReorder(warehouseId);
+      setInventoryAnalytics(result);
+    } catch (error: any) {
+      console.error("Error fetching analytics:", error);
+    } finally {
+      setAnalyticsLoading(false);
+    }
+  };
 
   // Fetch suppliers
   const fetchSuppliers = async () => {
@@ -105,9 +126,10 @@ const PurchaseOrdersPage: React.FC = () => {
     }
   };
 
-  // Load suppliers on mount
+  // Load suppliers and analytics on mount
   useEffect(() => {
     fetchSuppliers();
+    fetchInventoryAnalytics();
   }, []);
 
   // Load data on mount and when filters change
@@ -143,6 +165,50 @@ const PurchaseOrdersPage: React.FC = () => {
 
     return { total, draft, ordered, partial, completed };
   }, [purchaseOrders]);
+
+  // Prepare chart data
+  const chartData = useMemo(() => {
+    if (!inventoryAnalytics?.productsToOrder) {
+      return {
+        supplierData: { categories: [], series: [] },
+        statusData: { labels: [], series: [] },
+      };
+    }
+
+    // Group products by supplier
+    const productsBySupplier: Record<string, number> = {};
+    inventoryAnalytics.productsToOrder.forEach((product: any) => {
+      const supplier = product.supplier_name || "Unknown";
+      productsBySupplier[supplier] = (productsBySupplier[supplier] || 0) + 1;
+    });
+
+    // Sort by quantity
+    const sortedSuppliers = Object.entries(productsBySupplier)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 10); // Top 10 suppliers
+
+    const supplierData = {
+      categories: sortedSuppliers.map(([name]) => name),
+      series: [
+        {
+          name: "Số sản phẩm cần đặt",
+          data: sortedSuppliers.map(([, count]) => count),
+        },
+      ],
+    };
+
+    // Status distribution
+    const statusData = {
+      labels: ["Cần đặt hàng", "Tồn kho ổn định"],
+      series: [
+        inventoryAnalytics.productsToOrder.length,
+        inventoryAnalytics.totalProducts -
+          inventoryAnalytics.productsToOrder.length,
+      ],
+    };
+
+    return { supplierData, statusData };
+  }, [inventoryAnalytics]);
 
   const handleOpenAutoGenerate = async () => {
     setAutoGenModalOpen(true);
@@ -260,6 +326,82 @@ const PurchaseOrdersPage: React.FC = () => {
 
   const canAutoCreate = hasPermission("warehouse.purchase-orders.auto-create");
   const canCreate = hasPermission("warehouse.purchase-orders.create");
+
+  // Chart options
+  const barChartOptions: ApexOptions = {
+    chart: {
+      type: "bar",
+      height: 350,
+      toolbar: {
+        show: true,
+      },
+    },
+    plotOptions: {
+      bar: {
+        borderRadius: 4,
+        horizontal: true,
+      },
+    },
+    dataLabels: {
+      enabled: true,
+    },
+    xaxis: {
+      categories: chartData.supplierData.categories,
+      title: {
+        text: "Số lượng sản phẩm",
+      },
+    },
+    yaxis: {
+      title: {
+        text: "Nhà cung cấp",
+      },
+    },
+    colors: ["#1890ff"],
+    title: {
+      text: "Sản phẩm cần đặt theo Nhà cung cấp",
+      align: "center",
+      style: {
+        fontSize: "16px",
+        fontWeight: "bold",
+      },
+    },
+  };
+
+  const donutChartOptions: ApexOptions = {
+    chart: {
+      type: "donut",
+      height: 350,
+    },
+    labels: chartData.statusData.labels,
+    colors: ["#ff4d4f", "#52c41a"],
+    legend: {
+      position: "bottom",
+    },
+    title: {
+      text: "Trạng thái Tồn kho",
+      align: "center",
+      style: {
+        fontSize: "16px",
+        fontWeight: "bold",
+      },
+    },
+    plotOptions: {
+      pie: {
+        donut: {
+          labels: {
+            show: true,
+            total: {
+              show: true,
+              label: "Tổng sản phẩm",
+              formatter: () => {
+                return inventoryAnalytics?.totalProducts?.toString() || "0";
+              },
+            },
+          },
+        },
+      },
+    },
+  };
 
   return (
     <PageLayout
