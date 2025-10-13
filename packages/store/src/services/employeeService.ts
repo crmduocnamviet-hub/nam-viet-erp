@@ -1,5 +1,5 @@
-import { useEmployeeStore } from '../employeeStore';
-import { useAuthStore } from '../authStore';
+import { useEmployeeStore } from "../employeeStore";
+import { useAuthStore } from "../authStore";
 
 /**
  * Service to fetch and sync employee information with the store
@@ -20,27 +20,43 @@ interface EmployeeResponse {
 export async function fetchAndSetEmployee(
   employeeId: string,
   getEmployeeAPI: (id: string) => Promise<{ data: any; error?: any }>,
-  getPermissionsAPI?: (roleId: string) => Promise<{ data: string[]; error?: any }>
+  getPermissionsAPI?: (
+    roleId: string,
+  ) => Promise<{ data: string[]; error?: any }>,
 ): Promise<EmployeeResponse> {
-  const { setEmployee, setPermissions, setLoading, setError } = useEmployeeStore.getState();
+  const { setEmployee, setPermissions, setLoading, setError } =
+    useEmployeeStore.getState();
 
   try {
     setLoading(true);
     setError(null);
 
     // Fetch employee data
-    const { data: employee, error: employeeError } = await getEmployeeAPI(employeeId);
+    const { data: employee, error: employeeError } =
+      await getEmployeeAPI(employeeId);
 
     if (employeeError || !employee) {
-      throw new Error(employeeError?.message || 'Failed to fetch employee data');
+      throw new Error(
+        employeeError?.message || "Failed to fetch employee data",
+      );
     }
 
-    // Fetch permissions if API is provided
+    // Check if employee is super-admin
     let permissions: string[] = [];
-    if (getPermissionsAPI && employee.role_id) {
-      const { data: permData, error: permError } = await getPermissionsAPI(employee.role_id);
+    if (employee.role_name === "super-admin") {
+      // Super-admin gets all permissions automatically - no need to fetch from database
+      // Use wildcard permission - the employeeStore checks role_name and returns true for all permissions
+      permissions = ["*"];
+      console.log(
+        "[Employee Service] Super-admin detected - full permissions granted",
+      );
+    } else if (getPermissionsAPI && employee.role_id) {
+      // Fetch permissions from database for other roles
+      const { data: permData, error: permError } = await getPermissionsAPI(
+        employee.role_id,
+      );
       if (permError) {
-        console.warn('Failed to fetch permissions:', permError);
+        console.warn("Failed to fetch permissions:", permError);
       } else {
         permissions = permData || [];
       }
@@ -53,8 +69,8 @@ export async function fetchAndSetEmployee(
 
     return { employee, permissions };
   } catch (error: any) {
-    console.error('Error fetching employee:', error);
-    setError(error.message || 'Failed to fetch employee data');
+    console.error("Error fetching employee:", error);
+    setError(error.message || "Failed to fetch employee data");
     setLoading(false);
     return { employee: null, permissions: [], error };
   }
@@ -65,13 +81,14 @@ export async function fetchAndSetEmployee(
  * @param getUserEmployeeAPI - API function that gets employee by user ID
  */
 export async function fetchEmployeeByUserId(
-  getUserEmployeeAPI: (userId: string) => Promise<{ data: any; error?: any }>
+  getUserEmployeeAPI: (userId: string) => Promise<{ data: any; error?: any }>,
 ): Promise<EmployeeResponse> {
   const { user } = useAuthStore.getState();
-  const { setEmployee, setPermissions, setLoading, setError } = useEmployeeStore.getState();
+  const { setEmployee, setPermissions, setLoading, setError } =
+    useEmployeeStore.getState();
 
   if (!user?.id) {
-    const error = 'No user found in auth store';
+    const error = "No user found in auth store";
     setError(error);
     return { employee: null, permissions: [], error: new Error(error) };
   }
@@ -80,29 +97,42 @@ export async function fetchEmployeeByUserId(
     setLoading(true);
     setError(null);
 
-    const { data: employee, error: employeeError } = await getUserEmployeeAPI(user.id);
+    const { data: employee, error: employeeError } = await getUserEmployeeAPI(
+      user.id,
+    );
 
     if (employeeError || !employee) {
-      throw new Error(employeeError?.message || 'Failed to fetch employee data');
+      throw new Error(
+        employeeError?.message || "Failed to fetch employee data",
+      );
+    }
+
+    // Check if employee is super-admin
+    let permissions: string[] = [];
+    if (employee.role_name === "super-admin") {
+      // Super-admin gets all permissions automatically - no need to check database
+      // Use wildcard permission - the employeeStore checks role_name and returns true for all permissions
+      permissions = ["*"];
+      console.log(
+        "[Employee Service] Super-admin detected - full permissions granted",
+      );
+    } else if (employee.permissions && Array.isArray(employee.permissions)) {
+      // Use permissions from employee data if available
+      permissions = employee.permissions;
     }
 
     // Update store
     setEmployee(employee);
-
-    // If employee has permissions array, set it
-    if (employee.permissions && Array.isArray(employee.permissions)) {
-      setPermissions(employee.permissions);
-    }
-
+    setPermissions(permissions);
     setLoading(false);
 
     return {
       employee,
-      permissions: employee.permissions || []
+      permissions,
     };
   } catch (error: any) {
-    console.error('Error fetching employee by user ID:', error);
-    setError(error.message || 'Failed to fetch employee data');
+    console.error("Error fetching employee by user ID:", error);
+    setError(error.message || "Failed to fetch employee data");
     setLoading(false);
     return { employee: null, permissions: [], error };
   }
@@ -113,12 +143,12 @@ export async function fetchEmployeeByUserId(
  * @param getEmployeeAPI - The API function to fetch employee data
  */
 export async function refreshEmployee(
-  getEmployeeAPI: (id: string) => Promise<{ data: any; error?: any }>
+  getEmployeeAPI: (id: string) => Promise<{ data: any; error?: any }>,
 ): Promise<EmployeeResponse> {
   const { employee } = useEmployeeStore.getState();
 
   if (!employee?.employee_id) {
-    const error = 'No employee found in store';
+    const error = "No employee found in store";
     return { employee: null, permissions: [], error: new Error(error) };
   }
 

@@ -1,8 +1,8 @@
-import { create } from 'zustand';
-import { devtools, persist } from 'zustand/middleware';
-import { immer } from 'zustand/middleware/immer';
+import { create } from "zustand";
+import { devtools, persist } from "zustand/middleware";
+import { immer } from "zustand/middleware/immer";
 
-interface Employee {
+export interface Employee {
   employee_id: string;
   full_name: string;
   email?: string;
@@ -43,73 +43,113 @@ export const useEmployeeStore = create<EmployeeState>()(
         error: null,
 
         setEmployee: (employee) =>
-          set((state) => {
-            state.employee = employee;
-            state.error = null;
-          }, false, 'setEmployee'),
+          set(
+            (state) => {
+              state.employee = employee;
+              state.error = null;
+            },
+            false,
+            "setEmployee",
+          ),
 
         setPermissions: (permissions) =>
-          set((state) => {
-            state.permissions = permissions;
-          }, false, 'setPermissions'),
+          set(
+            (state) => {
+              state.permissions = permissions;
+            },
+            false,
+            "setPermissions",
+          ),
 
         setLoading: (isLoading) =>
-          set((state) => {
-            state.isLoading = isLoading;
-          }, false, 'setLoading'),
+          set(
+            (state) => {
+              state.isLoading = isLoading;
+            },
+            false,
+            "setLoading",
+          ),
 
         setError: (error) =>
-          set((state) => {
-            state.error = error;
-          }, false, 'setError'),
+          set(
+            (state) => {
+              state.error = error;
+            },
+            false,
+            "setError",
+          ),
 
         clearEmployee: () =>
-          set((state) => {
-            state.employee = null;
-            state.permissions = [];
-            state.error = null;
-          }, false, 'clearEmployee'),
+          set(
+            (state) => {
+              state.employee = null;
+              state.permissions = [];
+              state.error = null;
+            },
+            false,
+            "clearEmployee",
+          ),
 
         updateEmployee: (updates) =>
-          set((state) => {
-            if (state.employee) {
-              Object.assign(state.employee, updates);
-            }
-          }, false, 'updateEmployee'),
+          set(
+            (state) => {
+              if (state.employee) {
+                Object.assign(state.employee, updates);
+              }
+            },
+            false,
+            "updateEmployee",
+          ),
 
         hasPermission: (permission) => {
-          const { permissions } = get();
+          const { employee, permissions } = get();
+          // Super-admin always has all permissions
+          if (employee?.role_name === "super-admin") {
+            return true;
+          }
           return permissions.includes(permission);
         },
 
         hasAnyPermission: (requiredPermissions) => {
-          const { permissions } = get();
+          const { employee, permissions } = get();
+          // Super-admin always has all permissions
+          if (employee?.role_name === "super-admin") {
+            return true;
+          }
           return requiredPermissions.some((perm) => permissions.includes(perm));
         },
 
         hasAllPermissions: (requiredPermissions) => {
-          const { permissions } = get();
-          return requiredPermissions.every((perm) => permissions.includes(perm));
+          const { employee, permissions } = get();
+          // Super-admin always has all permissions
+          if (employee?.role_name === "super-admin") {
+            return true;
+          }
+          return requiredPermissions.every((perm) =>
+            permissions.includes(perm),
+          );
         },
       })),
       {
-        name: 'employee-storage',
+        name: "employee-storage",
         partialize: (state) => ({
           employee: state.employee,
           permissions: state.permissions,
         }),
-      }
+      },
     ),
     {
-      name: 'EmployeeStore',
-    }
-  )
+      name: "EmployeeStore",
+    },
+  ),
 );
 
 // Selectors
 export const useEmployee = () => useEmployeeStore((state) => state.employee);
-export const usePermissions = () => useEmployeeStore((state) => state.permissions);
-export const useEmployeeLoading = () => useEmployeeStore((state) => state.isLoading);
+export const usePermissions = () =>
+  useEmployeeStore((state) => state.permissions);
+export const useEmployeeLoading = () =>
+  useEmployeeStore((state) => state.isLoading);
 export const useEmployeeError = () => useEmployeeStore((state) => state.error);
 export const useHasPermission = (permission: string) =>
   useEmployeeStore((state) => state.hasPermission(permission));
