@@ -683,4 +683,23 @@ interface SaleOrderProductLotItem {
   quantity: number;
   order_id: string;
   lot_id: number;
+};
+
+// User Account Management Interfaces
+interface IUserAccount {
+  id: string;
+  email: string;
+  full_name?: string;
+  phone?: string;
+  avatar_url?: string;
+  created_at: string;
+  updated_at?: string;
+  last_sign_in_at?: string;
+}
+
+interface IUserAccountForm {
+  email: string;
+  password: string;
+  full_name?: string;
+  phone?: string;
 }

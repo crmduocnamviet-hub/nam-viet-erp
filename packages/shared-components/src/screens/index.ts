@@ -44,6 +44,7 @@ import ChatbotManagementPage from "./marketing/ChatbotManagementPage";
 // Screen Imports - Management
 import DashboardPage from "./management/DashboardPage";
 import EmployeesPage from "./management/EmployeesPage";
+import UserManagementPage from "./management/UserManagementPage";
 import RoomManagementPage from "./management/RoomManagementPage";
 
 // Screen Imports - Staff Dashboards
@@ -308,6 +309,13 @@ export const SCREEN_REGISTRY: ScreenRegistry = {
     title: "Quản lý Nhân viên",
     description: "Quản lý thông tin nhân viên",
   },
+  "management.users": {
+    component: UserManagementPage,
+    permissions: ["management.access", "users.view"],
+    category: "management",
+    title: "Quản lý Tài khoản",
+    description: "Quản lý tài khoản đăng nhập và phân quyền",
+  },
   "management.rooms": {
     component: RoomManagementPage,
     permissions: ["management.access", "rooms.view"],
@@ -514,6 +522,11 @@ export const PERMISSIONS = {
   "employees.create": "Thêm nhân viên mới",
   "employees.edit": "Chỉnh sửa thông tin nhân viên",
   "employees.delete": "Xóa nhân viên",
+  "users.view": "Xem danh sách tài khoản",
+  "users.create": "Tạo tài khoản mới",
+  "users.edit": "Chỉnh sửa tài khoản",
+  "users.delete": "Xóa tài khoản",
+  "users.manage": "Quản lý tài khoản người dùng",
   "rooms.view": "Xem danh sách phòng ban",
   "rooms.create": "Tạo phòng ban mới",
   "rooms.edit": "Chỉnh sửa thông tin phòng ban",
@@ -530,6 +543,11 @@ export const ROLE_PERMISSIONS = {
     "employees.view",
     "employees.create",
     "employees.edit",
+    "users.view",
+    "users.create",
+    "users.edit",
+    "users.delete",
+    "users.manage",
     "inventory.access",
     "products.view",
     "products.create",
@@ -760,6 +778,7 @@ export {
   // Management
   DashboardPage,
   EmployeesPage,
+  UserManagementPage,
   RoomManagementPage,
   // Staff Dashboards
   SalesStaffDashboardPage,
