@@ -54,6 +54,7 @@ import DeliveryStaffDashboardPage from "./staff/DeliveryStaffDashboardPage";
 // Screen Imports - Warehouse
 import WarehousePurchaseOrdersPage from "./warehouse/PurchaseOrdersPage";
 import PurchaseOrderReceivingPage from "./warehouse/PurchaseOrderReceivingPage";
+import PurchaseOrderReceivingDetailPage from "./warehouse/PurchaseOrderReceivingDetailPage";
 import SalesOrderPickingPage from "./warehouse/SalesOrderPickingPage";
 import SuppliersPage from "./warehouse/SuppliersPage";
 import VATInventoryDashboard from "./warehouse/VATInventoryDashboard";
@@ -352,6 +353,13 @@ export const SCREEN_REGISTRY: ScreenRegistry = {
     category: "warehouse",
     title: "Nhận Hàng",
     description: "Quét mã vạch và xác nhận nhận hàng từ nhà cung cấp",
+  },
+  "warehouse.receiving.detail": {
+    component: PurchaseOrderReceivingDetailPage,
+    permissions: ["warehouse.access", "warehouse.receiving.access"],
+    category: "warehouse",
+    title: "Xác Nhận Nhận Hàng",
+    description: "Xác nhận nhận hàng cho đơn đặt hàng cụ thể",
   },
   "warehouse.picking": {
     component: SalesOrderPickingPage,
@@ -760,6 +768,7 @@ export {
   // Warehouse
   WarehousePurchaseOrdersPage,
   PurchaseOrderReceivingPage,
+  PurchaseOrderReceivingDetailPage,
   SalesOrderPickingPage,
   SuppliersPage,
   VATInventoryDashboard,

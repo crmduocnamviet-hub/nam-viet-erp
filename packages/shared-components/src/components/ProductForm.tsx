@@ -23,6 +23,7 @@ import {
   DollarCircleOutlined,
   HomeOutlined,
   QrcodeOutlined,
+  UsergroupAddOutlined, // Import icon for new tab
 } from "@ant-design/icons";
 import ImageUpload from "./ImageUpload";
 import {
@@ -31,6 +32,8 @@ import {
   getWarehouse,
   enableLotManagement,
   disableLotManagement,
+  getSuppliers,
+  getProductSupplierMappings,
 } from "@nam-viet-erp/services";
 import PdfUpload from "./PdfUpload";
 import QRScannerModal from "./QRScannerModal";
@@ -63,8 +66,8 @@ const ProductForm: React.FC<ProductFormProps> = ({
   const [warehouses, setWarehouses] = useState<IWarehouse[]>([]);
   const [loadingWarehouses, setLoadingWarehouses] = useState(false);
 
-  // Watch enable_lot_management field
-  // const enableLotManagement = Form.useWatch("enable_lot_management", form);
+  const [suppliers, setSuppliers] = useState<any[]>([]);
+  const [loadingSuppliers, setLoadingSuppliers] = useState(false);
 
   // Responsive column spans
   const isMobile = !screens.md;
@@ -84,9 +87,24 @@ const ProductForm: React.FC<ProductFormProps> = ({
     setLoadingWarehouses(false);
   };
 
-  // Tự động hỏi danh sách kho mỗi khi form được mở
+  const fetchSuppliers = async () => {
+    setLoadingSuppliers(true);
+    const { data, error } = await getSuppliers({ status: "active" });
+    if (error) {
+      console.error("Lỗi tải danh sách nhà cung cấp:", error);
+      notification.error({
+        message: "Lỗi tải nhà cung cấp",
+        description: getErrorMessage(error),
+      });
+    } else {
+      setSuppliers(data || []);
+    }
+    setLoadingSuppliers(false);
+  };
+
   useEffect(() => {
     fetchWarehouses();
+    fetchSuppliers();
   }, []);
 
   const handleExtractFromPdf = async (
@@ -101,7 +119,6 @@ const ProductForm: React.FC<ProductFormProps> = ({
 
       if (!data) throw "Data not found";
 
-      // Nâng cấp để điền tất cả các trường mới từ AI
       form.setFieldsValue({
         name: data.name,
         category: data.category,
@@ -133,7 +150,6 @@ const ProductForm: React.FC<ProductFormProps> = ({
     }
   };
 
-  // HÀM MỚI: Xử lý logic khi bấm nút "Làm giàu dữ liệu từ AI"
   const handleEnrichData = async () => {
     const productName = form.getFieldValue("name");
     if (!productName) {
@@ -146,12 +162,10 @@ const ProductForm: React.FC<ProductFormProps> = ({
 
     setAiLoading(true);
     try {
-      // Gọi đến "Người Phục vụ AI" trên Supabase
       const { data, error } = await enrichProductData(productName);
 
       if (error) throw error;
 
-      // Tự động điền dữ liệu AI trả về vào các ô tương ứng
       form.setFieldsValue({
         description: data.description,
         tags: data.tags,
@@ -171,7 +185,6 @@ const ProductForm: React.FC<ProductFormProps> = ({
     }
   };
 
-  // Handle QR scan for barcode
   const handleQRScan = (scannedData: string) => {
     form.setFieldsValue({ barcode: scannedData });
     setIsQRScannerOpen(false);
@@ -184,11 +197,23 @@ const ProductForm: React.FC<ProductFormProps> = ({
 
   useEffect(() => {
     if (initialData && warehouses.length > 0) {
+      // Fetch supplier mappings for existing product
+      if (initialData.id) {
+        const fetchMappings = async () => {
+          const { data, error } = await getProductSupplierMappings(
+            initialData.id,
+          );
+          if (data) {
+            const supplierIds = data.map((m) => m.supplier_id);
+            form.setFieldsValue({ supplier_ids: supplierIds });
+          }
+        };
+        fetchMappings();
+      }
+
       setTimeout(() => {
-        // Handle inventory settings if they exist (from separate inventory table)
         let inventorySettingsForForm = {};
 
-        // Only try to process inventory data if it exists and is an array
         if (
           initialData.inventory_data &&
           Array.isArray(initialData.inventory_data)
@@ -242,36 +267,20 @@ const ProductForm: React.FC<ProductFormProps> = ({
   }, [initialData, warehouses, form]);
 
   const handleOk = async (values: any) => {
-    // Merge image_url and image_url_manual, preferring manual input if provided
     const finalImageUrl = values.image_url_manual || values.image_url || "";
-
-    // Separate inventory_settings from product data
     const { inventory_settings, ...productData } = values;
 
     const finalValues = {
       ...productData,
       image_url: finalImageUrl,
-      // Pass inventory_settings separately so it can be saved to inventory table
       inventory_settings: inventory_settings || {},
     };
 
-    // Remove the manual field since it's now merged
     delete finalValues.image_url_manual;
 
-    console.log("Calling onFinish with finalValues:", finalValues);
-    console.log("Product data:", {
-      ...finalValues,
-      inventory_settings: undefined,
-    });
-    console.log("Inventory settings:", finalValues.inventory_settings);
-
-    // Check if lot management is being enabled/disabled
     const wasLotManagementEnabled = initialData?.enable_lot_management;
     const isLotManagementEnabled = values.enable_lot_management;
 
-    console.log(wasLotManagementEnabled, isLotManagementEnabled);
-
-    // If lot management is being DISABLED, delete all lots
     if (initialData?.id && wasLotManagementEnabled && !isLotManagementEnabled) {
       try {
         const result = await disableLotManagement(initialData.id);
@@ -289,7 +298,6 @@ const ProductForm: React.FC<ProductFormProps> = ({
       }
     }
 
-    // If lot management is being ENABLED for existing product
     if (initialData?.id && !wasLotManagementEnabled && isLotManagementEnabled) {
       try {
         const result = await enableLotManagement(initialData.id);
@@ -326,7 +334,10 @@ const ProductForm: React.FC<ProductFormProps> = ({
               <ImageUpload />
             </Form.Item>
             <Form.Item name="image_url_manual">
-              <Input placeholder="Hoặc dán URL ảnh trực tiếp vào đây" />
+              <Input
+                placeholder="Hoặc dán URL ảnh trực tiếp vào đây"
+                size="large"
+              />
             </Form.Item>
           </Col>
           <Col span={infoColSpan}>
@@ -337,7 +348,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
                   label="Tên sản phẩm"
                   rules={[{ required: true }]}
                 >
-                  <Input />
+                  <Input size="large" />
                 </Form.Item>
               </Col>
               <Col span={halfColSpan}>
@@ -346,7 +357,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
                   label="Mã SKU"
                   rules={[{ required: true }]}
                 >
-                  <Input />
+                  <Input size="large" />
                 </Form.Item>
               </Col>
               <Col span={halfColSpan}>
@@ -359,32 +370,57 @@ const ProductForm: React.FC<ProductFormProps> = ({
                       />
                     }
                     placeholder="Nhập hoặc quét mã vạch"
+                    size="large"
                   />
                 </Form.Item>
               </Col>
               <Col span={halfColSpan}>
                 <Form.Item name="category" label="Phân loại SP (Gợi ý từ AI)">
-                  <Select />
+                  <Select size="large" />
                 </Form.Item>
               </Col>
               <Col span={24}>
                 <Form.Item name="tags" label="Tags (hoạt chất, từ khóa...)">
-                  <Select mode="tags" />
+                  <Select mode="tags" size="large" />
                 </Form.Item>
               </Col>
               <Col span={halfColSpan}>
                 <Form.Item name="manufacturer" label="Công ty sản xuất">
-                  <Input />
+                  <Input size="large" />
                 </Form.Item>
               </Col>
               <Col span={halfColSpan}>
                 <Form.Item name="distributor" label="Công ty phân phối">
-                  <Input />
+                  <Input size="large" />
+                </Form.Item>
+              </Col>
+              <Col span={halfColSpan}>
+                <Form.Item
+                  name="supplier_ids"
+                  label="Danh sách nhà cung cấp cho sản phẩm này"
+                >
+                  <Select
+                    allowClear
+                    showSearch
+                    loading={loadingSuppliers}
+                    placeholder="Tìm và chọn các nhà cung cấp"
+                    optionFilterProp="children"
+                    filterOption={(input, option) =>
+                      (option?.label ?? "")
+                        .toLowerCase()
+                        .includes(input.toLowerCase())
+                    }
+                    options={suppliers.map((s) => ({
+                      value: s.id,
+                      label: s.name,
+                    }))}
+                    size="large"
+                  />
                 </Form.Item>
               </Col>
               <Col span={halfColSpan}>
                 <Form.Item name="packaging" label="Quy cách đóng gói">
-                  <Input />
+                  <Input size="large" />
                 </Form.Item>
               </Col>
               <Col span={halfColSpan}>
@@ -397,6 +433,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
                       { value: "Đặt", label: "Đặt" },
                       { value: "Ngậm", label: "Ngậm" },
                     ]}
+                    size="large"
                   />
                 </Form.Item>
               </Col>
@@ -404,7 +441,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
           </Col>
           <Col span={24}>
             <Form.Item name="description" label="Mô tả & HDSD chung">
-              <Input.TextArea rows={4} />
+              <Input.TextArea rows={4} size="large" />
             </Form.Item>
           </Col>
 
@@ -413,28 +450,28 @@ const ProductForm: React.FC<ProductFormProps> = ({
           </Col>
           <Col xs={24} sm={12}>
             <Form.Item name="hdsd_0_2" label="Từ 0-2 tuổi">
-              <Input.TextArea rows={2} />
+              <Input.TextArea rows={2} size="large" />
             </Form.Item>
           </Col>
           <Col xs={24} sm={12}>
             <Form.Item name="hdsd_2_6" label="Từ 2-6 tuổi">
-              <Input.TextArea rows={2} />
+              <Input.TextArea rows={2} size="large" />
             </Form.Item>
           </Col>
           <Col xs={24} sm={12}>
             <Form.Item name="hdsd_6_18" label="Từ 6-18 tuổi">
-              <Input.TextArea rows={2} />
+              <Input.TextArea rows={2} size="large" />
             </Form.Item>
           </Col>
           <Col xs={24} sm={12}>
             <Form.Item name="hdsd_over_18" label="Trên 18 tuổi">
-              <Input.TextArea rows={2} />
+              <Input.TextArea rows={2} size="large" />
             </Form.Item>
           </Col>
 
           <Col span={24}>
             <Form.Item name="disease" label="Bệnh áp dụng (Gợi ý từ AI)">
-              <Input />
+              <Input size="large" />
             </Form.Item>
           </Col>
 
@@ -472,12 +509,12 @@ const ProductForm: React.FC<ProductFormProps> = ({
         <Row gutter={[16, 16]}>
           <Col xs={24} sm={12} lg={8}>
             <Form.Item name="wholesale_unit" label="Đơn vị Bán Buôn">
-              <Input placeholder="ví dụ: Thùng" />
+              <Input placeholder="ví dụ: Thùng" size="large" />
             </Form.Item>
           </Col>
           <Col xs={24} sm={12} lg={8}>
             <Form.Item name="retail_unit" label="Đơn vị Bán lẻ">
-              <Input placeholder="ví dụ: Hộp" />
+              <Input placeholder="ví dụ: Hộp" size="large" />
             </Form.Item>
           </Col>
 
@@ -497,6 +534,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
                   `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ".")
                 }
                 parser={(value) => Number(value!.replace(/\./g, "")) as any}
+                size="large"
               />
             </Form.Item>
           </Col>
@@ -509,6 +547,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
                   `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ".")
                 }
                 parser={(value) => value!.replace(/\./g, "")}
+                size="large"
               />
             </Form.Item>
           </Col>
@@ -521,6 +560,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
                   `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ".")
                 }
                 parser={(value) => value!.replace(/\./g, "")}
+                size="large"
               />
             </Form.Item>
           </Col>
@@ -548,7 +588,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
                   name={["inventory_settings", wh.id, "min_stock"]}
                   label="Tồn tối thiểu"
                 >
-                  <InputNumber style={{ width: "100%" }} />
+                  <InputNumber style={{ width: "100%" }} size="large" />
                 </Form.Item>
               </Col>
               <Col xs={24} sm={12}>
@@ -556,7 +596,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
                   name={["inventory_settings", wh.id, "max_stock"]}
                   label="Tồn tối đa"
                 >
-                  <InputNumber style={{ width: "100%" }} />
+                  <InputNumber style={{ width: "100%" }} size="large" />
                 </Form.Item>
               </Col>
             </Row>
@@ -585,6 +625,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
             onClick={handleEnrichData}
             loading={aiLoading}
             block={isMobile}
+            size="large"
           >
             Gợi ý dữ liệu từ Tên [AI]
           </Button>

@@ -39,7 +39,7 @@ const PdfUpload: React.FC<PdfUploadProps> = ({ onFileReady, loading }) => {
 
   return (
     <Upload customRequest={customRequest} maxCount={1} showUploadList={false}>
-      <Button icon={<UploadOutlined />} loading={loading}>
+      <Button icon={<UploadOutlined />} loading={loading} size="large">
         Trích xuất từ PDF
       </Button>
     </Upload>

@@ -1,5 +1,16 @@
 import React, { useState, useMemo } from "react";
-import { Table, Button, Select, Row, Col, Tag, App, Spin, Tooltip } from "antd";
+import {
+  Table,
+  Button,
+  Select,
+  Row,
+  Col,
+  Tag,
+  App,
+  Spin,
+  Tooltip,
+  Modal,
+} from "antd";
 import { DeleteOutlined, PlusOutlined, ShopOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import dayjs from "dayjs";
@@ -76,17 +87,20 @@ const ProductLotManagement: React.FC<ProductLotManagementProps> = ({
   }
 
   const handleDeleteLot = async (record: any) => {
-    const confirmed = window.confirm(
-      `Bạn có chắc chắn muốn xóa lô "${record.lot_number}"?`,
-    );
-    if (!confirmed) return;
-
-    setIsDeleting(true);
-
-    deleteLot({
-      lotId: record.id,
-      productId: productId,
-      warehouseId: record.warehouse_id,
+    Modal.confirm({
+      title: "Xác nhận xóa lô",
+      content: `Bạn có chắc chắn muốn xóa lô "${record.lot_number}"?`,
+      okText: "Xóa",
+      okType: "danger",
+      cancelText: "Hủy",
+      onOk: () => {
+        setIsDeleting(true);
+        deleteLot({
+          lotId: record.id,
+          productId: productId,
+          warehouseId: record.warehouse_id,
+        });
+      },
     });
   };
 
@@ -175,6 +189,7 @@ const ProductLotManagement: React.FC<ProductLotManagementProps> = ({
               type="link"
               onClick={() => navigate(`/lots/${record.id}`)}
               style={{ padding: 0, fontWeight: "bold" }}
+              size="large"
             >
               {text}
             </Button>
@@ -237,7 +252,7 @@ const ProductLotManagement: React.FC<ProductLotManagementProps> = ({
           >
             <Button
               type="text"
-              size="small"
+              size="large"
               icon={isAggregatedView ? <ShopOutlined /> : undefined}
               onClick={() => handleOpenWarehouseQuantityModal(record)}
               style={{
@@ -274,7 +289,7 @@ const ProductLotManagement: React.FC<ProductLotManagementProps> = ({
             <Button
               type="text"
               danger
-              size="small"
+              size="large"
               icon={<DeleteOutlined />}
               onClick={() => handleDeleteLot(record)}
             />

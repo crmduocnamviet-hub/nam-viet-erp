@@ -4,7 +4,12 @@
  * Implements NÚT 2, 3, 4 functionalities
  */
 
+import {
+  getB2BWarehouseProducts,
+  getProductInventoryInWarehouse,
+} from "./productService";
 import { supabase } from "./supabase";
+import { getInventoryByProductId, upsetInventory } from "./warehouse";
 
 // =====================================================
 // LOT OPERATIONS
@@ -29,6 +34,35 @@ export const getAvailableLots = async (params: {
   });
 
   return { data: data as AvailableLot[], error };
+};
+
+/**
+ * Search for product lots by lot number
+ */
+export const searchProductLots = async (
+  productId: number,
+  searchText: string,
+  warehouseId?: number,
+) => {
+  let query = supabase
+    .from("product_lots")
+    .select("lot_number")
+    .eq("product_id", productId)
+    .ilike("lot_number", `%${searchText}%`)
+    .limit(10);
+
+  if (warehouseId) {
+    query = query.eq("warehouse_id", warehouseId);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error("Error searching product lots:", error);
+    return [];
+  }
+
+  return data.map((lot) => ({ value: lot.lot_number }));
 };
 
 /**
@@ -115,6 +149,25 @@ export const updateProductLot = async (
     .single();
 
   return { data: data as IProductLot, error };
+};
+
+export const getProductLotByProductIds = async (productId: number[]) => {
+  try {
+    const { data } = await supabase
+      .from("product_lots")
+      .select(
+        `
+      *,
+      product:product_id(id, name, sku),
+      warehouse:warehouse_id(name)
+    `,
+      )
+      .in("product_id", productId);
+
+    return (data || []) as IProductLot[];
+  } catch (e) {
+    return [];
+  }
 };
 
 /**
@@ -654,7 +707,7 @@ export const getProductLots = async (params: {
   // Sort by expiry date (FEFO - First Expired First Out)
   // Lots expiring soonest appear first
   // Lots without expiry dates appear last
-  const sortedLots = lotsWithExpiry.sort((a, b) => {
+  const sortedLots: IProductLot[] = lotsWithExpiry.sort((a, b) => {
     // If both have no expiry date, maintain original order
     if (
       a.days_until_expiry === undefined &&
@@ -871,6 +924,28 @@ export const updateInventoryQuantity = async (params: {
     .eq("warehouse_id", params.warehouseId);
 
   return { error };
+};
+
+export const addingQuantityToInventory = async (params: {
+  productId: number;
+  warehouseId: number;
+  quantity: number;
+}) => {
+  try {
+    const { data } = await getProductInventoryInWarehouse({
+      productId: params.productId,
+      warehouseId: params.warehouseId,
+    });
+    if (data) {
+      await upsetInventory([
+        {
+          product_id: params.productId,
+          warehouse_id: params.warehouseId,
+          quantity: data.quantity + params.quantity,
+        },
+      ]);
+    }
+  } catch {}
 };
 
 /**

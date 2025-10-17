@@ -39,11 +39,22 @@ export const upsetInventory = async (record: Partial<IInventory>[]) => {
 export const getInventoryByWarehouse = async (warehouseId: number) => {
   const response = await supabase
     .from("inventory")
-    .select(`
+    .select(
+      `
       *,
       products (*)
-    `)
+    `,
+    )
     .eq("warehouse_id", warehouseId)
     .order("created_at", { ascending: false });
+  return response;
+};
+
+export const getB2BWarehouse = async () => {
+  const response: PostgrestSingleResponse<IWarehouse> = await supabase
+    .from("warehouses")
+    .select("*")
+    .eq("is_b2b_warehouse", true)
+    .single();
   return response;
 };

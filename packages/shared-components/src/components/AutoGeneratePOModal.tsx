@@ -16,6 +16,7 @@ import {
   CheckCircleOutlined,
   WarningOutlined,
   ShoppingCartOutlined,
+  MedicineBoxOutlined,
 } from "@ant-design/icons";
 
 const { Text, Title } = Typography;
@@ -132,6 +133,7 @@ const AutoGeneratePOModal: React.FC<AutoGeneratePOModalProps> = ({
             }
           }}
           style={{ width: "100%" }}
+          size="middle"
         />
       ),
     },
@@ -194,7 +196,12 @@ const AutoGeneratePOModal: React.FC<AutoGeneratePOModalProps> = ({
       onCancel={onClose}
       width={1000}
       footer={[
-        <Button key="cancel" onClick={onClose} disabled={confirming}>
+        <Button
+          key="cancel"
+          onClick={onClose}
+          disabled={confirming}
+          size="large"
+        >
           Hủy
         </Button>,
         <Button
@@ -204,6 +211,7 @@ const AutoGeneratePOModal: React.FC<AutoGeneratePOModalProps> = ({
           loading={confirming}
           disabled={editedProducts.length === 0}
           icon={<CheckCircleOutlined />}
+          size="large"
         >
           Xác Nhận Tạo {totalSuppliers} Đơn Hàng
         </Button>,
@@ -244,8 +252,8 @@ const AutoGeneratePOModal: React.FC<AutoGeneratePOModalProps> = ({
                 </Text>
               </Space>
             }
-            type="warning"
-            icon={<WarningOutlined />}
+            type="success"
+            icon={<MedicineBoxOutlined />}
             showIcon
           />
 
@@ -284,31 +292,13 @@ const AutoGeneratePOModal: React.FC<AutoGeneratePOModalProps> = ({
                     dataSource={supplierProducts}
                     rowKey="product_id"
                     pagination={false}
-                    size="small"
+                    size="large"
                     scroll={{ x: 900 }}
                   />
                 </div>
               );
             },
           )}
-
-          {/* Notes */}
-          <Alert
-            message="Lưu ý"
-            description={
-              <ul style={{ margin: 0, paddingLeft: 20 }}>
-                <li>
-                  Hệ thống sẽ tạo {totalSuppliers} đơn đặt hàng (1 đơn cho mỗi
-                  nhà cung cấp)
-                </li>
-                <li>Trạng thái ban đầu của đơn hàng là "Nháp"</li>
-                <li>Số lượng đề xuất = Tồn kho tối đa - Tồn kho hiện tại</li>
-                <li>Chỉ đề xuất các sản phẩm có tồn kho ≤ tồn kho tối thiểu</li>
-              </ul>
-            }
-            type="info"
-            showIcon
-          />
         </Space>
       )}
     </Modal>

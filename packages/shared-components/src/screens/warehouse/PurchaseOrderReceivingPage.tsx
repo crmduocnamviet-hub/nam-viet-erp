@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Card,
   Table,
@@ -42,7 +43,8 @@ import { useAuthStore, usePurchaseOrderStore } from "@nam-viet-erp/store";
 
 const { Text } = Typography;
 
-interface ReceivingItemData {
+interface LotData {
+  id: number; // Unique ID for UI management
   quantityToReceive: number;
   lotNumber?: string;
   expirationDate?: string;
@@ -50,6 +52,7 @@ interface ReceivingItemData {
 }
 
 const PurchaseOrderReceivingPage: React.FC = () => {
+  const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
 
   // Purchase Order Store
@@ -68,9 +71,9 @@ const PurchaseOrderReceivingPage: React.FC = () => {
   } = usePurchaseOrderStore();
 
   const [selectedPO, setSelectedPO] = useState<any>(null);
-  const [receivingData, setReceivingData] = useState<
-    Record<number, ReceivingItemData>
-  >({});
+  const [receivingData, setReceivingData] = useState<Record<number, LotData[]>>(
+    {},
+  );
   const [scannerOpen, setScannerOpen] = useState(false);
   const [confirming, setConfirming] = useState(false);
 
@@ -79,6 +82,15 @@ const PurchaseOrderReceivingPage: React.FC = () => {
   const [newImportForm] = Form.useForm();
   const [selectedProducts, setSelectedProducts] = useState<any[]>([]);
   const [creatingImport, setCreatingImport] = useState(false);
+
+  const selectedSupplierId = Form.useWatch("supplier_id", newImportForm);
+
+  const supplierProducts = useMemo(() => {
+    if (!selectedSupplierId) {
+      return [];
+    }
+    return products.filter((p) => p.supplier_id === selectedSupplierId);
+  }, [selectedSupplierId, products]);
 
   // Fetch data on mount
   useEffect(() => {
@@ -233,14 +245,18 @@ const PurchaseOrderReceivingPage: React.FC = () => {
       (sum: number, item: any) => sum + (item.received_quantity || 0),
       0,
     );
-    const totalQuantityToReceive = Object.values(receivingData).reduce(
-      (sum, data) => sum + (data.quantityToReceive || 0),
-      0,
-    );
 
-    const itemsWithData = items.filter(
-      (item: any) => receivingData[item.id]?.quantityToReceive > 0,
-    ).length;
+    let totalQuantityToReceive = 0;
+    let itemsWithData = 0;
+
+    Object.values(receivingData).forEach((lots) => {
+      if (lots.length > 0) {
+        itemsWithData++;
+        lots.forEach((lot) => {
+          totalQuantityToReceive += lot.quantityToReceive || 0;
+        });
+      }
+    });
 
     return {
       totalItems,
@@ -267,14 +283,24 @@ const PurchaseOrderReceivingPage: React.FC = () => {
     if (item) {
       const remaining = item.quantity - (item.received_quantity || 0);
       if (remaining > 0) {
-        // Auto-fill quantity
-        setReceivingData((prev) => ({
-          ...prev,
-          [item.id]: {
-            ...prev[item.id],
-            quantityToReceive: (prev[item.id]?.quantityToReceive || 0) + 1,
-          },
-        }));
+        setReceivingData((prev) => {
+          const lots = prev[item.id] || [];
+          const existingEmptyLotIndex = lots.findIndex((l) => !l.lotNumber);
+
+          if (existingEmptyLotIndex !== -1) {
+            const newLots = [...lots];
+            newLots[existingEmptyLotIndex].quantityToReceive += 1;
+            return { ...prev, [item.id]: newLots };
+          } else {
+            const newLot: LotData = {
+              id: Date.now(),
+              quantityToReceive: 1,
+              lotNumber: "",
+              expirationDate: "",
+            };
+            return { ...prev, [item.id]: [...lots, newLot] };
+          }
+        });
 
         notification.success({
           message: "Quét thành công",
@@ -297,8 +323,8 @@ const PurchaseOrderReceivingPage: React.FC = () => {
 
   // Handle confirm receiving
   const handleConfirmReceiving = () => {
-    const itemsToReceive = Object.entries(receivingData).filter(
-      ([_, data]) => data.quantityToReceive > 0,
+    const itemsToReceive = Object.entries(receivingData).flatMap(
+      ([itemId, lots]) => lots.map((lot) => ({ ...lot, itemId })),
     );
 
     if (itemsToReceive.length === 0) {
@@ -311,7 +337,7 @@ const PurchaseOrderReceivingPage: React.FC = () => {
 
     // Check for missing lot/expiration
     const missingData = itemsToReceive.filter(
-      ([_, data]) => !data.lotNumber || !data.expirationDate,
+      (lot) => !lot.lotNumber || !lot.expirationDate,
     );
 
     if (missingData.length > 0) {
@@ -332,14 +358,18 @@ const PurchaseOrderReceivingPage: React.FC = () => {
     try {
       // Prepare receiving payload
       const receivingPayload = Object.entries(receivingData)
-        .filter(([_, data]) => data.quantityToReceive > 0)
-        .map(([itemId, data]) => ({
-          itemId: Number(itemId),
-          quantityToReceive: data.quantityToReceive,
-          lotNumber: data.lotNumber,
-          expirationDate: data.expirationDate,
-          shelfLocation: data.shelfLocation,
-        }));
+        .flatMap(([itemId, lots]) =>
+          lots.map((lot) => ({
+            itemId: Number(itemId),
+            quantityToReceive: lot.quantityToReceive,
+            lotNumber: lot.lotNumber,
+            expirationDate: lot.expirationDate,
+            shelfLocation: lot.shelfLocation,
+          })),
+        )
+        .filter((lot) => lot.quantityToReceive > 0);
+
+      console.log(receivingData);
 
       // Call receiving service through store
       const result = await receivePOItems(
@@ -382,7 +412,9 @@ const PurchaseOrderReceivingPage: React.FC = () => {
       key: "po_number",
       width: 150,
       render: (text: string, record: any) => (
-        <a onClick={() => setSelectedPO(record)}>{text}</a>
+        <a onClick={() => navigate(`/warehouse/receiving/${record.id}`)}>
+          {text}
+        </a>
       ),
     },
     {
@@ -445,7 +477,11 @@ const PurchaseOrderReceivingPage: React.FC = () => {
       width: 120,
       fixed: "right",
       render: (_: any, record: any) => (
-        <Button type="primary" onClick={() => setSelectedPO(record)}>
+        <Button
+          type="primary"
+          onClick={() => navigate(`/warehouse/receiving/${record.id}`)}
+          size="large"
+        >
           Nhận Hàng
         </Button>
       ),
@@ -500,48 +536,95 @@ const PurchaseOrderReceivingPage: React.FC = () => {
       width: 120,
       align: "center",
       render: (_: any, record: any) => {
-        const remaining = record.quantity - (record.received_quantity || 0);
-        return (
-          <InputNumber
-            min={0}
-            max={remaining}
-            value={receivingData[record.id]?.quantityToReceive || 0}
-            onChange={(val) =>
-              setReceivingData((prev) => ({
-                ...prev,
-                [record.id]: {
-                  ...prev[record.id],
-                  quantityToReceive: val || 0,
-                },
-              }))
-            }
-            style={{ width: "100%" }}
-          />
+        const lots = receivingData[record.id] || [];
+        const totalToReceive = lots.reduce(
+          (sum, lot) => sum + (lot.quantityToReceive || 0),
+          0,
         );
+        return <Text strong>{totalToReceive}</Text>;
       },
     },
     {
       title: "Số Lô & Hạn SD",
       key: "lot_expiration",
-      width: 250,
-      render: (_: any, record: any) => (
-        <LotExpirationInput
-          value={{
-            lotNumber: receivingData[record.id]?.lotNumber,
-            expirationDate: receivingData[record.id]?.expirationDate,
-          }}
-          onChange={(value) =>
-            setReceivingData((prev) => ({
-              ...prev,
-              [record.id]: {
-                ...prev[record.id],
-                ...value,
-              },
-            }))
-          }
-          disabled={!receivingData[record.id]?.quantityToReceive}
-        />
-      ),
+      width: 350,
+      render: (_: any, record: any) => {
+        const lots = receivingData[record.id] || [];
+        const product = record.product;
+        const showLotInput = product?.enable_lot_management;
+
+        return (
+          <Space direction="vertical" style={{ width: "100%" }}>
+            {lots.map((lot, index) => (
+              <Space key={lot.id} style={{ width: "100%" }} align="start">
+                <LotExpirationInput
+                  showLotNumberInput={showLotInput}
+                  value={{
+                    lotNumber: lot.lotNumber,
+                    expirationDate: lot.expirationDate,
+                  }}
+                  onChange={(value) => {
+                    const newLots = [...lots];
+                    newLots[index] = { ...newLots[index], ...value };
+                    setReceivingData((prev) => ({
+                      ...prev,
+                      [record.id]: newLots,
+                    }));
+                  }}
+                  productId={record.product_id}
+                />
+                <InputNumber
+                  min={1}
+                  placeholder="SL"
+                  value={lot.quantityToReceive}
+                  onChange={(quantity) => {
+                    const newLots = [...lots];
+                    newLots[index].quantityToReceive = quantity || 1;
+                    setReceivingData((prev) => ({
+                      ...prev,
+                      [record.id]: newLots,
+                    }));
+                  }}
+                  style={{ width: 70 }}
+                />
+                <Button
+                  type="text"
+                  danger
+                  icon={<DeleteOutlined />}
+                  onClick={() => {
+                    const newLots = lots.filter((_, i) => i !== index);
+                    setReceivingData((prev) => ({
+                      ...prev,
+                      [record.id]: newLots,
+                    }));
+                  }}
+                />
+              </Space>
+            ))}
+            {(!!product?.enable_lot_management || lots.length === 0) && (
+              <Button
+                type="dashed"
+                icon={<PlusOutlined />}
+                onClick={() => {
+                  const newLot: LotData = {
+                    id: Date.now(),
+                    quantityToReceive: 1,
+                    lotNumber: "",
+                    expirationDate: "",
+                  };
+                  setReceivingData((prev) => ({
+                    ...prev,
+                    [record.id]: [...(prev[record.id] || []), newLot],
+                  }));
+                }}
+                block
+              >
+                Thêm Lô
+              </Button>
+            )}
+          </Space>
+        );
+      },
     },
     {
       title: "Trạng Thái",
@@ -549,12 +632,17 @@ const PurchaseOrderReceivingPage: React.FC = () => {
       width: 120,
       fixed: "right",
       render: (_: any, record: any) => {
-        const receivedQty = receivingData[record.id]?.quantityToReceive || 0;
-        if (receivedQty === 0) {
+        const lots = receivingData[record.id] || [];
+        const totalToReceive = lots.reduce(
+          (sum, lot) => sum + (lot.quantityToReceive || 0),
+          0,
+        );
+
+        if (totalToReceive === 0) {
           return <Tag>Chưa nhận</Tag>;
         }
         const remaining = record.quantity - (record.received_quantity || 0);
-        if (receivedQty === remaining) {
+        if (totalToReceive === remaining) {
           return (
             <Tag color="success" icon={<CheckCircleOutlined />}>
               Đủ
@@ -580,6 +668,7 @@ const PurchaseOrderReceivingPage: React.FC = () => {
               type="primary"
               icon={<PlusOutlined />}
               onClick={handleOpenNewImportModal}
+              size="large"
             >
               Tạo Phiếu Nhập Mới
             </Button>
@@ -591,6 +680,7 @@ const PurchaseOrderReceivingPage: React.FC = () => {
                 setSelectedPO(null);
                 setReceivingData({});
               }}
+              size="large"
             >
               Quay Lại
             </Button>
@@ -695,8 +785,8 @@ const PurchaseOrderReceivingPage: React.FC = () => {
               <Button
                 type="primary"
                 icon={<ScanOutlined />}
-                size="large"
                 onClick={() => setScannerOpen(true)}
+                size="large"
               >
                 Quét Mã Vạch
               </Button>
@@ -728,6 +818,7 @@ const PurchaseOrderReceivingPage: React.FC = () => {
                   onClick={handleConfirmReceiving}
                   loading={confirming}
                   disabled={!receivingSummary?.totalQuantityToReceive}
+                  size="large"
                 >
                   Xác Nhận Nhận Hàng
                 </Button>
@@ -740,7 +831,7 @@ const PurchaseOrderReceivingPage: React.FC = () => {
               rowKey="id"
               pagination={false}
               scroll={{ x: 1200 }}
-              size="small"
+              size="large"
             />
           </Card>
         </Space>
@@ -765,7 +856,11 @@ const PurchaseOrderReceivingPage: React.FC = () => {
         onCancel={() => setNewImportModalOpen(false)}
         width={1000}
         footer={[
-          <Button key="cancel" onClick={() => setNewImportModalOpen(false)}>
+          <Button
+            key="cancel"
+            onClick={() => setNewImportModalOpen(false)}
+            size="large"
+          >
             Hủy
           </Button>,
           <Button
@@ -775,12 +870,23 @@ const PurchaseOrderReceivingPage: React.FC = () => {
             disabled={!b2bWarehouse}
             onClick={handleCreateImport}
             icon={<CheckCircleOutlined />}
+            size="large"
           >
             Tạo Phiếu Nhập
           </Button>,
         ]}
       >
-        <Form form={newImportForm} layout="vertical">
+        <Form
+          form={newImportForm}
+          layout="vertical"
+          onValuesChange={(changedValues) => {
+            if (
+              Object.prototype.hasOwnProperty.call(changedValues, "supplier_id")
+            ) {
+              setSelectedProducts([]);
+            }
+          }}
+        >
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
@@ -802,6 +908,7 @@ const PurchaseOrderReceivingPage: React.FC = () => {
                     label: s.name,
                     value: s.id,
                   }))}
+                  size="large"
                 />
               </Form.Item>
             </Col>
@@ -812,6 +919,7 @@ const PurchaseOrderReceivingPage: React.FC = () => {
                   disabled
                   style={{ cursor: "not-allowed" }}
                   prefix={<InboxOutlined />}
+                  size="large"
                 />
                 <Text type="secondary" style={{ fontSize: 12 }}>
                   Tự động nhập vào kho B2B
@@ -827,12 +935,20 @@ const PurchaseOrderReceivingPage: React.FC = () => {
                 label="Ngày Nhập"
                 rules={[{ required: true, message: "Vui lòng chọn ngày" }]}
               >
-                <DatePicker style={{ width: "100%" }} format="DD/MM/YYYY" />
+                <DatePicker
+                  style={{ width: "100%" }}
+                  format="DD/MM/YYYY"
+                  size="large"
+                />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item name="notes" label="Ghi Chú">
-                <Input.TextArea rows={1} placeholder="Ghi chú về phiếu nhập" />
+                <Input.TextArea
+                  rows={1}
+                  placeholder="Ghi chú về phiếu nhập"
+                  size="large"
+                />
               </Form.Item>
             </Col>
           </Row>
@@ -845,20 +961,24 @@ const PurchaseOrderReceivingPage: React.FC = () => {
               type="dashed"
               icon={<PlusOutlined />}
               onClick={handleAddProduct}
+              disabled={!selectedSupplierId}
+              size="large"
             >
               Thêm Sản Phẩm
             </Button>
           }
           style={{ marginTop: 16 }}
         >
-          {selectedProducts.length === 0 ? (
+          {!selectedSupplierId ? (
+            <Empty description="Vui lòng chọn nhà cung cấp để thêm sản phẩm" />
+          ) : selectedProducts.length === 0 ? (
             <Empty description="Chưa có sản phẩm nào. Nhấn 'Thêm Sản Phẩm' để bắt đầu" />
           ) : (
             <Table
               dataSource={selectedProducts}
               rowKey="id"
               pagination={false}
-              size="small"
+              size="large"
               columns={[
                 {
                   title: "Sản Phẩm",
@@ -878,10 +998,12 @@ const PurchaseOrderReceivingPage: React.FC = () => {
                           .toLowerCase()
                           .includes(input.toLowerCase())
                       }
-                      options={products.map((p) => ({
+                      options={supplierProducts.map((p) => ({
                         label: `${p.name} (${p.sku || "N/A"})`,
                         value: p.id,
                       }))}
+                      disabled={!selectedSupplierId}
+                      size="large"
                     />
                   ),
                 },
@@ -897,6 +1019,7 @@ const PurchaseOrderReceivingPage: React.FC = () => {
                         handleUpdateProduct(record.id, "quantity", value || 1)
                       }
                       style={{ width: "100%" }}
+                      size="middle"
                     />
                   ),
                 },
@@ -904,30 +1027,37 @@ const PurchaseOrderReceivingPage: React.FC = () => {
                   title: "Số Lô & Hạn SD",
                   key: "lot",
                   width: 280,
-                  render: (_, record) => (
-                    <LotExpirationInput
-                      value={{
-                        lotNumber: record.lot_number,
-                        expirationDate: record.expiration_date,
-                      }}
-                      onChange={(value) => {
-                        if (value.lotNumber !== undefined) {
-                          handleUpdateProduct(
-                            record.id,
-                            "lot_number",
-                            value.lotNumber,
+                  render: (_, record) => {
+                    const product = products.find(
+                      (p) => p.id === record.product_id,
+                    );
+                    const showLotInput = product?.enable_lot_management;
+                    return (
+                      <LotExpirationInput
+                        showLotNumberInput={showLotInput}
+                        value={{
+                          lotNumber: record.lot_number,
+                          expirationDate: record.expiration_date,
+                        }}
+                        onChange={(value) => {
+                          // Update the entire lot/expiration data in one call
+                          setSelectedProducts(
+                            selectedProducts.map((p) =>
+                              p.id === record.id
+                                ? {
+                                    ...p,
+                                    lot_number: value.lotNumber,
+                                    expiration_date: value.expirationDate,
+                                  }
+                                : p,
+                            ),
                           );
-                        }
-                        if (value.expirationDate !== undefined) {
-                          handleUpdateProduct(
-                            record.id,
-                            "expiration_date",
-                            value.expirationDate,
-                          );
-                        }
-                      }}
-                    />
-                  ),
+                        }}
+                        productId={record.product_id}
+                        warehouseId={b2bWarehouse?.id}
+                      />
+                    );
+                  },
                 },
                 {
                   title: "Giá",
@@ -969,6 +1099,7 @@ const PurchaseOrderReceivingPage: React.FC = () => {
                       danger
                       icon={<DeleteOutlined />}
                       onClick={() => handleRemoveProduct(record.id)}
+                      size="large"
                     />
                   ),
                 },

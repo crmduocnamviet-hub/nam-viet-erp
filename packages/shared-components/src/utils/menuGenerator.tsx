@@ -129,12 +129,6 @@ export const SALE_APP_MENU: MenuItemConfig[] = [
         permissions: ["warehouse.picking.access"],
       },
       {
-        label: "Nhà Cung Cấp",
-        key: "/warehouse/suppliers",
-        screenKey: "warehouse.suppliers",
-        permissions: ["warehouse.suppliers.view"],
-      },
-      {
         label: "Kho VAT",
         key: "/warehouse/vat-inventory",
         screenKey: "warehouse.vat-inventory",
@@ -147,6 +141,13 @@ export const SALE_APP_MENU: MenuItemConfig[] = [
         permissions: ["warehouse.vat.reconcile"],
       },
     ],
+  },
+  {
+    label: "🏢 Nhà Cung Cấp",
+    key: "/warehouse/suppliers",
+    icon: <ShopOutlined />,
+    screenKey: "warehouse.suppliers",
+    permissions: ["warehouse.suppliers.view"],
   },
   {
     label: "📅 Đặt lịch & Khám bệnh",

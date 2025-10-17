@@ -1,10 +1,20 @@
 import React from "react";
-import { Table, Button, Space, Tag, Tooltip, Popconfirm } from "antd";
+import {
+  Table,
+  Button,
+  Space,
+  Tag,
+  Tooltip,
+  Popconfirm,
+  Dropdown,
+  Menu,
+} from "antd";
 import {
   EyeOutlined,
   EditOutlined,
   StopOutlined,
   DeleteOutlined,
+  MoreOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 
@@ -15,6 +25,7 @@ interface PurchaseOrdersTableProps {
   onEdit?: (record: any) => void;
   onCancel?: (record: any) => void;
   onDelete?: (record: any) => void;
+  onStatusChange?: (record: any, status: string) => void;
   hasPermission: (permission: string) => boolean;
 }
 
@@ -25,6 +36,7 @@ const PurchaseOrdersTable: React.FC<PurchaseOrdersTableProps> = ({
   onEdit,
   onCancel,
   onDelete,
+  onStatusChange,
   hasPermission,
 }) => {
   const columns: ColumnsType<any> = [
@@ -105,12 +117,24 @@ const PurchaseOrdersTable: React.FC<PurchaseOrdersTableProps> = ({
         const isCancelled = record.status === "cancelled";
         const canModify = !isCompleted && !isCancelled;
 
+        const statusMenu = (
+          <Menu
+            onClick={({ key }) => onStatusChange?.(record, key)}
+            items={[
+              { key: "draft", label: "Nháp" },
+              { key: "sent", label: "Đã gửi" },
+              { key: "ordered", label: "Đã đặt hàng" },
+              { key: "received", label: "Hoàn thành" },
+            ].filter((item) => item.key !== record.status)}
+          />
+        );
+
         return (
-          <Space size="small">
+          <Space size="middle">
             <Tooltip title="Xem">
               <Button
                 type="link"
-                size="small"
+                size="middle"
                 icon={<EyeOutlined />}
                 onClick={() => onView?.(record)}
               />
@@ -119,7 +143,7 @@ const PurchaseOrdersTable: React.FC<PurchaseOrdersTableProps> = ({
               <Tooltip title="Sửa">
                 <Button
                   type="link"
-                  size="small"
+                  size="middle"
                   icon={<EditOutlined />}
                   onClick={() => onEdit?.(record)}
                 />
@@ -137,7 +161,7 @@ const PurchaseOrdersTable: React.FC<PurchaseOrdersTableProps> = ({
                 <Tooltip title="Hủy đơn">
                   <Button
                     type="link"
-                    size="small"
+                    size="middle"
                     danger
                     icon={<StopOutlined />}
                   />
@@ -156,12 +180,17 @@ const PurchaseOrdersTable: React.FC<PurchaseOrdersTableProps> = ({
                 <Tooltip title="Xóa">
                   <Button
                     type="link"
-                    size="small"
+                    size="middle"
                     danger
                     icon={<DeleteOutlined />}
                   />
                 </Tooltip>
               </Popconfirm>
+            )}
+            {canEdit && canModify && (
+              <Dropdown overlay={statusMenu} trigger={["click"]}>
+                <Button size="middle" icon={<MoreOutlined />} />
+              </Dropdown>
             )}
           </Space>
         );

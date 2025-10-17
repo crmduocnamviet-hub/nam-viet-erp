@@ -10,19 +10,15 @@ import {
   DatePicker,
   Space,
   notification,
-  Collapse,
-  Spin,
+  Tooltip,
 } from "antd";
 import {
-  PlusOutlined,
   SearchOutlined,
   SyncOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
-  BarChartOutlined,
+  ClearOutlined,
 } from "@ant-design/icons";
-import Chart from "react-apexcharts";
-import type { ApexOptions } from "apexcharts";
 import PageLayout from "../../components/PageLayout";
 import AutoGeneratePOModal from "../../components/AutoGeneratePOModal";
 import EditPurchaseOrderModal from "../../components/EditPurchaseOrderModal";
@@ -34,6 +30,7 @@ import {
   cancelPurchaseOrder,
   deletePurchaseOrder,
   createPurchaseOrdersFromProducts,
+  updatePurchaseOrderStatus,
 } from "@nam-viet-erp/services";
 import { getSuppliers } from "@nam-viet-erp/services/src/supplierService";
 import { useAuthStore } from "@nam-viet-erp/store";
@@ -79,7 +76,7 @@ const PurchaseOrdersPage: React.FC = () => {
   // Fetch suppliers
   const fetchSuppliers = async () => {
     try {
-      const { data, error } = await getSuppliers(true);
+      const { data, error } = await getSuppliers();
 
       if (error) {
         throw error;
@@ -136,6 +133,12 @@ const PurchaseOrdersPage: React.FC = () => {
   useEffect(() => {
     fetchPurchaseOrders();
   }, [statusFilter, dateRange]);
+
+  const handleClearFilters = () => {
+    setSearchText("");
+    setStatusFilter("all");
+    setDateRange(null);
+  };
 
   // Filter by search text (client-side)
   const filteredData = useMemo(() => {
@@ -223,8 +226,6 @@ const PurchaseOrdersPage: React.FC = () => {
 
       if (result.productsToOrder && result.productsToOrder.length > 0) {
         setSuggestedProducts(result.productsToOrder);
-      } else {
-        setSuggestedProducts([]);
       }
     } catch (error: any) {
       notification.error({
@@ -324,84 +325,32 @@ const PurchaseOrdersPage: React.FC = () => {
     }
   };
 
+  const handleStatusChange = async (record: any, status: string) => {
+    try {
+      const { error } = await updatePurchaseOrderStatus(
+        record.id,
+        status as any,
+      );
+
+      if (error) {
+        throw error;
+      }
+
+      notification.success({
+        message: "Thành công",
+        description: `Đã cập nhật trạng thái đơn hàng ${record.po_number}`,
+      });
+
+      fetchPurchaseOrders();
+    } catch (error: any) {
+      notification.error({
+        message: "Lỗi",
+        description: error.message || "Không thể cập nhật trạng thái",
+      });
+    }
+  };
+
   const canAutoCreate = hasPermission("warehouse.purchase-orders.auto-create");
-  const canCreate = hasPermission("warehouse.purchase-orders.create");
-
-  // Chart options
-  const barChartOptions: ApexOptions = {
-    chart: {
-      type: "bar",
-      height: 350,
-      toolbar: {
-        show: true,
-      },
-    },
-    plotOptions: {
-      bar: {
-        borderRadius: 4,
-        horizontal: true,
-      },
-    },
-    dataLabels: {
-      enabled: true,
-    },
-    xaxis: {
-      categories: chartData.supplierData.categories,
-      title: {
-        text: "Số lượng sản phẩm",
-      },
-    },
-    yaxis: {
-      title: {
-        text: "Nhà cung cấp",
-      },
-    },
-    colors: ["#1890ff"],
-    title: {
-      text: "Sản phẩm cần đặt theo Nhà cung cấp",
-      align: "center",
-      style: {
-        fontSize: "16px",
-        fontWeight: "bold",
-      },
-    },
-  };
-
-  const donutChartOptions: ApexOptions = {
-    chart: {
-      type: "donut",
-      height: 350,
-    },
-    labels: chartData.statusData.labels,
-    colors: ["#ff4d4f", "#52c41a"],
-    legend: {
-      position: "bottom",
-    },
-    title: {
-      text: "Trạng thái Tồn kho",
-      align: "center",
-      style: {
-        fontSize: "16px",
-        fontWeight: "bold",
-      },
-    },
-    plotOptions: {
-      pie: {
-        donut: {
-          labels: {
-            show: true,
-            total: {
-              show: true,
-              label: "Tổng sản phẩm",
-              formatter: () => {
-                return inventoryAnalytics?.totalProducts?.toString() || "0";
-              },
-            },
-          },
-        },
-      },
-    },
-  };
 
   return (
     <PageLayout
@@ -413,13 +362,9 @@ const PurchaseOrdersPage: React.FC = () => {
               type="primary"
               icon={<SyncOutlined />}
               onClick={handleOpenAutoGenerate}
+              size="large"
             >
               Tạo Dự Trù Tự Động
-            </Button>
-          )}
-          {canCreate && (
-            <Button type="primary" icon={<PlusOutlined />}>
-              Tạo Đơn Mới
             </Button>
           )}
         </Space>
@@ -469,7 +414,7 @@ const PurchaseOrdersPage: React.FC = () => {
       </Row>
 
       {/* Filters */}
-      <Card style={{ marginBottom: 16 }}>
+      <Card style={{ marginBottom: 16, borderWidth: 0 }}>
         <Space wrap>
           <Input
             placeholder="Tìm kiếm theo số đơn, nhà cung cấp..."
@@ -477,11 +422,13 @@ const PurchaseOrdersPage: React.FC = () => {
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
             style={{ width: 300 }}
+            size="large"
           />
           <Select
             value={statusFilter}
             onChange={setStatusFilter}
             style={{ width: 150 }}
+            size="large"
           >
             <Select.Option value="all">Tất cả</Select.Option>
             <Select.Option value="draft">Nháp</Select.Option>
@@ -497,12 +444,20 @@ const PurchaseOrdersPage: React.FC = () => {
             placeholder={["Từ ngày", "Đến ngày"]}
             value={dateRange}
             onChange={(dates) => setDateRange(dates as any)}
+            size="large"
           />
+          <Tooltip title="Xóa bộ lọc">
+            <Button
+              icon={<ClearOutlined />}
+              onClick={handleClearFilters}
+              size="large"
+            />
+          </Tooltip>
         </Space>
       </Card>
 
       {/* Table */}
-      <Card>
+      <Card style={{ borderWidth: 0 }}>
         <PurchaseOrdersTable
           data={filteredData}
           loading={loading}
@@ -510,6 +465,7 @@ const PurchaseOrdersPage: React.FC = () => {
           onEdit={handleEdit}
           onCancel={handleCancel}
           onDelete={handleDelete}
+          onStatusChange={handleStatusChange}
           hasPermission={hasPermission}
         />
       </Card>

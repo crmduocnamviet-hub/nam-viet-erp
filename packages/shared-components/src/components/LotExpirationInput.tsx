@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import {
+  AutoComplete,
   Input,
   DatePicker,
   Space,
@@ -15,6 +16,7 @@ import {
   AudioOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
+import { searchProductLots } from "@nam-viet-erp/services";
 
 interface LotExpirationInputProps {
   value?: {
@@ -28,6 +30,9 @@ interface LotExpirationInputProps {
     lot?: string;
     expiration?: string;
   };
+  productId?: number;
+  warehouseId?: number;
+  showLotNumberInput?: boolean;
 }
 
 const LotExpirationInput: React.FC<LotExpirationInputProps> = ({
@@ -39,9 +44,32 @@ const LotExpirationInput: React.FC<LotExpirationInputProps> = ({
     lot: "Nhập số lô",
     expiration: "Chọn hạn sử dụng",
   },
+  productId,
+  warehouseId,
+  showLotNumberInput = true,
 }) => {
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef<any>(null);
+  const [options, setOptions] = useState<{ value: string }[]>([]);
+  const [searchText, setSearchText] = useState("");
+
+  // Debounce search
+  useEffect(() => {
+    if (!searchText || !productId) {
+      setOptions([]);
+      return;
+    }
+
+    const handler = setTimeout(() => {
+      searchProductLots(productId, searchText, warehouseId).then((results) => {
+        setOptions(results);
+      });
+    }, 300);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [searchText, productId, warehouseId]);
 
   // Initialize speech recognition
   useEffect(() => {
@@ -84,10 +112,14 @@ const LotExpirationInput: React.FC<LotExpirationInputProps> = ({
     };
   }, []);
 
-  const handleLotChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLotSearch = (text: string) => {
+    setSearchText(text);
+  };
+
+  const handleLotChange = (data: string) => {
     onChange?.({
       ...value,
-      lotNumber: e.target.value,
+      lotNumber: data,
     });
   };
 
@@ -121,61 +153,70 @@ const LotExpirationInput: React.FC<LotExpirationInputProps> = ({
   };
 
   return (
-    <Space direction="vertical" style={{ width: "100%" }} size="small">
-      <Row gutter={8}>
-        <Col flex="auto">
-          <Input
-            placeholder={placeholder.lot}
-            value={value.lotNumber}
-            onChange={handleLotChange}
-            disabled={disabled}
-            prefix={<BarcodeOutlined />}
-            suffix={
-              <Space size={4}>
-                <Tooltip title={isListening ? "Đang nghe..." : "Nói số lô"}>
-                  <Button
-                    type="text"
-                    size="small"
-                    icon={<AudioOutlined />}
-                    onClick={handleSpeechToText}
-                    disabled={disabled}
-                    style={{
-                      color: isListening ? "#ff4d4f" : undefined,
-                    }}
-                  />
-                </Tooltip>
-                {onScanLot && (
-                  <Tooltip title="Quét mã lô">
-                    <Button
-                      type="text"
-                      size="small"
-                      icon={<CameraOutlined />}
-                      onClick={onScanLot}
-                      disabled={disabled}
-                    />
-                  </Tooltip>
-                )}
-              </Space>
-            }
-          />
-        </Col>
-      </Row>
-      <Row>
-        <Col span={24}>
-          <DatePicker
-            placeholder={placeholder.expiration}
-            value={value.expirationDate ? dayjs(value.expirationDate) : null}
-            onChange={handleDateChange}
-            disabled={disabled}
-            style={{ width: "100%" }}
-            format="DD/MM/YYYY"
-            disabledDate={(current) => {
-              // Can't select dates before today
-              return current && current < dayjs().startOf("day");
-            }}
-          />
-        </Col>
-      </Row>
+    <Space direction="vertical" style={{ width: "100%", gap: 20 }}>
+      {showLotNumberInput && (
+        <Row gutter={8}>
+          <Col>
+            <AutoComplete
+              options={options}
+              onSearch={handleLotSearch}
+              onChange={handleLotChange}
+              value={value.lotNumber}
+              disabled={disabled || !productId}
+              style={{ width: 200 }}
+            >
+              <Input
+                placeholder={placeholder.lot}
+                prefix={<BarcodeOutlined />}
+                suffix={
+                  <Space size={4}>
+                    <Tooltip title={isListening ? "Đang nghe..." : "Nói số lô"}>
+                      <Button
+                        type="text"
+                        icon={<AudioOutlined />}
+                        onClick={handleSpeechToText}
+                        disabled={disabled}
+                        style={{
+                          color: isListening ? "#ff4d4f" : undefined,
+                        }}
+                      />
+                    </Tooltip>
+                    {onScanLot && (
+                      <Tooltip title="Quét mã lô">
+                        <Button
+                          type="text"
+                          icon={<CameraOutlined />}
+                          onClick={onScanLot}
+                          disabled={disabled}
+                        />
+                      </Tooltip>
+                    )}
+                  </Space>
+                }
+              />
+            </AutoComplete>
+          </Col>
+        </Row>
+      )}
+      {showLotNumberInput && (
+        <Row>
+          <Col>
+            <DatePicker
+              placeholder={placeholder.expiration}
+              value={value.expirationDate ? dayjs(value.expirationDate) : null}
+              onChange={handleDateChange}
+              disabled={disabled}
+              format="DD/MM/YYYY"
+              disabledDate={(current) => {
+                // Can't select dates before today
+                return current && current < dayjs().startOf("day");
+              }}
+              size="large"
+              style={{ width: 200 }}
+            />
+          </Col>
+        </Row>
+      )}
     </Space>
   );
 };

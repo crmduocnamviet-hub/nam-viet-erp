@@ -1,4 +1,15 @@
+import type { PostgrestSingleResponse } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
+import {
+  addingQuantityToInventory,
+  getProductLotByProductIds,
+  getProductLots,
+  syncAllLotsToInventory,
+  syncLotQuantityToInventory,
+  updateProductLot,
+} from "./lotManagementService";
+import { getB2BWarehouseProducts, getProductById } from "./productService";
+import { getB2BWarehouse } from "./warehouse";
 
 /**
  * Generate the next PO number
@@ -74,7 +85,7 @@ export const getPurchaseOrders = async (filters?: {
  * Get purchase order by ID
  */
 export const getPurchaseOrderById = async (id: number) => {
-  return await supabase
+  const response: PostgrestSingleResponse<IProductOrder> = await supabase
     .from("purchase_orders")
     .select(
       `
@@ -88,6 +99,7 @@ export const getPurchaseOrderById = async (id: number) => {
     )
     .eq("id", id)
     .single();
+  return response;
 };
 
 /**
@@ -195,69 +207,127 @@ export const receivePurchaseOrderItems = async (
     expirationDate?: string;
     shelfLocation?: string;
   }>,
-  receivedBy: string | null,
 ) => {
   try {
+    const { data: b2bWarehouse } = await getB2BWarehouse();
+    if (!b2bWarehouse) {
+      throw new Error("B2B warehouse not found");
+    }
     // Get the PO and its items
     const { data: poData, error: poError } = await getPurchaseOrderById(poId);
     if (poError || !poData) {
       throw new Error(`Purchase order not found: ${poError?.message}`);
     }
 
-    // Update each item
-    const updatePromises = items.map(async (receiveData) => {
-      const poItem = poData.items.find((i: any) => i.id === receiveData.itemId);
-      if (!poItem) {
-        throw new Error(`Item ${receiveData.itemId} not found in PO`);
+    const map: Map<
+      number,
+      {
+        itemId: number;
+        quantityToReceive: number;
+        lotNumber?: string;
+        expirationDate?: string;
+        shelfLocation?: string;
+      }[]
+    > = new Map();
+
+    items.forEach((item) => {
+      if (map.has(item.itemId)) {
+        map.get(item.itemId)?.push(item);
+      } else {
+        map.set(item.itemId, [item]);
       }
+    });
 
+    const _updatePromises = Array.from(map.keys()).map(async (poItemId) => {
+      const poItem = (poData.items || []).find((i) => (i.id = poItemId));
+      const productId = poItem?.product_id;
+      if (!productId) return;
+      const { data: productInfo } = await getProductById(productId);
+      const poItemList = map.get(poItemId) || [];
+      if (!poItemList.length) return;
+      const addingQuantity = poItemList?.reduce(
+        (v, item) => v + item.quantityToReceive,
+        0,
+      );
+      if (productInfo?.enable_lot_management) {
+        const { data: productLots } = await getProductLots({ productId });
+        const mergedQuantitySameLotNumber = new Map<string, number>();
+        const mergedExpiryDateSameLotNumber = new Map<string, string>();
+        poItemList.forEach((item) => {
+          const lotNumber = item.lotNumber || "Lô mặc định";
+          mergedQuantitySameLotNumber.set(
+            lotNumber,
+            (mergedQuantitySameLotNumber.get(lotNumber) || 0) +
+              item.quantityToReceive || 0,
+          );
+          if (lotNumber !== "Lô mặc định") {
+            mergedExpiryDateSameLotNumber.set(
+              lotNumber,
+              mergedExpiryDateSameLotNumber.get(lotNumber) ||
+                item.expirationDate ||
+                "",
+            );
+          }
+        });
+        // Update on product lot
+        await Promise.all(
+          Array.from(mergedQuantitySameLotNumber.keys()).map(
+            async (lotNumber) => {
+              try {
+                const findLotId = productLots?.find(
+                  (pl) => pl.lot_number === lotNumber,
+                );
+                if (!findLotId) return;
+                await updateProductLot(
+                  findLotId.id,
+                  lotNumber !== "Lô mặc định"
+                    ? {
+                        quantity:
+                          (mergedQuantitySameLotNumber.get(lotNumber) || 0) +
+                          (findLotId.quantity || 0),
+                        expiry_date:
+                          mergedExpiryDateSameLotNumber.get(lotNumber),
+                      }
+                    : {
+                        quantity:
+                          (mergedQuantitySameLotNumber.get(lotNumber) || 0) +
+                          (findLotId.quantity || 0),
+                      },
+                );
+              } catch {}
+            },
+          ),
+        );
+
+        await syncAllLotsToInventory(productInfo.id);
+      } else {
+        await addingQuantityToInventory({
+          productId: productId,
+          warehouseId: b2bWarehouse.id,
+          quantity: addingQuantity,
+        });
+      }
       const newReceivedQuantity =
-        (poItem.received_quantity || 0) + receiveData.quantityToReceive;
-
-      // Update purchase order item
+        (poItem.received_quantity || 0) + addingQuantity;
       const { error: itemError } = await supabase
         .from("purchase_order_items")
         .update({
           received_quantity: newReceivedQuantity,
-          lot_number: receiveData.lotNumber,
-          expiration_date: receiveData.expirationDate,
-          shelf_location: receiveData.shelfLocation,
+          // lot_number: receiveData.lotNumber,
         })
-        .eq("id", receiveData.itemId);
-
-      if (itemError) {
-        throw new Error(`Failed to update item: ${itemError.message}`);
-      }
-
-      // Update inventory - add received quantity to current stock
-      const { data: inventoryData } = await supabase
-        .from("inventory")
-        .select("*")
-        .eq("product_id", poItem.product_id)
-        .single();
-
-      if (inventoryData) {
-        await supabase
-          .from("inventory")
-          .update({
-            quantity: inventoryData.quantity + receiveData.quantityToReceive,
-          })
-          .eq("id", inventoryData.id);
-      }
-
-      return { success: true, itemId: receiveData.itemId };
+        .eq("id", poItemId);
     });
 
-    await Promise.all(updatePromises);
+    await Promise.all(_updatePromises);
 
     // Check if PO is fully received
     const { data: updatedPO } = await getPurchaseOrderById(poId);
     if (updatedPO) {
-      const allItemsFullyReceived = updatedPO.items.every(
+      const allItemsFullyReceived = (updatedPO.items || []).every(
         (item: any) => item.received_quantity >= item.quantity,
       );
 
-      const someItemsReceived = updatedPO.items.some(
+      const someItemsReceived = (updatedPO.items || []).some(
         (item: any) => item.received_quantity > 0,
       );
 
@@ -267,7 +337,7 @@ export const receivePurchaseOrderItems = async (
       } else if (someItemsReceived) {
         newStatus = "partially_received";
       } else {
-        newStatus = poData.status; // Keep current status
+        newStatus = poData.status as any; // Keep current status
       }
 
       // Update PO status if changed
@@ -553,92 +623,102 @@ export const createDirectPurchaseImport = async (
       );
     }
 
-    // Create purchase order items with received_quantity = quantity
-    const itemsWithPoId = items.map((item) => ({
-      po_id: orderData.id,
-      product_id: item.product_id,
-      quantity: item.quantity,
-      received_quantity: item.quantity, // Mark as fully received
-      lot_number: item.lot_number,
-      expiration_date: item.expiration_date,
-      shelf_location: item.shelf_location,
-    }));
+    // Process items to get lot_id and update inventory
+    const processedItems = await Promise.all(
+      items.map(async (item) => {
+        let lot_id = null;
 
+        // 1. Find or create product_lot
+        if (item.lot_number) {
+          const { data: existingLot } = await supabase
+            .from("product_lots")
+            .select("id, quantity")
+            .eq("product_id", item.product_id)
+            .eq("warehouse_id", warehouseId)
+            .eq("lot_number", item.lot_number)
+            .single();
+
+          if (existingLot) {
+            lot_id = existingLot.id;
+            // Update existing lot quantity
+            await supabase
+              .from("product_lots")
+              .update({
+                quantity: existingLot.quantity + item.quantity,
+                expiry_date: item.expiration_date || undefined,
+              })
+              .eq("id", lot_id);
+          } else {
+            // Create new lot
+            const { data: newLot, error: newLotError } = await supabase
+              .from("product_lots")
+              .insert({
+                product_id: item.product_id,
+                warehouse_id: warehouseId,
+                lot_number: item.lot_number,
+                expiry_date: item.expiration_date,
+                received_date: new Date().toISOString().split("T")[0],
+                quantity: item.quantity,
+              })
+              .select("id")
+              .single();
+
+            if (newLotError || !newLot) {
+              throw new Error(`Failed to create lot: ${newLotError?.message}`);
+            }
+            lot_id = newLot.id;
+          }
+        }
+
+        // 2. Update inventory
+        const { data: inventoryData } = await supabase
+          .from("inventory")
+          .select("id, quantity")
+          .eq("product_id", item.product_id)
+          .eq("warehouse_id", warehouseId)
+          .single();
+
+        if (inventoryData) {
+          await supabase
+            .from("inventory")
+            .update({
+              quantity: inventoryData.quantity + item.quantity,
+            })
+            .eq("id", inventoryData.id);
+        } else {
+          await supabase.from("inventory").insert({
+            product_id: item.product_id,
+            warehouse_id: warehouseId,
+            quantity: item.quantity,
+            min_stock: 0,
+            max_stock: 0,
+          });
+        }
+
+        return {
+          po_id: orderData.id,
+          product_id: item.product_id,
+          quantity: item.quantity,
+          received_quantity: item.quantity,
+          lot_id: lot_id, // Use lot_id
+        };
+      }),
+    );
+
+    // Create purchase order items
     const { data: itemsData, error: itemsError } = await supabase
       .from("purchase_order_items")
-      .insert(itemsWithPoId)
+      .insert(processedItems)
       .select();
 
     if (itemsError) {
-      // Rollback the order if items creation fails
+      // This part is tricky. A rollback should undo the inventory and lot changes.
+      // For simplicity, we'll just throw, but a real-world scenario needs a transaction.
       await supabase.from("purchase_orders").delete().eq("id", orderData.id);
       throw new Error(
-        `Failed to create purchase order items: ${itemsError.message}`,
+        `Failed to create purchase order items: ${itemsError.message}. Inventory might be inconsistent.`,
       );
     }
-
-    // Update inventory and product lots for each item
-    const updatePromises = items.map(async (item) => {
-      // 1. Check if lot exists for this product + warehouse + lot_number
-      if (item.lot_number) {
-        const { data: existingLot } = await supabase
-          .from("product_lots")
-          .select("*")
-          .eq("product_id", item.product_id)
-          .eq("warehouse_id", warehouseId)
-          .eq("lot_number", item.lot_number)
-          .single();
-
-        if (existingLot) {
-          // Update existing lot quantity
-          await supabase
-            .from("product_lots")
-            .update({
-              quantity: existingLot.quantity + item.quantity,
-              expiry_date: item.expiration_date || existingLot.expiry_date,
-            })
-            .eq("id", existingLot.id);
-        } else {
-          // Create new lot
-          await supabase.from("product_lots").insert({
-            product_id: item.product_id,
-            warehouse_id: warehouseId,
-            lot_number: item.lot_number,
-            expiry_date: item.expiration_date,
-            received_date: new Date().toISOString().split("T")[0],
-            quantity: item.quantity,
-          });
-        }
-      }
-
-      // 2. Update inventory - add received quantity to current stock
-      const { data: inventoryData } = await supabase
-        .from("inventory")
-        .select("*")
-        .eq("product_id", item.product_id)
-        .eq("warehouse_id", warehouseId)
-        .single();
-
-      if (inventoryData) {
-        await supabase
-          .from("inventory")
-          .update({
-            quantity: inventoryData.quantity + item.quantity,
-          })
-          .eq("id", inventoryData.id);
-      } else {
-        // Create inventory record if it doesn't exist
-        await supabase.from("inventory").insert({
-          product_id: item.product_id,
-          warehouse_id: warehouseId,
-          quantity: item.quantity,
-          min_stock: 0,
-          max_stock: 0,
-        });
-      }
-    });
-
-    await Promise.all(updatePromises);
 
     return {
       success: true,

@@ -45,9 +45,10 @@ interface ProductFormData {
 
   // Inventory Settings (separate table)
   inventory_settings?: InventorySettings;
+  supplier_ids?: number[];
 }
 
-interface ProductData extends Omit<ProductFormData, 'inventory_settings'> {
+interface ProductData extends Omit<ProductFormData, "inventory_settings"> {
   id?: number;
   is_active?: boolean;
   created_at?: string;
