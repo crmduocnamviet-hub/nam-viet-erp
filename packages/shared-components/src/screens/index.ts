@@ -51,6 +51,15 @@ import SalesStaffDashboardPage from "./staff/SalesStaffDashboardPage";
 import InventoryStaffDashboardPage from "./staff/InventoryStaffDashboardPage";
 import DeliveryStaffDashboardPage from "./staff/DeliveryStaffDashboardPage";
 
+// Screen Imports - Warehouse
+import WarehousePurchaseOrdersPage from "./warehouse/PurchaseOrdersPage";
+import PurchaseOrderReceivingPage from "./warehouse/PurchaseOrderReceivingPage";
+import PurchaseOrderReceivingDetailPage from "./warehouse/PurchaseOrderReceivingDetailPage";
+import SalesOrderPickingPage from "./warehouse/SalesOrderPickingPage";
+import SuppliersPage from "./warehouse/SuppliersPage";
+import VATInventoryDashboard from "./warehouse/VATInventoryDashboard";
+import VATReconciliationPage from "./warehouse/VATReconciliationPage";
+
 // Screen Registry Interface
 export interface ScreenConfig {
   component: React.ComponentType<any>;
@@ -329,6 +338,57 @@ export const SCREEN_REGISTRY: ScreenRegistry = {
     title: "Dashboard Nhân viên Giao hàng",
     description: "Lịch trình giao hàng và thống kê cho nhân viên giao hàng",
   },
+
+  // ==================== WAREHOUSE SCREENS ====================
+  "warehouse.purchase-orders": {
+    component: WarehousePurchaseOrdersPage,
+    permissions: ["warehouse.access", "warehouse.purchase-orders.view"],
+    category: "warehouse",
+    title: "Đơn Đặt Hàng",
+    description: "Quản lý đơn đặt hàng từ nhà cung cấp",
+  },
+  "warehouse.receiving": {
+    component: PurchaseOrderReceivingPage,
+    permissions: ["warehouse.access", "warehouse.receiving.access"],
+    category: "warehouse",
+    title: "Nhận Hàng",
+    description: "Quét mã vạch và xác nhận nhận hàng từ nhà cung cấp",
+  },
+  "warehouse.receiving.detail": {
+    component: PurchaseOrderReceivingDetailPage,
+    permissions: ["warehouse.access", "warehouse.receiving.access"],
+    category: "warehouse",
+    title: "Xác Nhận Nhận Hàng",
+    description: "Xác nhận nhận hàng cho đơn đặt hàng cụ thể",
+  },
+  "warehouse.picking": {
+    component: SalesOrderPickingPage,
+    permissions: ["warehouse.access", "warehouse.picking.access"],
+    category: "warehouse",
+    title: "Xuất Hàng / Lấy Hàng",
+    description: "Quét mã vạch và xác nhận lấy hàng để chuẩn bị giao",
+  },
+  "warehouse.suppliers": {
+    component: SuppliersPage,
+    permissions: ["warehouse.access", "warehouse.suppliers.view"],
+    category: "warehouse",
+    title: "Nhà Cung Cấp",
+    description: "Quản lý thông tin nhà cung cấp và đối tác",
+  },
+  "warehouse.vat-inventory": {
+    component: VATInventoryDashboard,
+    permissions: ["warehouse.access", "warehouse.vat.view"],
+    category: "warehouse",
+    title: "Kho VAT",
+    description: "Quản lý tồn kho VAT và đối chiếu với tồn kho thực tế",
+  },
+  "warehouse.vat-reconciliation": {
+    component: VATReconciliationPage,
+    permissions: ["warehouse.access", "warehouse.vat.reconcile"],
+    category: "warehouse",
+    title: "Đối Chiếu VAT",
+    description: "Đối chiếu hóa đơn VAT mua vào và bán ra",
+  },
 };
 
 // ==================== PERMISSION CATEGORIES ====================
@@ -338,6 +398,7 @@ export const PERMISSION_CATEGORIES = {
   B2B: "b2b",
   MEDICAL: "medical",
   INVENTORY: "inventory",
+  WAREHOUSE: "warehouse",
   FINANCIAL: "financial",
   MARKETING: "marketing",
   MANAGEMENT: "management",
@@ -394,6 +455,24 @@ export const PERMISSIONS = {
   "purchase-orders.view": "Xem đơn mua hàng",
   "purchase-orders.create": "Tạo đơn mua hàng",
   "purchase-orders.approve": "Phê duyệt đơn mua hàng",
+
+  // Warehouse Permissions
+  "warehouse.access": "Truy cập quản lý kho vận",
+  "warehouse.purchase-orders.view": "Xem đơn đặt hàng",
+  "warehouse.purchase-orders.create": "Tạo đơn đặt hàng",
+  "warehouse.purchase-orders.edit": "Chỉnh sửa đơn đặt hàng",
+  "warehouse.purchase-orders.auto-create": "Tạo dự trù tự động",
+  "warehouse.receiving.access": "Truy cập chức năng nhận hàng",
+  "warehouse.receiving.confirm": "Xác nhận nhận hàng",
+  "warehouse.picking.access": "Truy cập chức năng xuất hàng",
+  "warehouse.picking.confirm": "Xác nhận xuất hàng",
+  "warehouse.suppliers.view": "Xem danh sách nhà cung cấp",
+  "warehouse.suppliers.create": "Thêm nhà cung cấp mới",
+  "warehouse.suppliers.edit": "Chỉnh sửa thông tin nhà cung cấp",
+  "warehouse.suppliers.delete": "Xóa nhà cung cấp",
+  "warehouse.vat.view": "Xem kho VAT",
+  "warehouse.vat.reconcile": "Đối chiếu VAT",
+  "warehouse.vat.create-invoice": "Tạo hóa đơn VAT",
 
   // Delivery & Shipping Permissions
   "delivery.access": "Truy cập chức năng giao hàng",
@@ -510,6 +589,19 @@ export const ROLE_PERMISSIONS = {
     "purchase-orders.view",
     "purchase-orders.create",
     "purchase-orders.approve",
+    "warehouse.access",
+    "warehouse.purchase-orders.view",
+    "warehouse.purchase-orders.create",
+    "warehouse.purchase-orders.edit",
+    "warehouse.purchase-orders.auto-create",
+    "warehouse.receiving.access",
+    "warehouse.receiving.confirm",
+    "warehouse.picking.access",
+    "warehouse.picking.confirm",
+    "warehouse.suppliers.view",
+    "warehouse.suppliers.create",
+    "warehouse.suppliers.edit",
+    "warehouse.vat.view",
   ],
 
   "inventory-staff": [
@@ -524,6 +616,45 @@ export const ROLE_PERMISSIONS = {
     "b2b.view",
     "quotes.edit",
     "inventory.dashboard",
+    "warehouse.access",
+    "warehouse.purchase-orders.view",
+    "warehouse.receiving.access",
+    "warehouse.receiving.confirm",
+    "warehouse.picking.access",
+    "warehouse.picking.confirm",
+    "warehouse.suppliers.view",
+  ],
+
+  "warehouse-manager": [
+    "warehouse.access",
+    "warehouse.purchase-orders.view",
+    "warehouse.purchase-orders.create",
+    "warehouse.purchase-orders.edit",
+    "warehouse.purchase-orders.auto-create",
+    "warehouse.receiving.access",
+    "warehouse.receiving.confirm",
+    "warehouse.picking.access",
+    "warehouse.picking.confirm",
+    "warehouse.suppliers.view",
+    "warehouse.suppliers.create",
+    "warehouse.suppliers.edit",
+    "warehouse.suppliers.delete",
+    "warehouse.vat.view",
+    "warehouse.vat.reconcile",
+    "warehouse.vat.create-invoice",
+    "inventory.access",
+    "products.view",
+  ],
+
+  "warehouse-staff": [
+    "warehouse.access",
+    "warehouse.purchase-orders.view",
+    "warehouse.receiving.access",
+    "warehouse.receiving.confirm",
+    "warehouse.picking.access",
+    "warehouse.picking.confirm",
+    "warehouse.suppliers.view",
+    "warehouse.vat.view",
   ],
 
   "delivery-staff": [
@@ -578,6 +709,11 @@ export const ROLE_PERMISSIONS = {
     "transactions.view",
     "transactions.create",
     "funds.view",
+    "warehouse.access",
+    "warehouse.vat.view",
+    "warehouse.vat.reconcile",
+    "warehouse.vat.create-invoice",
+    "warehouse.purchase-orders.view",
   ],
 };
 
@@ -629,6 +765,14 @@ export {
   SalesStaffDashboardPage,
   InventoryStaffDashboardPage,
   DeliveryStaffDashboardPage,
+  // Warehouse
+  WarehousePurchaseOrdersPage,
+  PurchaseOrderReceivingPage,
+  PurchaseOrderReceivingDetailPage,
+  SalesOrderPickingPage,
+  SuppliersPage,
+  VATInventoryDashboard,
+  VATReconciliationPage,
 };
 
 // Helper function to get screen by key
@@ -638,7 +782,7 @@ export const getScreen = (screenKey: string): ScreenConfig | undefined => {
 
 // Helper function to get screens by category
 export const getScreensByCategory = (
-  category: string
+  category: string,
 ): Record<string, ScreenConfig> => {
   return Object.entries(SCREEN_REGISTRY)
     .filter(([_, config]) => config.category === category)
@@ -648,7 +792,7 @@ export const getScreensByCategory = (
 // Helper function to check if user has permission for screen
 export const hasScreenPermission = (
   screenKey: string,
-  userPermissions: string[]
+  userPermissions: string[],
 ): boolean => {
   const screen = SCREEN_REGISTRY[screenKey];
   if (!screen) return false;
@@ -658,13 +802,13 @@ export const hasScreenPermission = (
 
   // Check if user has ALL required permissions
   return screen.permissions.every((permission) =>
-    userPermissions.includes(permission)
+    userPermissions.includes(permission),
   );
 };
 
 // Helper function to get available screens for user
 export const getAvailableScreens = (
-  userPermissions: string[]
+  userPermissions: string[],
 ): Record<string, ScreenConfig> => {
   return Object.entries(SCREEN_REGISTRY)
     .filter(([key, _]) => hasScreenPermission(key, userPermissions))

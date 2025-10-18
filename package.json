@@ -30,6 +30,7 @@
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^16.4.0",
     "husky": "^9.0.11",
+    "jspdf-autotable": "^5.0.2",
     "lint-staged": "^15.2.7",
     "prettier": "^3.3.3",
     "supabase": "^2.40.7",
@@ -45,6 +46,8 @@
   },
   "dependencies": {
     "apexcharts": "^5.3.5",
-    "react-apexcharts": "^1.7.0"
+    "jspdf": "^3.0.3",
+    "react-apexcharts": "^1.7.0",
+    "ttf2woff2": "^5.0.0"
   }
 }

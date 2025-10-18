@@ -96,6 +96,21 @@ interface IVoucher {
   is_active: boolean;
 }
 
+interface IProductOrder {
+  id: number;
+  supplier_id?: number;
+  suppliers?: ISupplier;
+  items?: IProductOrderItem[];
+  status: string;
+  note?: string;
+  created_by?: string;
+  po_number?: string;
+  expected_delivery_date?: string;
+  total_amount?: number;
+  updated_at?: string;
+  created_at?: string;
+}
+
 interface IProductOrderItem {
   id: number;
   po_id: number;
@@ -103,6 +118,7 @@ interface IProductOrderItem {
   quantity: number;
   cost_price: number;
   created_at: string;
+  received_quantity: number;
 }
 
 interface IRolePermission {
@@ -515,10 +531,10 @@ interface IPurchaseOrderItem {
   po_id: number;
   product_id: number;
   quantity: number;
-  unit_price: number;
   received_quantity: number;
-  notes: string | null;
   created_at: string;
+  lot_id?: number;
+  product_lots?: IProductLot;
 }
 
 // Extended PO with supplier and items
@@ -608,3 +624,11 @@ interface ProductLotWithDetails extends IProductLot {
 type ProductWithInventoryData = IProduct & {
   inventory_data: IInventory[];
 };
+
+interface SaleOrderProductLotItem {
+  id: number;
+  created_at: string;
+  quantity: number;
+  order_id: string;
+  lot_id: number;
+}

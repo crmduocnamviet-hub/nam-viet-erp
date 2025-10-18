@@ -16,7 +16,11 @@ import {
   PlusOutlined,
 } from "@ant-design/icons";
 import ProductForm from "../../components/ProductForm";
-import { createProduct, upsetInventory } from "@nam-viet-erp/services";
+import {
+  createProduct,
+  upsetInventory,
+  createProductSupplierMapping, // Import the service
+} from "@nam-viet-erp/services";
 
 const { Title, Text } = Typography;
 const { useBreakpoint } = Grid;
@@ -42,7 +46,7 @@ const CreateProductPage: React.FC<CreateProductPageProps> = ({
           <div style={{ textAlign: "center", padding: "40px 0" }}>
             <Title level={3}>🚫 Không có quyền truy cập</Title>
             <p>Bạn không có quyền tạo sản phẩm mới.</p>
-            <Button onClick={() => navigate(-1)}>
+            <Button onClick={() => navigate(-1)} size="large">
               <ArrowLeftOutlined /> Quay lại
             </Button>
           </div>
@@ -52,31 +56,50 @@ const CreateProductPage: React.FC<CreateProductPageProps> = ({
   }
 
   const handleCreateProduct = async (values: ProductFormData) => {
-    console.log("CreateProductPage handleCreateProduct called with:", values);
     setLoading(true);
     try {
-      const { inventory_settings, ...productData } = values;
+      const { inventory_settings, supplier_ids, ...productData } = values;
 
-      console.log("Inventory settings:", inventory_settings);
-      console.log("Product data:", productData);
-
-      // Create product first
-      const { data: createdProduct, error: productError } = await createProduct(
-        productData
-      );
+      // 1. Create product first
+      const { data: createdProduct, error: productError } =
+        await createProduct(productData);
       if (productError) throw productError;
 
-      // Save inventory_settings to inventory table if product was created and settings exist
+      const productId = createdProduct.id;
+
+      // 2. Save supplier mappings if product was created and IDs exist
+      if (productId && supplier_ids && supplier_ids.length > 0) {
+        const mappingPromises = supplier_ids.map((supplierId: number) =>
+          createProductSupplierMapping({
+            product_id: productId,
+            supplier_id: supplierId,
+            is_primary: false, // You might want to add logic to set a primary supplier
+          }),
+        );
+
+        const mappingResults = await Promise.all(mappingPromises);
+
+        const mappingErrors = mappingResults.filter((r) => r.error);
+        if (mappingErrors.length > 0) {
+          console.error("Supplier mapping errors:", mappingErrors);
+          notification.warning({
+            message: "Cảnh báo!",
+            description:
+              "Sản phẩm đã được tạo nhưng có lỗi khi lưu thông tin nhà cung cấp.",
+          });
+        }
+      }
+
+      // 3. Save inventory_settings to inventory table
       if (
-        createdProduct?.id &&
+        productId &&
         inventory_settings &&
         Object.keys(inventory_settings).length > 0
       ) {
-        // Convert inventory_settings to array format for upsert
         const inventoryData = Object.entries(inventory_settings)
           .filter(([_, settings]) => settings && typeof settings === "object")
           .map(([warehouseId, settings]) => ({
-            product_id: createdProduct.id,
+            product_id: productId,
             warehouse_id: parseInt(warehouseId),
             min_stock: settings?.min_stock || 0,
             max_stock: settings?.max_stock || 0,
@@ -97,7 +120,7 @@ const CreateProductPage: React.FC<CreateProductPageProps> = ({
 
       notification?.success({
         message: "Thành công!",
-        description: "Sản phẩm mới và tồn kho đã được tạo thành công.",
+        description: "Sản phẩm mới đã được tạo thành công.",
       });
 
       // Navigate back to products list

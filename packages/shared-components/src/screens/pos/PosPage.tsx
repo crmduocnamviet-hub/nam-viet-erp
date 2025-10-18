@@ -27,6 +27,7 @@ import {
   searchProductInWarehouse,
   searchProductInWarehouseByBarcode,
   calculateProductGlobalQuantities,
+  supabase,
 } from "@nam-viet-erp/services";
 import {
   usePosStore,
@@ -43,6 +44,7 @@ import {
 import PaymentModal from "../../components/PaymentModal";
 import PosTabContent from "../../components/PosTabContent";
 import LotSelectionModal from "../../components/LotSelectionModal";
+import ComboLotSelectionModal from "../../components/ComboLotSelectionModal";
 
 const getErrorMessage = (error: any): string => {
   return error?.message || "Đã xảy ra lỗi không xác định";
@@ -147,6 +149,13 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
   const [isLotSelectionModalOpen, setIsLotSelectionModalOpen] = useState(false);
   const [selectedProductForLot, setSelectedProductForLot] =
     useState<IProduct | null>(null);
+
+  // Combo lot selection modal
+  const [isComboLotSelectionModalOpen, setIsComboLotSelectionModalOpen] =
+    useState(false);
+  const [selectedComboForLot, setSelectedComboForLot] =
+    useState<IComboWithItems | null>(null);
+  const [selectedComboQuantity, setSelectedComboQuantity] = useState(1);
 
   const selectedLocation = "dh1"; // Default location
   const { warehouseId, fundId } = employeeWarehouse
@@ -673,8 +682,31 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
       maxComboSets = 1;
     }
 
+    // Check if any product in combo is lot-managed
+    const hasLotManagedProducts = combo.combo_items.some(
+      (item) => item.products?.enable_lot_management,
+    );
+
+    if (hasLotManagedProducts && employeeWarehouse) {
+      // Open lot selection modal for combo
+      setSelectedComboForLot(combo);
+      setSelectedComboQuantity(maxComboSets);
+      setIsComboLotSelectionModalOpen(true);
+      return;
+    }
+
+    // If no lot-managed products, proceed normally
+    addComboToCart(combo, maxComboSets, null);
+  };
+
+  // Helper function to add combo to cart (with or without lot info)
+  const addComboToCart = (
+    combo: IComboWithItems,
+    maxComboSets: number,
+    lotSelections: any[] | null,
+  ) => {
     // Remove products that are part of the combo from cart
-    combo.combo_items.forEach((comboItem) => {
+    combo.combo_items?.forEach((comboItem) => {
       const cartItem = cart.find(
         (item) => !item.isCombo && item.id === comboItem.product_id,
       );
@@ -696,11 +728,11 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
     });
 
     // Calculate total original price
-    const originalPrice = combo.combo_items.reduce((sum, item) => {
+    const originalPrice = combo.combo_items!.reduce((sum, item) => {
       return sum + (item.products?.retail_price || 0) * item.quantity;
     }, 0);
 
-    // Add combo as a single cart item
+    // Add combo as a single cart item with lot info
     const comboCartItem = {
       key: `combo_${combo.id}_${Date.now()}`,
       id: combo.id,
@@ -717,6 +749,7 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
       isCombo: true,
       combo_id: combo.id,
       comboData: combo,
+      lotSelections: lotSelections || undefined, // Store lot selections with combo
     };
 
     addCartItem(comboCartItem);
@@ -732,6 +765,17 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
 
     // Refetch combos to update the store
     fetchCombos();
+  };
+
+  // Handle combo lot selection confirmation
+  const handleComboLotSelectionConfirm = (lotSelections: any[]) => {
+    if (!selectedComboForLot) return;
+
+    addComboToCart(selectedComboForLot, selectedComboQuantity, lotSelections);
+
+    // Reset state
+    setSelectedComboForLot(null);
+    setSelectedComboQuantity(1);
   };
 
   const handleCreateCustomer = async (values: any) => {
@@ -912,18 +956,59 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
     removeCartItem(itemKey);
   };
 
-  const handleUpdateQuantity = (itemKey: string, newQuantity: number) => {
+  const handleUpdateQuantity = async (itemKey: string, newQuantity: number) => {
     const item = cart.find((i) => i.key === itemKey);
     if (!item) return;
 
     if (newQuantity <= 0) {
       removeCartItem(itemKey);
-    } else {
-      updateCartItem(itemKey, {
-        quantity: newQuantity,
-        total: item.price * newQuantity,
-      });
+      return;
     }
+
+    // Check lot quantities for combo items when increasing
+    if (item.isCombo && item.lotSelections && newQuantity > item.quantity) {
+      const quantityIncrease = newQuantity - item.quantity;
+
+      // Check each lot selection has enough quantity
+      for (const lotSelection of item.lotSelections) {
+        const comboItem = item.comboData?.combo_items?.find(
+          (ci: any) => ci.product_id === lotSelection.product_id,
+        );
+        if (comboItem) {
+          const requiredIncrease = comboItem.quantity * quantityIncrease;
+          const totalRequired = lotSelection.quantity + requiredIncrease;
+
+          // Fetch current lot quantity
+          const { data: lotData, error } = await supabase
+            .from("product_lots")
+            .select("quantity, lot_number")
+            .eq("id", lotSelection.lot_id)
+            .single();
+
+          if (error || !lotData) {
+            notification.error({
+              message: "Lỗi kiểm tra lô hàng",
+              description: "Không thể kiểm tra số lượng lô hàng",
+            });
+            return;
+          }
+
+          if ((lotData.quantity || 0) < totalRequired) {
+            notification.error({
+              message: "Không đủ số lượng lô",
+              description: `Lô "${lotData.lot_number}" chỉ còn ${lotData.quantity || 0} sản phẩm. Cần ${totalRequired} để tăng combo lên ${newQuantity}.`,
+            });
+            return;
+          }
+        }
+      }
+    }
+
+    // Update quantity if all checks pass
+    updateCartItem(itemKey, {
+      quantity: newQuantity,
+      total: item.price * newQuantity,
+    });
   };
 
   const cartDetails = useMemo((): CartDetails => {
@@ -1287,6 +1372,22 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
         product={selectedProductForLot}
         warehouseId={employeeWarehouse?.id || null}
       />
+
+      {/* Combo Lot Selection Modal */}
+      {selectedComboForLot && (
+        <ComboLotSelectionModal
+          open={isComboLotSelectionModalOpen}
+          combo={selectedComboForLot}
+          comboQuantity={selectedComboQuantity}
+          warehouseId={employeeWarehouse?.id || 0}
+          onConfirm={handleComboLotSelectionConfirm}
+          onCancel={() => {
+            setIsComboLotSelectionModalOpen(false);
+            setSelectedComboForLot(null);
+            setSelectedComboQuantity(1);
+          }}
+        />
+      )}
     </div>
   );
 };

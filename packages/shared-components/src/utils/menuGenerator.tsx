@@ -10,6 +10,7 @@ import {
   RocketOutlined,
   SettingOutlined,
   UserOutlined,
+  InboxOutlined,
 } from "@ant-design/icons";
 import { hasScreenPermission } from "../screens";
 
@@ -102,6 +103,51 @@ export const SALE_APP_MENU: MenuItemConfig[] = [
         permissions: ["inventory.purchase-orders.view"],
       },
     ],
+  },
+  {
+    label: "🏭 Quản Lý Kho Vận",
+    key: "warehouse",
+    icon: <InboxOutlined />,
+    permissions: ["warehouse.access"],
+    children: [
+      {
+        label: "Đơn Đặt Hàng",
+        key: "/warehouse/purchase-orders",
+        screenKey: "warehouse.purchase-orders",
+        permissions: ["warehouse.purchase-orders.view"],
+      },
+      {
+        label: "Nhận Hàng",
+        key: "/warehouse/receiving",
+        screenKey: "warehouse.receiving",
+        permissions: ["warehouse.receiving.access"],
+      },
+      {
+        label: "Xuất Hàng",
+        key: "/warehouse/picking",
+        screenKey: "warehouse.picking",
+        permissions: ["warehouse.picking.access"],
+      },
+      {
+        label: "Kho VAT",
+        key: "/warehouse/vat-inventory",
+        screenKey: "warehouse.vat-inventory",
+        permissions: ["warehouse.vat.view"],
+      },
+      {
+        label: "Đối Chiếu VAT",
+        key: "/warehouse/vat-reconciliation",
+        screenKey: "warehouse.vat-reconciliation",
+        permissions: ["warehouse.vat.reconcile"],
+      },
+    ],
+  },
+  {
+    label: "🏢 Nhà Cung Cấp",
+    key: "/warehouse/suppliers",
+    icon: <ShopOutlined />,
+    screenKey: "warehouse.suppliers",
+    permissions: ["warehouse.suppliers.view"],
   },
   {
     label: "📅 Đặt lịch & Khám bệnh",
@@ -227,17 +273,17 @@ export const CMS_APP_MENU: MenuItemConfig[] = [
 // Helper function to check if user has any of the required permissions
 const hasAnyPermission = (
   userPermissions: string[],
-  requiredPermissions: string[]
+  requiredPermissions: string[],
 ): boolean => {
   return requiredPermissions.some((permission) =>
-    userPermissions.includes(permission)
+    userPermissions.includes(permission),
   );
 };
 
 // Generate menu items based on user permissions
 export const generateMenu = (
   menuConfig: MenuItemConfig[],
-  userPermissions: string[]
+  userPermissions: string[],
 ): MenuProps["items"] => {
   const filterMenuItems = (items: MenuItemConfig[]): MenuProps["items"] => {
     return items
@@ -296,7 +342,7 @@ export const generateMenu = (
 
 // Helper to get route mapping from menu config
 export const getRouteMapping = (
-  menuConfig: MenuItemConfig[]
+  menuConfig: MenuItemConfig[],
 ): Record<string, string> => {
   const mapping: Record<string, string> = {};
 
@@ -321,7 +367,7 @@ export const getRouteMapping = (
 // Permission-based route generator
 export const generateRoutes = (
   routeMapping: Record<string, string>,
-  userPermissions: string[]
+  userPermissions: string[],
 ): Array<{ path: string; screenKey: string }> => {
   return Object.entries(routeMapping)
     .filter(([_, screenKey]) => hasScreenPermission(screenKey, userPermissions))

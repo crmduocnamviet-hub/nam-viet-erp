@@ -4,7 +4,12 @@
  * Implements NÚT 2, 3, 4 functionalities
  */
 
+import {
+  getB2BWarehouseProducts,
+  getProductInventoryInWarehouse,
+} from "./productService";
 import { supabase } from "./supabase";
+import { getInventoryByProductId, upsetInventory } from "./warehouse";
 
 // =====================================================
 // LOT OPERATIONS
@@ -29,6 +34,35 @@ export const getAvailableLots = async (params: {
   });
 
   return { data: data as AvailableLot[], error };
+};
+
+/**
+ * Search for product lots by lot number
+ */
+export const searchProductLots = async (
+  productId: number,
+  searchText: string,
+  warehouseId?: number,
+) => {
+  let query = supabase
+    .from("product_lots")
+    .select("lot_number")
+    .eq("product_id", productId)
+    .ilike("lot_number", `%${searchText}%`)
+    .limit(10);
+
+  if (warehouseId) {
+    query = query.eq("warehouse_id", warehouseId);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error("Error searching product lots:", error);
+    return [];
+  }
+
+  return data.map((lot) => ({ value: lot.lot_number }));
 };
 
 /**
@@ -115,6 +149,25 @@ export const updateProductLot = async (
     .single();
 
   return { data: data as IProductLot, error };
+};
+
+export const getProductLotByProductIds = async (productId: number[]) => {
+  try {
+    const { data } = await supabase
+      .from("product_lots")
+      .select(
+        `
+      *,
+      product:product_id(id, name, sku),
+      warehouse:warehouse_id(name)
+    `,
+      )
+      .in("product_id", productId);
+
+    return (data || []) as IProductLot[];
+  } catch (e) {
+    return [];
+  }
 };
 
 /**
@@ -565,6 +618,21 @@ export const getLotInventorySummary = async (params?: {
 };
 
 /**
+ * Get lots for a specific product and warehouse
+ * Wrapper function for getProductLots with simplified parameters
+ */
+export const getProductLotsByWarehouse = async (
+  productId: number,
+  warehouseId: number,
+) => {
+  return getProductLots({
+    productId,
+    warehouseId,
+    onlyAvailable: true,
+  });
+};
+
+/**
  * Get lots for a specific product with inventory data
  * Calculates from inventory table:
  * - If lot_id is NULL → show as "Mặc Định" (Default) lot with no dates
@@ -636,7 +704,26 @@ export const getProductLots = async (params: {
     };
   });
 
-  return { data: lotsWithExpiry, error: null };
+  // Sort by expiry date (FEFO - First Expired First Out)
+  // Lots expiring soonest appear first
+  // Lots without expiry dates appear last
+  const sortedLots: IProductLot[] = lotsWithExpiry.sort((a, b) => {
+    // If both have no expiry date, maintain original order
+    if (
+      a.days_until_expiry === undefined &&
+      b.days_until_expiry === undefined
+    ) {
+      return 0;
+    }
+    // Lots without expiry date go to the end
+    if (a.days_until_expiry === undefined) return 1;
+    if (b.days_until_expiry === undefined) return -1;
+
+    // Sort by days until expiry (ascending - nearest expiry first)
+    return a.days_until_expiry - b.days_until_expiry;
+  });
+
+  return { data: sortedLots, error: null };
 };
 
 /**
@@ -737,6 +824,92 @@ export const updateProductLotQuantity = async (params: {
 };
 
 /**
+ * Deduct quantity from a product lot
+ * Used when selling products from a specific lot
+ */
+export const deductProductLotQuantity = async (params: {
+  lotId: number;
+  quantityToDeduct: number;
+}) => {
+  const { lotId, quantityToDeduct } = params;
+
+  try {
+    // Get current lot data
+    const { data: lot, error: fetchError } = await supabase
+      .from("product_lots")
+      .select("quantity, product_id, warehouse_id")
+      .eq("id", lotId)
+      .single();
+
+    if (fetchError) throw fetchError;
+    if (!lot) throw new Error(`Lot ${lotId} not found`);
+
+    // Calculate new quantity
+    const newQuantity = (lot.quantity || 0) - quantityToDeduct;
+
+    if (newQuantity < 0) {
+      throw new Error(
+        `Insufficient quantity in lot ${lotId}. Available: ${lot.quantity}, Required: ${quantityToDeduct}`,
+      );
+    }
+
+    // Update lot quantity
+    const { error: updateError } = await supabase
+      .from("product_lots")
+      .update({ quantity: newQuantity })
+      .eq("id", lotId);
+
+    if (updateError) throw updateError;
+
+    // Sync to inventory table
+    await syncLotQuantityToInventory({
+      productId: lot.product_id,
+      warehouseId: lot.warehouse_id,
+    });
+
+    return { newQuantity, error: null };
+  } catch (error: any) {
+    return { newQuantity: 0, error };
+  }
+};
+
+/**
+ * Batch deduct quantities from multiple product lots
+ * Used when processing orders with multiple lot-managed products
+ */
+export const batchDeductLotQuantities = async (
+  lotDeductions: Array<{
+    lotId: number;
+    quantityToDeduct: number;
+  }>,
+) => {
+  const results = [];
+  const errors = [];
+
+  for (const deduction of lotDeductions) {
+    const { error } = await deductProductLotQuantity(deduction);
+
+    if (error) {
+      errors.push({
+        lotId: deduction.lotId,
+        error: error.message || "Unknown error",
+      });
+    } else {
+      results.push({
+        lotId: deduction.lotId,
+        success: true,
+      });
+    }
+  }
+
+  return {
+    results,
+    errors,
+    success: errors.length === 0,
+  };
+};
+
+/**
  * Update inventory quantity directly
  */
 export const updateInventoryQuantity = async (params: {
@@ -751,6 +924,28 @@ export const updateInventoryQuantity = async (params: {
     .eq("warehouse_id", params.warehouseId);
 
   return { error };
+};
+
+export const addingQuantityToInventory = async (params: {
+  productId: number;
+  warehouseId: number;
+  quantity: number;
+}) => {
+  try {
+    const { data } = await getProductInventoryInWarehouse({
+      productId: params.productId,
+      warehouseId: params.warehouseId,
+    });
+    if (data) {
+      await upsetInventory([
+        {
+          product_id: params.productId,
+          warehouse_id: params.warehouseId,
+          quantity: data.quantity + params.quantity,
+        },
+      ]);
+    }
+  } catch {}
 };
 
 /**
@@ -1111,6 +1306,26 @@ export const disableLotManagement = async (productId: number) => {
   }
 };
 
+/**
+ * Add a record to track which product lot is used in a sales order.
+ * This is used for auditing and checking purposes.
+ */
+export const addSaleOrderProductLotItem = async (
+  item: Omit<SaleOrderProductLotItem, "id" | "created_at">,
+) => {
+  const { data, error } = await supabase
+    .from("sales_order_product_lot_items")
+    .insert({
+      order_id: item.order_id,
+      lot_id: item.lot_id,
+      quantity: item.quantity,
+    })
+    .select()
+    .single();
+
+  return { data, error };
+};
+
 export default {
   // Lot operations
   getAvailableLots,
@@ -1143,11 +1358,14 @@ export default {
   // Reporting
   getLotInventorySummary,
   getProductLots,
+  getProductLotsByWarehouse,
   // getProductLotTotals,
   getCOGSByLot,
   deleteProductLot,
   deleteAllProductLots,
   updateProductLotQuantity,
+  deductProductLotQuantity,
+  batchDeductLotQuantities,
   updateInventoryQuantity,
   syncLotQuantityToInventory,
   syncAllLotsToInventory,
@@ -1157,4 +1375,7 @@ export default {
   // Enable/Disable lot management
   enableLotManagement,
   disableLotManagement,
+
+  // Sales order lot tracking
+  addSaleOrderProductLotItem,
 };

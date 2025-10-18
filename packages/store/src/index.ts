@@ -16,6 +16,7 @@ export * from "./comboStore";
 export * from "./inventoryStore";
 export * from "./productStore";
 export * from "./warehouseStore";
+export * from "./purchaseOrderStore";
 export * from "./lotManagementStore";
 export * from "./fetchStore";
 export * from "./fetchSubmitStore";

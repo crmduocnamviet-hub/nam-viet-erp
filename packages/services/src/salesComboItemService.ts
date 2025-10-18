@@ -9,6 +9,7 @@ export interface ISalesComboItem {
   product_id: number;
   quantity: number;
   unit_price: number;
+  lot_id?: number | null;
 }
 
 /**
@@ -32,7 +33,7 @@ export const createSalesComboItem = async (comboItem: ISalesComboItem) => {
  * @returns Promise with the created combo items data and any error
  */
 export const createMultipleSalesComboItems = async (
-  comboItems: ISalesComboItem[]
+  comboItems: ISalesComboItem[],
 ) => {
   const response = await supabase
     .from("sales_combo_items")
@@ -65,7 +66,7 @@ export const getSalesComboItemsByOrderId = async (orderId: string) => {
         sku,
         barcode
       )
-    `
+    `,
     )
     .eq("order_id", orderId)
     .order("created_at", { ascending: false });
@@ -96,7 +97,7 @@ export const getSalesComboItemsByComboId = async (comboId: number) => {
         sku,
         barcode
       )
-    `
+    `,
     )
     .eq("combo_id", comboId)
     .order("created_at", { ascending: false });

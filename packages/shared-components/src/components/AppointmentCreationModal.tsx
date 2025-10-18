@@ -264,7 +264,7 @@ const AppointmentCreationModal: React.FC<AppointmentCreationModalProps> = ({
         //   startOfHour.add(45, 'minutes'),
         // ];
         const bookedSlotsInHour = bookedTimes.filter((bt) =>
-          bt.isSame(startOfHour, "hour")
+          bt.isSame(startOfHour, "hour"),
         );
         if (bookedSlotsInHour.length >= 4) {
           hours.add(time.hour());
@@ -574,7 +574,7 @@ const AppointmentCreationModal: React.FC<AppointmentCreationModalProps> = ({
       title="Tạo Lịch hẹn mới (4 bước Siêu tốc)"
       onCancel={handleClose}
       width={800}
-      destroyOnClose={true}
+      destroyOnHidden
       footer={
         <Space>
           <Button onClick={handleClose}>Hủy</Button>
@@ -633,7 +633,7 @@ const ConfirmationStep = ({
   const appointmentDateTime =
     allValues.appointmentDate && allValues.appointmentTime
       ? `${allValues.appointmentDate.format(
-          "DD/MM/YYYY"
+          "DD/MM/YYYY",
         )} lúc ${allValues.appointmentTime.format("HH:mm")}`
       : "Chưa chọn";
 

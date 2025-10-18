@@ -1,3 +1,4 @@
+import type { PostgrestSingleResponse } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
 
 export const extractFromPdf = async (fileContent: string, mimeType: string) => {
@@ -5,7 +6,7 @@ export const extractFromPdf = async (fileContent: string, mimeType: string) => {
     "extract-from-pdf",
     {
       body: { fileContent, mimeType },
-    }
+    },
   );
   return response;
 };
@@ -51,7 +52,7 @@ export const searchProducts = async ({
       .select("*", { count: "exact" });
     if (search) {
       query = query.or(
-        `name.ilike.%${search}%,sku.ilike.%${search}%,barcode.ilike.%${search}`
+        `name.ilike.%${search}%,sku.ilike.%${search}%,barcode.ilike.%${search}`,
       );
     }
     if (status) {
@@ -121,7 +122,7 @@ export const getActiveProduct = async () => {
 };
 
 export const getProductById = async (id: number) => {
-  const response = await supabase
+  const response: PostgrestSingleResponse<IProduct> = await supabase
     .from("products")
     .select("*")
     .eq("id", id)
@@ -179,7 +180,7 @@ export const getB2BWarehouseProducts = async ({
         name,
         is_b2b_warehouse
       )
-    `
+    `,
     )
     .ilike("products.name", `%${search}%`)
     .eq("products.is_active", true)
@@ -204,7 +205,7 @@ export const getB2BWarehouseProductByBarCode = async ({
         name,
         is_b2b_warehouse
       )
-    `
+    `,
     )
     .eq("products.barcode", barcode)
     .eq("products.is_active", true)
@@ -226,5 +227,18 @@ export const getProductInWarehouseByBarCode = async ({
     .eq("products.barcode", barcode)
     .eq("products.is_active", true)
     .eq("warehouse_id", warehouseId);
+  return response;
+};
+
+export const getProductInventoryInWarehouse = async (params: {
+  productId: number;
+  warehouseId: number;
+}) => {
+  const response: PostgrestSingleResponse<IInventory> = await supabase
+    .from("inventory")
+    .select("*")
+    .eq("product_id", params.productId)
+    .eq("warehouse_id", params.warehouseId)
+    .single();
   return response;
 };
