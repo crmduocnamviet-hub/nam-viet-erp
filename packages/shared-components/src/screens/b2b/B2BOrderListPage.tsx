@@ -91,7 +91,7 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
   const [editQuoteModalOpen, setEditQuoteModalOpen] = useState(false);
   const [createCustomerModalOpen, setCreateCustomerModalOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<B2BQuoteWithStatus | null>(
-    null
+    null,
   );
   const [orderItems, setOrderItems] = useState<any[]>([]);
   const [loadingItems, setLoadingItems] = useState(false);
@@ -180,7 +180,7 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
 
     // Filter stages based on allowed statuses
     return B2B_ORDER_STAGES.filter((stage) =>
-      allowedStatuses.includes(stage.key)
+      allowedStatuses.includes(stage.key),
     );
   };
 
@@ -266,7 +266,7 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
           "packaged",
         ];
         quotesData = quotesData.filter((quote) =>
-          inventoryRelevantStages.includes(quote.quote_stage)
+          inventoryRelevantStages.includes(quote.quote_stage),
         );
       }
 
@@ -276,7 +276,7 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
       // Clear selected orders if they no longer exist in the current data
       const currentOrderIds = quotesData.map((quote) => quote.quote_id);
       setSelectedOrderIds((prev) =>
-        prev.filter((id) => currentOrderIds.includes(id))
+        prev.filter((id) => currentOrderIds.includes(id)),
       );
     } catch (error: any) {
       notification.error({
@@ -300,13 +300,13 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
 
     if (!hasNotificationPermission) {
       console.log(
-        "[B2B Dashboard] User does not have b2b.notification permission. Skipping realtime subscription."
+        "[B2B Dashboard] User does not have b2b.notification permission. Skipping realtime subscription.",
       );
       return;
     }
 
     console.log(
-      "[B2B Dashboard] Setting up realtime subscription for b2b_quotes..."
+      "[B2B Dashboard] Setting up realtime subscription for b2b_quotes...",
     );
 
     // Subscribe to b2b_quotes changes
@@ -347,7 +347,7 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
         // Refresh the list to show updated data
         loadOrders();
       },
-      employee?.employee_id // Optional: filter by employee ID
+      employee?.employee_id, // Optional: filter by employee ID
     );
 
     // Cleanup subscription on unmount
@@ -461,8 +461,8 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
             <div class="order">
               <div class="order-header">
                 <div class="order-title">Đơn hàng #${index + 1}: ${
-              quote.quote_number || "Chưa có mã"
-            }</div>
+                  quote.quote_number || "Chưa có mã"
+                }</div>
                 <div class="client-info">
                   <strong>Khách hàng:</strong> ${
                     quote.customer_name || "N/A"
@@ -499,13 +499,13 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
                         <td>${item.product_sku || "N/A"}</td>
                         <td>${item.quantity || 0}</td>
                         <td>${(item.unit_price || 0).toLocaleString(
-                          "vi-VN"
+                          "vi-VN",
                         )} VND</td>
                         <td>${(
                           (item.quantity || 0) * (item.unit_price || 0)
                         ).toLocaleString("vi-VN")} VND</td>
                       </tr>
-                    `
+                    `,
                       )
                       .join("")}
                   </tbody>
@@ -600,7 +600,7 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
 
       // Check if this product exists in the current order
       const orderItem = orderItems.find(
-        (item) => item.product_id === scannedProduct.id
+        (item) => item.product_id === scannedProduct.id,
       );
 
       if (!orderItem) {
@@ -675,7 +675,7 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
       setLoading(true);
       const { error } = await updateQuoteStage(
         selectedOrder.quote_id,
-        "packaged"
+        "packaged",
       );
 
       if (error) {
@@ -763,9 +763,8 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
         created_by_employee_id: employee.employee_id,
       };
 
-      const { data: newCustomer, error } = await createB2BCustomer(
-        customerData
-      );
+      const { data: newCustomer, error } =
+        await createB2BCustomer(customerData);
 
       if (error) {
         throw new Error(error.message);
@@ -802,7 +801,7 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
   // Auto-fill customer details when customer name/code changes
   const handleCustomerChange = async (
     field: "customer_name" | "customer_code",
-    value: string
+    value: string,
   ) => {
     if (!value) return;
 
@@ -812,8 +811,8 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
         field === "customer_name"
           ? c.customer_name === value
           : field === "customer_code"
-          ? c.customer_code === value
-          : false
+            ? c.customer_code === value
+            : false,
       );
 
       if (existingCustomer) {
@@ -880,7 +879,7 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
         existingCustomer = existingCustomers?.find(
           (c) =>
             c.customer_name === values.customer_name ||
-            (values.customer_code && c.customer_code === values.customer_code)
+            (values.customer_code && c.customer_code === values.customer_code),
         );
 
         if (existingCustomer) {
@@ -1024,7 +1023,7 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
       const updatePromises = selectedOrderIds.map((orderId) =>
         updateB2BQuote(orderId, {
           quote_stage: values.quote_stage,
-        })
+        }),
       );
 
       await Promise.all(updatePromises);
@@ -1088,7 +1087,7 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
 
       const { data: updatedQuote, error } = await updateB2BQuote(
         selectedOrder.quote_id,
-        updateData
+        updateData,
       );
 
       if (error) {
@@ -1283,29 +1282,13 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
       width: 150,
       render: (_, record) => (
         <Space>
-          {canViewQuotes && (
-            <Button
-              type="link"
-              icon={<EyeOutlined />}
-              onClick={() => handleViewOrder(record)}
-              size="small"
-            >
-              Xem
-            </Button>
-          )}
           {canEditQuotes && canEditOrderStatus(record.quote_stage) && (
             <Button
               type="link"
               icon={<EditOutlined />}
               onClick={() => handleEditOrder(record)}
               size="small"
-            >
-              {isInventoryStaff &&
-              !userPermissions.includes("admin") &&
-              !userPermissions.includes("super-admin")
-                ? "Cập nhật"
-                : "Sửa"}
-            </Button>
+            ></Button>
           )}
           {canEditQuotes && !canEditOrderStatus(record.quote_stage) && (
             <Button
@@ -1321,13 +1304,7 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
                   ? "Đơn hàng này không thuộc phạm vi quản lý của bộ phận kho"
                   : "Bạn không có quyền chỉnh sửa trạng thái này"
               }
-            >
-              {isInventoryStaff &&
-              !userPermissions.includes("admin") &&
-              !userPermissions.includes("super-admin")
-                ? "Cập nhật"
-                : "Sửa"}
-            </Button>
+            ></Button>
           )}
         </Space>
       ),
@@ -1461,10 +1438,10 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
                     {filters.paymentStatus === "unpaid"
                       ? "Chưa thanh toán"
                       : filters.paymentStatus === "partial"
-                      ? "Thanh toán một phần"
-                      : filters.paymentStatus === "paid"
-                      ? "Đã thanh toán"
-                      : "Quá hạn thanh toán"}
+                        ? "Thanh toán một phần"
+                        : filters.paymentStatus === "paid"
+                          ? "Đã thanh toán"
+                          : "Quá hạn thanh toán"}
                   </Tag>
                 )}
                 {filters.customerName && (
@@ -1569,6 +1546,12 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
               `${range[0]}-${range[1]} của ${total} đơn hàng`,
           }}
           scroll={{ x: 1000 }}
+          onRow={(record) => ({
+            onClick: () => {
+              canViewQuotes && handleViewOrder(record);
+            },
+            style: { cursor: canViewQuotes ? "pointer" : "not-allowed" },
+          })}
         />
       </Card>
 
@@ -1677,8 +1660,8 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
               !userPermissions.includes("super-admin")
                 ? B2B_ORDER_STAGES.filter((stage) =>
                     ["accepted", "pending_packaging", "packaged"].includes(
-                      stage.key
-                    )
+                      stage.key,
+                    ),
                   )
                 : B2B_ORDER_STAGES
               ).map((stage) => (

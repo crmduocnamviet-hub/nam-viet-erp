@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Card,
   Table,
@@ -36,6 +37,7 @@ interface ProductListPageContentProps {
 const ProductListPageContent: React.FC<ProductListPageContentProps> = ({
   hasPermission = () => true,
 }) => {
+  const navigate = useNavigate();
   const { notification } = AntApp.useApp();
   const screens = useBreakpoint();
   const isMobile = !screens.lg;
@@ -174,7 +176,10 @@ const ProductListPageContent: React.FC<ProductListPageContentProps> = ({
           <Title level={isMobile ? 3 : 2} style={{ margin: 0 }}>
             📦 Danh sách Sản phẩm
           </Title>
-          <Text type="secondary" style={{ fontSize: isMobile ? "14px" : "16px" }}>
+          <Text
+            type="secondary"
+            style={{ fontSize: isMobile ? "14px" : "16px" }}
+          >
             Xem danh sách sản phẩm trong hệ thống
           </Text>
         </div>
@@ -197,6 +202,10 @@ const ProductListPageContent: React.FC<ProductListPageContentProps> = ({
               rowKey="id"
               pagination={pagination}
               onChange={handleTableChange}
+              onRow={(record) => ({
+                onClick: () => navigate(`/products/edit/${record.id}`),
+                style: { cursor: "pointer" },
+              })}
               scroll={{ x: 800 }}
             />
           </Space>

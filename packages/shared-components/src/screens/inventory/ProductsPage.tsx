@@ -54,7 +54,7 @@ interface ProductsPageContentProps {
 }
 
 const ProductsPageContent: React.FC<ProductsPageContentProps> = ({
-  hasPermission = () => true
+  hasPermission = () => true,
 }) => {
   const navigate = useNavigate();
   const { notification, modal } = AntApp.useApp();
@@ -76,7 +76,7 @@ const ProductsPageContent: React.FC<ProductsPageContentProps> = ({
 
   const fetchProducts = async (
     search = debouncedSearchTerm,
-    status = statusFilter
+    status = statusFilter,
   ) => {
     setTableLoading(true);
     try {
@@ -150,7 +150,7 @@ const ProductsPageContent: React.FC<ProductsPageContentProps> = ({
   };
 
   const handleBulkActions = async (
-    action: "deactivate" | "activate" | "setFixed" | "unsetFixed" | "delete"
+    action: "deactivate" | "activate" | "setFixed" | "unsetFixed" | "delete",
   ) => {
     let confirmTitle = "";
     let okType: "primary" | "danger" = "primary";
@@ -235,7 +235,6 @@ const ProductsPageContent: React.FC<ProductsPageContentProps> = ({
     }
     navigate("/products/create");
   };
-
 
   const onSelectChange = (newSelectedRowKeys: React.Key[]) => {
     setSelectedRowKeys(newSelectedRowKeys);
@@ -408,7 +407,7 @@ const ProductsPageContent: React.FC<ProductsPageContentProps> = ({
       render: (inventoryData: any[], record: any) => {
         if (!inventoryData) return `0 ${record.retail_unit || ""}`;
         const inventory = inventoryData.find(
-          (inv) => inv.warehouse_id === wh.id
+          (inv) => inv.warehouse_id === wh.id,
         );
         const unit = wh.is_b2b_warehouse
           ? record.wholesale_unit
@@ -422,11 +421,6 @@ const ProductsPageContent: React.FC<ProductsPageContentProps> = ({
       key: "action",
       render: (_: any, record: any) => (
         <Space size="middle">
-          <Button
-            type="link"
-            icon={<EditOutlined />}
-            onClick={() => handleEdit(record)}
-          />
           <Button
             type="link"
             icon={<DeleteOutlined />}
@@ -549,6 +543,10 @@ const ProductsPageContent: React.FC<ProductsPageContentProps> = ({
           rowKey="id"
           pagination={pagination}
           onChange={handleTableChange}
+          onRow={(record) => ({
+            onClick: () => handleEdit(record),
+            style: { cursor: "pointer" },
+          })}
         />
       </Space>
     </>

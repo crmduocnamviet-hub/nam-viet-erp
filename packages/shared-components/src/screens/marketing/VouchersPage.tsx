@@ -16,7 +16,7 @@ import {
   Tag,
   Grid,
 } from "antd";
-import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import { PlusOutlined, DeleteOutlined } from "@ant-design/icons";
 import {
   createVoucher,
   deleteVoucher,
@@ -168,15 +168,18 @@ const Vouchers: React.FC = () => {
     {
       title: "Hành động",
       key: "action",
+      width: 80,
+      align: "center" as const,
+      fixed: "right" as const,
       render: (_: any, record: any) => (
-        <Space>
-          <Button icon={<EditOutlined />} onClick={() => handleEdit(record)} />
-          <Button
-            icon={<DeleteOutlined />}
-            danger
-            onClick={() => handleDelete(record.id, record.code)}
-          />
-        </Space>
+        <Button
+          icon={<DeleteOutlined />}
+          danger
+          onClick={(e) => {
+            e.stopPropagation();
+            handleDelete(record.id, record.code);
+          }}
+        />
       ),
     },
   ];
@@ -198,6 +201,10 @@ const Vouchers: React.FC = () => {
         dataSource={vouchers}
         loading={loading}
         rowKey="id"
+        onRow={(record) => ({
+          onClick: () => handleEdit(record),
+          style: { cursor: "pointer" },
+        })}
       />
 
       <Modal

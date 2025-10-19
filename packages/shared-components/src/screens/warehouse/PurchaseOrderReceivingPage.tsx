@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Card,
@@ -18,10 +18,6 @@ import {
   Badge,
   Empty,
   Spin,
-  Form,
-  Select,
-  DatePicker,
-  Input,
 } from "antd";
 import {
   ScanOutlined,
@@ -29,12 +25,11 @@ import {
   WarningOutlined,
   BarcodeOutlined,
   ArrowLeftOutlined,
-  InboxOutlined,
   ClockCircleOutlined,
   PlusOutlined,
   DeleteOutlined,
+  InboxOutlined,
 } from "@ant-design/icons";
-import dayjs from "dayjs";
 import type { ColumnsType } from "antd/es/table";
 import PageLayout from "../../components/PageLayout";
 import LotExpirationInput from "../../components/LotExpirationInput";
@@ -77,159 +72,12 @@ const PurchaseOrderReceivingPage: React.FC = () => {
   const [scannerOpen, setScannerOpen] = useState(false);
   const [confirming, setConfirming] = useState(false);
 
-  // New import modal state
-  const [newImportModalOpen, setNewImportModalOpen] = useState(false);
-  const [newImportForm] = Form.useForm();
-  const [selectedProducts, setSelectedProducts] = useState<any[]>([]);
-  const [creatingImport, setCreatingImport] = useState(false);
-
-  const selectedSupplierId = Form.useWatch("supplier_id", newImportForm);
-
-  const supplierProducts = useMemo(() => {
-    if (!selectedSupplierId) {
-      return [];
-    }
-    return products.filter((p) => p.supplier_id === selectedSupplierId);
-  }, [selectedSupplierId, products]);
-
   // Fetch data on mount
   useEffect(() => {
     fetchPurchaseOrders({
       status: ["ordered", "sent", "partially_received"],
     });
-    fetchSuppliers();
-    fetchProducts();
-    fetchB2bWarehouse();
-  }, [fetchPurchaseOrders, fetchSuppliers, fetchProducts, fetchB2bWarehouse]);
-
-  // Open new import modal
-  const handleOpenNewImportModal = () => {
-    setNewImportModalOpen(true);
-    setSelectedProducts([]);
-    newImportForm.resetFields();
-    newImportForm.setFieldsValue({
-      order_date: dayjs(),
-    });
-  };
-
-  // Add product to import list
-  const handleAddProduct = () => {
-    setSelectedProducts([
-      ...selectedProducts,
-      {
-        id: Date.now(), // Temporary ID for UI
-        product_id: undefined,
-        quantity: 1,
-        lot_number: "",
-        expiration_date: "",
-      },
-    ]);
-  };
-
-  // Remove product from import list
-  const handleRemoveProduct = (id: number) => {
-    setSelectedProducts(selectedProducts.filter((p) => p.id !== id));
-  };
-
-  // Update product in import list
-  const handleUpdateProduct = (id: number, field: string, value: any) => {
-    setSelectedProducts(
-      selectedProducts.map((p) => (p.id === id ? { ...p, [field]: value } : p)),
-    );
-  };
-
-  // Create new import order
-  const handleCreateImport = async () => {
-    try {
-      const values = await newImportForm.validateFields();
-
-      if (!b2bWarehouse) {
-        notification.error({
-          message: "Lỗi",
-          description: "Không tìm thấy kho B2B",
-        });
-        return;
-      }
-
-      if (selectedProducts.length === 0) {
-        notification.warning({
-          message: "Chưa có sản phẩm",
-          description: "Vui lòng thêm ít nhất 1 sản phẩm",
-        });
-        return;
-      }
-
-      // Validate all products have required fields
-      const invalidProducts = selectedProducts.filter(
-        (p) => !p.product_id || !p.quantity || p.quantity <= 0,
-      );
-
-      if (invalidProducts.length > 0) {
-        notification.warning({
-          message: "Thông tin không hợp lệ",
-          description:
-            "Vui lòng chọn sản phẩm và nhập số lượng cho tất cả các dòng",
-        });
-        return;
-      }
-
-      setCreatingImport(true);
-
-      // Calculate total amount
-      const totalAmount = selectedProducts.reduce((sum, p) => {
-        const product = products.find((prod) => prod.id === p.product_id);
-        const price = product?.cost_price || product?.wholesale_price || 0;
-        return sum + price * p.quantity;
-      }, 0);
-
-      // Prepare items
-      const items = selectedProducts.map((p) => ({
-        product_id: p.product_id,
-        quantity: p.quantity,
-        lot_number: p.lot_number || undefined,
-        expiration_date: p.expiration_date || undefined,
-      }));
-
-      // Create import order - always use B2B warehouse
-      const result = await createImport(
-        {
-          supplier_id: values.supplier_id,
-          order_date: values.order_date.format("YYYY-MM-DD"),
-          expected_delivery_date: null,
-          total_amount: totalAmount,
-          notes: values.notes || "Nhập hàng trực tiếp vào kho B2B",
-          created_by: user?.id || null,
-        },
-        items,
-        b2bWarehouse.id,
-      );
-
-      if (!result.success) {
-        throw new Error(result.error?.message || "Failed to create import");
-      }
-
-      notification.success({
-        message: "Tạo phiếu nhập thành công",
-        description: `Đã tạo phiếu nhập vào kho ${b2bWarehouse.name} với ${selectedProducts.length} sản phẩm`,
-        duration: 4,
-      });
-
-      // Close modal and refresh
-      setNewImportModalOpen(false);
-      setSelectedProducts([]);
-      newImportForm.resetFields();
-      fetchPurchaseOrders({
-        status: ["ordered", "sent", "partially_received"],
-      });
-    } catch (error: any) {
-      notification.error({
-        message: "Lỗi",
-        description: error.message || "Không thể tạo phiếu nhập",
-      });
-    } finally {
-      setCreatingImport(false);
-    }
-  };
+  }, [fetchPurchaseOrders]);
 
   // Calculate receiving summary
   const receivingSummary = React.useMemo(() => {
@@ -667,7 +515,7 @@ const PurchaseOrderReceivingPage: React.FC = () => {
             <Button
               type="primary"
               icon={<PlusOutlined />}
-              onClick={handleOpenNewImportModal}
+              onClick={() => navigate("/warehouse/receiving/create")}
               size="large"
             >
               Tạo Phiếu Nhập Mới
@@ -843,306 +691,6 @@ const PurchaseOrderReceivingPage: React.FC = () => {
         onClose={() => setScannerOpen(false)}
         onScan={handleBarcodeScan}
       />
-
-      {/* New Import Modal */}
-      <Modal
-        title={
-          <Space>
-            <PlusOutlined />
-            Tạo Phiếu Nhập Hàng Mới
-          </Space>
-        }
-        open={newImportModalOpen}
-        onCancel={() => setNewImportModalOpen(false)}
-        width={1000}
-        footer={[
-          <Button
-            key="cancel"
-            onClick={() => setNewImportModalOpen(false)}
-            size="large"
-          >
-            Hủy
-          </Button>,
-          <Button
-            key="submit"
-            type="primary"
-            loading={creatingImport}
-            disabled={!b2bWarehouse}
-            onClick={handleCreateImport}
-            icon={<CheckCircleOutlined />}
-            size="large"
-          >
-            Tạo Phiếu Nhập
-          </Button>,
-        ]}
-      >
-        <Form
-          form={newImportForm}
-          layout="vertical"
-          onValuesChange={(changedValues) => {
-            if (
-              Object.prototype.hasOwnProperty.call(changedValues, "supplier_id")
-            ) {
-              setSelectedProducts([]);
-            }
-          }}
-        >
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="supplier_id"
-                label="Nhà Cung Cấp"
-                rules={[
-                  { required: true, message: "Vui lòng chọn nhà cung cấp" },
-                ]}
-              >
-                <Select
-                  placeholder="Chọn nhà cung cấp"
-                  showSearch
-                  filterOption={(input, option) =>
-                    (option?.label ?? "")
-                      .toLowerCase()
-                      .includes(input.toLowerCase())
-                  }
-                  options={suppliers.map((s) => ({
-                    label: s.name,
-                    value: s.id,
-                  }))}
-                  size="large"
-                />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item label="Kho Nhập">
-                <Input
-                  value={b2bWarehouse?.name || "Đang tải..."}
-                  disabled
-                  style={{ cursor: "not-allowed" }}
-                  prefix={<InboxOutlined />}
-                  size="large"
-                />
-                <Text type="secondary" style={{ fontSize: 12 }}>
-                  Tự động nhập vào kho B2B
-                </Text>
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="order_date"
-                label="Ngày Nhập"
-                rules={[{ required: true, message: "Vui lòng chọn ngày" }]}
-              >
-                <DatePicker
-                  style={{ width: "100%" }}
-                  format="DD/MM/YYYY"
-                  size="large"
-                />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="notes" label="Ghi Chú">
-                <Input.TextArea
-                  rows={1}
-                  placeholder="Ghi chú về phiếu nhập"
-                  size="large"
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-        </Form>
-
-        <Card
-          title="Danh Sách Sản Phẩm"
-          extra={
-            <Button
-              type="dashed"
-              icon={<PlusOutlined />}
-              onClick={handleAddProduct}
-              disabled={!selectedSupplierId}
-              size="large"
-            >
-              Thêm Sản Phẩm
-            </Button>
-          }
-          style={{ marginTop: 16 }}
-        >
-          {!selectedSupplierId ? (
-            <Empty description="Vui lòng chọn nhà cung cấp để thêm sản phẩm" />
-          ) : selectedProducts.length === 0 ? (
-            <Empty description="Chưa có sản phẩm nào. Nhấn 'Thêm Sản Phẩm' để bắt đầu" />
-          ) : (
-            <Table
-              dataSource={selectedProducts}
-              rowKey="id"
-              pagination={false}
-              size="large"
-              columns={[
-                {
-                  title: "Sản Phẩm",
-                  key: "product",
-                  width: 250,
-                  render: (_, record) => (
-                    <Select
-                      placeholder="Chọn sản phẩm"
-                      style={{ width: "100%" }}
-                      value={record.product_id}
-                      onChange={(value) =>
-                        handleUpdateProduct(record.id, "product_id", value)
-                      }
-                      showSearch
-                      filterOption={(input, option) =>
-                        (option?.label ?? "")
-                          .toLowerCase()
-                          .includes(input.toLowerCase())
-                      }
-                      options={supplierProducts.map((p) => ({
-                        label: `${p.name} (${p.sku || "N/A"})`,
-                        value: p.id,
-                      }))}
-                      disabled={!selectedSupplierId}
-                      size="large"
-                    />
-                  ),
-                },
-                {
-                  title: "Số Lượng",
-                  key: "quantity",
-                  width: 100,
-                  render: (_, record) => (
-                    <InputNumber
-                      min={1}
-                      value={record.quantity}
-                      onChange={(value) =>
-                        handleUpdateProduct(record.id, "quantity", value || 1)
-                      }
-                      style={{ width: "100%" }}
-                      size="middle"
-                    />
-                  ),
-                },
-                {
-                  title: "Số Lô & Hạn SD",
-                  key: "lot",
-                  width: 280,
-                  render: (_, record) => {
-                    const product = products.find(
-                      (p) => p.id === record.product_id,
-                    );
-                    const showLotInput = product?.enable_lot_management;
-                    return (
-                      <LotExpirationInput
-                        showLotNumberInput={showLotInput}
-                        value={{
-                          lotNumber: record.lot_number,
-                          expirationDate: record.expiration_date,
-                        }}
-                        onChange={(value) => {
-                          // Update the entire lot/expiration data in one call
-                          setSelectedProducts(
-                            selectedProducts.map((p) =>
-                              p.id === record.id
-                                ? {
-                                    ...p,
-                                    lot_number: value.lotNumber,
-                                    expiration_date: value.expirationDate,
-                                  }
-                                : p,
-                            ),
-                          );
-                        }}
-                        productId={record.product_id}
-                        warehouseId={b2bWarehouse?.id}
-                      />
-                    );
-                  },
-                },
-                {
-                  title: "Giá",
-                  key: "price",
-                  width: 100,
-                  render: (_, record) => {
-                    const product = products.find(
-                      (p) => p.id === record.product_id,
-                    );
-                    const price =
-                      product?.cost_price || product?.wholesale_price || 0;
-                    return <Text>{price.toLocaleString("vi-VN")} ₫</Text>;
-                  },
-                },
-                {
-                  title: "Thành Tiền",
-                  key: "total",
-                  width: 120,
-                  render: (_, record) => {
-                    const product = products.find(
-                      (p) => p.id === record.product_id,
-                    );
-                    const price =
-                      product?.cost_price || product?.wholesale_price || 0;
-                    const total = price * (record.quantity || 0);
-                    return (
-                      <Text strong>{total.toLocaleString("vi-VN")} ₫</Text>
-                    );
-                  },
-                },
-                {
-                  title: "",
-                  key: "actions",
-                  width: 50,
-                  fixed: "right",
-                  render: (_, record) => (
-                    <Button
-                      type="text"
-                      danger
-                      icon={<DeleteOutlined />}
-                      onClick={() => handleRemoveProduct(record.id)}
-                      size="large"
-                    />
-                  ),
-                },
-              ]}
-            />
-          )}
-
-          {selectedProducts.length > 0 && (
-            <div style={{ marginTop: 16, textAlign: "right" }}>
-              <Space size="large">
-                <Text>
-                  Tổng sản phẩm: <Text strong>{selectedProducts.length}</Text>
-                </Text>
-                <Text>
-                  Tổng số lượng:{" "}
-                  <Text strong>
-                    {selectedProducts.reduce(
-                      (sum, p) => sum + (p.quantity || 0),
-                      0,
-                    )}
-                  </Text>
-                </Text>
-                <Text>
-                  Tổng tiền:{" "}
-                  <Text strong type="success">
-                    {selectedProducts
-                      .reduce((sum, p) => {
-                        const product = products.find(
-                          (prod) => prod.id === p.product_id,
-                        );
-                        const price =
-                          product?.cost_price || product?.wholesale_price || 0;
-                        return sum + price * (p.quantity || 0);
-                      }, 0)
-                      .toLocaleString("vi-VN")}{" "}
-                    ₫
-                  </Text>
-                </Text>
-              </Space>
-            </div>
-          )}
-        </Card>
-      </Modal>
     </PageLayout>
   );
 };

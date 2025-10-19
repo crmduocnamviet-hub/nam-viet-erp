@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Button,
   Card,
@@ -18,10 +19,9 @@ import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   ClearOutlined,
+  PlusCircleOutlined,
 } from "@ant-design/icons";
 import PageLayout from "../../components/PageLayout";
-import AutoGeneratePOModal from "../../components/AutoGeneratePOModal";
-import EditPurchaseOrderModal from "../../components/EditPurchaseOrderModal";
 import ViewPurchaseOrderModal from "../../components/ViewPurchaseOrderModal";
 import PurchaseOrdersTable from "../../components/PurchaseOrdersTable";
 import {
@@ -32,7 +32,6 @@ import {
   createPurchaseOrdersFromProducts,
   updatePurchaseOrderStatus,
 } from "@nam-viet-erp/services";
-import { getSuppliers } from "@nam-viet-erp/services/src/supplierService";
 import { useAuthStore } from "@nam-viet-erp/store";
 import { useEmployeeStore } from "@nam-viet-erp/store";
 import dayjs from "dayjs";
@@ -40,6 +39,7 @@ import dayjs from "dayjs";
 const { RangePicker } = DatePicker;
 
 const PurchaseOrdersPage: React.FC = () => {
+  const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
   const hasPermission = useEmployeeStore((state) => state.hasPermission);
   const [loading, setLoading] = useState(false);
@@ -48,48 +48,10 @@ const PurchaseOrdersPage: React.FC = () => {
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(
     null,
   );
-  const [autoGenModalOpen, setAutoGenModalOpen] = useState(false);
   const [autoGenLoading, setAutoGenLoading] = useState(false);
-  const [suggestedProducts, setSuggestedProducts] = useState<any[]>([]);
   const [purchaseOrders, setPurchaseOrders] = useState<any[]>([]);
-  const [suppliers, setSuppliers] = useState<any[]>([]);
-  const [editModalOpen, setEditModalOpen] = useState(false);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [selectedPO, setSelectedPO] = useState<any>(null);
-  const [analyticsLoading, setAnalyticsLoading] = useState(false);
-  const [inventoryAnalytics, setInventoryAnalytics] = useState<any>(null);
-
-  // Fetch inventory analytics
-  const fetchInventoryAnalytics = async () => {
-    setAnalyticsLoading(true);
-    try {
-      const warehouseId = 1; // TODO: Get actual warehouseId
-      const result = await analyzeProductsNeedingReorder(warehouseId);
-      setInventoryAnalytics(result);
-    } catch (error: any) {
-      console.error("Error fetching analytics:", error);
-    } finally {
-      setAnalyticsLoading(false);
-    }
-  };
-
-  // Fetch suppliers
-  const fetchSuppliers = async () => {
-    try {
-      const { data, error } = await getSuppliers();
-
-      if (error) {
-        throw error;
-      }
-
-      setSuppliers(data || []);
-    } catch (error: any) {
-      notification.error({
-        message: "Lỗi",
-        description: error.message || "Không thể tải danh sách nhà cung cấp",
-      });
-    }
-  };
 
   // Fetch purchase orders
   const fetchPurchaseOrders = async () => {
@@ -122,12 +84,6 @@ const PurchaseOrdersPage: React.FC = () => {
       setLoading(false);
     }
   };
-
-  // Load suppliers and analytics on mount
-  useEffect(() => {
-    fetchSuppliers();
-    fetchInventoryAnalytics();
-  }, []);
 
   // Load data on mount and when filters change
   useEffect(() => {
@@ -169,54 +125,8 @@ const PurchaseOrdersPage: React.FC = () => {
     return { total, draft, ordered, partial, completed };
   }, [purchaseOrders]);
 
-  // Prepare chart data
-  const chartData = useMemo(() => {
-    if (!inventoryAnalytics?.productsToOrder) {
-      return {
-        supplierData: { categories: [], series: [] },
-        statusData: { labels: [], series: [] },
-      };
-    }
-
-    // Group products by supplier
-    const productsBySupplier: Record<string, number> = {};
-    inventoryAnalytics.productsToOrder.forEach((product: any) => {
-      const supplier = product.supplier_name || "Unknown";
-      productsBySupplier[supplier] = (productsBySupplier[supplier] || 0) + 1;
-    });
-
-    // Sort by quantity
-    const sortedSuppliers = Object.entries(productsBySupplier)
-      .sort(([, a], [, b]) => b - a)
-      .slice(0, 10); // Top 10 suppliers
-
-    const supplierData = {
-      categories: sortedSuppliers.map(([name]) => name),
-      series: [
-        {
-          name: "Số sản phẩm cần đặt",
-          data: sortedSuppliers.map(([, count]) => count),
-        },
-      ],
-    };
-
-    // Status distribution
-    const statusData = {
-      labels: ["Cần đặt hàng", "Tồn kho ổn định"],
-      series: [
-        inventoryAnalytics.productsToOrder.length,
-        inventoryAnalytics.totalProducts -
-          inventoryAnalytics.productsToOrder.length,
-      ],
-    };
-
-    return { supplierData, statusData };
-  }, [inventoryAnalytics]);
-
-  const handleOpenAutoGenerate = async () => {
-    setAutoGenModalOpen(true);
+  const handleAutoGenerate = async () => {
     setAutoGenLoading(true);
-    setSuggestedProducts([]);
 
     try {
       // TODO: Get actual warehouseId from context/props
@@ -225,49 +135,36 @@ const PurchaseOrdersPage: React.FC = () => {
       const result = await analyzeProductsNeedingReorder(warehouseId);
 
       if (result.productsToOrder && result.productsToOrder.length > 0) {
-        setSuggestedProducts(result.productsToOrder);
+        // Directly create purchase orders without modal confirmation
+        const createResult = await createPurchaseOrdersFromProducts(
+          result.productsToOrder,
+          warehouseId,
+          user?.id || null,
+        );
+
+        notification.success({
+          message: "Thành công",
+          description:
+            createResult.message ||
+            `Đã tạo đơn đặt hàng tự động cho ${result.productsToOrder.length} sản phẩm`,
+          duration: 5,
+        });
+
+        // Refresh purchase orders list
+        fetchPurchaseOrders();
+      } else {
+        notification.info({
+          message: "Thông báo",
+          description: "Không có sản phẩm nào cần đặt hàng",
+        });
       }
     } catch (error: any) {
       notification.error({
         message: "Lỗi",
-        description: error.message || "Không thể phân tích tồn kho",
+        description: error.message || "Không thể tạo đơn đặt hàng tự động",
       });
-      setAutoGenModalOpen(false);
     } finally {
       setAutoGenLoading(false);
-    }
-  };
-
-  const handleConfirmAutoGenerate = async (editedProducts: any[]) => {
-    try {
-      // TODO: Get actual warehouseId from context/props
-      const warehouseId = 1; // Replace with actual warehouse selection
-
-      // Create purchase orders from edited products
-      const result = await createPurchaseOrdersFromProducts(
-        editedProducts,
-        warehouseId,
-        user?.id || null,
-      );
-
-      notification.success({
-        message: "Thành công",
-        description:
-          result.message ||
-          `Đã tạo đơn đặt hàng tự động cho ${editedProducts.length} sản phẩm`,
-        duration: 5,
-      });
-
-      setAutoGenModalOpen(false);
-      setSuggestedProducts([]);
-
-      // Refresh purchase orders list
-      fetchPurchaseOrders();
-    } catch (error: any) {
-      notification.error({
-        message: "Lỗi",
-        description: error.message || "Không thể tạo đơn đặt hàng",
-      });
     }
   };
 
@@ -277,12 +174,13 @@ const PurchaseOrdersPage: React.FC = () => {
   };
 
   const handleEdit = (record: any) => {
-    setSelectedPO(record);
-    setEditModalOpen(true);
-  };
-
-  const handleEditSuccess = () => {
-    fetchPurchaseOrders();
+    // Navigate to edit page for draft orders
+    if (record.status === "draft") {
+      navigate(`/warehouse/purchase-orders/${record.id}/edit`);
+    } else {
+      // Show view modal for non-draft orders
+      handleView(record);
+    }
   };
 
   const handleCancel = async (record: any) => {
@@ -361,10 +259,21 @@ const PurchaseOrdersPage: React.FC = () => {
             <Button
               type="primary"
               icon={<SyncOutlined />}
-              onClick={handleOpenAutoGenerate}
+              onClick={handleAutoGenerate}
+              loading={autoGenLoading}
               size="large"
             >
-              Tạo Dự Trù Tự Động
+              Dự Trù Tự Động
+            </Button>
+          )}
+          {canAutoCreate && (
+            <Button
+              type="primary"
+              icon={<PlusCircleOutlined />}
+              onClick={() => navigate("/warehouse/receiving/create")}
+              size="large"
+            >
+              Tạo đơn hàng
             </Button>
           )}
         </Space>
@@ -470,19 +379,6 @@ const PurchaseOrdersPage: React.FC = () => {
         />
       </Card>
 
-      {/* Auto Generate PO Modal */}
-      <AutoGeneratePOModal
-        open={autoGenModalOpen}
-        onClose={() => {
-          setAutoGenModalOpen(false);
-          setSuggestedProducts([]);
-        }}
-        onConfirm={handleConfirmAutoGenerate}
-        loading={autoGenLoading}
-        products={suggestedProducts}
-        warehouseName="Kho Chính" // TODO: Replace with actual warehouse name
-      />
-
       {/* View Purchase Order Modal */}
       <ViewPurchaseOrderModal
         open={viewModalOpen}
@@ -491,18 +387,6 @@ const PurchaseOrdersPage: React.FC = () => {
           setSelectedPO(null);
         }}
         purchaseOrder={selectedPO}
-      />
-
-      {/* Edit Purchase Order Modal */}
-      <EditPurchaseOrderModal
-        open={editModalOpen}
-        onClose={() => {
-          setEditModalOpen(false);
-          setSelectedPO(null);
-        }}
-        onSuccess={handleEditSuccess}
-        purchaseOrder={selectedPO}
-        suppliers={suppliers}
       />
     </PageLayout>
   );

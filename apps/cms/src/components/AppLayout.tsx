@@ -24,7 +24,6 @@ import {
   Drawer,
 } from "antd";
 import viVN from "antd/locale/vi_VN";
-import { signOut } from "@nam-viet-erp/services";
 import {
   Screen,
   CreateProductPage,
@@ -33,7 +32,7 @@ import {
 import logo from "../assets/logo.png";
 import MissingDocumentationWarning from "./MissingDocumentationWarning";
 
-const { Header, Content, Footer, Sider } = Layout;
+const { Content, Sider } = Layout;
 const { Title } = Typography;
 const { useBreakpoint } = Grid; // <-- "Mắt thần" theo dõi kích thước màn hình
 
@@ -193,11 +192,6 @@ const AppLayout: React.FC = () => {
     }
   };
 
-  const handleLogout = async () => {
-    await signOut();
-    navigate("/login");
-  };
-
   return (
     <ConfigProvider theme={namVietTheme} locale={viVN}>
       <Layout style={{ minHeight: "100vh" }}>
@@ -279,33 +273,31 @@ const AppLayout: React.FC = () => {
             transition: "margin-left 0.2s",
           }}
         >
-          <Header
-            style={{
-              padding: "0 24px",
-              background: namVietTheme.components.Layout.headerBg,
-              display: "flex",
-              justifyContent: isMobile ? "space-between" : "flex-end",
-              alignItems: "center",
-              height: 48,
-            }}
-          >
-            {/* Nút Hamburger chỉ hiển thị trên mobile */}
-            {isMobile && (
+          {isMobile && (
+            <div
+              style={{
+                position: "fixed",
+                top: 16,
+                right: 16,
+                zIndex: 1000,
+              }}
+            >
               <Button
-                type="text"
+                type="primary"
+                shape="circle"
                 icon={<MenuOutlined style={{ fontSize: "20px" }} />}
                 onClick={() => setMobileMenuOpen(true)}
+                size="large"
               />
-            )}
-            <Button onClick={handleLogout}>Đăng xuất</Button>
-          </Header>
+            </div>
+          )}
           <Content style={{ margin: "16px", overflow: "initial" }}>
             <div
               style={{
                 padding: 16,
                 background: "#ffffff",
                 borderRadius: namVietTheme.token.borderRadius,
-                minHeight: "calc(100vh - 128px)",
+                minHeight: "calc(100vh - 32px)",
               }}
             >
               <Routes>
@@ -375,6 +367,14 @@ const AppLayout: React.FC = () => {
                   path="/employees"
                   element={<Screen screenKey="management.employees" />}
                 />
+                <Route
+                  path="/employees/create"
+                  element={<Screen screenKey="management.employees.create" />}
+                />
+                <Route
+                  path="/employees/:employeeId"
+                  element={<Screen screenKey="management.employees.edit" />}
+                />
 
                 {/* --- ROUTE CHO MODULE QUẢN LÝ TÀI KHOẢN --- */}
                 <Route
@@ -432,9 +432,6 @@ const AppLayout: React.FC = () => {
               </Routes>
             </div>
           </Content>
-          <Footer style={{ textAlign: "center", padding: "10px 0" }}>
-            Nam Việt ERP ©{new Date().getFullYear()} - LVH
-          </Footer>
         </Layout>
       </Layout>
     </ConfigProvider>

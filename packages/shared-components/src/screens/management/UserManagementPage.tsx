@@ -22,7 +22,6 @@ import {
 } from "antd";
 import {
   PlusOutlined,
-  EditOutlined,
   DeleteOutlined,
   UserOutlined,
   MailOutlined,
@@ -241,34 +240,28 @@ const UserManagementPageContent: React.FC = () => {
     {
       title: "Hành động",
       key: "actions",
-      width: 150,
-      fixed: "right",
+      width: 80,
+      fixed: "right" as const,
       render: (_, record: IUserAccount) => (
-        <Space>
-          <Tooltip title="Chỉnh sửa">
+        <Popconfirm
+          title="Bạn có chắc chắn muốn xóa tài khoản này?"
+          onConfirm={(e) => {
+            e?.stopPropagation();
+            handleDelete(record.id);
+          }}
+          okText="Xóa"
+          cancelText="Hủy"
+        >
+          <Tooltip title="Xóa">
             <Button
               type="primary"
-              icon={<EditOutlined />}
+              danger
+              icon={<DeleteOutlined />}
               size="small"
-              onClick={() => openModal(record)}
+              onClick={(e) => e.stopPropagation()}
             />
           </Tooltip>
-          <Popconfirm
-            title="Bạn có chắc chắn muốn xóa tài khoản này?"
-            onConfirm={() => handleDelete(record.id)}
-            okText="Xóa"
-            cancelText="Hủy"
-          >
-            <Tooltip title="Xóa">
-              <Button
-                type="primary"
-                danger
-                icon={<DeleteOutlined />}
-                size="small"
-              />
-            </Tooltip>
-          </Popconfirm>
-        </Space>
+        </Popconfirm>
       ),
     },
   ];
@@ -343,6 +336,10 @@ const UserManagementPageContent: React.FC = () => {
           dataSource={users}
           rowKey="id"
           loading={loading}
+          onRow={(record) => ({
+            onClick: () => openModal(record),
+            style: { cursor: "pointer" },
+          })}
           scroll={{ x: 1200 }}
           pagination={{
             pageSize: 10,

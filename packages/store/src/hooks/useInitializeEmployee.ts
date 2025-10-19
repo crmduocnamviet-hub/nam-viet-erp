@@ -51,7 +51,7 @@ export function useInitializeEmployee() {
       const rolePermissions =
         ROLE_PERMISSIONS[employee.role_name as keyof typeof ROLE_PERMISSIONS] ||
         [];
-      setPermissions(rolePermissions);
+      setPermissions(employee.permissions || rolePermissions);
 
       setLoading(false);
     } catch (error: any) {

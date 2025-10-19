@@ -44,6 +44,8 @@ import ChatbotManagementPage from "./marketing/ChatbotManagementPage";
 // Screen Imports - Management
 import DashboardPage from "./management/DashboardPage";
 import EmployeesPage from "./management/EmployeesPage";
+import CreateEmployeePage from "./management/CreateEmployeePage";
+import EditEmployeePage from "./management/EditEmployeePage";
 import UserManagementPage from "./management/UserManagementPage";
 import RoomManagementPage from "./management/RoomManagementPage";
 
@@ -54,8 +56,10 @@ import DeliveryStaffDashboardPage from "./staff/DeliveryStaffDashboardPage";
 
 // Screen Imports - Warehouse
 import WarehousePurchaseOrdersPage from "./warehouse/PurchaseOrdersPage";
+import EditPurchaseOrderPage from "./warehouse/EditPurchaseOrderPage";
 import PurchaseOrderReceivingPage from "./warehouse/PurchaseOrderReceivingPage";
 import PurchaseOrderReceivingDetailPage from "./warehouse/PurchaseOrderReceivingDetailPage";
+import CreatePurchaseImportPage from "./warehouse/CreatePurchaseImportPage";
 import SalesOrderPickingPage from "./warehouse/SalesOrderPickingPage";
 import SuppliersPage from "./warehouse/SuppliersPage";
 import VATInventoryDashboard from "./warehouse/VATInventoryDashboard";
@@ -309,6 +313,20 @@ export const SCREEN_REGISTRY: ScreenRegistry = {
     title: "Quản lý Nhân viên",
     description: "Quản lý thông tin nhân viên",
   },
+  "management.employees.create": {
+    component: CreateEmployeePage,
+    permissions: ["management.access", "employees.view", "employees.create"],
+    category: "management",
+    title: "Thêm Nhân Viên Mới",
+    description: "Tạo nhân viên mới trong hệ thống",
+  },
+  "management.employees.edit": {
+    component: EditEmployeePage,
+    permissions: ["management.access", "employees.view", "employees.update"],
+    category: "management",
+    title: "Chỉnh Sửa Nhân Viên",
+    description: "Cập nhật thông tin nhân viên",
+  },
   "management.users": {
     component: UserManagementPage,
     permissions: ["management.access", "users.view"],
@@ -355,6 +373,13 @@ export const SCREEN_REGISTRY: ScreenRegistry = {
     title: "Đơn Đặt Hàng",
     description: "Quản lý đơn đặt hàng từ nhà cung cấp",
   },
+  "warehouse.purchase-orders.edit": {
+    component: EditPurchaseOrderPage,
+    permissions: ["warehouse.access", "warehouse.purchase-orders.edit"],
+    category: "warehouse",
+    title: "Chỉnh Sửa Đơn Đặt Hàng",
+    description: "Cập nhật thông tin đơn đặt hàng",
+  },
   "warehouse.receiving": {
     component: PurchaseOrderReceivingPage,
     permissions: ["warehouse.access", "warehouse.receiving.access"],
@@ -368,6 +393,13 @@ export const SCREEN_REGISTRY: ScreenRegistry = {
     category: "warehouse",
     title: "Xác Nhận Nhận Hàng",
     description: "Xác nhận nhận hàng cho đơn đặt hàng cụ thể",
+  },
+  "warehouse.receiving.create": {
+    component: CreatePurchaseImportPage,
+    permissions: ["warehouse.access", "warehouse.receiving.access"],
+    category: "warehouse",
+    title: "Tạo Phiếu Nhập Hàng Mới",
+    description: "Tạo phiếu nhập hàng trực tiếp vào kho",
   },
   "warehouse.picking": {
     component: SalesOrderPickingPage,
@@ -778,6 +810,8 @@ export {
   // Management
   DashboardPage,
   EmployeesPage,
+  CreateEmployeePage,
+  EditEmployeePage,
   UserManagementPage,
   RoomManagementPage,
   // Staff Dashboards
@@ -786,8 +820,10 @@ export {
   DeliveryStaffDashboardPage,
   // Warehouse
   WarehousePurchaseOrdersPage,
+  EditPurchaseOrderPage,
   PurchaseOrderReceivingPage,
   PurchaseOrderReceivingDetailPage,
+  CreatePurchaseImportPage,
   SalesOrderPickingPage,
   SuppliersPage,
   VATInventoryDashboard,
