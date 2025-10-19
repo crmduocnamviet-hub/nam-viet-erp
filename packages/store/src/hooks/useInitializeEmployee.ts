@@ -2,6 +2,7 @@ import { useEffect, useCallback } from "react";
 import { useEmployeeStore } from "../employeeStore";
 import { useAuthStore } from "../authStore";
 import { getEmployeeByUserId } from "@nam-viet-erp/services";
+import { ROLE_PERMISSIONS } from "@nam-viet-erp/shared-components";
 
 /**
  * Hook to initialize employee data on app mount
@@ -40,16 +41,17 @@ export function useInitializeEmployee() {
 
       if (employeeError || !employee) {
         throw new Error(
-          employeeError?.message || "Failed to fetch employee data"
+          employeeError?.message || "Failed to fetch employee data",
         );
       }
 
       setEmployee(employee);
 
-      // Set permissions if available
-      if (employee.permissions && Array.isArray(employee.permissions)) {
-        setPermissions(employee.permissions);
-      }
+      // Calculate permissions based on role
+      const rolePermissions =
+        ROLE_PERMISSIONS[employee.role_name as keyof typeof ROLE_PERMISSIONS] ||
+        [];
+      setPermissions(rolePermissions);
 
       setLoading(false);
     } catch (error: any) {
@@ -99,7 +101,7 @@ export function useInitializeEmployeeWithFetch() {
 
   const fetchEmployee = useCallback(
     async (
-      getEmployeeAPI: (userId: string) => Promise<{ data: any; error?: any }>
+      getEmployeeAPI: (userId: string) => Promise<{ data: any; error?: any }>,
     ) => {
       if (!user?.id) {
         setError("No user found");
@@ -111,21 +113,23 @@ export function useInitializeEmployeeWithFetch() {
         setError(null);
 
         const { data: employee, error: employeeError } = await getEmployeeAPI(
-          user.id
+          user.id,
         );
 
         if (employeeError || !employee) {
           throw new Error(
-            employeeError?.message || "Failed to fetch employee data"
+            employeeError?.message || "Failed to fetch employee data",
           );
         }
 
         setEmployee(employee);
 
-        // Set permissions if available
-        if (employee.permissions && Array.isArray(employee.permissions)) {
-          setPermissions(employee.permissions);
-        }
+        // Calculate permissions based on role
+        const rolePermissions =
+          ROLE_PERMISSIONS[
+            employee.role_name as keyof typeof ROLE_PERMISSIONS
+          ] || [];
+        setPermissions(rolePermissions);
 
         setLoading(false);
         return employee;
@@ -136,7 +140,7 @@ export function useInitializeEmployeeWithFetch() {
         return null;
       }
     },
-    [user?.id]
+    [user?.id],
   );
 
   return {
@@ -168,7 +172,7 @@ export function useInitializeEmployeeWithFetch() {
  * ```
  */
 export function useRefreshEmployee(
-  getEmployeeAPI: (userId: string) => Promise<{ data: any; error?: any }>
+  getEmployeeAPI: (userId: string) => Promise<{ data: any; error?: any }>,
 ) {
   const user = useAuthStore((state) => state.user);
   const setEmployee = useEmployeeStore((state) => state.setEmployee);
@@ -188,12 +192,12 @@ export function useRefreshEmployee(
       setError(null);
 
       const { data: employee, error: employeeError } = await getEmployeeAPI(
-        user.id
+        user.id,
       );
 
       if (employeeError || !employee) {
         throw new Error(
-          employeeError?.message || "Failed to refresh employee data"
+          employeeError?.message || "Failed to refresh employee data",
         );
       }
 

@@ -90,7 +90,10 @@ const menuItems: MenuProps["items"] = [
     label: "Nhân sự",
     key: "hr",
     icon: <UserOutlined />,
-    children: [{ label: "Quản lý Nhân viên", key: "/employees" }],
+    children: [
+      { label: "Quản lý Nhân viên", key: "/employees" },
+      { label: "Quản lý Tài khoản", key: "/users" },
+    ],
   },
   {
     label: "Tài chính",
@@ -371,6 +374,12 @@ const AppLayout: React.FC = () => {
                 <Route
                   path="/employees"
                   element={<Screen screenKey="management.employees" />}
+                />
+
+                {/* --- ROUTE CHO MODULE QUẢN LÝ TÀI KHOẢN --- */}
+                <Route
+                  path="/users"
+                  element={<Screen screenKey="management.users" />}
                 />
 
                 {/* --- ROUTE CHO MODULE BỆNH NHÂN --- */}

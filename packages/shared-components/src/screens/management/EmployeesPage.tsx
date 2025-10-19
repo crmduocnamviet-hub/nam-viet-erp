@@ -17,6 +17,7 @@ import {
   Popconfirm,
   Avatar,
   Tooltip,
+  Divider,
 } from "antd";
 import {
   UserOutlined,
@@ -33,6 +34,8 @@ import {
   createEmployee,
   updateEmployee,
   deleteEmployee,
+  searchUsersForLinking,
+  getUsers,
 } from "@nam-viet-erp/services";
 
 const { Title, Text } = Typography;
@@ -43,6 +46,7 @@ interface EmployeeFormData {
   employee_code: string;
   role_name: string;
   is_active: boolean;
+  user_id?: string;
 }
 
 const EmployeesPage: React.FC = () => {
@@ -53,7 +57,7 @@ const EmployeesPage: React.FC = () => {
   const [selectedRole, setSelectedRole] = useState<string>("all");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<IEmployee | null>(
-    null
+    null,
   );
   const [stats, setStats] = useState({
     total: 0,
@@ -64,10 +68,107 @@ const EmployeesPage: React.FC = () => {
     active: 0,
   });
   const [form] = Form.useForm();
+  const [userSearchResults, setUserSearchResults] = useState<IUserAccount[]>(
+    [],
+  );
+  const [userSearchLoading, setUserSearchLoading] = useState(false);
+  const [userSearchTerm, setUserSearchTerm] = useState("");
+  const [users, setUsers] = useState<IUserAccount[]>([]);
 
   useEffect(() => {
     loadEmployees();
+    loadUsers();
   }, [searchTerm, selectedRole]);
+
+  const loadUsers = async () => {
+    try {
+      const { data, error } = await getUsers();
+      if (error) {
+        console.error("Error loading users:", error);
+      } else {
+        setUsers(data || []);
+        // Check for orphaned user_id references
+        checkOrphanedUserReferences(data || []);
+      }
+    } catch (error) {
+      console.error("Error loading users:", error);
+    }
+  };
+
+  // Check for employees with user_id that no longer exists
+  const checkOrphanedUserReferences = (userList: IUserAccount[]) => {
+    const userIds = userList.map((user) => user.id);
+    const orphanedEmployees = employees.filter(
+      (emp) => emp.user_id && !userIds.includes(emp.user_id),
+    );
+
+    if (orphanedEmployees.length > 0) {
+      notification.warning({
+        message: "Phát hiện liên kết tài khoản không hợp lệ",
+        description: `${orphanedEmployees.length} nhân viên có liên kết tài khoản đã bị xóa. Bấm "Tự động sửa" để xóa liên kết không hợp lệ.`,
+        duration: 10,
+        btn: (
+          <Button
+            size="small"
+            onClick={() => cleanupOrphanedReferences(orphanedEmployees)}
+          >
+            Tự động sửa
+          </Button>
+        ),
+      });
+    }
+  };
+
+  // Cleanup orphaned user_id references
+  const cleanupOrphanedReferences = async (orphanedEmployees: IEmployee[]) => {
+    try {
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const employee of orphanedEmployees) {
+        try {
+          const { error } = await updateEmployee(employee.employee_id, {
+            user_id: null,
+          });
+          if (error) {
+            console.error(
+              `Error cleaning up employee ${employee.employee_id}:`,
+              error,
+            );
+            errorCount++;
+          } else {
+            successCount++;
+          }
+        } catch (err) {
+          console.error(
+            `Exception cleaning up employee ${employee.employee_id}:`,
+            err,
+          );
+          errorCount++;
+        }
+      }
+
+      if (successCount > 0) {
+        notification.success({
+          message: "Dọn dẹp liên kết thành công!",
+          description: `Đã xóa ${successCount} liên kết tài khoản không hợp lệ.`,
+        });
+        loadEmployees(); // Reload to refresh the display
+      }
+
+      if (errorCount > 0) {
+        notification.error({
+          message: "Một số liên kết không thể dọn dẹp",
+          description: `${errorCount} liên kết gặp lỗi khi xử lý.`,
+        });
+      }
+    } catch (error) {
+      notification.error({
+        message: "Lỗi hệ thống",
+        description: "Không thể dọn dẹp liên kết tài khoản.",
+      });
+    }
+  };
 
   const loadEmployees = async () => {
     try {
@@ -100,16 +201,16 @@ const EmployeesPage: React.FC = () => {
   const calculateStats = (employeeData: IEmployee[]) => {
     const total = employeeData.length;
     const inventoryStaff = employeeData.filter(
-      (emp) => emp.role_name === "inventory-staff"
+      (emp) => emp.role_name === "inventory-staff",
     ).length;
     const medicalStaff = employeeData.filter(
-      (emp) => emp.role_name === "medical-staff"
+      (emp) => emp.role_name === "medical-staff",
     ).length;
     const deliveryStaff = employeeData.filter(
-      (emp) => emp.role_name === "delivery-staff"
+      (emp) => emp.role_name === "delivery-staff",
     ).length;
     const salesStaff = employeeData.filter(
-      (emp) => emp.role_name === "sales-staff"
+      (emp) => emp.role_name === "sales-staff",
     ).length;
     const active = employeeData.filter((emp) => emp.is_active).length;
 
@@ -125,20 +226,50 @@ const EmployeesPage: React.FC = () => {
 
   const handleCreateEmployee = async (values: EmployeeFormData) => {
     try {
-      const { error } = await createEmployee(values);
+      // Remove user_id from employee creation data
+      const { user_id, ...employeeData } = values;
 
+      const { data: newEmployee, error } = await createEmployee(employeeData);
       if (error) {
         notification.error({
           message: "Lỗi tạo nhân viên",
           description: error.message,
         });
       } else {
+        // Link user if selected
+        if (user_id && newEmployee?.employee_id) {
+          try {
+            // Verify user still exists before linking
+            const userExists = users.find((user) => user.id === user_id);
+            if (userExists) {
+              await updateEmployee(newEmployee.employee_id, {
+                user_id: user_id || null,
+              });
+            } else {
+              notification.warning({
+                message: "Tài khoản không tồn tại",
+                description:
+                  "Tài khoản đã chọn không còn tồn tại. Nhân viên được tạo nhưng không liên kết tài khoản.",
+              });
+            }
+          } catch (linkError) {
+            console.error("Error linking user:", linkError);
+            notification.error({
+              message: "Lỗi liên kết tài khoản",
+              description:
+                "Không thể liên kết tài khoản. Nhân viên được tạo nhưng chưa có tài khoản đăng nhập.",
+            });
+          }
+        }
+
         notification?.success({
           message: "Tạo nhân viên thành công!",
           description: `Đã tạo nhân viên ${values.full_name}`,
         });
         setIsModalOpen(false);
         form.resetFields();
+        setUserSearchTerm("");
+        setUserSearchResults([]);
         loadEmployees();
       }
     } catch (error) {
@@ -153,9 +284,17 @@ const EmployeesPage: React.FC = () => {
     if (!editingEmployee) return;
 
     try {
+      const { user_id, ...employeeData } = values;
+
+      // Convert undefined to null for Supabase
+      const updateData = {
+        ...employeeData,
+        user_id: user_id || null,
+      };
+
       const { error } = await updateEmployee(
         editingEmployee.employee_id,
-        values
+        updateData,
       );
 
       if (error) {
@@ -171,6 +310,8 @@ const EmployeesPage: React.FC = () => {
         setIsModalOpen(false);
         setEditingEmployee(null);
         form.resetFields();
+        setUserSearchTerm("");
+        setUserSearchResults([]);
         loadEmployees();
       }
     } catch (error) {
@@ -183,7 +324,7 @@ const EmployeesPage: React.FC = () => {
 
   const handleDeleteEmployee = async (
     employeeId: string,
-    employeeName: string
+    employeeName: string,
   ) => {
     try {
       const { error } = await deleteEmployee(employeeId);
@@ -208,6 +349,52 @@ const EmployeesPage: React.FC = () => {
     }
   };
 
+  // Search users for linking
+  const searchUsers = async (searchTerm: string) => {
+    setUserSearchLoading(true);
+    try {
+      const { data, error } = await searchUsersForLinking(searchTerm);
+      if (error) {
+        console.error("Error searching users:", error);
+        notification.error({
+          message: "Lỗi tìm kiếm tài khoản",
+          description: error.message,
+        });
+      } else {
+        setUserSearchResults(data || []);
+      }
+    } catch (error) {
+      console.error("Exception searching users:", error);
+      notification.error({
+        message: "Lỗi hệ thống",
+        description: "Không thể tìm kiếm tài khoản",
+      });
+    } finally {
+      setUserSearchLoading(false);
+    }
+  };
+
+  // Handle user search with debounce
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      searchUsers(userSearchTerm);
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [userSearchTerm]);
+
+  // Load users initially
+  useEffect(() => {
+    searchUsers(""); // Load all users initially
+  }, []);
+
+  // Also load users when modal opens
+  useEffect(() => {
+    if (isModalOpen) {
+      searchUsers("");
+    }
+  }, [isModalOpen]);
+
   const handleOpenModal = (employee?: IEmployee) => {
     if (employee) {
       setEditingEmployee(employee);
@@ -216,11 +403,17 @@ const EmployeesPage: React.FC = () => {
         employee_code: employee.employee_code,
         role_name: employee.role_name,
         is_active: employee.is_active,
+        user_id: employee.user_id,
       });
     } else {
       setEditingEmployee(null);
       form.resetFields();
     }
+
+    // Reset user search when opening modal
+    setUserSearchTerm("");
+    setUserSearchResults([]);
+
     setIsModalOpen(true);
   };
 
@@ -321,6 +514,40 @@ const EmployeesPage: React.FC = () => {
         { text: "Nhân Viên Kinh Doanh", value: "sales-staff" },
       ],
       onFilter: (value: any, record: IEmployee) => record.role_name === value,
+    },
+    {
+      title: "Tài khoản đăng nhập",
+      dataIndex: "user_id",
+      key: "user_id",
+      width: 200,
+      render: (userId: string, record: IEmployee) => {
+        if (!userId) {
+          return <Tag color="default">Chưa liên kết</Tag>;
+        }
+
+        // Find user info from users state (if available)
+        const linkedUser = users.find((user) => user.id === userId);
+        if (linkedUser) {
+          return (
+            <Tooltip title={`Email: ${linkedUser.email}`}>
+              <Tag color="blue">{linkedUser.email}</Tag>
+            </Tooltip>
+          );
+        }
+
+        // User not found - might be deleted
+        return (
+          <Tooltip title="Tài khoản này đã bị xóa - nhấn để liên kết lại">
+            <Tag
+              color="red"
+              style={{ cursor: "pointer" }}
+              onClick={() => handleOpenModal(record)}
+            >
+              ⚠️ Tài khoản đã xóa
+            </Tag>
+          </Tooltip>
+        );
+      },
     },
     {
       title: "Trạng thái",
@@ -607,6 +834,32 @@ const EmployeesPage: React.FC = () => {
                   <Select.Option value={true}>Hoạt động</Select.Option>
                   <Select.Option value={false}>Không hoạt động</Select.Option>
                 </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+
+          {/* User Account Linking Section */}
+          <Divider orientation="left">Liên kết tài khoản đăng nhập</Divider>
+          <Row gutter={16}>
+            <Col span={24}>
+              <Form.Item name="user_id" label="Tài khoản đăng nhập">
+                <Select
+                  placeholder="Chọn tài khoản để liên kết (tùy chọn)"
+                  allowClear
+                  showSearch
+                  loading={userSearchLoading}
+                  notFoundContent={
+                    userSearchLoading
+                      ? "Đang tìm kiếm..."
+                      : "Không tìm thấy tài khoản"
+                  }
+                  onSearch={setUserSearchTerm}
+                  filterOption={false}
+                  options={userSearchResults.map((user) => ({
+                    value: user.id,
+                    label: `${user.email} - ${user.full_name || "Chưa có tên"}`,
+                  }))}
+                />
               </Form.Item>
             </Col>
           </Row>

@@ -308,6 +308,58 @@ interface IPatient {
   address?: string;
 }
 
+// Patient Points Transaction Types
+type PointsTransactionType =
+  | "earn"
+  | "redeem"
+  | "adjustment"
+  | "expire"
+  | "refund";
+type PointsReferenceType =
+  | "order"
+  | "visit"
+  | "manual"
+  | "promotion"
+  | "birthday"
+  | "referral"
+  | "system";
+
+// Patient Points History - Lịch sử tích điểm
+interface IPatientPointsHistory {
+  id: string;
+  patient_id: string;
+  transaction_type: PointsTransactionType;
+  points_amount: number; // Positive for earn, negative for redeem
+  balance_before: number;
+  balance_after: number;
+  reference_type: PointsReferenceType;
+  reference_id: string | null;
+  description: string | null;
+  notes: string | null;
+  expires_at: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
+// Extended Patient Points History with relations
+interface IPatientPointsHistoryWithDetails extends IPatientPointsHistory {
+  patient?: IPatient;
+  employee?: IEmployee;
+}
+
+// Patient Points Summary - Tổng kết điểm tích lũy
+interface IPatientPointsSummary {
+  patient_id: string;
+  full_name: string;
+  phone_number: string | null;
+  current_balance: number;
+  total_earned: number;
+  total_redeemed: number;
+  total_expired: number;
+  transaction_count: number;
+  last_transaction_at: string | null;
+}
+
 // Employee Management - Quản lý Nhân sự (Bác sĩ, Dược sĩ, Lễ tân)
 interface IEmployee {
   employee_id: string;
@@ -631,4 +683,23 @@ interface SaleOrderProductLotItem {
   quantity: number;
   order_id: string;
   lot_id: number;
+};
+
+// User Account Management Interfaces
+interface IUserAccount {
+  id: string;
+  email: string;
+  full_name?: string;
+  phone?: string;
+  avatar_url?: string;
+  created_at: string;
+  updated_at?: string;
+  last_sign_in_at?: string;
+}
+
+interface IUserAccountForm {
+  email: string;
+  password: string;
+  full_name?: string;
+  phone?: string;
 }
