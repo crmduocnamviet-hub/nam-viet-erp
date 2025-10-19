@@ -58,21 +58,23 @@ export const ScreenProvider: React.FC<ScreenProviderProps> = ({
       return null;
     }
 
-    // Check permissions
-    if (!user || !hasScreenPermission(screenKey, user.permissions)) {
-      return (
-        <div
-          style={{
-            padding: "24px",
-            textAlign: "center",
-            color: "#ff4d4f",
-            fontSize: "16px",
-          }}
-        >
-          <h3>Không có quyền truy cập</h3>
-          <p>Bạn không có quyền truy cập trang này.</p>
-        </div>
-      );
+    if (user?.role !== "super-admin") {
+      // Check permissions
+      if (!user || !hasScreenPermission(screenKey, user.permissions)) {
+        return (
+          <div
+            style={{
+              padding: "24px",
+              textAlign: "center",
+              color: "#ff4d4f",
+              fontSize: "16px",
+            }}
+          >
+            <h3>Không có quyền truy cập</h3>
+            <p>Bạn không có quyền truy cập trang này.</p>
+          </div>
+        );
+      }
     }
 
     const Component = screen.component;
@@ -89,6 +91,7 @@ export const ScreenProvider: React.FC<ScreenProviderProps> = ({
 
   const hasPermission = (screenKey: string): boolean => {
     if (!user) return false;
+    if (user.role === "super-admin") return true;
     return hasScreenPermission(screenKey, user.permissions);
   };
 

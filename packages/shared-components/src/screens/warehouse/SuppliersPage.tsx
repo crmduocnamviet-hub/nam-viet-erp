@@ -19,7 +19,6 @@ import {
 import {
   PlusOutlined,
   SearchOutlined,
-  EditOutlined,
   DeleteOutlined,
   PhoneOutlined,
   MailOutlined,
@@ -139,29 +138,22 @@ const SuppliersPage: React.FC = () => {
     {
       title: "Hành Động",
       key: "actions",
-      width: 100,
+      width: 80,
       align: "center" as const,
       fixed: "right" as const,
       render: (_: any, record: any) => (
-        <Space size="small">
-          <Tooltip title="Sửa">
-            <Button
-              type="text"
-              size="large"
-              icon={<EditOutlined />}
-              onClick={() => handleEdit(record)}
-            />
-          </Tooltip>
-          <Tooltip title="Xóa">
-            <Button
-              type="text"
-              size="large"
-              danger
-              icon={<DeleteOutlined />}
-              onClick={() => handleDelete(record)}
-            />
-          </Tooltip>
-        </Space>
+        <Tooltip title="Xóa">
+          <Button
+            type="text"
+            size="large"
+            danger
+            icon={<DeleteOutlined />}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDelete(record);
+            }}
+          />
+        </Tooltip>
       ),
     },
   ];
@@ -343,6 +335,10 @@ const SuppliersPage: React.FC = () => {
           dataSource={suppliers}
           loading={loading}
           rowKey="id"
+          onRow={(record) => ({
+            onClick: () => handleEdit(record),
+            style: { cursor: "pointer" },
+          })}
           scroll={{ x: 1400 }}
           pagination={{
             showSizeChanger: true,

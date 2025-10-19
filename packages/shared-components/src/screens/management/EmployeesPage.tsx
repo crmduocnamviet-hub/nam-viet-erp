@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Card,
   Table,
@@ -10,55 +11,37 @@ import {
   App,
   Row,
   Col,
-  Modal,
-  Form,
   Select,
   Statistic,
   Popconfirm,
   Avatar,
   Tooltip,
-  Divider,
 } from "antd";
 import {
   UserOutlined,
   PlusOutlined,
   SearchOutlined,
-  EditOutlined,
   DeleteOutlined,
   MedicineBoxOutlined,
   CustomerServiceOutlined,
-  UserAddOutlined,
 } from "@ant-design/icons";
 import {
   getEmployees,
-  createEmployee,
-  updateEmployee,
   deleteEmployee,
-  searchUsersForLinking,
+  updateEmployee,
   getUsers,
 } from "@nam-viet-erp/services";
 
 const { Title, Text } = Typography;
 const { Search } = Input;
 
-interface EmployeeFormData {
-  full_name: string;
-  employee_code: string;
-  role_name: string;
-  is_active: boolean;
-  user_id?: string;
-}
-
 const EmployeesPage: React.FC = () => {
+  const navigate = useNavigate();
   const { notification } = App.useApp();
   const [employees, setEmployees] = useState<IEmployee[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRole, setSelectedRole] = useState<string>("all");
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingEmployee, setEditingEmployee] = useState<IEmployee | null>(
-    null,
-  );
   const [stats, setStats] = useState({
     total: 0,
     inventoryStaff: 0,
@@ -67,12 +50,6 @@ const EmployeesPage: React.FC = () => {
     salesStaff: 0,
     active: 0,
   });
-  const [form] = Form.useForm();
-  const [userSearchResults, setUserSearchResults] = useState<IUserAccount[]>(
-    [],
-  );
-  const [userSearchLoading, setUserSearchLoading] = useState(false);
-  const [userSearchTerm, setUserSearchTerm] = useState("");
   const [users, setUsers] = useState<IUserAccount[]>([]);
 
   useEffect(() => {
@@ -224,104 +201,6 @@ const EmployeesPage: React.FC = () => {
     });
   };
 
-  const handleCreateEmployee = async (values: EmployeeFormData) => {
-    try {
-      // Remove user_id from employee creation data
-      const { user_id, ...employeeData } = values;
-
-      const { data: newEmployee, error } = await createEmployee(employeeData);
-      if (error) {
-        notification.error({
-          message: "Lỗi tạo nhân viên",
-          description: error.message,
-        });
-      } else {
-        // Link user if selected
-        if (user_id && newEmployee?.employee_id) {
-          try {
-            // Verify user still exists before linking
-            const userExists = users.find((user) => user.id === user_id);
-            if (userExists) {
-              await updateEmployee(newEmployee.employee_id, {
-                user_id: user_id || null,
-              });
-            } else {
-              notification.warning({
-                message: "Tài khoản không tồn tại",
-                description:
-                  "Tài khoản đã chọn không còn tồn tại. Nhân viên được tạo nhưng không liên kết tài khoản.",
-              });
-            }
-          } catch (linkError) {
-            console.error("Error linking user:", linkError);
-            notification.error({
-              message: "Lỗi liên kết tài khoản",
-              description:
-                "Không thể liên kết tài khoản. Nhân viên được tạo nhưng chưa có tài khoản đăng nhập.",
-            });
-          }
-        }
-
-        notification?.success({
-          message: "Tạo nhân viên thành công!",
-          description: `Đã tạo nhân viên ${values.full_name}`,
-        });
-        setIsModalOpen(false);
-        form.resetFields();
-        setUserSearchTerm("");
-        setUserSearchResults([]);
-        loadEmployees();
-      }
-    } catch (error) {
-      notification.error({
-        message: "Lỗi hệ thống",
-        description: "Không thể tạo nhân viên mới",
-      });
-    }
-  };
-
-  const handleUpdateEmployee = async (values: EmployeeFormData) => {
-    if (!editingEmployee) return;
-
-    try {
-      const { user_id, ...employeeData } = values;
-
-      // Convert undefined to null for Supabase
-      const updateData = {
-        ...employeeData,
-        user_id: user_id || null,
-      };
-
-      const { error } = await updateEmployee(
-        editingEmployee.employee_id,
-        updateData,
-      );
-
-      if (error) {
-        notification.error({
-          message: "Lỗi cập nhật nhân viên",
-          description: error.message,
-        });
-      } else {
-        notification?.success({
-          message: "Cập nhật nhân viên thành công!",
-          description: `Đã cập nhật thông tin ${values.full_name}`,
-        });
-        setIsModalOpen(false);
-        setEditingEmployee(null);
-        form.resetFields();
-        setUserSearchTerm("");
-        setUserSearchResults([]);
-        loadEmployees();
-      }
-    } catch (error) {
-      notification.error({
-        message: "Lỗi hệ thống",
-        description: "Không thể cập nhật nhân viên",
-      });
-    }
-  };
-
   const handleDeleteEmployee = async (
     employeeId: string,
     employeeName: string,
@@ -347,74 +226,6 @@ const EmployeesPage: React.FC = () => {
         description: "Không thể xóa nhân viên",
       });
     }
-  };
-
-  // Search users for linking
-  const searchUsers = async (searchTerm: string) => {
-    setUserSearchLoading(true);
-    try {
-      const { data, error } = await searchUsersForLinking(searchTerm);
-      if (error) {
-        console.error("Error searching users:", error);
-        notification.error({
-          message: "Lỗi tìm kiếm tài khoản",
-          description: error.message,
-        });
-      } else {
-        setUserSearchResults(data || []);
-      }
-    } catch (error) {
-      console.error("Exception searching users:", error);
-      notification.error({
-        message: "Lỗi hệ thống",
-        description: "Không thể tìm kiếm tài khoản",
-      });
-    } finally {
-      setUserSearchLoading(false);
-    }
-  };
-
-  // Handle user search with debounce
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      searchUsers(userSearchTerm);
-    }, 500);
-
-    return () => clearTimeout(timeoutId);
-  }, [userSearchTerm]);
-
-  // Load users initially
-  useEffect(() => {
-    searchUsers(""); // Load all users initially
-  }, []);
-
-  // Also load users when modal opens
-  useEffect(() => {
-    if (isModalOpen) {
-      searchUsers("");
-    }
-  }, [isModalOpen]);
-
-  const handleOpenModal = (employee?: IEmployee) => {
-    if (employee) {
-      setEditingEmployee(employee);
-      form.setFieldsValue({
-        full_name: employee.full_name,
-        employee_code: employee.employee_code,
-        role_name: employee.role_name,
-        is_active: employee.is_active,
-        user_id: employee.user_id,
-      });
-    } else {
-      setEditingEmployee(null);
-      form.resetFields();
-    }
-
-    // Reset user search when opening modal
-    setUserSearchTerm("");
-    setUserSearchResults([]);
-
-    setIsModalOpen(true);
   };
 
   const getRoleIcon = (role: string) => {
@@ -541,7 +352,7 @@ const EmployeesPage: React.FC = () => {
             <Tag
               color="red"
               style={{ cursor: "pointer" }}
-              onClick={() => handleOpenModal(record)}
+              onClick={() => navigate(`/employees/${record.employee_id}`)}
             >
               ⚠️ Tài khoản đã xóa
             </Tag>
@@ -567,30 +378,29 @@ const EmployeesPage: React.FC = () => {
     {
       title: "Thao tác",
       key: "actions",
+      width: 80,
+      fixed: "right" as const,
       render: (record: IEmployee) => (
-        <Space>
-          <Tooltip title="Chỉnh sửa">
+        <Popconfirm
+          title="Xóa nhân viên"
+          description={`Bạn có chắc chắn muốn xóa nhân viên ${record.full_name}?`}
+          onConfirm={(e) => {
+            e?.stopPropagation();
+            handleDeleteEmployee(record.employee_id, record.full_name);
+          }}
+          okText="Xóa"
+          cancelText="Hủy"
+          okType="danger"
+        >
+          <Tooltip title="Xóa">
             <Button
               type="text"
-              icon={<EditOutlined />}
-              onClick={() => handleOpenModal(record)}
+              danger
+              icon={<DeleteOutlined />}
+              onClick={(e) => e.stopPropagation()}
             />
           </Tooltip>
-          <Popconfirm
-            title="Xóa nhân viên"
-            description={`Bạn có chắc chắn muốn xóa nhân viên ${record.full_name}?`}
-            onConfirm={() =>
-              handleDeleteEmployee(record.employee_id, record.full_name)
-            }
-            okText="Xóa"
-            cancelText="Hủy"
-            okType="danger"
-          >
-            <Tooltip title="Xóa">
-              <Button type="text" danger icon={<DeleteOutlined />} />
-            </Tooltip>
-          </Popconfirm>
-        </Space>
+        </Popconfirm>
       ),
     },
   ];
@@ -609,7 +419,7 @@ const EmployeesPage: React.FC = () => {
             type="primary"
             size="large"
             icon={<PlusOutlined />}
-            onClick={() => handleOpenModal()}
+            onClick={() => navigate("/employees/create")}
             style={{
               background: "linear-gradient(45deg, #1890ff, #40a9ff)",
               border: "none",
@@ -735,6 +545,10 @@ const EmployeesPage: React.FC = () => {
           dataSource={employees}
           rowKey="employee_id"
           loading={loading}
+          onRow={(record) => ({
+            onClick: () => navigate(`/employees/${record.employee_id}`),
+            style: { cursor: "pointer" },
+          })}
           pagination={{
             pageSize: 20,
             showSizeChanger: true,
@@ -743,128 +557,6 @@ const EmployeesPage: React.FC = () => {
           }}
         />
       </Card>
-
-      {/* Modal */}
-      <Modal
-        title={
-          <Space>
-            <UserAddOutlined />
-            {editingEmployee ? "Chỉnh sửa nhân viên" : "Thêm nhân viên mới"}
-          </Space>
-        }
-        open={isModalOpen}
-        onCancel={() => {
-          setIsModalOpen(false);
-          setEditingEmployee(null);
-          form.resetFields();
-        }}
-        onOk={form.submit}
-        width={600}
-        okText={editingEmployee ? "Cập nhật" : "Tạo mới"}
-        cancelText="Hủy"
-      >
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={
-            editingEmployee ? handleUpdateEmployee : handleCreateEmployee
-          }
-          style={{ marginTop: 16 }}
-        >
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="full_name"
-                label="Họ và tên"
-                rules={[{ required: true, message: "Vui lòng nhập họ và tên" }]}
-              >
-                <Input placeholder="Nhập họ và tên" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="employee_code"
-                label="Mã nhân viên"
-                rules={[
-                  { required: true, message: "Vui lòng nhập mã nhân viên" },
-                  {
-                    pattern: /^[A-Z0-9]+$/,
-                    message: "Mã nhân viên chỉ chứa chữ hoa và số",
-                  },
-                ]}
-              >
-                <Input placeholder="VD: DOC001, PHAR001" />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="role_name"
-                label="Vai trò"
-                rules={[{ required: true, message: "Vui lòng chọn vai trò" }]}
-              >
-                <Select placeholder="Chọn vai trò">
-                  <Select.Option value="BacSi">🩺 Bác sĩ</Select.Option>
-                  <Select.Option value="DuocSi">💊 Dược sĩ</Select.Option>
-                  <Select.Option value="LeTan">📞 Lễ tân</Select.Option>
-                  <Select.Option value="inventory-staff">
-                    📦 Nhân Viên Kho
-                  </Select.Option>
-                  <Select.Option value="medical-staff">
-                    🏥 Nhân Viên Y Tế
-                  </Select.Option>
-                  <Select.Option value="delivery-staff">
-                    🚚 Nhân Viên Giao Hàng
-                  </Select.Option>
-                  <Select.Option value="sales-staff">
-                    💼 Nhân Viên Kinh Doanh
-                  </Select.Option>
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="is_active"
-                label="Trạng thái"
-                initialValue={true}
-              >
-                <Select>
-                  <Select.Option value={true}>Hoạt động</Select.Option>
-                  <Select.Option value={false}>Không hoạt động</Select.Option>
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
-
-          {/* User Account Linking Section */}
-          <Divider orientation="left">Liên kết tài khoản đăng nhập</Divider>
-          <Row gutter={16}>
-            <Col span={24}>
-              <Form.Item name="user_id" label="Tài khoản đăng nhập">
-                <Select
-                  placeholder="Chọn tài khoản để liên kết (tùy chọn)"
-                  allowClear
-                  showSearch
-                  loading={userSearchLoading}
-                  notFoundContent={
-                    userSearchLoading
-                      ? "Đang tìm kiếm..."
-                      : "Không tìm thấy tài khoản"
-                  }
-                  onSearch={setUserSearchTerm}
-                  filterOption={false}
-                  options={userSearchResults.map((user) => ({
-                    value: user.id,
-                    label: `${user.email} - ${user.full_name || "Chưa có tên"}`,
-                  }))}
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-        </Form>
-      </Modal>
     </div>
   );
 };

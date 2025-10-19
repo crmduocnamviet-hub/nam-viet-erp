@@ -495,6 +495,15 @@ const AppLayoutContent: React.FC = () => {
                   path="/warehouse/vat-reconciliation"
                   element={renderScreen("warehouse.vat-reconciliation")}
                 />
+                {/* Management Routes */}
+                <Route
+                  path="/employees/create"
+                  element={renderScreen("management.employees.create")}
+                />
+                <Route
+                  path="/employees/:employeeId"
+                  element={renderScreen("management.employees.edit")}
+                />
                 {/* Fallback route */}
                 <Route path="*" element={<ComingSoon />} />
               </Routes>

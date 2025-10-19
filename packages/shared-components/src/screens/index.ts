@@ -44,6 +44,8 @@ import ChatbotManagementPage from "./marketing/ChatbotManagementPage";
 // Screen Imports - Management
 import DashboardPage from "./management/DashboardPage";
 import EmployeesPage from "./management/EmployeesPage";
+import CreateEmployeePage from "./management/CreateEmployeePage";
+import EditEmployeePage from "./management/EditEmployeePage";
 import UserManagementPage from "./management/UserManagementPage";
 import RoomManagementPage from "./management/RoomManagementPage";
 
@@ -309,6 +311,20 @@ export const SCREEN_REGISTRY: ScreenRegistry = {
     category: "management",
     title: "Quản lý Nhân viên",
     description: "Quản lý thông tin nhân viên",
+  },
+  "management.employees.create": {
+    component: CreateEmployeePage,
+    permissions: ["management.access", "employees.view", "employees.create"],
+    category: "management",
+    title: "Thêm Nhân Viên Mới",
+    description: "Tạo nhân viên mới trong hệ thống",
+  },
+  "management.employees.edit": {
+    component: EditEmployeePage,
+    permissions: ["management.access", "employees.view", "employees.update"],
+    category: "management",
+    title: "Chỉnh Sửa Nhân Viên",
+    description: "Cập nhật thông tin nhân viên",
   },
   "management.users": {
     component: UserManagementPage,
@@ -786,6 +802,8 @@ export {
   // Management
   DashboardPage,
   EmployeesPage,
+  CreateEmployeePage,
+  EditEmployeePage,
   UserManagementPage,
   RoomManagementPage,
   // Staff Dashboards

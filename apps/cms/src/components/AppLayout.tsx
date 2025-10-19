@@ -375,6 +375,14 @@ const AppLayout: React.FC = () => {
                   path="/employees"
                   element={<Screen screenKey="management.employees" />}
                 />
+                <Route
+                  path="/employees/create"
+                  element={<Screen screenKey="management.employees.create" />}
+                />
+                <Route
+                  path="/employees/:employeeId"
+                  element={<Screen screenKey="management.employees.edit" />}
+                />
 
                 {/* --- ROUTE CHO MODULE QUẢN LÝ TÀI KHOẢN --- */}
                 <Route

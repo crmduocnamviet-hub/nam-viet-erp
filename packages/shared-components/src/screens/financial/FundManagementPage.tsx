@@ -16,7 +16,7 @@ import {
   Avatar,
   Grid,
 } from "antd";
-import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import { PlusOutlined, DeleteOutlined } from "@ant-design/icons";
 import {
   createFund,
   deleteFund,
@@ -192,15 +192,18 @@ const FundManagementContent: React.FC = () => {
     {
       title: "Hành động",
       key: "action",
+      width: 80,
+      align: "center" as const,
+      fixed: "right" as const,
       render: (_: any, record: any) => (
-        <Space>
-          <Button icon={<EditOutlined />} onClick={() => handleEdit(record)} />
-          <Button
-            icon={<DeleteOutlined />}
-            danger
-            onClick={() => handleDelete(record.id, record.name)}
-          />
-        </Space>
+        <Button
+          icon={<DeleteOutlined />}
+          danger
+          onClick={(e) => {
+            e.stopPropagation();
+            handleDelete(record.id, record.name);
+          }}
+        />
       ),
     },
   ];
@@ -224,6 +227,10 @@ const FundManagementContent: React.FC = () => {
         dataSource={funds}
         loading={loading}
         rowKey="id"
+        onRow={(record) => ({
+          onClick: () => handleEdit(record),
+          style: { cursor: "pointer" },
+        })}
       />
       <Modal
         title={
