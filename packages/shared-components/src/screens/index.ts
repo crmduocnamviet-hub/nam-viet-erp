@@ -56,6 +56,7 @@ import DeliveryStaffDashboardPage from "./staff/DeliveryStaffDashboardPage";
 
 // Screen Imports - Warehouse
 import WarehousePurchaseOrdersPage from "./warehouse/PurchaseOrdersPage";
+import EditPurchaseOrderPage from "./warehouse/EditPurchaseOrderPage";
 import PurchaseOrderReceivingPage from "./warehouse/PurchaseOrderReceivingPage";
 import PurchaseOrderReceivingDetailPage from "./warehouse/PurchaseOrderReceivingDetailPage";
 import CreatePurchaseImportPage from "./warehouse/CreatePurchaseImportPage";
@@ -371,6 +372,13 @@ export const SCREEN_REGISTRY: ScreenRegistry = {
     category: "warehouse",
     title: "Đơn Đặt Hàng",
     description: "Quản lý đơn đặt hàng từ nhà cung cấp",
+  },
+  "warehouse.purchase-orders.edit": {
+    component: EditPurchaseOrderPage,
+    permissions: ["warehouse.access", "warehouse.purchase-orders.edit"],
+    category: "warehouse",
+    title: "Chỉnh Sửa Đơn Đặt Hàng",
+    description: "Cập nhật thông tin đơn đặt hàng",
   },
   "warehouse.receiving": {
     component: PurchaseOrderReceivingPage,
@@ -812,6 +820,7 @@ export {
   DeliveryStaffDashboardPage,
   // Warehouse
   WarehousePurchaseOrdersPage,
+  EditPurchaseOrderPage,
   PurchaseOrderReceivingPage,
   PurchaseOrderReceivingDetailPage,
   CreatePurchaseImportPage,

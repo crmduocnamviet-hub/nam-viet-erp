@@ -9,12 +9,9 @@ import {
   Button,
   Grid,
   Drawer,
-  Space,
-  Dropdown,
 } from "antd";
-import { MenuOutlined, UserOutlined, LogoutOutlined } from "@ant-design/icons";
+import { MenuOutlined } from "@ant-design/icons";
 import viVN from "antd/locale/vi_VN";
-import { signOut } from "@nam-viet-erp/services";
 import {
   ScreenProvider,
   useScreens,
@@ -24,7 +21,7 @@ import {
 
 import logo from "../assets/logo.png";
 
-const { Header, Content, Footer, Sider } = Layout;
+const { Content, Sider } = Layout;
 const { Title } = Typography;
 const { useBreakpoint } = Grid;
 
@@ -73,11 +70,6 @@ const AppLayoutContent: React.FC = () => {
     if (isMobile) {
       setMobileMenuOpen(false);
     }
-  };
-
-  const handleLogout = async () => {
-    await signOut();
-    navigate("/login");
   };
 
   const ComingSoon = () => (
@@ -259,124 +251,31 @@ const AppLayoutContent: React.FC = () => {
             transition: "margin-left 0.2s",
           }}
         >
-          <Header
-            style={{
-              padding: "12px 24px",
-              background: namVietTheme.components.Layout.headerBg,
-              display: "flex",
-              justifyContent: isMobile ? "space-between" : "flex-end",
-              alignItems: "center",
-              height: 70,
-            }}
-          >
-            {isMobile && (
+          {isMobile && (
+            <div
+              style={{
+                position: "fixed",
+                top: 16,
+                right: 16,
+                zIndex: 1000,
+              }}
+            >
               <Button
-                type="text"
+                type="primary"
+                shape="circle"
                 icon={<MenuOutlined style={{ fontSize: "20px" }} />}
                 onClick={() => setMobileMenuOpen(true)}
+                size="large"
               />
-            )}
-            <Dropdown
-              menu={{
-                items: [
-                  {
-                    key: "user-info",
-                    label: (
-                      <div
-                        style={{
-                          padding: "8px 0",
-                          borderBottom: "1px solid #f0f0f0",
-                          marginBottom: "8px",
-                        }}
-                      >
-                        <div
-                          style={{
-                            fontSize: "16px",
-                            fontWeight: "600",
-                            color: "#262626",
-                            lineHeight: "1.2",
-                          }}
-                        >
-                          {user?.name || "Người dùng"}
-                        </div>
-                        <div
-                          style={{
-                            fontSize: "13px",
-                            color: "#8c8c8c",
-                            lineHeight: "1.2",
-                          }}
-                        >
-                          {/* Add employee code if available */}
-                        </div>
-                      </div>
-                    ),
-                    disabled: true,
-                  },
-                  {
-                    key: "logout",
-                    label: "Đăng xuất",
-                    icon: <LogoutOutlined />,
-                    onClick: handleLogout,
-                  },
-                ],
-              }}
-              placement="bottomRight"
-              trigger={["click"]}
-            >
-              <Space
-                align="center"
-                style={{
-                  cursor: "pointer",
-                  padding: "8px 12px",
-                  borderRadius: "8px",
-                  transition: "background-color 0.2s",
-                }}
-                className="user-avatar-section"
-              >
-                <Avatar
-                  size="large"
-                  style={{
-                    backgroundColor: "#1890ff",
-                    fontWeight: "bold",
-                    fontSize: "16px",
-                  }}
-                  icon={!user?.name ? <UserOutlined /> : null}
-                >
-                  {user?.name ? user.name.charAt(0).toUpperCase() : "U"}
-                </Avatar>
-                {!isMobile && (
-                  <div style={{ textAlign: "left" }}>
-                    <div
-                      style={{
-                        fontSize: "16px",
-                        fontWeight: "600",
-                        color: "#262626",
-                        lineHeight: "1.2",
-                      }}
-                    >
-                      {user?.name || "Người dùng"}
-                    </div>
-                    <div
-                      style={{
-                        fontSize: "13px",
-                        color: "#8c8c8c",
-                        lineHeight: "1.2",
-                      }}
-                    >
-                      {/* Add employee code if available */}
-                    </div>
-                  </div>
-                )}
-              </Space>
-            </Dropdown>
-          </Header>
+            </div>
+          )}
           <Content style={{ margin: "16px", overflow: "initial" }}>
             <div
               style={{
                 padding: 16,
                 background: "#ffffff",
                 borderRadius: namVietTheme.token.borderRadius,
-                minHeight: "calc(100vh - 128px)",
+                minHeight: "calc(100vh - 70px)",
               }}
             >
               <Routes>
@@ -468,6 +367,10 @@ const AppLayoutContent: React.FC = () => {
                   element={renderScreen("warehouse.purchase-orders")}
                 />
                 <Route
+                  path="/warehouse/purchase-orders/:id/edit"
+                  element={renderScreen("warehouse.purchase-orders.edit")}
+                />
+                <Route
                   path="/warehouse/receiving"
                   element={renderScreen("warehouse.receiving")}
                 />
@@ -509,9 +412,6 @@ const AppLayoutContent: React.FC = () => {
               </Routes>
             </div>
           </Content>
-          <Footer style={{ textAlign: "center", padding: "10px 0" }}>
-            Nam Việt ERP ©{new Date().getFullYear()} - LVH
-          </Footer>
         </Layout>
       </Layout>
     </>

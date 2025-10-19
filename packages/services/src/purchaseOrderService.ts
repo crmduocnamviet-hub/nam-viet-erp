@@ -193,6 +193,47 @@ export const updateReceivedQuantity = async (
 };
 
 /**
+ * Update purchase order item quantity
+ */
+export const updatePurchaseOrderItem = async (
+  itemId: number,
+  quantity: number,
+) => {
+  return await supabase
+    .from("purchase_order_items")
+    .update({ quantity })
+    .eq("id", itemId)
+    .select()
+    .single();
+};
+
+/**
+ * Add items to purchase order
+ */
+export const addPurchaseOrderItems = async (
+  poId: number,
+  items: Array<{ product_id: number; quantity: number }>,
+) => {
+  const itemsWithPoId = items.map((item) => ({
+    ...item,
+    po_id: poId,
+    received_quantity: 0,
+  }));
+
+  return await supabase
+    .from("purchase_order_items")
+    .insert(itemsWithPoId)
+    .select();
+};
+
+/**
+ * Delete purchase order item
+ */
+export const deletePurchaseOrderItem = async (itemId: number) => {
+  return await supabase.from("purchase_order_items").delete().eq("id", itemId);
+};
+
+/**
  * Receive purchase order items (NHẬP KHO)
  * Updates received quantities, lot numbers, expiration dates
  * Updates inventory
