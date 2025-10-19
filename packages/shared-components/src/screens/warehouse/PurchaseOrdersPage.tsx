@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Button,
   Card,
@@ -18,6 +19,7 @@ import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   ClearOutlined,
+  PlusCircleOutlined,
 } from "@ant-design/icons";
 import PageLayout from "../../components/PageLayout";
 import AutoGeneratePOModal from "../../components/AutoGeneratePOModal";
@@ -40,6 +42,7 @@ import dayjs from "dayjs";
 const { RangePicker } = DatePicker;
 
 const PurchaseOrdersPage: React.FC = () => {
+  const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
   const hasPermission = useEmployeeStore((state) => state.hasPermission);
   const [loading, setLoading] = useState(false);
@@ -364,7 +367,17 @@ const PurchaseOrdersPage: React.FC = () => {
               onClick={handleOpenAutoGenerate}
               size="large"
             >
-              Tạo Dự Trù Tự Động
+              Dự Trù Tự Động
+            </Button>
+          )}
+          {canAutoCreate && (
+            <Button
+              type="primary"
+              icon={<PlusCircleOutlined />}
+              onClick={() => navigate("/warehouse/receiving/create")}
+              size="large"
+            >
+              Tạo đơn hàng
             </Button>
           )}
         </Space>

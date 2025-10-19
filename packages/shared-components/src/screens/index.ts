@@ -56,6 +56,7 @@ import DeliveryStaffDashboardPage from "./staff/DeliveryStaffDashboardPage";
 import WarehousePurchaseOrdersPage from "./warehouse/PurchaseOrdersPage";
 import PurchaseOrderReceivingPage from "./warehouse/PurchaseOrderReceivingPage";
 import PurchaseOrderReceivingDetailPage from "./warehouse/PurchaseOrderReceivingDetailPage";
+import CreatePurchaseImportPage from "./warehouse/CreatePurchaseImportPage";
 import SalesOrderPickingPage from "./warehouse/SalesOrderPickingPage";
 import SuppliersPage from "./warehouse/SuppliersPage";
 import VATInventoryDashboard from "./warehouse/VATInventoryDashboard";
@@ -368,6 +369,13 @@ export const SCREEN_REGISTRY: ScreenRegistry = {
     category: "warehouse",
     title: "Xác Nhận Nhận Hàng",
     description: "Xác nhận nhận hàng cho đơn đặt hàng cụ thể",
+  },
+  "warehouse.receiving.create": {
+    component: CreatePurchaseImportPage,
+    permissions: ["warehouse.access", "warehouse.receiving.access"],
+    category: "warehouse",
+    title: "Tạo Phiếu Nhập Hàng Mới",
+    description: "Tạo phiếu nhập hàng trực tiếp vào kho",
   },
   "warehouse.picking": {
     component: SalesOrderPickingPage,
@@ -788,6 +796,7 @@ export {
   WarehousePurchaseOrdersPage,
   PurchaseOrderReceivingPage,
   PurchaseOrderReceivingDetailPage,
+  CreatePurchaseImportPage,
   SalesOrderPickingPage,
   SuppliersPage,
   VATInventoryDashboard,

@@ -472,6 +472,10 @@ const AppLayoutContent: React.FC = () => {
                   element={renderScreen("warehouse.receiving")}
                 />
                 <Route
+                  path="/warehouse/receiving/create"
+                  element={renderScreen("warehouse.receiving.create")}
+                />
+                <Route
                   path="/warehouse/receiving/:poId"
                   element={renderScreen("warehouse.receiving.detail")}
                 />
