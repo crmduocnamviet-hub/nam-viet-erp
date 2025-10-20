@@ -596,6 +596,11 @@ export const ROLE_PERMISSIONS = {
     "b2b.notification",
     "quotes.view",
     "quotes.create",
+    "medical.access",
+    "patients.view",
+    "patients.create",
+    "patients.edit",
+    "patients.delete",
   ],
 
   "sales-manager": [

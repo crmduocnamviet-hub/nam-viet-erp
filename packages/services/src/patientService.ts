@@ -11,7 +11,9 @@ export const getPatients = async (filters?: {
   let query = supabase.from("patients").select("*");
 
   if (filters?.search) {
-    query = query.or(`full_name.ilike.%${filters.search}%,phone_number.ilike.%${filters.search}%`);
+    query = query.or(
+      `full_name.ilike.%${filters.search}%,phone_number.ilike.%${filters.search}%`,
+    );
   }
 
   if (filters?.isB2BCustomer !== undefined) {
@@ -23,7 +25,10 @@ export const getPatients = async (filters?: {
   }
 
   if (filters?.offset) {
-    query = query.range(filters.offset, (filters.offset + (filters.limit || 10)) - 1);
+    query = query.range(
+      filters.offset,
+      filters.offset + (filters.limit || 10) - 1,
+    );
   }
 
   const response = await query.order("created_at", { ascending: false });
@@ -31,7 +36,9 @@ export const getPatients = async (filters?: {
 };
 
 // Get patient by ID
-export const getPatientById = async (patientId: string): Promise<PostgrestSingleResponse<IPatient | null>> => {
+export const getPatientById = async (
+  patientId: string,
+): Promise<PostgrestSingleResponse<IPatient | null>> => {
   const response = await supabase
     .from("patients")
     .select("*")
@@ -42,7 +49,9 @@ export const getPatientById = async (patientId: string): Promise<PostgrestSingle
 };
 
 // Get patient by phone number
-export const getPatientByPhone = async (phoneNumber: string): Promise<PostgrestSingleResponse<IPatient | null>> => {
+export const getPatientByPhone = async (
+  phoneNumber: string,
+): Promise<PostgrestSingleResponse<IPatient | null>> => {
   const response = await supabase
     .from("patients")
     .select("*")
@@ -53,10 +62,23 @@ export const getPatientByPhone = async (phoneNumber: string): Promise<PostgrestS
 };
 
 // Create new patient
-export const createPatient = async (patient: Omit<IPatient, "patient_id" | "created_at">): Promise<PostgrestSingleResponse<IPatient | null>> => {
+export const createPatient = async (
+  patient: Omit<IPatient, "patient_id" | "created_at">,
+): Promise<PostgrestSingleResponse<IPatient | null>> => {
+  // Normalize address field to support either text or text[] columns
+  const normalized: any = { ...patient };
+  if ((normalized as any).address !== undefined) {
+    const val = (normalized as any).address as any;
+    if (val === null || val === "") {
+      delete normalized.address;
+    } else if (!Array.isArray(val)) {
+      normalized.address = [val];
+    }
+  }
+
   const response = await supabase
     .from("patients")
-    .insert(patient)
+    .insert(normalized)
     .select()
     .single();
 
@@ -66,11 +88,22 @@ export const createPatient = async (patient: Omit<IPatient, "patient_id" | "crea
 // Update patient
 export const updatePatient = async (
   patientId: string,
-  updates: Partial<Omit<IPatient, "patient_id" | "created_at">>
+  updates: Partial<Omit<IPatient, "patient_id" | "created_at">>,
 ): Promise<PostgrestSingleResponse<IPatient | null>> => {
+  // Normalize address field to support either text or text[] columns
+  const normalized: any = { ...updates };
+  if (normalized.address !== undefined) {
+    const val = normalized.address as any;
+    if (val === null || val === "") {
+      delete normalized.address;
+    } else if (!Array.isArray(val)) {
+      normalized.address = [val];
+    }
+  }
+
   const response = await supabase
     .from("patients")
-    .update(updates)
+    .update(normalized)
     .eq("patient_id", patientId)
     .select()
     .single();
@@ -79,7 +112,9 @@ export const updatePatient = async (
 };
 
 // Delete patient
-export const deletePatient = async (patientId: string): Promise<PostgrestSingleResponse<null>> => {
+export const deletePatient = async (
+  patientId: string,
+): Promise<PostgrestSingleResponse<null>> => {
   const response = await supabase
     .from("patients")
     .delete()
@@ -102,7 +137,7 @@ export const getVIPPatients = async (minPoints: number = 100) => {
 // Update loyalty points
 export const updateLoyaltyPoints = async (
   patientId: string,
-  pointsToAdd: number
+  pointsToAdd: number,
 ): Promise<PostgrestSingleResponse<IPatient | null>> => {
   // First get current points
   const { data: currentPatient } = await getPatientById(patientId);
@@ -128,17 +163,16 @@ export const getPatientsWithConditions = async (condition: string) => {
   const response = await supabase
     .from("patients")
     .select("*")
-    .or(`allergy_notes.ilike.%${condition}%,chronic_diseases.ilike.%${condition}%`)
+    .or(
+      `allergy_notes.ilike.%${condition}%,chronic_diseases.ilike.%${condition}%`,
+    )
     .order("full_name", { ascending: true });
 
   return response;
 };
 
 // Update patient notes (receptionist notes)
-export const updatePatientNotes = async (
-  patientId: string,
-  notes: string
-) => {
+export const updatePatientNotes = async (patientId: string, notes: string) => {
   const response = await supabase
     .from("patients")
     .update({ receptionist_notes: notes })

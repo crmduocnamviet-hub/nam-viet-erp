@@ -14,6 +14,7 @@ export * from "./src/comboService";
 
 // Scheduling & Medical Services
 export * from "./src/patientService";
+export * from "./src/patientPointsService";
 export * from "./src/employeeService";
 export * from "./src/userManagementService";
 export * from "./src/appointmentStatusService";
