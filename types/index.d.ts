@@ -299,12 +299,10 @@ interface IPatient {
   phone_number: string | null;
   date_of_birth: string | null;
   gender: string | null;
-  is_b2b_customer: boolean; // Phân biệt Khách lẻ/Bệnh nhân và Khách buôn
   loyalty_points: number;
   allergy_notes: string | null; // Dị ứng đã biết
   chronic_diseases: string | null; // Bệnh nền/Bệnh mãn tính
   created_at: string;
-  receptionist_notes?: string;
   address?: string;
 }
 
@@ -683,7 +681,7 @@ interface SaleOrderProductLotItem {
   quantity: number;
   order_id: string;
   lot_id: number;
-};
+}
 
 // User Account Management Interfaces
 interface IUserAccount {
