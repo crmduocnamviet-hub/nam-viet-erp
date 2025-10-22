@@ -361,30 +361,12 @@ export const receivePurchaseOrderItems = async (
 
     await Promise.all(_updatePromises);
 
-    // Check if PO is fully received
-    const { data: updatedPO } = await getPurchaseOrderById(poId);
-    if (updatedPO) {
-      const allItemsFullyReceived = (updatedPO.items || []).every(
-        (item: any) => item.received_quantity >= item.quantity,
-      );
+    // Always set PO status to "received" (done) when confirming receiving
+    const newStatus: IPurchaseOrder["status"] = "received";
 
-      const someItemsReceived = (updatedPO.items || []).some(
-        (item: any) => item.received_quantity > 0,
-      );
-
-      let newStatus: IPurchaseOrder["status"];
-      if (allItemsFullyReceived) {
-        newStatus = "received";
-      } else if (someItemsReceived) {
-        newStatus = "partially_received";
-      } else {
-        newStatus = poData.status as any; // Keep current status
-      }
-
-      // Update PO status if changed
-      if (newStatus !== poData.status) {
-        await updatePurchaseOrderStatus(poId, newStatus);
-      }
+    // Update PO status if changed
+    if (newStatus !== poData.status) {
+      await updatePurchaseOrderStatus(poId, newStatus);
     }
 
     return { success: true, message: "Items received successfully" };

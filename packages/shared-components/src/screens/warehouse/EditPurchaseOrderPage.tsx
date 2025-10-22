@@ -21,10 +21,11 @@ import {
 } from "antd";
 import {
   SaveOutlined,
-  ArrowLeftOutlined,
   PlusOutlined,
   DeleteOutlined,
   CloseOutlined,
+  HomeOutlined,
+  ShoppingOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
@@ -37,6 +38,7 @@ import {
 } from "@nam-viet-erp/services";
 import { getSuppliers } from "@nam-viet-erp/services/src/supplierService";
 import { searchProducts } from "@nam-viet-erp/services";
+import PageLayout from "../../components/PageLayout";
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -63,7 +65,7 @@ const EditPurchaseOrderPageContent: React.FC = () => {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [purchaseOrder, setPurchaseOrder] = useState<any>(null);
+  const [purchaseOrder, setPurchaseOrder] = useState<IProductOrder>(null);
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [items, setItems] = useState<POItem[]>([]);
   const [products, setProducts] = useState<any[]>([]);
@@ -98,7 +100,7 @@ const EditPurchaseOrderPageContent: React.FC = () => {
         setSuppliers(suppliersResponse.data || []);
         setProducts(productsResponse.data || []);
         setItems(poData.items || []);
-
+        console.log(poData);
         // Set form values
         form.setFieldsValue({
           supplier_id: poData.supplier_id,
@@ -343,238 +345,229 @@ const EditPurchaseOrderPageContent: React.FC = () => {
   }
 
   return (
-    <div style={{ padding: "24px" }}>
-      <Space direction="vertical" size="large" style={{ width: "100%" }}>
-        {/* Header with Actions */}
-        <div>
-          <Row
-            justify="space-between"
-            align="middle"
-            style={{ marginBottom: 16 }}
-          >
-            <Col>
-              <Tooltip title="Quay lại">
-                <Button
-                  icon={<ArrowLeftOutlined />}
-                  onClick={() => navigate("/warehouse/purchase-orders")}
+    <PageLayout
+      title={`Chỉnh sửa Đơn Đặt Hàng - ${purchaseOrder?.po_number || ""}`}
+      showBackButton
+      breadcrumbs={[
+        {
+          title: "Trang chủ",
+          href: "/",
+          icon: <HomeOutlined />,
+        },
+        {
+          title: "Đơn Đặt Hàng",
+          href: "/warehouse/purchase-orders",
+          icon: <ShoppingOutlined />,
+        },
+        {
+          title: purchaseOrder?.po_number ?? "",
+        },
+      ]}
+      extra={
+        <Space size="middle">
+          <Tooltip title="Hủy">
+            <Button
+              icon={<CloseOutlined />}
+              size="large"
+              onClick={() => navigate("/warehouse/purchase-orders")}
+            />
+          </Tooltip>
+          <Tooltip title="Lưu thay đổi">
+            <Button
+              type="primary"
+              size="large"
+              icon={<SaveOutlined />}
+              onClick={() => form.submit()}
+              loading={saving}
+            />
+          </Tooltip>
+        </Space>
+      }
+    >
+      {/* Two Column Layout */}
+      <Form
+        form={form}
+        layout="vertical"
+        onFinish={handleSave}
+        initialValues={{
+          status: "draft",
+        }}
+      >
+        <Row gutter={24}>
+          {/* Left Column - Order Information */}
+          <Col xs={24} lg={10} xl={8}>
+            <Card title="Thông tin Đơn hàng" style={{ height: "100%" }}>
+              <Form.Item
+                name="supplier_id"
+                label="Nhà Cung Cấp"
+                rules={[
+                  { required: true, message: "Vui lòng chọn nhà cung cấp" },
+                ]}
+              >
+                <Select
+                  showSearch
+                  placeholder="Chọn nhà cung cấp"
+                  optionFilterProp="children"
+                  size="large"
+                  filterOption={(input, option) =>
+                    (option?.label ?? "")
+                      .toLowerCase()
+                      .includes(input.toLowerCase())
+                  }
+                  options={suppliers.map((supplier) => ({
+                    value: supplier.id,
+                    label: supplier.name,
+                  }))}
+                />
+              </Form.Item>
+
+              <Form.Item
+                name="order_date"
+                label="Ngày Đặt Hàng"
+                rules={[
+                  { required: true, message: "Vui lòng chọn ngày đặt hàng" },
+                ]}
+              >
+                <DatePicker
+                  style={{ width: "100%" }}
+                  format="DD/MM/YYYY"
                   size="large"
                 />
-              </Tooltip>
-            </Col>
-            <Col>
-              <Space size="middle">
-                <Tooltip title="Hủy">
-                  <Button
-                    icon={<CloseOutlined />}
-                    size="large"
-                    onClick={() => navigate("/warehouse/purchase-orders")}
-                  />
-                </Tooltip>
-                <Tooltip title="Lưu thay đổi">
+              </Form.Item>
+
+              <Form.Item
+                name="expected_delivery_date"
+                label="Ngày Dự Kiến Giao"
+              >
+                <DatePicker
+                  style={{ width: "100%" }}
+                  format="DD/MM/YYYY"
+                  size="large"
+                />
+              </Form.Item>
+
+              <Form.Item
+                name="status"
+                label="Trạng Thái"
+                rules={[
+                  { required: true, message: "Vui lòng chọn trạng thái" },
+                ]}
+              >
+                <Select placeholder="Chọn trạng thái" size="large">
+                  <Select.Option value="draft">Nháp</Select.Option>
+                  <Select.Option value="sent">Đã gửi</Select.Option>
+                  <Select.Option value="ordered">Đã đặt hàng</Select.Option>
+                  <Select.Option value="partially_received">
+                    Nhận một phần
+                  </Select.Option>
+                  <Select.Option value="received">Hoàn thành</Select.Option>
+                  <Select.Option value="cancelled">Đã hủy</Select.Option>
+                </Select>
+              </Form.Item>
+
+              <Form.Item name="notes" label="Ghi Chú">
+                <TextArea
+                  rows={4}
+                  placeholder="Nhập ghi chú cho đơn hàng..."
+                  showCount
+                  maxLength={500}
+                />
+              </Form.Item>
+
+              <Divider />
+
+              {/* Total Amount Display */}
+              <div
+                style={{
+                  padding: "16px",
+                  backgroundColor: "#f5f5f5",
+                  borderRadius: "8px",
+                }}
+              >
+                <Row justify="space-between" align="middle">
+                  <Col>
+                    <Text strong style={{ fontSize: 16 }}>
+                      Tổng Tiền:
+                    </Text>
+                  </Col>
+                  <Col>
+                    <Text strong style={{ fontSize: 20, color: "#1890ff" }}>
+                      {calculateTotalAmount().toLocaleString("vi-VN", {
+                        style: "currency",
+                        currency: "VND",
+                      })}
+                    </Text>
+                  </Col>
+                </Row>
+                <div style={{ marginTop: 8 }}>
+                  <Text type="secondary" style={{ fontSize: 12 }}>
+                    Số sản phẩm: <strong>{items.length}</strong>
+                  </Text>
+                </div>
+              </div>
+            </Card>
+          </Col>
+
+          {/* Right Column - Products */}
+          <Col xs={24} lg={14} xl={16}>
+            <Card
+              title="Sản phẩm trong đơn hàng"
+              extra={
+                <Tooltip title="Thêm sản phẩm">
                   <Button
                     type="primary"
-                    size="large"
-                    icon={<SaveOutlined />}
-                    onClick={() => form.submit()}
-                    loading={saving}
+                    icon={<PlusOutlined />}
+                    onClick={handleAddProduct}
                   />
                 </Tooltip>
-              </Space>
-            </Col>
-          </Row>
-          <Title level={2} style={{ margin: 0 }}>
-            Chỉnh sửa Đơn Đặt Hàng
-          </Title>
-          <Text type="secondary">
-            Số đơn: <strong>{purchaseOrder?.po_number}</strong>
-          </Text>
-        </div>
-
-        {/* Two Column Layout */}
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={handleSave}
-          initialValues={{
-            status: "draft",
-          }}
-        >
-          <Row gutter={24}>
-            {/* Left Column - Order Information */}
-            <Col xs={24} lg={10} xl={8}>
-              <Card title="Thông tin Đơn hàng" style={{ height: "100%" }}>
-                <Form.Item
-                  name="supplier_id"
-                  label="Nhà Cung Cấp"
-                  rules={[
-                    { required: true, message: "Vui lòng chọn nhà cung cấp" },
-                  ]}
-                >
+              }
+            >
+              {addingProduct && (
+                <div style={{ marginBottom: 16 }}>
                   <Select
                     showSearch
-                    placeholder="Chọn nhà cung cấp"
+                    placeholder="Tìm và chọn sản phẩm..."
                     optionFilterProp="children"
                     size="large"
-                    filterOption={(input, option) =>
-                      (option?.label ?? "")
-                        .toLowerCase()
-                        .includes(input.toLowerCase())
-                    }
-                    options={suppliers.map((supplier) => ({
-                      value: supplier.id,
-                      label: supplier.name,
+                    style={{ width: "100%" }}
+                    onSelect={handleProductSelect}
+                    onBlur={() => setAddingProduct(false)}
+                    autoFocus
+                    filterOption={(input, option) => {
+                      const product = products.find(
+                        (p) => p.id === option?.value,
+                      );
+                      if (!product) return false;
+                      const searchStr =
+                        `${product.name} ${product.sku || ""}`.toLowerCase();
+                      return searchStr.includes(input.toLowerCase());
+                    }}
+                    options={products.map((product) => ({
+                      value: product.id,
+                      label: `${product.name}${product.sku ? ` (${product.sku})` : ""}`,
                     }))}
                   />
-                </Form.Item>
-
-                <Form.Item
-                  name="order_date"
-                  label="Ngày Đặt Hàng"
-                  rules={[
-                    { required: true, message: "Vui lòng chọn ngày đặt hàng" },
-                  ]}
-                >
-                  <DatePicker
-                    style={{ width: "100%" }}
-                    format="DD/MM/YYYY"
-                    size="large"
-                  />
-                </Form.Item>
-
-                <Form.Item
-                  name="expected_delivery_date"
-                  label="Ngày Dự Kiến Giao"
-                >
-                  <DatePicker
-                    style={{ width: "100%" }}
-                    format="DD/MM/YYYY"
-                    size="large"
-                  />
-                </Form.Item>
-
-                <Form.Item
-                  name="status"
-                  label="Trạng Thái"
-                  rules={[
-                    { required: true, message: "Vui lòng chọn trạng thái" },
-                  ]}
-                >
-                  <Select placeholder="Chọn trạng thái" size="large">
-                    <Select.Option value="draft">Nháp</Select.Option>
-                    <Select.Option value="sent">Đã gửi</Select.Option>
-                    <Select.Option value="ordered">Đã đặt hàng</Select.Option>
-                    <Select.Option value="partially_received">
-                      Nhận một phần
-                    </Select.Option>
-                    <Select.Option value="received">Hoàn thành</Select.Option>
-                    <Select.Option value="cancelled">Đã hủy</Select.Option>
-                  </Select>
-                </Form.Item>
-
-                <Form.Item name="notes" label="Ghi Chú">
-                  <TextArea
-                    rows={4}
-                    placeholder="Nhập ghi chú cho đơn hàng..."
-                    showCount
-                    maxLength={500}
-                  />
-                </Form.Item>
-
-                <Divider />
-
-                {/* Total Amount Display */}
-                <div
-                  style={{
-                    padding: "16px",
-                    backgroundColor: "#f5f5f5",
-                    borderRadius: "8px",
-                  }}
-                >
-                  <Row justify="space-between" align="middle">
-                    <Col>
-                      <Text strong style={{ fontSize: 16 }}>
-                        Tổng Tiền:
-                      </Text>
-                    </Col>
-                    <Col>
-                      <Text strong style={{ fontSize: 20, color: "#1890ff" }}>
-                        {calculateTotalAmount().toLocaleString("vi-VN", {
-                          style: "currency",
-                          currency: "VND",
-                        })}
-                      </Text>
-                    </Col>
-                  </Row>
-                  <div style={{ marginTop: 8 }}>
-                    <Text type="secondary" style={{ fontSize: 12 }}>
-                      Số sản phẩm: <strong>{items.length}</strong>
-                    </Text>
-                  </div>
                 </div>
-              </Card>
-            </Col>
+              )}
 
-            {/* Right Column - Products */}
-            <Col xs={24} lg={14} xl={16}>
-              <Card
-                title="Sản phẩm trong đơn hàng"
-                extra={
-                  <Tooltip title="Thêm sản phẩm">
-                    <Button
-                      type="primary"
-                      icon={<PlusOutlined />}
-                      onClick={handleAddProduct}
-                    />
-                  </Tooltip>
+              <Table
+                columns={columns}
+                dataSource={items}
+                rowKey={(record, index) =>
+                  record.id?.toString() || `new-${index}`
                 }
-              >
-                {addingProduct && (
-                  <div style={{ marginBottom: 16 }}>
-                    <Select
-                      showSearch
-                      placeholder="Tìm và chọn sản phẩm..."
-                      optionFilterProp="children"
-                      size="large"
-                      style={{ width: "100%" }}
-                      onSelect={handleProductSelect}
-                      onBlur={() => setAddingProduct(false)}
-                      autoFocus
-                      filterOption={(input, option) => {
-                        const product = products.find(
-                          (p) => p.id === option?.value,
-                        );
-                        if (!product) return false;
-                        const searchStr =
-                          `${product.name} ${product.sku || ""}`.toLowerCase();
-                        return searchStr.includes(input.toLowerCase());
-                      }}
-                      options={products.map((product) => ({
-                        value: product.id,
-                        label: `${product.name}${product.sku ? ` (${product.sku})` : ""}`,
-                      }))}
-                    />
-                  </div>
-                )}
-
-                <Table
-                  columns={columns}
-                  dataSource={items}
-                  rowKey={(record, index) =>
-                    record.id?.toString() || `new-${index}`
-                  }
-                  pagination={false}
-                  scroll={{ x: 800 }}
-                  locale={{
-                    emptyText:
-                      "Chưa có sản phẩm nào. Click 'Thêm sản phẩm' để bắt đầu.",
-                  }}
-                />
-              </Card>
-            </Col>
-          </Row>
-        </Form>
-      </Space>
-    </div>
+                pagination={false}
+                scroll={{ x: 800 }}
+                locale={{
+                  emptyText:
+                    "Chưa có sản phẩm nào. Click 'Thêm sản phẩm' để bắt đầu.",
+                }}
+              />
+            </Card>
+          </Col>
+        </Row>
+      </Form>
+    </PageLayout>
   );
 };
 

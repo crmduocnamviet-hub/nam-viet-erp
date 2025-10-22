@@ -14,6 +14,8 @@ import {
   App,
   Checkbox,
   Grid,
+  Modal,
+  Space,
 } from "antd";
 import type { TabsProps } from "antd";
 
@@ -24,6 +26,7 @@ import {
   HomeOutlined,
   QrcodeOutlined,
   UsergroupAddOutlined, // Import icon for new tab
+  PlusOutlined,
 } from "@ant-design/icons";
 import ImageUpload from "./ImageUpload";
 import {
@@ -34,6 +37,7 @@ import {
   disableLotManagement,
   getSuppliers,
   getProductSupplierMappings,
+  createSupplier,
 } from "@nam-viet-erp/services";
 import PdfUpload from "./PdfUpload";
 import QRScannerModal from "./QRScannerModal";
@@ -69,6 +73,14 @@ const ProductForm: React.FC<ProductFormProps> = ({
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [loadingSuppliers, setLoadingSuppliers] = useState(false);
 
+  // New supplier modal state
+  const [isAddSupplierModalOpen, setIsAddSupplierModalOpen] = useState(false);
+  const [newSupplierName, setNewSupplierName] = useState("");
+  const [newSupplierPhone, setNewSupplierPhone] = useState("");
+  const [newSupplierEmail, setNewSupplierEmail] = useState("");
+  const [newSupplierAddress, setNewSupplierAddress] = useState("");
+  const [creatingSupplier, setCreatingSupplier] = useState(false);
+
   // Responsive column spans
   const isMobile = !screens.md;
   const imageColSpan = isMobile ? 24 : 8;
@@ -100,6 +112,69 @@ const ProductForm: React.FC<ProductFormProps> = ({
       setSuppliers(data || []);
     }
     setLoadingSuppliers(false);
+  };
+
+  const handleAddSupplier = () => {
+    setIsAddSupplierModalOpen(true);
+  };
+
+  const handleCreateSupplier = async () => {
+    if (!newSupplierName.trim()) {
+      notification.error({
+        message: "Lỗi",
+        description: "Vui lòng nhập tên nhà cung cấp",
+      });
+      return;
+    }
+
+    setCreatingSupplier(true);
+    try {
+      const { data, error } = await createSupplier({
+        name: newSupplierName.trim(),
+        phone: newSupplierPhone.trim() || null,
+        email: newSupplierEmail.trim() || null,
+        address: newSupplierAddress.trim() || null,
+        status: "active",
+      });
+
+      if (error) throw error;
+
+      notification.success({
+        message: "Thành công",
+        description: "Đã tạo nhà cung cấp mới",
+      });
+
+      // Refresh suppliers list
+      await fetchSuppliers();
+
+      // Add to current selection
+      const currentSupplierIds = form.getFieldValue("supplier_ids") || [];
+      form.setFieldsValue({
+        supplier_ids: [...currentSupplierIds, data.id],
+      });
+
+      // Reset and close modal
+      setNewSupplierName("");
+      setNewSupplierPhone("");
+      setNewSupplierEmail("");
+      setNewSupplierAddress("");
+      setIsAddSupplierModalOpen(false);
+    } catch (error: any) {
+      notification.error({
+        message: "Lỗi",
+        description: error.message || "Không thể tạo nhà cung cấp",
+      });
+    } finally {
+      setCreatingSupplier(false);
+    }
+  };
+
+  const handleCancelAddSupplier = () => {
+    setNewSupplierName("");
+    setNewSupplierPhone("");
+    setNewSupplierEmail("");
+    setNewSupplierAddress("");
+    setIsAddSupplierModalOpen(false);
   };
 
   useEffect(() => {
@@ -415,6 +490,21 @@ const ProductForm: React.FC<ProductFormProps> = ({
                       label: s.name,
                     }))}
                     size="large"
+                    dropdownRender={(menu) => (
+                      <>
+                        {menu}
+                        <Divider style={{ margin: "8px 0" }} />
+                        <Button
+                          type="text"
+                          icon={<PlusOutlined />}
+                          onClick={handleAddSupplier}
+                          block
+                          style={{ textAlign: "left" }}
+                        >
+                          Thêm nhà cung cấp mới
+                        </Button>
+                      </>
+                    )}
                   />
                 </Form.Item>
               </Col>
@@ -644,6 +734,61 @@ const ProductForm: React.FC<ProductFormProps> = ({
         onClose={() => setIsQRScannerOpen(false)}
         onScan={handleQRScan}
       />
+
+      {/* Add Supplier Modal */}
+      <Modal
+        title="Thêm Nhà Cung Cấp Mới"
+        open={isAddSupplierModalOpen}
+        onOk={handleCreateSupplier}
+        onCancel={handleCancelAddSupplier}
+        confirmLoading={creatingSupplier}
+        okText="Tạo"
+        cancelText="Hủy"
+      >
+        <Space direction="vertical" style={{ width: "100%" }} size="middle">
+          <div>
+            <label style={{ display: "block", marginBottom: 4 }}>
+              Tên nhà cung cấp <span style={{ color: "red" }}>*</span>
+            </label>
+            <Input
+              placeholder="Nhập tên nhà cung cấp"
+              value={newSupplierName}
+              onChange={(e) => setNewSupplierName(e.target.value)}
+              size="large"
+            />
+          </div>
+          <div>
+            <label style={{ display: "block", marginBottom: 4 }}>
+              Số điện thoại
+            </label>
+            <Input
+              placeholder="Nhập số điện thoại"
+              value={newSupplierPhone}
+              onChange={(e) => setNewSupplierPhone(e.target.value)}
+              size="large"
+            />
+          </div>
+          <div>
+            <label style={{ display: "block", marginBottom: 4 }}>Email</label>
+            <Input
+              placeholder="Nhập email"
+              value={newSupplierEmail}
+              onChange={(e) => setNewSupplierEmail(e.target.value)}
+              size="large"
+              type="email"
+            />
+          </div>
+          <div>
+            <label style={{ display: "block", marginBottom: 4 }}>Địa chỉ</label>
+            <Input.TextArea
+              placeholder="Nhập địa chỉ"
+              value={newSupplierAddress}
+              onChange={(e) => setNewSupplierAddress(e.target.value)}
+              rows={3}
+            />
+          </div>
+        </Space>
+      </Modal>
     </Form>
   );
 };

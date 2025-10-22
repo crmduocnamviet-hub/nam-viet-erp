@@ -20,6 +20,8 @@ import {
   ClockCircleOutlined,
   ClearOutlined,
   PlusCircleOutlined,
+  HomeOutlined,
+  ShoppingOutlined,
 } from "@ant-design/icons";
 import PageLayout from "../../components/PageLayout";
 import ViewPurchaseOrderModal from "../../components/ViewPurchaseOrderModal";
@@ -169,8 +171,14 @@ const PurchaseOrdersPage: React.FC = () => {
   };
 
   const handleView = (record: any) => {
-    setSelectedPO(record);
-    setViewModalOpen(true);
+    // Navigate to receiving page for ordered status
+    if (record.status === "ordered") {
+      navigate(`/warehouse/receiving/${record.id}`);
+    } else {
+      // Show view modal for other statuses
+      setSelectedPO(record);
+      setViewModalOpen(true);
+    }
   };
 
   const handleEdit = (record: any) => {
@@ -253,6 +261,17 @@ const PurchaseOrdersPage: React.FC = () => {
   return (
     <PageLayout
       title="Đơn Đặt Hàng"
+      breadcrumbs={[
+        {
+          title: "Trang chủ",
+          href: "/",
+          icon: <HomeOutlined />,
+        },
+        {
+          title: "Đơn Đặt Hàng",
+          icon: <ShoppingOutlined />,
+        },
+      ]}
       extra={
         <Space>
           {canAutoCreate && (

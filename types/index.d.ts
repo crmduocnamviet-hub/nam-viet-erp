@@ -102,13 +102,14 @@ interface IProductOrder {
   suppliers?: ISupplier;
   items?: IProductOrderItem[];
   status: string;
-  note?: string;
+  notes?: string;
   created_by?: string;
   po_number?: string;
   expected_delivery_date?: string;
   total_amount?: number;
   updated_at?: string;
   created_at?: string;
+  order_date?: string;
 }
 
 interface IProductOrderItem {

@@ -26,12 +26,18 @@ import {
   ClockCircleOutlined,
   PlusOutlined,
   DeleteOutlined,
+  HomeOutlined,
+  InboxOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import PageLayout from "../../components/PageLayout";
 import LotExpirationInput from "../../components/LotExpirationInput";
 import QRScannerModal from "../../components/QRScannerModal";
 import { useAuthStore, usePurchaseOrderStore } from "@nam-viet-erp/store";
+import {
+  analyzeProductsNeedingReorder,
+  createPurchaseOrdersFromProducts,
+} from "@nam-viet-erp/services";
 
 const { Text } = Typography;
 
@@ -208,6 +214,48 @@ const PurchaseOrderReceivingDetailPage: React.FC = () => {
     }
   };
 
+  // Run auto-generate purchase orders
+  const runAutoGenerate = async () => {
+    try {
+      const warehouseId = 1; // TODO: Get actual warehouseId from context/props
+      const autoGenResult = await analyzeProductsNeedingReorder(warehouseId);
+
+      if (
+        autoGenResult.productsToOrder &&
+        autoGenResult.productsToOrder.length > 0
+      ) {
+        const createResult = await createPurchaseOrdersFromProducts(
+          autoGenResult.productsToOrder,
+          warehouseId,
+          user?.id || null,
+        );
+
+        notification.success({
+          message: "Dự trù tự động hoàn tất",
+          description:
+            createResult.message ||
+            `Đã tạo đơn đặt hàng tự động cho ${autoGenResult.productsToOrder.length} sản phẩm`,
+          duration: 5,
+        });
+      } else {
+        notification.info({
+          message: "Dự trù tự động",
+          description: "Không có sản phẩm nào cần đặt hàng",
+          duration: 3,
+        });
+      }
+    } catch (autoGenError: any) {
+      // Don't block the main flow if auto-generate fails
+      console.error("Auto-generate error:", autoGenError);
+      notification.warning({
+        message: "Dự trù tự động thất bại",
+        description:
+          autoGenError.message || "Không thể tạo đơn đặt hàng tự động",
+        duration: 4,
+      });
+    }
+  };
+
   const confirmReceiving = async () => {
     setConfirming(true);
     try {
@@ -243,9 +291,39 @@ const PurchaseOrderReceivingDetailPage: React.FC = () => {
         duration: 4,
       });
 
-      // Reset and navigate back
-      setReceivingData({});
-      navigate("/warehouse/receiving");
+      // Check if this is a partial receive
+      const isPartialReceive =
+        receivingSummary!.totalQuantityToReceive <
+        receivingSummary!.pendingQuantity;
+
+      if (isPartialReceive) {
+        // Show confirmation modal for partial receive
+        Modal.confirm({
+          title: "Đơn hàng nhận một phần",
+          content:
+            "Đơn hàng chưa nhận đủ số lượng. Bạn có muốn chạy 'Dự trù tự động' để tạo đơn hàng mới không?",
+          okText: "Chạy Dự Trù",
+          cancelText: "Bỏ qua",
+          onOk: async () => {
+            await runAutoGenerate();
+            // Navigate back after auto-generate completes
+            setReceivingData({});
+            navigate("/warehouse/receiving");
+          },
+          onCancel: () => {
+            // Navigate back even if user cancels
+            setReceivingData({});
+            navigate("/warehouse/receiving");
+          },
+        });
+      } else {
+        // Full receive - run auto-generate automatically
+        await runAutoGenerate();
+
+        // Reset and navigate back
+        setReceivingData({});
+        navigate("/warehouse/receiving");
+      }
     } catch (error: any) {
       notification.error({
         message: "Lỗi",
@@ -439,15 +517,21 @@ const PurchaseOrderReceivingDetailPage: React.FC = () => {
   return (
     <PageLayout
       title="Xác Nhận Nhận Hàng"
-      extra={
-        <Button
-          icon={<ArrowLeftOutlined />}
-          onClick={() => navigate("/warehouse/receiving")}
-          size="large"
-        >
-          Quay Lại
-        </Button>
-      }
+      breadcrumbs={[
+        {
+          title: "Trang chủ",
+          href: "/",
+          icon: <HomeOutlined />,
+        },
+        {
+          title: "Nhận Hàng",
+          href: "/warehouse/receiving",
+          icon: <InboxOutlined />,
+        },
+        {
+          title: "Xác Nhận Nhận Hàng",
+        },
+      ]}
     >
       <Space direction="vertical" size="large" style={{ width: "100%" }}>
         {/* Order Info */}

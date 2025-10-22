@@ -20,9 +20,8 @@ export const useProductWithInventory = (productId: number) => {
     queryFn: async () => {
       try {
         // Fetch product data
-        const { data: product, error: productError } = await getProductById(
-          productId
-        );
+        const { data: product, error: productError } =
+          await getProductById(productId);
         if (productError) throw productError;
         if (!product) {
           throw new Error("Không tìm thấy sản phẩm");
@@ -63,19 +62,21 @@ export const useUpdateProductHandler = ({
     (state) =>
       state.fetchData?.[
         getQueryKey([FETCH_QUERY_KEY.PRODUCT_WITH_INVENTORY, productId!])
-      ]?.fetch ?? null
+      ]?.fetch ?? null,
   );
 
   const { submit, isLoading } = useSubmitQuery({
     key: [FETCH_SUBMIT_QUERY_KEY.UPDATE_PRODUCT, productId],
     onSubmit: async (values: ProductFormData) => {
       try {
-        const { inventory_settings, ...productData } = {...values};
+        const { inventory_settings, supplier_ids, ...productData } = {
+          ...values,
+        };
 
-        // Update product data
+        // Update product data (excluding supplier_ids as it's managed separately)
         const { error: productError } = await updateProduct(
           productId,
-          productData
+          productData,
         );
         if (productError) throw productError;
 

@@ -10,8 +10,9 @@ import {
   Grid,
   Drawer,
 } from "antd";
-import { MenuOutlined } from "@ant-design/icons";
+import { MenuOutlined, LogoutOutlined } from "@ant-design/icons";
 import viVN from "antd/locale/vi_VN";
+import { signOut } from "@nam-viet-erp/services";
 import {
   ScreenProvider,
   useScreens,
@@ -72,6 +73,11 @@ const AppLayoutContent: React.FC = () => {
     }
   };
 
+  const handleLogout = async () => {
+    await signOut();
+    navigate("/login");
+  };
+
   const ComingSoon = () => (
     <div style={{ padding: "24px", textAlign: "center" }}>
       <h1>Tính năng này sắp ra mắt!</h1>
@@ -111,6 +117,8 @@ const AppLayoutContent: React.FC = () => {
               left: 0,
               top: 0,
               bottom: 0,
+              display: "flex",
+              flexDirection: "column",
             }}
           >
             <div
@@ -140,8 +148,30 @@ const AppLayoutContent: React.FC = () => {
               mode="inline"
               items={menuItems}
               onClick={handleMenuClick}
-              style={{ fontSize: "16px" }}
+              style={{ fontSize: "16px", flex: 1 }}
             />
+            <div
+              style={{
+                padding: collapsed ? "8px" : "16px",
+                borderTop: "1px solid rgba(255, 255, 255, 0.1)",
+              }}
+            >
+              <Button
+                type="text"
+                icon={<LogoutOutlined />}
+                onClick={handleLogout}
+                block
+                style={{
+                  color: "rgba(255, 255, 255, 0.75)",
+                  height: "40px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: collapsed ? "center" : "flex-start",
+                }}
+              >
+                {!collapsed && "Đăng xuất"}
+              </Button>
+            </div>
           </Sider>
         )}
 
@@ -197,49 +227,28 @@ const AppLayoutContent: React.FC = () => {
                 style={{ fontSize: "16px", flex: 1 }}
               />
 
-              {/* User Info Section for Mobile */}
+              {/* Logout Button for Mobile */}
               <div
                 style={{
                   padding: "16px",
                   borderTop: "1px solid rgba(255, 255, 255, 0.1)",
-                  backgroundColor: "rgba(255, 255, 255, 0.05)",
                 }}
               >
-                <div
-                  style={{ display: "flex", alignItems: "center", gap: "12px" }}
+                <Button
+                  type="text"
+                  icon={<LogoutOutlined />}
+                  onClick={handleLogout}
+                  block
+                  style={{
+                    color: "rgba(255, 255, 255, 0.75)",
+                    height: "40px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "flex-start",
+                  }}
                 >
-                  <Avatar
-                    size="default"
-                    style={{
-                      backgroundColor: "rgba(255, 255, 255, 0.2)",
-                      color: "white",
-                      fontWeight: "bold",
-                    }}
-                  >
-                    {user?.name ? user.name.charAt(0).toUpperCase() : "U"}
-                  </Avatar>
-                  <div style={{ flex: 1 }}>
-                    <div
-                      style={{
-                        fontSize: "14px",
-                        fontWeight: "500",
-                        color: "white",
-                        lineHeight: "1.2",
-                      }}
-                    >
-                      {user?.name || "Người dùng"}
-                    </div>
-                    <div
-                      style={{
-                        fontSize: "12px",
-                        color: "rgba(255, 255, 255, 0.7)",
-                        lineHeight: "1.2",
-                      }}
-                    >
-                      {/* Add employee code if available */}
-                    </div>
-                  </div>
-                </div>
+                  Đăng xuất
+                </Button>
               </div>
             </div>
           </Drawer>

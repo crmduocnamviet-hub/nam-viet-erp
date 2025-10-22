@@ -23,6 +23,7 @@ import {
   DeleteOutlined,
   SaveOutlined,
   InboxOutlined,
+  HomeOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import type { ColumnsType } from "antd/es/table";
@@ -316,15 +317,23 @@ const CreatePurchaseImportPage: React.FC = () => {
   return (
     <PageLayout
       title="Tạo Phiếu Nhập Hàng Mới"
+      breadcrumbs={[
+        {
+          title: "Trang chủ",
+          href: "/",
+          icon: <HomeOutlined />,
+        },
+        {
+          title: "Nhận Hàng",
+          href: "/warehouse/receiving",
+          icon: <InboxOutlined />,
+        },
+        {
+          title: "Tạo Phiếu Nhập Hàng Mới",
+        },
+      ]}
       extra={
         <Space>
-          <Button
-            icon={<ArrowLeftOutlined />}
-            onClick={() => navigate("/warehouse/receiving")}
-            size="large"
-          >
-            Quay Lại
-          </Button>
           <Button
             type="primary"
             icon={<SaveOutlined />}
