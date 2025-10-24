@@ -13,7 +13,10 @@ import {
   Input,
   App,
   Select,
+  Space,
+  Tooltip,
 } from "antd";
+import { EditOutlined } from "@ant-design/icons";
 import { useDebounce, QRScanner } from "@nam-viet-erp/shared-components";
 import {
   searchProducts,
@@ -106,6 +109,10 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
   // Combo Store
   const storedCombos = useCombos();
   const { fetchCombos } = useComboStore();
+
+  // Tab editing state
+  const [editingTabId, setEditingTabId] = useState<string | null>(null);
+  const [editingTabTitle, setEditingTabTitle] = useState<string>("");
 
   // Inventory Store
   const inventory = useInventory();
@@ -786,7 +793,6 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
         phone_number: values.phone_number,
         date_of_birth: values.date_of_birth?.format("YYYY-MM-DD") || null,
         gender: values.gender || null,
-        is_b2b_customer: values.is_b2b_customer || false,
         loyalty_points: 0,
         allergy_notes: values.allergy_notes || null,
         chronic_diseases: values.chronic_diseases || null,
@@ -1178,17 +1184,55 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
         items={tabs.map((tab) => ({
           key: tab.id,
           label: (
-            <span
-              onDoubleClick={(e) => {
-                e.stopPropagation();
-                const newTitle = prompt("Nhập tên đơn hàng:", tab.title);
-                if (newTitle && newTitle.trim()) {
-                  const { updateTabTitle } = usePosStore.getState();
-                  updateTabTitle(tab.id, newTitle.trim());
-                }
-              }}
-            >
-              {tab.title}
+            <Space size={4}>
+              {editingTabId === tab.id ? (
+                <Input
+                  size="small"
+                  value={editingTabTitle}
+                  onChange={(e) => setEditingTabTitle(e.target.value)}
+                  onPressEnter={() => {
+                    if (editingTabTitle.trim()) {
+                      const { updateTabTitle } = usePosStore.getState();
+                      updateTabTitle(tab.id, editingTabTitle.trim());
+                    }
+                    setEditingTabId(null);
+                    setEditingTabTitle("");
+                  }}
+                  onBlur={() => {
+                    if (editingTabTitle.trim()) {
+                      const { updateTabTitle } = usePosStore.getState();
+                      updateTabTitle(tab.id, editingTabTitle.trim());
+                    }
+                    setEditingTabId(null);
+                    setEditingTabTitle("");
+                  }}
+                  autoFocus
+                  style={{ width: 120 }}
+                />
+              ) : (
+                <span
+                  style={{ cursor: "pointer" }}
+                  onDoubleClick={(e) => {
+                    e.stopPropagation();
+                    setEditingTabId(tab.id);
+                    setEditingTabTitle(tab.title);
+                  }}
+                >
+                  {tab.title}
+                </span>
+              )}
+              {editingTabId !== tab.id && (
+                <Tooltip title="Double-click to edit or click icon">
+                  <EditOutlined
+                    style={{ fontSize: 12, color: "#999", cursor: "pointer" }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditingTabId(tab.id);
+                      setEditingTabTitle(tab.title);
+                    }}
+                  />
+                </Tooltip>
+              )}
               {tab.cart.length > 0 && (
                 <Badge
                   count={tab.cart.length}
@@ -1196,7 +1240,7 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
                   style={{ backgroundColor: "#52c41a" }}
                 />
               )}
-            </span>
+            </Space>
           ),
           closable: tabs.length > 1,
           children: (

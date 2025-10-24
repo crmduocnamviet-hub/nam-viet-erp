@@ -241,6 +241,7 @@ interface IInventory {
   min_stock: number;
   max_stock: number;
   warehouses?: IWarehouse;
+  products?: IProduct;
 }
 
 // Extended inventory with product details for display
