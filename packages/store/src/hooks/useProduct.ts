@@ -3,6 +3,10 @@ import {
   getProductById,
   updateProduct,
   upsetInventory,
+  getProductSupplierMappings,
+  createProductSupplierMapping,
+  updateProductSupplierMapping,
+  deleteProductSupplierMapping,
 } from "@nam-viet-erp/services";
 import { FETCH_QUERY_KEY, useQuery } from "..";
 import useSubmitQuery from "./useSubmitQuery";
@@ -69,11 +73,16 @@ export const useUpdateProductHandler = ({
     key: [FETCH_SUBMIT_QUERY_KEY.UPDATE_PRODUCT, productId],
     onSubmit: async (values: ProductFormData) => {
       try {
-        const { inventory_settings, supplier_ids, ...productData } = {
+        const {
+          inventory_settings,
+          supplier_ids,
+          supplier_mapping,
+          ...productData
+        } = {
           ...values,
         };
 
-        // Update product data (excluding supplier_ids as it's managed separately)
+        // Update product data (excluding supplier_ids and supplier_mapping as they're managed separately)
         const { error: productError } = await updateProduct(
           productId,
           productData,
@@ -98,6 +107,40 @@ export const useUpdateProductHandler = ({
               message:
                 "Sản phẩm đã được cập nhật nhưng có lỗi khi cập nhật tồn kho.",
             };
+          }
+        }
+
+        // Handle supplier mapping
+        if (supplier_mapping) {
+          // Get existing supplier mappings
+          const { data: existingMappings } =
+            await getProductSupplierMappings(productId);
+
+          if (existingMappings && existingMappings.length > 0) {
+            // Update existing mapping
+            const existingMapping = existingMappings[0];
+            const { error: mappingError } = await updateProductSupplierMapping(
+              existingMapping.id,
+              {
+                supplier_id: supplier_mapping.supplier_id,
+                supplier_product_code: supplier_mapping.supplier_product_code,
+                is_primary: true,
+              },
+            );
+            if (mappingError) {
+              console.error("Error updating supplier mapping:", mappingError);
+            }
+          } else {
+            // Create new mapping
+            const { error: mappingError } = await createProductSupplierMapping({
+              product_id: productId,
+              supplier_id: supplier_mapping.supplier_id,
+              supplier_product_code: supplier_mapping.supplier_product_code,
+              is_primary: true,
+            });
+            if (mappingError) {
+              console.error("Error creating supplier mapping:", mappingError);
+            }
           }
         }
       } catch (error: any) {

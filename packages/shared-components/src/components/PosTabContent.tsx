@@ -147,6 +147,7 @@ const PosTabContent: React.FC<PosTabContentProps> = ({
   const [isEditPatientModalOpen, setIsEditPatientModalOpen] = useState(false);
   const [editForm] = Form.useForm();
   const [isSavingPatient, setIsSavingPatient] = useState(false);
+  const productSearchRef = React.useRef<any>(null);
 
   // Update tab title when customer is selected
   useEffect(() => {
@@ -156,6 +157,58 @@ const PosTabContent: React.FC<PosTabContentProps> = ({
       updateTabTitle(activeTabId, newTitle);
     }
   }, [selectedCustomer, activeTabId]);
+
+  // Auto-focus product search when typing
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Get the active element
+      const activeElement = document.activeElement as HTMLElement;
+      const tagName = activeElement?.tagName.toLowerCase();
+
+      // Don't trigger if user is already typing in an input/textarea
+      if (
+        tagName === "input" ||
+        tagName === "textarea" ||
+        activeElement?.contentEditable === "true"
+      ) {
+        return;
+      }
+
+      // Don't trigger on special keys
+      if (
+        e.ctrlKey ||
+        e.metaKey ||
+        e.altKey ||
+        e.key === "Escape" ||
+        e.key === "Tab" ||
+        e.key === "Enter" ||
+        e.key === "Shift" ||
+        e.key === "Control" ||
+        e.key === "Alt" ||
+        e.key === "Meta" ||
+        e.key.startsWith("Arrow") ||
+        e.key.startsWith("F")
+      ) {
+        return;
+      }
+
+      // Only trigger on printable characters (length 1 or space)
+      if (e.key.length === 1) {
+        // Focus the product search input
+        if (productSearchRef.current) {
+          productSearchRef.current.focus();
+        }
+      }
+    };
+
+    // Add event listener
+    document.addEventListener("keydown", handleKeyDown);
+
+    // Cleanup
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
 
   // Calculate age from date of birth
   const calculateAge = (dateOfBirth: string | null): number | null => {
@@ -333,6 +386,7 @@ const PosTabContent: React.FC<PosTabContentProps> = ({
             }}
           >
             <ProductSearchInput
+              ref={productSearchRef}
               size="large"
               onChange={(product) => handleAddToCart(product)}
               selectedCustomer={selectedCustomer}

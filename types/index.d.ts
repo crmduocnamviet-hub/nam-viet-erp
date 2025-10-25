@@ -28,6 +28,7 @@ interface IProduct {
   wholesale_profit: number | null;
   retail_profit: number | null;
   wholesale_price: number | null;
+  vat_percent?: number;
   is_active: boolean;
   image_url: string | null;
   route: string | null;
@@ -524,6 +525,7 @@ interface IB2BQuoteItem {
   discount_percent: number;
   discount_amount: number;
   subtotal: number;
+  vat_percent?: number;
   notes?: string | null;
   created_at: string;
   // Relations
