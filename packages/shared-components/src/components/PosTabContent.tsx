@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Row,
@@ -25,7 +25,6 @@ import {
   Table,
   Descriptions,
   Form,
-  DatePicker,
   App,
 } from "antd";
 import {
@@ -46,18 +45,22 @@ import {
   CloseOutlined,
   EditOutlined,
 } from "@ant-design/icons";
-import { useInventory } from "@nam-viet-erp/store";
+import { useInventory, usePosStore } from "@nam-viet-erp/store";
 import {
   calculateProductGlobalQuantities,
   updatePatient,
 } from "@nam-viet-erp/services";
 import ProductSearchInput from "./ProductSearchInput";
+import DateInput from "./DateInput";
 
 const { Text, Title } = Typography;
 const { Search } = Input;
 const { useBreakpoint } = Grid;
 
 interface PosTabContentProps {
+  // Tab
+  activeTabId: string;
+
   // Warehouse
   employeeWarehouse: IWarehouse | null;
   loadingWarehouse: boolean;
@@ -106,6 +109,7 @@ interface PosTabContentProps {
 }
 
 const PosTabContent: React.FC<PosTabContentProps> = ({
+  activeTabId,
   employeeWarehouse,
   loadingWarehouse,
   customerSearchTerm,
@@ -143,6 +147,15 @@ const PosTabContent: React.FC<PosTabContentProps> = ({
   const [isEditPatientModalOpen, setIsEditPatientModalOpen] = useState(false);
   const [editForm] = Form.useForm();
   const [isSavingPatient, setIsSavingPatient] = useState(false);
+
+  // Update tab title when customer is selected
+  useEffect(() => {
+    if (selectedCustomer) {
+      const { updateTabTitle } = usePosStore.getState();
+      const newTitle = `${selectedCustomer.full_name}-${selectedCustomer.phone_number}`;
+      updateTabTitle(activeTabId, newTitle);
+    }
+  }, [selectedCustomer, activeTabId]);
 
   // Calculate age from date of birth
   const calculateAge = (dateOfBirth: string | null): number | null => {
@@ -1128,7 +1141,7 @@ const PosTabContent: React.FC<PosTabContentProps> = ({
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item label="Ngày sinh" name="date_of_birth">
-                <Input type="date" />
+                <DateInput />
               </Form.Item>
             </Col>
             <Col span={12}>

@@ -1,6 +1,17 @@
 import React, { useState } from "react";
-import { Row, Col, Typography, Grid, notification, Tabs } from "antd";
-import { PlusOutlined } from "@ant-design/icons";
+import {
+  Row,
+  Col,
+  Typography,
+  Grid,
+  notification,
+  Tabs,
+  Input,
+  Space,
+  Tooltip,
+  Badge,
+} from "antd";
+import { PlusOutlined, EditOutlined } from "@ant-design/icons";
 import { getB2BWarehouseProductByBarCode } from "@nam-viet-erp/services";
 import {
   B2BCustomerSearchModal,
@@ -55,6 +66,10 @@ const CreateOrderPage: React.FC<CreateOrderPageProps> = ({
   const screens = useBreakpoint(); // Lấy thông tin màn hình hiện tại
   const isMobile = !screens.lg; // Coi là mobile nếu màn hình nhỏ hơn 'lg'
 
+  // Tab editing state
+  const [editingTabId, setEditingTabId] = useState<string | null>(null);
+  const [editingTabTitle, setEditingTabTitle] = useState<string>("");
+
   // Get zustand store state and actions
   const tabs = useTabs();
   const activeTabId = useActiveTabId();
@@ -67,6 +82,7 @@ const CreateOrderPage: React.FC<CreateOrderPageProps> = ({
     createTab,
     closeTab,
     switchTab,
+    updateTabTitle,
   } = useB2BOrderStore();
   // Handle client selection
   const handleSelectClient = (client: IB2BCustomer) => {
@@ -225,28 +241,13 @@ const CreateOrderPage: React.FC<CreateOrderPageProps> = ({
   return (
     <div
       style={{
-        padding: "24px",
+        padding: 0,
         minHeight: "100vh",
+        height: "100vh",
+        backgroundColor: "#f5f5f5",
+        overflow: "hidden",
       }}
     >
-      <Row
-        justify="space-between"
-        align="middle"
-        style={{ marginBottom: isMobile ? 16 : 24 }}
-      >
-        <Col>
-          <Title level={isMobile ? 3 : 2} style={{ margin: 0 }}>
-            🛒 Tạo Báo Giá / Đơn Hàng B2B
-          </Title>
-          <Text
-            type="secondary"
-            style={{ fontSize: isMobile ? "14px" : "16px" }}
-          >
-            Tạo báo giá và đơn hàng chi tiết cho khách hàng bán buôn
-          </Text>
-        </Col>
-      </Row>
-
       {/* Multi-tab navigation */}
       <Tabs
         type="editable-card"
@@ -261,10 +262,72 @@ const CreateOrderPage: React.FC<CreateOrderPageProps> = ({
         }}
         items={tabs.map((tab, index) => ({
           key: tab.id,
-          label: tab.title,
+          label: (
+            <Space size={4}>
+              {editingTabId === tab.id ? (
+                <Input
+                  size="small"
+                  value={editingTabTitle}
+                  onChange={(e) => setEditingTabTitle(e.target.value)}
+                  onPressEnter={() => {
+                    if (editingTabTitle.trim()) {
+                      updateTabTitle(tab.id, editingTabTitle.trim());
+                    }
+                    setEditingTabId(null);
+                    setEditingTabTitle("");
+                  }}
+                  onBlur={() => {
+                    if (editingTabTitle.trim()) {
+                      updateTabTitle(tab.id, editingTabTitle.trim());
+                    }
+                    setEditingTabId(null);
+                    setEditingTabTitle("");
+                  }}
+                  autoFocus
+                  style={{ width: 120 }}
+                />
+              ) : (
+                <span
+                  style={{ cursor: "pointer" }}
+                  onDoubleClick={(e) => {
+                    e.stopPropagation();
+                    setEditingTabId(tab.id);
+                    setEditingTabTitle(tab.title);
+                  }}
+                >
+                  {tab.title}
+                </span>
+              )}
+              {editingTabId !== tab.id && (
+                <Tooltip title="Double-click to edit or click icon">
+                  <EditOutlined
+                    style={{ fontSize: 12, color: "#999", cursor: "pointer" }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditingTabId(tab.id);
+                      setEditingTabTitle(tab.title);
+                    }}
+                  />
+                </Tooltip>
+              )}
+              {tab.orderItems.length > 0 && (
+                <Badge
+                  count={tab.orderItems.length}
+                  offset={[10, -2]}
+                  style={{ backgroundColor: "#52c41a" }}
+                />
+              )}
+            </Space>
+          ),
           closable: tabs.length > 1,
           children: (
-            <div>
+            <div
+              style={{
+                height: "calc(100vh - 48px)",
+                overflowY: "auto",
+                padding: "16px",
+              }}
+            >
               <CreateOrderForm
                 index={index}
                 employee={employee}
@@ -274,8 +337,18 @@ const CreateOrderPage: React.FC<CreateOrderPageProps> = ({
             </div>
           ),
         }))}
-        style={{ marginBottom: 16 }}
+        style={{
+          marginBottom: 0,
+          backgroundColor: "transparent",
+        }}
         addIcon={<PlusOutlined />}
+        // styles={{
+        //   tabPane: {
+        //     overflowY: "auto",
+        //     height: "calc(100vh - 48px)",
+        //     padding: "16px",
+        //   },
+        // }}
       />
 
       {/* Order Preview Modal */}

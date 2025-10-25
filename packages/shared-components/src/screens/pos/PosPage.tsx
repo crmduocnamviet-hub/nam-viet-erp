@@ -38,7 +38,6 @@ import {
   usePosActiveTabId,
   useCart,
   usePosSelectedCustomer,
-  usePosSelectedWarehouse,
   usePosIsProcessingPayment,
   useComboStore,
   useCombos,
@@ -1245,6 +1244,7 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
           closable: tabs.length > 1,
           children: (
             <PosTabContent
+              activeTabId={tab.id}
               employeeWarehouse={employeeWarehouse}
               loadingWarehouse={loadingWarehouse}
               customerSearchTerm={customerSearchTerm}

@@ -83,6 +83,7 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
     updateOrderItemByIndex,
     removeOrderItemByIndex,
     addOrderItemByIndex,
+    updateTabTitle,
   } = useB2BOrderStore();
 
   // Use the new useCreateB2BQuoteHandler hook
@@ -115,9 +116,29 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
     }
   }, [selectedClient]);
 
-  // Watch form values to calculate totals
-  const discountPercent = Form.useWatch("discount_percent", form) || 0;
-  const taxPercent = Form.useWatch("tax_percent", form) || 0;
+  // Update tab title when customer is selected
+  React.useEffect(() => {
+    const currentTab = tabs[index];
+    if (selectedClient && currentTab) {
+      const newTitle = `${selectedClient.customer_name}-${selectedClient.phone_number || selectedClient.customer_code}`;
+      updateTabTitle(currentTab.id, newTitle);
+    }
+  }, [selectedClient, tabs, index, updateTabTitle]);
+
+  // State for discount and tax to ensure proper re-rendering
+  const [discountPercent, setDiscountPercent] = React.useState(0);
+  const [taxPercent, setTaxPercent] = React.useState(10);
+
+  // Sync form values with state when tab data is loaded
+  React.useEffect(() => {
+    const currentTab = tabs[index];
+    if (currentTab?.formData) {
+      const discount = currentTab.formData.discount_percent ?? 0;
+      const tax = currentTab.formData.tax_percent ?? 10;
+      setDiscountPercent(discount);
+      setTaxPercent(tax);
+    }
+  }, [tabs, index]);
 
   // Calculate totals based on order items and form values
   const totals = React.useMemo(() => {
@@ -703,86 +724,98 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
             </Card>
           </Col>
         </Row>
-
-        {/* Order Information */}
-        <Card
-          title={
-            <Space>
-              <CalendarOutlined />
-              Thông tin Đơn hàng
-            </Space>
-          }
-          style={{ marginBottom: 16 }}
-        >
-          {/* Row 1: Ngày tạo and Hạn báo giá */}
-          <Row gutter={16}>
-            <Col xs={24} sm={12}>
-              <Form.Item name="quote_date" label="Ngày tạo">
-                <DatePicker style={{ width: "100%" }} disabled />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={12}>
-              <Form.Item
-                name="valid_until"
-                label="Hạn báo giá"
-                rules={[
-                  { required: true, message: "Vui lòng chọn ngày hết hạn" },
-                ]}
-              >
-                <DatePicker
-                  style={{ width: "100%" }}
-                  placeholder="Chọn ngày hết hạn"
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          {/* Row 2: Chiết khấu and Thuế */}
-          <Row gutter={16}>
-            <Col xs={24} sm={12}>
-              <Form.Item name="discount_percent" label="Chiết khấu (%)">
-                <InputNumber
-                  style={{ width: "100%" }}
-                  min={0}
-                  max={100}
-                  placeholder="0"
-                />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={12}>
-              <Form.Item name="tax_percent" label="Thuế (%)">
-                <InputNumber
-                  style={{ width: "100%" }}
-                  min={0}
-                  max={100}
-                  placeholder="10"
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          {/* Row 3: Nhân viên tạo (full screen) */}
-          <Row gutter={16}>
-            <Col span={24}>
-              <Form.Item label="Nhân viên tạo">
-                <Input value={employee?.full_name} disabled />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          {/* Row 4: Ghi chú (full screen) */}
-          <Row gutter={16}>
-            <Col span={24}>
-              <Form.Item name="notes" label="Ghi chú">
-                <TextArea rows={7} placeholder="Ghi chú cho đơn hàng..." />
-              </Form.Item>
-            </Col>
-          </Row>
-        </Card>
       </Form>
 
       <Row gutter={24}>
-        <Col xs={24} lg={18}>
+        <Col xs={24} sm={6}>
+          {/* Order Information */}
+          <Card
+            title={
+              <Space>
+                <CalendarOutlined />
+                Thông tin Đơn hàng
+              </Space>
+            }
+            style={{ marginBottom: 16 }}
+          >
+            {/* Row 1: Ngày tạo and Hạn báo giá */}
+            <Row gutter={16}>
+              <Col xs={24} sm={12}>
+                <Form.Item name="quote_date" label="Ngày tạo" layout="vertical">
+                  <DatePicker style={{ width: "100%" }} disabled />
+                </Form.Item>
+              </Col>
+              <Col xs={24} sm={12}>
+                <Form.Item
+                  name="valid_until"
+                  label="Hạn báo giá"
+                  layout="vertical"
+                  rules={[
+                    { required: true, message: "Vui lòng chọn ngày hết hạn" },
+                  ]}
+                >
+                  <DatePicker
+                    style={{ width: "100%" }}
+                    placeholder="Chọn ngày hết hạn"
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+
+            {/* Row 2: Chiết khấu and Thuế */}
+            <Row gutter={16}>
+              <Col xs={24} sm={12}>
+                <Form.Item
+                  name="discount_percent"
+                  layout="vertical"
+                  label="Chiết khấu (%)"
+                >
+                  <InputNumber
+                    style={{ width: "100%" }}
+                    min={0}
+                    max={100}
+                    placeholder="0"
+                    onChange={(value) => setDiscountPercent(value || 0)}
+                  />
+                </Form.Item>
+              </Col>
+              <Col xs={24} sm={12}>
+                <Form.Item
+                  name="tax_percent"
+                  layout="vertical"
+                  label="Thuế (%)"
+                >
+                  <InputNumber
+                    style={{ width: "100%" }}
+                    min={0}
+                    max={100}
+                    placeholder="10"
+                    onChange={(value) => setTaxPercent(value || 10)}
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+
+            {/* Row 3: Nhân viên tạo (full screen) */}
+            {/* <Row gutter={16}>
+              <Col span={24}>
+                <Form.Item label="Nhân viên tạo">
+                  <Input value={employee?.full_name} disabled />
+                </Form.Item>
+              </Col>
+            </Row> */}
+
+            {/* Row 4: Ghi chú (full screen) */}
+            <Row gutter={16}>
+              <Col span={24}>
+                <Form.Item name="notes" layout="vertical" label="Ghi chú">
+                  <TextArea rows={7} placeholder="Ghi chú cho đơn hàng..." />
+                </Form.Item>
+              </Col>
+            </Row>
+          </Card>
+        </Col>
+        <Col xs={24} lg={12}>
           {/* Order Items */}
           <Card
             title={

@@ -64,7 +64,8 @@ const AppLayoutContent: React.FC = () => {
   const menuItems = user ? generateMenu(SALE_APP_MENU, user.permissions) : [];
 
   // Check if current route is POS - show fullscreen
-  const isFullscreenRoute = location.pathname === "/pos";
+  const isFullscreenRoute =
+    location.pathname === "/pos" || location.pathname === "/create-quote";
 
   const handleMenuClick = (e: any) => {
     navigate(e.key);
@@ -90,6 +91,10 @@ const AppLayoutContent: React.FC = () => {
       <div style={{ width: "100vw", height: "100vh", overflow: "hidden" }}>
         <Routes>
           <Route path="/pos" element={renderScreen("pos.main")} />
+          <Route
+            path="/create-quote"
+            element={renderScreen("b2b.create-quote")}
+          />
         </Routes>
       </div>
     );
