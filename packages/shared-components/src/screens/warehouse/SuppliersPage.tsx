@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Table,
   Button,
@@ -8,7 +9,6 @@ import {
   Card,
   Input,
   Modal,
-  Form,
   Row,
   Col,
   Statistic,
@@ -26,12 +26,7 @@ import {
   FilterOutlined,
 } from "@ant-design/icons";
 import PageLayout from "../../components/PageLayout";
-import {
-  getSuppliers,
-  createSupplier,
-  updateSupplier,
-  deactivateSupplier,
-} from "@nam-viet-erp/services";
+import { getSuppliers, deactivateSupplier } from "@nam-viet-erp/services";
 import { useDebounce } from "../../hooks/useDebounce";
 
 const { Text } = Typography;
@@ -39,13 +34,11 @@ const { Text } = Typography;
 type StatusFilter = "all" | "active" | "inactive";
 
 const SuppliersPage: React.FC = () => {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [modalVisible, setModalVisible] = useState(false);
-  const [editingSupplier, setEditingSupplier] = useState<any>(null);
   const [suppliers, setSuppliers] = useState<any[]>([]);
-  const [form] = Form.useForm();
 
   const debouncedSearchText = useDebounce(searchText, 300);
 
@@ -182,15 +175,11 @@ const SuppliersPage: React.FC = () => {
   }, [fetchSuppliers]);
 
   const handleCreate = () => {
-    setEditingSupplier(null);
-    form.resetFields();
-    setModalVisible(true);
+    navigate("/warehouse/suppliers/new");
   };
 
   const handleEdit = (supplier: any) => {
-    setEditingSupplier(supplier);
-    form.setFieldsValue(supplier);
-    setModalVisible(true);
+    navigate(`/warehouse/suppliers/${supplier.id}`);
   };
 
   const handleDelete = (supplier: any) => {
@@ -214,41 +203,6 @@ const SuppliersPage: React.FC = () => {
         }
       },
     });
-  };
-
-  const handleSubmit = async (values: any) => {
-    setLoading(true);
-    try {
-      if (editingSupplier) {
-        const { error } = await updateSupplier(editingSupplier.id, values);
-        if (error) throw error;
-        notification.success({
-          message: "Thành công",
-          description: "Đã cập nhật thông tin nhà cung cấp",
-        });
-      } else {
-        const { error } = await createSupplier({
-          ...values,
-          is_active: true,
-        });
-        if (error) throw error;
-        notification.success({
-          message: "Thành công",
-          description: "Đã thêm nhà cung cấp mới",
-        });
-      }
-
-      setModalVisible(false);
-      form.resetFields();
-      fetchSuppliers();
-    } catch (error: any) {
-      notification.error({
-        message: "Lỗi",
-        description: error.message || "Không thể lưu thông tin nhà cung cấp",
-      });
-    } finally {
-      setLoading(false);
-    }
   };
 
   return (
@@ -346,89 +300,6 @@ const SuppliersPage: React.FC = () => {
           }}
         />
       </Card>
-
-      <Modal
-        title={editingSupplier ? "Sửa Nhà Cung Cấp" : "Thêm Nhà Cung Cấp"}
-        open={modalVisible}
-        onCancel={() => {
-          setModalVisible(false);
-          form.resetFields();
-        }}
-        footer={null}
-        width={700}
-      >
-        <Form form={form} layout="vertical" onFinish={handleSubmit}>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="name"
-                label="Tên Nhà Cung Cấp"
-                rules={[{ required: true, message: "Vui lòng nhập tên" }]}
-              >
-                <Input placeholder="Công ty ABC" size="large" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="tax_code" label="Mã Số Thuế">
-                <Input placeholder="0123456789" size="large" />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="contact_person" label="Người Liên Hệ">
-                <Input placeholder="Nguyễn Văn A" size="large" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="phone"
-                label="Số Điện Thoại"
-                rules={[
-                  {
-                    pattern: /^[0-9]{10,11}$/,
-                    message: "Số điện thoại không hợp lệ",
-                  },
-                ]}
-              >
-                <Input placeholder="0901234567" size="large" />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Form.Item name="email" label="Email">
-            <Input
-              type="email"
-              placeholder="contact@example.com"
-              size="large"
-            />
-          </Form.Item>
-
-          <Form.Item name="address" label="Địa Chỉ">
-            <Input.TextArea
-              rows={3}
-              placeholder="Số nhà, đường, phường, quận, thành phố"
-              size="large"
-            />
-          </Form.Item>
-
-          <Form.Item name="payment_terms" label="Điều Khoản Thanh Toán">
-            <Input placeholder="VD: Thanh toán trong 30 ngày" size="large" />
-          </Form.Item>
-
-          <Form.Item>
-            <Space style={{ width: "100%", justifyContent: "flex-end" }}>
-              <Button onClick={() => setModalVisible(false)} size="large">
-                Hủy
-              </Button>
-              <Button type="primary" htmlType="submit" size="large">
-                {editingSupplier ? "Cập Nhật" : "Tạo Mới"}
-              </Button>
-            </Space>
-          </Form.Item>
-        </Form>
-      </Modal>
     </PageLayout>
   );
 };

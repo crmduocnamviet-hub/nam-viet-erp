@@ -405,6 +405,14 @@ const AppLayoutContent: React.FC = () => {
                   element={renderScreen("warehouse.suppliers")}
                 />
                 <Route
+                  path="/warehouse/suppliers/new"
+                  element={renderScreen("warehouse.suppliers.form")}
+                />
+                <Route
+                  path="/warehouse/suppliers/:supplierId"
+                  element={renderScreen("warehouse.suppliers.form")}
+                />
+                <Route
                   path="/warehouse/vat-inventory"
                   element={renderScreen("warehouse.vat-inventory")}
                 />

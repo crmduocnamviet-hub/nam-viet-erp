@@ -47,7 +47,41 @@ interface LotData {
   lotNumber?: string;
   expirationDate?: string;
   shelfLocation?: string;
+  // Pricing fields
+  unitPrice?: number; // Base price excluding VAT
+  vatPercent?: number; // VAT percentage
+  promotionBuyQty?: number; // Buy X quantity
+  promotionGetQty?: number; // Get Y quantity free
+  postPaymentDiscountPercent?: number; // Post-payment discount %
 }
+
+// Calculate final cost price based on pricing formula
+const calculateFinalCostPrice = (lot: LotData): number => {
+  const unitPrice = lot.unitPrice || 0;
+  const vatPercent = lot.vatPercent || 0;
+  const promotionBuyQty = lot.promotionBuyQty || 0;
+  const promotionGetQty = lot.promotionGetQty || 0;
+  const postPaymentDiscountPercent = lot.postPaymentDiscountPercent || 0;
+
+  // Step 1: Calculate price with VAT
+  const priceWithVAT = unitPrice * (1 + vatPercent / 100);
+
+  // Step 2: Apply promotion (buy X get Y free)
+  let effectivePrice = unitPrice;
+  if (promotionBuyQty > 0 && promotionGetQty > 0) {
+    // Total items = buy qty + free qty
+    const totalItems = promotionBuyQty + promotionGetQty;
+    // Effective price per item = (buy qty * unit price) / total items
+    effectivePrice = (promotionBuyQty * unitPrice) / totalItems;
+  }
+
+  // Step 3: Apply post-payment discount to base price (before VAT)
+  const postPaymentDiscount =
+    effectivePrice * (postPaymentDiscountPercent / 100);
+  const finalCostPrice = effectivePrice - postPaymentDiscount;
+
+  return Math.round(finalCostPrice);
+};
 
 const PurchaseOrderReceivingDetailPage: React.FC = () => {
   const { poId } = useParams<{ poId: string }>();
@@ -158,6 +192,11 @@ const PurchaseOrderReceivingDetailPage: React.FC = () => {
               quantityToReceive: 1,
               lotNumber: "",
               expirationDate: "",
+              unitPrice: item.unit_price || 0,
+              vatPercent: 10,
+              promotionBuyQty: 0,
+              promotionGetQty: 0,
+              postPaymentDiscountPercent: 0,
             };
             return { ...prev, [item.id]: [...lots, newLot] };
           }
@@ -268,6 +307,13 @@ const PurchaseOrderReceivingDetailPage: React.FC = () => {
             lotNumber: lot.lotNumber,
             expirationDate: lot.expirationDate,
             shelfLocation: lot.shelfLocation,
+            // Pricing data
+            unitPrice: lot.unitPrice,
+            vatPercent: lot.vatPercent,
+            promotionBuyQty: lot.promotionBuyQty,
+            promotionGetQty: lot.promotionGetQty,
+            postPaymentDiscountPercent: lot.postPaymentDiscountPercent,
+            finalCostPrice: calculateFinalCostPrice(lot),
           })),
         )
         .filter((lot) => lot.quantityToReceive > 0);
@@ -457,6 +503,11 @@ const PurchaseOrderReceivingDetailPage: React.FC = () => {
                     quantityToReceive: 1,
                     lotNumber: "",
                     expirationDate: "",
+                    unitPrice: record.unit_price || 0,
+                    vatPercent: 10,
+                    promotionBuyQty: 0,
+                    promotionGetQty: 0,
+                    postPaymentDiscountPercent: 0,
                   };
                   setReceivingData((prev) => ({
                     ...prev,
@@ -468,6 +519,163 @@ const PurchaseOrderReceivingDetailPage: React.FC = () => {
                 Thêm Lô
               </Button>
             )}
+          </Space>
+        );
+      },
+    },
+    {
+      title: "Giá gốc (chưa VAT)",
+      key: "unit_price",
+      width: 150,
+      render: (_: any, record: any) => {
+        const lots = receivingData[record.id] || [];
+        return (
+          <Space direction="vertical" style={{ width: "100%" }}>
+            {lots.map((lot, index) => (
+              <InputNumber
+                key={lot.id}
+                min={0}
+                placeholder="Giá gốc"
+                value={lot.unitPrice}
+                onChange={(value) => {
+                  const newLots = [...lots];
+                  newLots[index].unitPrice = value || 0;
+                  setReceivingData((prev) => ({
+                    ...prev,
+                    [record.id]: newLots,
+                  }));
+                }}
+                formatter={(value) =>
+                  `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+                }
+                parser={(value) => Number(value!.replace(/\$\s?|(,*)/g, ""))}
+                style={{ width: "100%" }}
+              />
+            ))}
+          </Space>
+        );
+      },
+    },
+    {
+      title: "VAT (%)",
+      key: "vat_percent",
+      width: 100,
+      render: (_: any, record: any) => {
+        const lots = receivingData[record.id] || [];
+        return (
+          <Space direction="vertical" style={{ width: "100%" }}>
+            {lots.map((lot, index) => (
+              <InputNumber
+                key={lot.id}
+                min={0}
+                max={100}
+                placeholder="VAT %"
+                value={lot.vatPercent}
+                onChange={(value) => {
+                  const newLots = [...lots];
+                  newLots[index].vatPercent = value || 0;
+                  setReceivingData((prev) => ({
+                    ...prev,
+                    [record.id]: newLots,
+                  }));
+                }}
+                style={{ width: "100%" }}
+              />
+            ))}
+          </Space>
+        );
+      },
+    },
+    {
+      title: "Khuyến mại (Mua/Tặng)",
+      key: "promotion",
+      width: 150,
+      render: (_: any, record: any) => {
+        const lots = receivingData[record.id] || [];
+        return (
+          <Space direction="vertical" style={{ width: "100%" }}>
+            {lots.map((lot, index) => (
+              <Space.Compact key={lot.id} style={{ width: "100%" }}>
+                <InputNumber
+                  min={0}
+                  placeholder="Mua"
+                  value={lot.promotionBuyQty}
+                  onChange={(value) => {
+                    const newLots = [...lots];
+                    newLots[index].promotionBuyQty = value || 0;
+                    setReceivingData((prev) => ({
+                      ...prev,
+                      [record.id]: newLots,
+                    }));
+                  }}
+                  style={{ width: "50%" }}
+                />
+                <InputNumber
+                  min={0}
+                  placeholder="Tặng"
+                  value={lot.promotionGetQty}
+                  onChange={(value) => {
+                    const newLots = [...lots];
+                    newLots[index].promotionGetQty = value || 0;
+                    setReceivingData((prev) => ({
+                      ...prev,
+                      [record.id]: newLots,
+                    }));
+                  }}
+                  style={{ width: "50%" }}
+                />
+              </Space.Compact>
+            ))}
+          </Space>
+        );
+      },
+    },
+    {
+      title: "CK trả sau (%)",
+      key: "post_payment_discount",
+      width: 120,
+      render: (_: any, record: any) => {
+        const lots = receivingData[record.id] || [];
+        return (
+          <Space direction="vertical" style={{ width: "100%" }}>
+            {lots.map((lot, index) => (
+              <InputNumber
+                key={lot.id}
+                min={0}
+                max={100}
+                placeholder="CK %"
+                value={lot.postPaymentDiscountPercent}
+                onChange={(value) => {
+                  const newLots = [...lots];
+                  newLots[index].postPaymentDiscountPercent = value || 0;
+                  setReceivingData((prev) => ({
+                    ...prev,
+                    [record.id]: newLots,
+                  }));
+                }}
+                style={{ width: "100%" }}
+              />
+            ))}
+          </Space>
+        );
+      },
+    },
+    {
+      title: "Giá vốn cuối",
+      key: "final_cost_price",
+      width: 150,
+      render: (_: any, record: any) => {
+        const lots = receivingData[record.id] || [];
+        return (
+          <Space direction="vertical" style={{ width: "100%" }}>
+            {lots.map((lot) => {
+              const finalPrice = calculateFinalCostPrice(lot);
+              return (
+                <Text key={lot.id} strong style={{ color: "#52c41a" }}>
+                  {finalPrice.toLocaleString("vi-VN")}đ
+                </Text>
+              );
+            })}
           </Space>
         );
       },
@@ -602,12 +810,6 @@ const PurchaseOrderReceivingDetailPage: React.FC = () => {
             <Button icon={<BarcodeOutlined />} size="large" disabled>
               Nhập Mã Thủ Công
             </Button>
-            <Alert
-              message="Quét mã vạch sản phẩm để tự động tăng số lượng nhận"
-              type="info"
-              showIcon
-              style={{ flex: 1 }}
-            />
           </Space>
         </Card>
 
@@ -634,12 +836,33 @@ const PurchaseOrderReceivingDetailPage: React.FC = () => {
             </Space>
           }
         >
+          <Alert
+            message="Công thức tính giá vốn cuối"
+            description={
+              <div>
+                <Text>
+                  <strong>Ví dụ:</strong> Chai dầu gội Clear giá gốc 100k (chưa
+                  VAT) → VAT 10% → Giá có VAT 110k → Khuyến mại mua 10 tặng 1 →
+                  Giá hiệu quả 100k/chai → Chiết khấu trả sau 5% →{" "}
+                  <strong>Giá vốn cuối = 95k/chai</strong>
+                </Text>
+                <br />
+                <Text type="secondary" style={{ fontSize: 12 }}>
+                  Công thức: Giá vốn = (Giá gốc × Mua / (Mua + Tặng)) × (1 - CK
+                  trả sau %)
+                </Text>
+              </div>
+            }
+            type="info"
+            showIcon
+            style={{ marginBottom: 16 }}
+          />
           <Table
             columns={productColumns}
             dataSource={selectedPO.items || []}
             rowKey="id"
             pagination={false}
-            scroll={{ x: 1200 }}
+            scroll={{ x: 1800 }}
             size="large"
           />
         </Card>
