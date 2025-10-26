@@ -17,6 +17,7 @@ import {
   ArrowLeftOutlined,
   HomeOutlined,
   ShopOutlined,
+  GiftOutlined,
 } from "@ant-design/icons";
 import PageLayout from "../../components/PageLayout";
 import {
@@ -123,13 +124,19 @@ const SupplierFormPage: React.FC = () => {
         },
       ]}
       extra={
-        <Button
-          icon={<ArrowLeftOutlined />}
-          onClick={() => navigate("/warehouse/suppliers")}
-          size="large"
-        >
-          Quay lại
-        </Button>
+        <Space>
+          {isEditing && (
+            <Button
+              icon={<GiftOutlined />}
+              onClick={() =>
+                navigate(`/warehouse/suppliers/${supplierId}/promotions`)
+              }
+              size="large"
+            >
+              Chương Trình Khuyến Mại
+            </Button>
+          )}
+        </Space>
       }
     >
       <Card>

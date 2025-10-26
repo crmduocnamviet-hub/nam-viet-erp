@@ -29,6 +29,7 @@ export * from "./src/notificationService";
 
 // Warehouse Management Services
 export * from "./src/supplierService";
+export * from "./src/supplierPromotionService";
 export * from "./src/purchaseOrderService";
 export * from "./src/lotManagementService";
 
