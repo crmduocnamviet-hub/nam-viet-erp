@@ -1,13 +1,19 @@
 import { supabase } from "./supabase";
-import type { PostgrestSingleResponse, PostgrestResponse } from "@supabase/supabase-js";
+import type {
+  PostgrestSingleResponse,
+  PostgrestResponse,
+} from "@supabase/supabase-js";
 
 /**
  * Fetch all active combos with their items and product details
  */
-export const getActiveCombos = async (): Promise<PostgrestResponse<IComboWithItems>> => {
+export const getActiveCombos = async (): Promise<
+  PostgrestResponse<IComboWithItems>
+> => {
   const response = await supabase
     .from("combos")
-    .select(`
+    .select(
+      `
       *,
       combo_items (
         id,
@@ -17,7 +23,8 @@ export const getActiveCombos = async (): Promise<PostgrestResponse<IComboWithIte
         created_at,
         products (*)
       )
-    `)
+    `,
+    )
     .eq("is_active", true)
     .order("created_at", { ascending: false });
 
@@ -27,10 +34,13 @@ export const getActiveCombos = async (): Promise<PostgrestResponse<IComboWithIte
 /**
  * Fetch a single combo by ID with items and product details
  */
-export const getComboById = async (comboId: number): Promise<PostgrestSingleResponse<IComboWithItems>> => {
+export const getComboById = async (
+  comboId: number,
+): Promise<PostgrestSingleResponse<IComboWithItems>> => {
   const response = await supabase
     .from("combos")
-    .select(`
+    .select(
+      `
       *,
       combo_items (
         id,
@@ -40,7 +50,8 @@ export const getComboById = async (comboId: number): Promise<PostgrestSingleResp
         created_at,
         products (*)
       )
-    `)
+    `,
+    )
     .eq("id", comboId)
     .single();
 
@@ -51,7 +62,7 @@ export const getComboById = async (comboId: number): Promise<PostgrestSingleResp
  * Create a new combo
  */
 export const createCombo = async (
-  combo: Omit<ICombo, "id" | "created_at" | "updated_at">
+  combo: Omit<ICombo, "id" | "created_at" | "updated_at">,
 ): Promise<PostgrestSingleResponse<ICombo>> => {
   const response = await supabase
     .from("combos")
@@ -67,7 +78,7 @@ export const createCombo = async (
  */
 export const updateCombo = async (
   comboId: number,
-  updates: Partial<Omit<ICombo, "id" | "created_at">>
+  updates: Partial<Omit<ICombo, "id" | "created_at">>,
 ): Promise<PostgrestSingleResponse<ICombo>> => {
   const response = await supabase
     .from("combos")
@@ -83,12 +94,9 @@ export const updateCombo = async (
  * Add items to a combo
  */
 export const addComboItems = async (
-  items: Omit<IComboItem, "id" | "created_at">[]
+  items: Omit<IComboItem, "id" | "created_at">[],
 ): Promise<PostgrestResponse<IComboItem>> => {
-  const response = await supabase
-    .from("combo_items")
-    .insert(items)
-    .select();
+  const response = await supabase.from("combo_items").insert(items).select();
 
   return response;
 };
@@ -98,7 +106,7 @@ export const addComboItems = async (
  */
 export const removeComboItems = async (
   comboId: number,
-  productIds: number[]
+  productIds: number[],
 ): Promise<PostgrestResponse<IComboItem>> => {
   const response = await supabase
     .from("combo_items")
@@ -113,7 +121,9 @@ export const removeComboItems = async (
 /**
  * Delete a combo (sets is_active to false)
  */
-export const deleteCombo = async (comboId: number): Promise<PostgrestSingleResponse<ICombo>> => {
+export const deleteCombo = async (
+  comboId: number,
+): Promise<PostgrestSingleResponse<ICombo>> => {
   const response = await supabase
     .from("combos")
     .update({ is_active: false, updated_at: new Date().toISOString() })
@@ -129,7 +139,7 @@ export const deleteCombo = async (comboId: number): Promise<PostgrestSingleRespo
  * Returns combos where all required products are present in the cart
  */
 export const detectCombosInCart = async (
-  cartItems: { id: number; quantity: number }[]
+  cartItems: { id: number; quantity: number }[],
 ): Promise<IComboWithItems[]> => {
   // Fetch all active combos
   const { data: combos, error } = await getActiveCombos();
@@ -147,7 +157,7 @@ export const detectCombosInCart = async (
 
     // Check if all combo items are in the cart with sufficient quantity
     for (const comboItem of comboItems) {
-      const cartItem = cartItems.find(ci => ci.id === comboItem.product_id);
+      const cartItem = cartItems.find((ci) => ci.id === comboItem.product_id);
 
       if (!cartItem || cartItem.quantity < comboItem.quantity) {
         isMatch = false;
@@ -166,7 +176,8 @@ export const detectCombosInCart = async (
       }
 
       const discountAmount = originalPrice - combo.combo_price;
-      const discountPercentage = originalPrice > 0 ? (discountAmount / originalPrice) * 100 : 0;
+      const discountPercentage =
+        originalPrice > 0 ? (discountAmount / originalPrice) * 100 : 0;
 
       matchedCombos.push({
         ...combo,

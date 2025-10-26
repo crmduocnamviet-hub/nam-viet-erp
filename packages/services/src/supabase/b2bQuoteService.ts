@@ -47,7 +47,7 @@ export const getB2BQuotes = async (filters?: {
   if (filters?.offset) {
     query = query.range(
       filters.offset,
-      filters.offset + (filters.limit || 10) - 1
+      filters.offset + (filters.limit || 10) - 1,
     );
   }
 
@@ -57,7 +57,7 @@ export const getB2BQuotes = async (filters?: {
 
 // Get B2B quote by ID
 export const getB2BQuoteById = async (
-  quoteId: string
+  quoteId: string,
 ): Promise<PostgrestSingleResponse<IB2BQuote | null>> => {
   const response = await supabase
     .from("b2b_quotes")
@@ -69,7 +69,7 @@ export const getB2BQuoteById = async (
         *,
         products!product_id(name, sku, manufacturer, retail_price)
       )
-    `
+    `,
     )
     .eq("quote_id", quoteId)
     .single();
@@ -79,7 +79,7 @@ export const getB2BQuoteById = async (
 
 // Create new B2B quote
 export const createB2BQuote = async (
-  quote: IB2BQuoteForm
+  quote: IB2BQuoteForm,
 ): Promise<PostgrestSingleResponse<IB2BQuote | null>> => {
   // Generate quote number
   const quoteNumber = await generateQuoteNumber();
@@ -98,7 +98,7 @@ export const createB2BQuote = async (
       `
       *,
       employees!created_by_employee_id(full_name, employee_code)
-    `
+    `,
     )
     .single();
 
@@ -113,7 +113,7 @@ export const updateB2BQuote = async (
       IB2BQuote,
       "quote_id" | "quote_number" | "created_at" | "quote_items" | "employee"
     >
-  >
+  >,
 ): Promise<PostgrestSingleResponse<IB2BQuote | null>> => {
   const updateData = {
     ...updates,
@@ -128,7 +128,7 @@ export const updateB2BQuote = async (
       `
       *,
       employees!created_by_employee_id(full_name, employee_code)
-    `
+    `,
     )
     .single();
 
@@ -138,14 +138,14 @@ export const updateB2BQuote = async (
 // Update quote stage
 export const updateQuoteStage = async (
   quoteId: string,
-  stage: IB2BQuote["quote_stage"]
+  stage: IB2BQuote["quote_stage"],
 ): Promise<PostgrestSingleResponse<IB2BQuote | null>> => {
   return updateB2BQuote(quoteId, { quote_stage: stage });
 };
 
 // Delete B2B quote
 export const deleteB2BQuote = async (
-  quoteId: string
+  quoteId: string,
 ): Promise<PostgrestSingleResponse<null>> => {
   // First delete quote items
   await supabase.from("b2b_quote_items").delete().eq("quote_id", quoteId);
@@ -185,7 +185,7 @@ const generateQuoteNumber = async (): Promise<string> => {
 
 // Add item to quote
 export const addQuoteItem = async (
-  item: Omit<IB2BQuoteItem, "item_id" | "created_at">
+  item: Omit<IB2BQuoteItem, "item_id" | "created_at">,
 ): Promise<PostgrestSingleResponse<IB2BQuoteItem | null>> => {
   const itemData = {
     ...item,
@@ -199,7 +199,7 @@ export const addQuoteItem = async (
       `
       *,
       products!product_id(name, sku, manufacturer, retail_price)
-    `
+    `,
     )
     .single();
 
@@ -209,7 +209,7 @@ export const addQuoteItem = async (
 // Update quote item
 export const updateQuoteItem = async (
   itemId: string,
-  updates: Partial<Omit<IB2BQuoteItem, "item_id" | "created_at" | "product">>
+  updates: Partial<Omit<IB2BQuoteItem, "item_id" | "created_at" | "product">>,
 ): Promise<PostgrestSingleResponse<IB2BQuoteItem | null>> => {
   const response = await supabase
     .from("b2b_quote_items")
@@ -219,7 +219,7 @@ export const updateQuoteItem = async (
       `
       *,
       products!product_id(name, sku, manufacturer, retail_price)
-    `
+    `,
     )
     .single();
 
@@ -228,7 +228,7 @@ export const updateQuoteItem = async (
 
 // Remove item from quote
 export const removeQuoteItem = async (
-  itemId: string
+  itemId: string,
 ): Promise<PostgrestSingleResponse<null>> => {
   const response = await supabase
     .from("b2b_quote_items")
@@ -246,7 +246,7 @@ export const getQuoteItems = async (quoteId: string) => {
       `
       *,
       products!product_id(name, sku, manufacturer, retail_price)
-    `
+    `,
     )
     .eq("quote_id", quoteId)
     .order("created_at", { ascending: true });
@@ -265,7 +265,7 @@ export const getB2BCustomers = async (filters?: {
 
   if (filters?.search) {
     query = query.or(
-      `customer_name.ilike.%${filters.search}%,customer_code.ilike.%${filters.search}%,phone_number.ilike.%${filters.search}%`
+      `customer_name.ilike.%${filters.search}%,customer_code.ilike.%${filters.search}%,phone_number.ilike.%${filters.search}%`,
     );
   }
 
@@ -287,7 +287,7 @@ export const getB2BCustomers = async (filters?: {
 
 // Create B2B customer
 export const createB2BCustomer = async (
-  customer: Omit<IB2BCustomer, "customer_id" | "created_at" | "updated_at">
+  customer: Omit<IB2BCustomer, "customer_id" | "created_at" | "updated_at">,
 ): Promise<PostgrestSingleResponse<IB2BCustomer | null>> => {
   const customerData = {
     ...customer,

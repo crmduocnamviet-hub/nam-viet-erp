@@ -30,9 +30,7 @@ export const getSalesOrders = async (filters?: {
   limit?: number;
   offset?: number;
 }) => {
-  let query = supabase
-    .from("sales_orders")
-    .select(`
+  let query = supabase.from("sales_orders").select(`
       *,
       patients(full_name, phone_number),
       medical_visits(visit_date, patients!inner(full_name)),
@@ -81,7 +79,10 @@ export const getSalesOrders = async (filters?: {
   }
 
   if (filters?.offset) {
-    query = query.range(filters.offset, (filters.offset + (filters.limit || 10)) - 1);
+    query = query.range(
+      filters.offset,
+      filters.offset + (filters.limit || 10) - 1,
+    );
   }
 
   const response = await query.order("order_datetime", { ascending: false });
@@ -89,10 +90,13 @@ export const getSalesOrders = async (filters?: {
 };
 
 // Get sales order by ID
-export const getSalesOrderById = async (orderId: string): Promise<PostgrestSingleResponse<ISalesOrder | null>> => {
+export const getSalesOrderById = async (
+  orderId: string,
+): Promise<PostgrestSingleResponse<ISalesOrder | null>> => {
   const response = await supabase
     .from("sales_orders")
-    .select(`
+    .select(
+      `
       *,
       patients(full_name, phone_number, loyalty_points),
       medical_visits(
@@ -105,7 +109,8 @@ export const getSalesOrderById = async (orderId: string): Promise<PostgrestSingl
         *,
         products!inner(name, manufacturer, retail_price, route)
       )
-    `)
+    `,
+    )
     .eq("order_id", orderId)
     .single();
 
@@ -116,11 +121,13 @@ export const getSalesOrderById = async (orderId: string): Promise<PostgrestSingl
 export const getSalesOrdersByPatientId = async (patientId: string) => {
   const response = await supabase
     .from("sales_orders")
-    .select(`
+    .select(
+      `
       *,
       created_by:employees!created_by_employee_id(full_name),
       sales_order_items(*, products!inner(name, retail_price))
-    `)
+    `,
+    )
     .eq("patient_id", patientId)
     .order("order_datetime", { ascending: false });
 
@@ -129,7 +136,7 @@ export const getSalesOrdersByPatientId = async (patientId: string) => {
 
 // Create new sales order
 export const createSalesOrder = async (
-  order: Omit<ISalesOrder, "order_id" | "order_datetime">
+  order: Omit<ISalesOrder, "order_id" | "order_datetime">,
 ): Promise<PostgrestSingleResponse<ISalesOrder | null>> => {
   const response = await supabase
     .from("sales_orders")
@@ -144,15 +151,17 @@ export const createSalesOrder = async (
 export const createSalesOrderFromMedicalVisit = async (
   medicalVisitId: string,
   createdByEmployeeId: string,
-  paymentMethod?: string
+  paymentMethod?: string,
 ): Promise<PostgrestSingleResponse<ISalesOrder | null>> => {
   // First get the medical visit and prescriptions
   const { data: visit } = await supabase
     .from("medical_visits")
-    .select(`
+    .select(
+      `
       patient_id,
       prescriptions(*, products!inner(retail_price))
-    `)
+    `,
+    )
     .eq("visit_id", medicalVisitId)
     .single();
 
@@ -163,7 +172,7 @@ export const createSalesOrderFromMedicalVisit = async (
   // Calculate total value
   const totalValue = visit.prescriptions.reduce((sum, prescription) => {
     const price = prescription.products?.retail_price || 0;
-    return sum + (price * prescription.quantity_ordered);
+    return sum + price * prescription.quantity_ordered;
   }, 0);
 
   const salesOrder: Omit<ISalesOrder, "order_id" | "order_datetime"> = {
@@ -175,7 +184,7 @@ export const createSalesOrderFromMedicalVisit = async (
     payment_method: paymentMethod || null,
     payment_status: "Chờ thanh toán",
     operational_status: "Hoàn tất",
-    is_ai_checked: false
+    is_ai_checked: false,
   };
 
   return createSalesOrder(salesOrder);
@@ -184,7 +193,7 @@ export const createSalesOrderFromMedicalVisit = async (
 // Update sales order
 export const updateSalesOrder = async (
   orderId: string,
-  updates: Partial<Omit<ISalesOrder, "order_id" | "order_datetime">>
+  updates: Partial<Omit<ISalesOrder, "order_id" | "order_datetime">>,
 ): Promise<PostgrestSingleResponse<ISalesOrder | null>> => {
   const response = await supabase
     .from("sales_orders")
@@ -200,7 +209,7 @@ export const updateSalesOrder = async (
 export const updatePaymentStatus = async (
   orderId: string,
   paymentStatus: string,
-  paymentMethod?: string
+  paymentMethod?: string,
 ): Promise<PostgrestSingleResponse<ISalesOrder | null>> => {
   const updates: any = { payment_status: paymentStatus };
   if (paymentMethod) {
@@ -213,23 +222,29 @@ export const updatePaymentStatus = async (
 // Mark as paid
 export const markOrderAsPaid = async (
   orderId: string,
-  paymentMethod: string
+  paymentMethod: string,
 ): Promise<PostgrestSingleResponse<ISalesOrder | null>> => {
   return updatePaymentStatus(orderId, "Đã thanh toán", paymentMethod);
 };
 
 // Cancel sales order
-export const cancelSalesOrder = async (orderId: string): Promise<PostgrestSingleResponse<ISalesOrder | null>> => {
+export const cancelSalesOrder = async (
+  orderId: string,
+): Promise<PostgrestSingleResponse<ISalesOrder | null>> => {
   return updateSalesOrder(orderId, { operational_status: "Đã hủy" });
 };
 
 // Mark as AI checked
-export const markAsAiChecked = async (orderId: string): Promise<PostgrestSingleResponse<ISalesOrder | null>> => {
+export const markAsAiChecked = async (
+  orderId: string,
+): Promise<PostgrestSingleResponse<ISalesOrder | null>> => {
   return updateSalesOrder(orderId, { is_ai_checked: true });
 };
 
 // Delete sales order
-export const deleteSalesOrder = async (orderId: string): Promise<PostgrestSingleResponse<null>> => {
+export const deleteSalesOrder = async (
+  orderId: string,
+): Promise<PostgrestSingleResponse<null>> => {
   const response = await supabase
     .from("sales_orders")
     .delete()
@@ -242,11 +257,13 @@ export const deleteSalesOrder = async (orderId: string): Promise<PostgrestSingle
 export const getPendingPayments = async () => {
   const response = await supabase
     .from("sales_orders")
-    .select(`
+    .select(
+      `
       *,
       patients(full_name, phone_number),
       created_by:employees!created_by_employee_id(full_name)
-    `)
+    `,
+    )
     .in("payment_status", ["Chờ thanh toán", "Thanh toán thiếu"])
     .eq("operational_status", "Hoàn tất")
     .order("order_datetime", { ascending: true });
@@ -258,11 +275,13 @@ export const getPendingPayments = async () => {
 export const getOrdersNeedingAiCheck = async () => {
   const response = await supabase
     .from("sales_orders")
-    .select(`
+    .select(
+      `
       *,
       patients(full_name, phone_number),
       sales_order_items(*, products!inner(name))
-    `)
+    `,
+    )
     .eq("is_ai_checked", false)
     .eq("operational_status", "Hoàn tất")
     .order("order_datetime", { ascending: true });
@@ -274,7 +293,9 @@ export const getOrdersNeedingAiCheck = async () => {
 export const getSalesStats = async (startDate?: string, endDate?: string) => {
   let query = supabase
     .from("sales_orders")
-    .select("total_value, payment_status, operational_status, order_type, payment_method");
+    .select(
+      "total_value, payment_status, operational_status, order_type, payment_method",
+    );
 
   if (startDate) {
     query = query.gte("order_datetime", startDate);
@@ -301,7 +322,8 @@ export const getSalesStats = async (startDate?: string, endDate?: string) => {
 
     // Order type stats
     acc.byOrderType = acc.byOrderType || {};
-    acc.byOrderType[order.order_type] = (acc.byOrderType[order.order_type] || 0) + 1;
+    acc.byOrderType[order.order_type] =
+      (acc.byOrderType[order.order_type] || 0) + 1;
 
     // Payment method stats
     acc.byPaymentMethod = acc.byPaymentMethod || {};
@@ -322,7 +344,7 @@ export const getTodaysSales = async () => {
 
   return getSalesOrders({
     startDate: startOfDay,
-    endDate: endOfDay
+    endDate: endOfDay,
   });
 };
 
@@ -335,7 +357,11 @@ export const getMonthlySalesSummary = async (year: number, month: number) => {
 };
 
 // Get top customers by sales value
-export const getTopCustomers = async (limit: number = 10, startDate?: string, endDate?: string) => {
+export const getTopCustomers = async (
+  limit: number = 10,
+  startDate?: string,
+  endDate?: string,
+) => {
   let query = supabase
     .from("sales_orders")
     .select("patient_id, total_value, patients!inner(full_name, phone_number)")
@@ -356,23 +382,26 @@ export const getTopCustomers = async (limit: number = 10, startDate?: string, en
     return response;
   }
 
-  const customerTotals = response.data?.reduce((acc, order) => {
-    const patientId = order.patient_id;
-    if (!patientId) return acc;
+  const customerTotals = response.data?.reduce(
+    (acc, order) => {
+      const patientId = order.patient_id;
+      if (!patientId) return acc;
 
-    if (!acc[patientId]) {
-      acc[patientId] = {
-        patient_id: patientId,
-        full_name: order.patients?.[0].full_name,
-        phone_number: order.patients?.[0].phone_number,
-        total_spent: 0,
-        order_count: 0
-      };
-    }
-    acc[patientId].total_spent += order.total_value;
-    acc[patientId].order_count += 1;
-    return acc;
-  }, {} as Record<string, any>);
+      if (!acc[patientId]) {
+        acc[patientId] = {
+          patient_id: patientId,
+          full_name: order.patients?.[0].full_name,
+          phone_number: order.patients?.[0].phone_number,
+          total_spent: 0,
+          order_count: 0,
+        };
+      }
+      acc[patientId].total_spent += order.total_value;
+      acc[patientId].order_count += 1;
+      return acc;
+    },
+    {} as Record<string, any>,
+  );
 
   const sortedCustomers = Object.values(customerTotals || {})
     .sort((a: any, b: any) => b.total_spent - a.total_spent)
@@ -392,9 +421,7 @@ export const searchOrdersForStoreChannel = async (filters?: {
   limit?: number;
   offset?: number;
 }) => {
-  let query = supabase
-    .from("sales_orders")
-    .select(`
+  let query = supabase.from("sales_orders").select(`
       *,
       patients!inner(full_name, phone_number),
       medical_visits(visit_date, assessment_diagnosis_icd10),
@@ -439,7 +466,10 @@ export const searchOrdersForStoreChannel = async (filters?: {
   }
 
   if (filters?.offset) {
-    query = query.range(filters.offset, (filters.offset + (filters.limit || 20)) - 1);
+    query = query.range(
+      filters.offset,
+      filters.offset + (filters.limit || 20) - 1,
+    );
   }
 
   const response = await query.order("order_datetime", { ascending: false });
@@ -453,18 +483,9 @@ export const getOrderStatuses = () => {
       "Chờ thanh toán",
       "Đã thanh toán",
       "Thanh toán thiếu",
-      "Hoàn tiền"
+      "Hoàn tiền",
     ],
-    operationalStatuses: [
-      "Đang xử lý",
-      "Hoàn tất",
-      "Đã hủy",
-      "Chờ xác nhận"
-    ],
-    orderTypes: [
-      "POS",
-      "Online",
-      "Prescription"
-    ]
+    operationalStatuses: ["Đang xử lý", "Hoàn tất", "Đã hủy", "Chờ xác nhận"],
+    orderTypes: ["POS", "Online", "Prescription"],
   };
 };

@@ -137,7 +137,6 @@ export const seedEmployees = async () => {
     console.log(`   - Total: ${allEmployees.length} employees`);
 
     return { success: true, data, count: allEmployees.length };
-
   } catch (error) {
     console.error("❌ Unexpected error during seeding:", error);
     return { success: false, error };
@@ -174,11 +173,12 @@ export const seedDoctors = async () => {
 
     console.log(`✅ Successfully seeded ${sampleDoctors.length} doctors`);
     data?.forEach((doctor, index) => {
-      console.log(`   ${index + 1}. ${doctor.full_name} (${doctor.employee_code})`);
+      console.log(
+        `   ${index + 1}. ${doctor.full_name} (${doctor.employee_code})`,
+      );
     });
 
     return { success: true, data, count: sampleDoctors.length };
-
   } catch (error) {
     console.error("❌ Unexpected error during doctor seeding:", error);
     return { success: false, error };
@@ -202,7 +202,6 @@ export const clearEmployees = async () => {
 
     console.log("✅ All employees cleared successfully");
     return { success: true };
-
   } catch (error) {
     console.error("❌ Unexpected error during clearing:", error);
     return { success: false, error };

@@ -6,10 +6,11 @@ export const signOut = async () => {
 };
 
 export const signIn = async (email: string, password: string) => {
-  const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
+  const { data: authData, error: authError } =
+    await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
   if (authError) {
     return { data: null, error: authError };
@@ -29,7 +30,10 @@ export const signIn = async (email: string, password: string) => {
 };
 
 export const getCurrentUser = async () => {
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
 
   if (userError || !user) {
     return { data: null, error: userError };

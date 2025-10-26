@@ -9,7 +9,7 @@ Get aggregated total quantities of a product across all warehouses.
 ## Usage
 
 ```typescript
-import { getProductLotTotals } from '@nam-viet-erp/services';
+import { getProductLotTotals } from "@nam-viet-erp/services";
 
 // Get totals across ALL warehouses
 const { data, error } = await getProductLotTotals({
@@ -97,7 +97,7 @@ const checkStockAvailability = async (productId, requiredQty) => {
   const { data } = await getProductLotTotals({ productId });
 
   if (!data) {
-    throw new Error('Không thể kiểm tra tồn kho');
+    throw new Error("Không thể kiểm tra tồn kho");
   }
 
   const { overall } = data;
@@ -120,7 +120,7 @@ const checkStockAvailability = async (productId, requiredQty) => {
 const result = await checkStockAvailability(123, 500);
 if (!result.available) {
   notification.warning({
-    message: 'Không đủ hàng',
+    message: "Không đủ hàng",
     description: result.message,
   });
 }
@@ -197,7 +197,7 @@ const findBestWarehouse = async (productId, requiredQty) => {
 
   // Find warehouse with enough stock
   const suitableWarehouse = data.by_warehouse.find(
-    w => w.total_available >= requiredQty
+    (w) => w.total_available >= requiredQty,
   );
 
   if (suitableWarehouse) {
@@ -210,7 +210,7 @@ const findBestWarehouse = async (productId, requiredQty) => {
 
   // Need to combine from multiple warehouses
   const sortedWarehouses = [...data.by_warehouse].sort(
-    (a, b) => b.total_available - a.total_available
+    (a, b) => b.total_available - a.total_available,
   );
 
   let remaining = requiredQty;
@@ -249,8 +249,8 @@ const fulfillment = await findBestWarehouse(123, 500);
 if (fulfillment.single_warehouse) {
   console.log(`Lấy từ kho ${fulfillment.warehouse_name}`);
 } else if (fulfillment.sufficient) {
-  console.log('Cần lấy từ nhiều kho:');
-  fulfillment.allocation.forEach(a => {
+  console.log("Cần lấy từ nhiều kho:");
+  fulfillment.allocation.forEach((a) => {
     console.log(`- ${a.warehouse_name}: ${a.quantity}`);
   });
 } else {
@@ -311,6 +311,7 @@ const StockAlert = ({ productId, minStock = 100 }) => {
 ## When to Use
 
 ✅ **Use `getProductLotTotals` when you need:**
+
 - Overall total quantities across all warehouses
 - Breakdown by warehouse
 - Quick stock check without lot details
@@ -318,6 +319,7 @@ const StockAlert = ({ productId, minStock = 100 }) => {
 - Stock allocation planning
 
 ❌ **Don't use when you need:**
+
 - Individual lot details (use `getProductLots` instead)
 - Expiry date information (use `getProductLots` instead)
 - Lot selection for orders (use `getAvailableLots` instead)

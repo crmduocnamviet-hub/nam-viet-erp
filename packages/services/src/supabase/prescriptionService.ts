@@ -61,7 +61,7 @@ export const getPrescriptions = async (filters?: {
   if (filters?.offset) {
     query = query.range(
       filters.offset,
-      filters.offset + (filters.limit || 10) - 1
+      filters.offset + (filters.limit || 10) - 1,
     );
   }
 
@@ -71,7 +71,7 @@ export const getPrescriptions = async (filters?: {
 
 // Get prescription by ID
 export const getPrescriptionById = async (
-  prescriptionId: string
+  prescriptionId: string,
 ): Promise<PostgrestSingleResponse<IPrescription | null>> => {
   const response = await supabase
     .from("prescriptions")
@@ -85,7 +85,7 @@ export const getPrescriptionById = async (
         patients!inner(full_name, phone_number, date_of_birth, allergy_notes),
         doctor:employees!inner(full_name, role_name)
       )
-    `
+    `,
     )
     .eq("prescription_item_id", prescriptionId)
     .single();
@@ -101,7 +101,7 @@ export const getPrescriptionsByVisitId = async (visitId: string) => {
       `
       *,
       products!inner(name, manufacturer, route, retail_price)
-    `
+    `,
     )
     .eq("visit_id", visitId)
     .order("created_at", { ascending: true });
@@ -111,7 +111,7 @@ export const getPrescriptionsByVisitId = async (visitId: string) => {
 
 // Create new prescription
 export const createPrescription = async (
-  prescription: Omit<IPrescription, "prescription_item_id">
+  prescription: Omit<IPrescription, "prescription_item_id">,
 ): Promise<PostgrestSingleResponse<IPrescription | null>> => {
   const response = await supabase
     .from("prescriptions")
@@ -130,7 +130,7 @@ export const createMultiplePrescriptions = async (
     quantity_ordered: number;
     dosage_instruction?: string;
     ai_interaction_warning?: string;
-  }>
+  }>,
 ): Promise<PostgrestSingleResponse<IPrescription[]>> => {
   const prescriptionItems = prescriptions.map((prescription) => ({
     visit_id: visitId,
@@ -151,7 +151,7 @@ export const createMultiplePrescriptions = async (
 // Update prescription
 export const updatePrescription = async (
   prescriptionId: string,
-  updates: Partial<Omit<IPrescription, "prescription_item_id">>
+  updates: Partial<Omit<IPrescription, "prescription_item_id">>,
 ): Promise<PostgrestSingleResponse<IPrescription | null>> => {
   const response = await supabase
     .from("prescriptions")
@@ -165,7 +165,7 @@ export const updatePrescription = async (
 
 // Delete prescription
 export const deletePrescription = async (
-  prescriptionId: string
+  prescriptionId: string,
 ): Promise<PostgrestSingleResponse<null>> => {
   const response = await supabase
     .from("prescriptions")
@@ -178,7 +178,7 @@ export const deletePrescription = async (
 // Add AI interaction warning
 export const addAiInteractionWarning = async (
   prescriptionId: string,
-  warning: string
+  warning: string,
 ): Promise<PostgrestSingleResponse<IPrescription | null>> => {
   const response = await supabase
     .from("prescriptions")
@@ -203,7 +203,7 @@ export const getPrescriptionsWithWarnings = async () => {
         patients!inner(full_name, phone_number),
         doctor:employees!inner(full_name)
       )
-    `
+    `,
     )
     .not("ai_interaction_warning", "is", null)
     .order("created_at", { ascending: false });
@@ -214,7 +214,7 @@ export const getPrescriptionsWithWarnings = async () => {
 // Get prescription statistics
 export const getPrescriptionStats = async (
   startDate?: string,
-  endDate?: string
+  endDate?: string,
 ) => {
   let query = supabase
     .from("prescriptions")
@@ -273,21 +273,24 @@ export const getMostPrescribedMedications = async (limit: number = 10) => {
     return response;
   }
 
-  const medicationCounts = response.data?.reduce((acc, prescription) => {
-    const key = prescription.product_id;
-    if (!acc[key]) {
-      acc[key] = {
-        product_id: prescription.product_id,
-        name: prescription.products.name,
-        manufacturer: prescription.products.manufacturer,
-        count: 0,
-        total_quantity: 0,
-      };
-    }
-    acc[key].count += 1;
-    acc[key].total_quantity += prescription.quantity_ordered;
-    return acc;
-  }, {} as Record<string, any>);
+  const medicationCounts = response.data?.reduce(
+    (acc, prescription) => {
+      const key = prescription.product_id;
+      if (!acc[key]) {
+        acc[key] = {
+          product_id: prescription.product_id,
+          name: prescription.products.name,
+          manufacturer: prescription.products.manufacturer,
+          count: 0,
+          total_quantity: 0,
+        };
+      }
+      acc[key].count += 1;
+      acc[key].total_quantity += prescription.quantity_ordered;
+      return acc;
+    },
+    {} as Record<string, any>,
+  );
 
   const sortedMedications = Object.values(medicationCounts || {})
     .sort((a: any, b: any) => b.count - a.count)
@@ -309,7 +312,7 @@ export const getPatientPrescriptionHistory = async (patientId: string) => {
         assessment_diagnosis_icd10,
         doctor:employees!inner(full_name)
       )
-    `
+    `,
     )
     .eq("medical_visits.patient_id", patientId)
     .order("medical_visits.visit_date", { ascending: false });
@@ -357,7 +360,7 @@ export const generatePrescriptionSummary = async (visitId: string) => {
         patients!inner(full_name, date_of_birth),
         doctor:employees!inner(full_name)
       )
-    `
+    `,
     )
     .eq("visit_id", visitId)
     .order("created_at", { ascending: true });

@@ -1,6 +1,11 @@
 #!/usr/bin/env ts-node
 
-import { seedEmployees, seedDoctors, clearEmployees, getAllDoctors } from "../seedDoctors";
+import {
+  seedEmployees,
+  seedDoctors,
+  clearEmployees,
+  getAllDoctors,
+} from "./seedDoctors";
 
 // CLI interface for seeding
 const main = async () => {
@@ -13,7 +18,9 @@ const main = async () => {
       break;
 
     case "all":
-      console.log("👥 Seeding all employees (doctors, pharmacists, receptionists)...");
+      console.log(
+        "👥 Seeding all employees (doctors, pharmacists, receptionists)...",
+      );
       await seedEmployees();
       break;
 
@@ -28,7 +35,9 @@ const main = async () => {
       if (result.success && result.data) {
         console.log(`Found ${result.data.length} doctors:`);
         result.data.forEach((doctor, index) => {
-          console.log(`  ${index + 1}. ${doctor.full_name} (${doctor.employee_code}) - ${doctor.role_name}`);
+          console.log(
+            `  ${index + 1}. ${doctor.full_name} (${doctor.employee_code}) - ${doctor.role_name}`,
+          );
         });
       }
       break;

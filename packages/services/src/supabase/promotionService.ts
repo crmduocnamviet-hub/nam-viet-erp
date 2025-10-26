@@ -66,7 +66,10 @@ export const createPromotion = async (record: Record<string, any>) => {
   return response;
 };
 
-export const updatePromotion = async (id: string, record: Record<string, any>) => {
+export const updatePromotion = async (
+  id: string,
+  record: Record<string, any>,
+) => {
   const response = await supabase
     .from("promotions")
     .update(record)
@@ -98,7 +101,7 @@ export const getActivePromotions = async () => {
 };
 
 export const deleteVoucher = async (
-  id: number
+  id: number,
 ): Promise<PostgrestSingleResponse<null>> => {
   const response = await supabase.from("vouchers").delete().eq("id", id);
   return response;
@@ -106,7 +109,7 @@ export const deleteVoucher = async (
 
 export const updateVoucher = async (
   id: number,
-  record: Partial<IVoucher>
+  record: Partial<IVoucher>,
 ): Promise<PostgrestSingleResponse<IVoucher | null>> => {
   const response: PostgrestSingleResponse<IVoucher | null> = await supabase
     .from("vouchers")

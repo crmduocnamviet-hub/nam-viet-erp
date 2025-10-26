@@ -36,7 +36,7 @@ export const getTransactions = async (page: number, pageSize: number) => {
 export const searchTransactions = async (
   searchTerm: string,
   page: number,
-  pageSize: number
+  pageSize: number,
 ) => {
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
@@ -59,7 +59,7 @@ export const createTransaction = async (record: Partial<ITransaction>) => {
 
 export const updateTransaction = async (
   id: number,
-  updates: Partial<ITransaction>
+  updates: Partial<ITransaction>,
 ) => {
   const response = await supabase
     .from("transactions")
@@ -98,7 +98,7 @@ export const uploadAttachment = async (file: File) => {
 
 export const uploadTransactionAttachments = async (
   fileName: string,
-  file: File
+  file: File,
 ) => {
   const response = await supabase.storage
     .from("transaction-attachments")

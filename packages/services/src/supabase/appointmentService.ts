@@ -29,9 +29,7 @@ export const getAppointments = async (filters?: {
   limit?: number;
   offset?: number;
 }) => {
-  let query = supabase
-    .from("appointments")
-    .select(`
+  let query = supabase.from("appointments").select(`
       *,
       patients!inner(full_name, phone_number),
       doctor:employees!doctor_id(full_name, role_name),
@@ -77,7 +75,10 @@ export const getAppointments = async (filters?: {
   }
 
   if (filters?.offset) {
-    query = query.range(filters.offset, (filters.offset + (filters.limit || 10)) - 1);
+    query = query.range(
+      filters.offset,
+      filters.offset + (filters.limit || 10) - 1,
+    );
   }
 
   const response = await query.order("scheduled_datetime", { ascending: true });
@@ -85,16 +86,20 @@ export const getAppointments = async (filters?: {
 };
 
 // Get appointment by ID
-export const getAppointmentById = async (appointmentId: string): Promise<PostgrestSingleResponse<IAppointment | null>> => {
+export const getAppointmentById = async (
+  appointmentId: string,
+): Promise<PostgrestSingleResponse<IAppointment | null>> => {
   const response = await supabase
     .from("appointments")
-    .select(`
+    .select(
+      `
       *,
       patients!inner(full_name, phone_number, allergy_notes, chronic_diseases),
       doctor:employees!doctor_id(full_name, role_name),
       receptionist:employees!receptionist_id(full_name, role_name),
       appointment_statuses!inner(status_name_vn, color_code)
-    `)
+    `,
+    )
     .eq("appointment_id", appointmentId)
     .single();
 
@@ -105,11 +110,13 @@ export const getAppointmentById = async (appointmentId: string): Promise<Postgre
 export const getAppointmentsByPatientId = async (patientId: string) => {
   const response = await supabase
     .from("appointments")
-    .select(`
+    .select(
+      `
       *,
       doctor:employees!doctor_id(full_name, role_name),
       appointment_statuses!inner(status_name_vn, color_code)
-    `)
+    `,
+    )
     .eq("patient_id", patientId)
     .order("scheduled_datetime", { ascending: false });
 
@@ -117,20 +124,27 @@ export const getAppointmentsByPatientId = async (patientId: string) => {
 };
 
 // Get appointments by doctor ID
-export const getAppointmentsByDoctorId = async (doctorId: string, date?: string) => {
+export const getAppointmentsByDoctorId = async (
+  doctorId: string,
+  date?: string,
+) => {
   let query = supabase
     .from("appointments")
-    .select(`
+    .select(
+      `
       *,
       patients!inner(full_name, phone_number),
       appointment_statuses!inner(status_name_vn, color_code)
-    `)
+    `,
+    )
     .eq("doctor_id", doctorId);
 
   if (date) {
     const startOfDay = `${date}T00:00:00`;
     const endOfDay = `${date}T23:59:59`;
-    query = query.gte("scheduled_datetime", startOfDay).lte("scheduled_datetime", endOfDay);
+    query = query
+      .gte("scheduled_datetime", startOfDay)
+      .lte("scheduled_datetime", endOfDay);
   }
 
   const response = await query.order("scheduled_datetime", { ascending: true });
@@ -139,7 +153,7 @@ export const getAppointmentsByDoctorId = async (doctorId: string, date?: string)
 
 // Create new appointment
 export const createAppointment = async (
-  appointment: Omit<IAppointment, "appointment_id" | "created_at">
+  appointment: Omit<IAppointment, "appointment_id" | "created_at">,
 ): Promise<PostgrestSingleResponse<IAppointment | null>> => {
   const response = await supabase
     .from("appointments")
@@ -153,7 +167,7 @@ export const createAppointment = async (
 // Update appointment
 export const updateAppointment = async (
   appointmentId: string,
-  updates: Partial<Omit<IAppointment, "appointment_id" | "created_at">>
+  updates: Partial<Omit<IAppointment, "appointment_id" | "created_at">>,
 ): Promise<PostgrestSingleResponse<IAppointment | null>> => {
   const response = await supabase
     .from("appointments")
@@ -166,7 +180,9 @@ export const updateAppointment = async (
 };
 
 // Delete appointment
-export const deleteAppointment = async (appointmentId: string): Promise<PostgrestSingleResponse<null>> => {
+export const deleteAppointment = async (
+  appointmentId: string,
+): Promise<PostgrestSingleResponse<null>> => {
   const response = await supabase
     .from("appointments")
     .delete()
@@ -178,13 +194,15 @@ export const deleteAppointment = async (appointmentId: string): Promise<Postgres
 // Update appointment status
 export const updateAppointmentStatus = async (
   appointmentId: string,
-  newStatus: string
+  newStatus: string,
 ): Promise<PostgrestSingleResponse<IAppointment | null>> => {
   const response = await supabase
     .from("appointments")
     .update({
       current_status: newStatus,
-      ...(newStatus === "CHECKED_IN" && { check_in_time: new Date().toISOString() })
+      ...(newStatus === "CHECKED_IN" && {
+        check_in_time: new Date().toISOString(),
+      }),
     })
     .eq("appointment_id", appointmentId)
     .select()
@@ -194,22 +212,30 @@ export const updateAppointmentStatus = async (
 };
 
 // Check-in appointment
-export const checkInAppointment = async (appointmentId: string): Promise<PostgrestSingleResponse<IAppointment | null>> => {
+export const checkInAppointment = async (
+  appointmentId: string,
+): Promise<PostgrestSingleResponse<IAppointment | null>> => {
   return updateAppointmentStatus(appointmentId, "CHECKED_IN");
 };
 
 // Cancel appointment
-export const cancelAppointment = async (appointmentId: string): Promise<PostgrestSingleResponse<IAppointment | null>> => {
+export const cancelAppointment = async (
+  appointmentId: string,
+): Promise<PostgrestSingleResponse<IAppointment | null>> => {
   return updateAppointmentStatus(appointmentId, "CANCELLED");
 };
 
 // Complete appointment
-export const completeAppointment = async (appointmentId: string): Promise<PostgrestSingleResponse<IAppointment | null>> => {
+export const completeAppointment = async (
+  appointmentId: string,
+): Promise<PostgrestSingleResponse<IAppointment | null>> => {
   return updateAppointmentStatus(appointmentId, "COMPLETED");
 };
 
 // Mark as no-show
-export const markNoShow = async (appointmentId: string): Promise<PostgrestSingleResponse<IAppointment | null>> => {
+export const markNoShow = async (
+  appointmentId: string,
+): Promise<PostgrestSingleResponse<IAppointment | null>> => {
   return updateAppointmentStatus(appointmentId, "NO_SHOW");
 };
 
@@ -222,7 +248,7 @@ export const getTodaysAppointments = async (doctorId?: string) => {
   return getAppointments({
     doctorId,
     startDate: startOfDay,
-    endDate: endOfDay
+    endDate: endOfDay,
   });
 };
 
@@ -232,11 +258,13 @@ export const getUpcomingAppointments = async (patientId: string) => {
 
   const response = await supabase
     .from("appointments")
-    .select(`
+    .select(
+      `
       *,
       doctor:employees!doctor_id(full_name, role_name),
       appointment_statuses!inner(status_name_vn, color_code)
-    `)
+    `,
+    )
     .eq("patient_id", patientId)
     .gte("scheduled_datetime", now)
     .in("current_status", ["SCHEDULED", "CONFIRMED"])
@@ -246,7 +274,10 @@ export const getUpcomingAppointments = async (patientId: string) => {
 };
 
 // Get appointment statistics
-export const getAppointmentStats = async (startDate?: string, endDate?: string) => {
+export const getAppointmentStats = async (
+  startDate?: string,
+  endDate?: string,
+) => {
   let query = supabase
     .from("appointments")
     .select("current_status, service_type");
@@ -268,12 +299,14 @@ export const getAppointmentStats = async (startDate?: string, endDate?: string) 
   const stats = response.data?.reduce((acc, appointment) => {
     // Status stats
     acc.byStatus = acc.byStatus || {};
-    acc.byStatus[appointment.current_status] = (acc.byStatus[appointment.current_status] || 0) + 1;
+    acc.byStatus[appointment.current_status] =
+      (acc.byStatus[appointment.current_status] || 0) + 1;
 
     // Service type stats
     acc.byServiceType = acc.byServiceType || {};
     acc.byServiceType[appointment.service_type || "Không xác định"] =
-      (acc.byServiceType[appointment.service_type || "Không xác định"] || 0) + 1;
+      (acc.byServiceType[appointment.service_type || "Không xác định"] || 0) +
+      1;
 
     acc.total = (acc.total || 0) + 1;
     return acc;
@@ -283,7 +316,9 @@ export const getAppointmentStats = async (startDate?: string, endDate?: string) 
 };
 
 // Send Zalo confirmation
-export const sendZaloConfirmation = async (appointmentId: string): Promise<PostgrestSingleResponse<IAppointment | null>> => {
+export const sendZaloConfirmation = async (
+  appointmentId: string,
+): Promise<PostgrestSingleResponse<IAppointment | null>> => {
   // Here you would integrate with Zalo API
   // For now, just mark as confirmed
   const response = await supabase
@@ -299,7 +334,7 @@ export const sendZaloConfirmation = async (appointmentId: string): Promise<Postg
 // Bulk update appointment statuses
 export const bulkUpdateAppointmentStatus = async (
   appointmentIds: string[],
-  newStatus: string
+  newStatus: string,
 ): Promise<PostgrestSingleResponse<IAppointment[]>> => {
   const response = await supabase
     .from("appointments")

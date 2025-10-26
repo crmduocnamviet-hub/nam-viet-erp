@@ -4,7 +4,7 @@ export interface Room {
   room_id: string;
   name: string;
   description?: string;
-  room_type: 'medical' | 'treatment' | 'consultation' | 'diagnostic' | 'other';
+  room_type: "medical" | "treatment" | "consultation" | "diagnostic" | "other";
   capacity?: number;
   equipment?: string[];
   is_active: boolean;
@@ -15,7 +15,7 @@ export interface Room {
 export interface CreateRoomData {
   name: string;
   description?: string;
-  room_type: Room['room_type'];
+  room_type: Room["room_type"];
   capacity?: number;
   equipment?: string[];
   is_active?: boolean;
@@ -45,7 +45,7 @@ export const getActiveRooms = async () => {
 };
 
 // Get rooms by type
-export const getRoomsByType = async (roomType: Room['room_type']) => {
+export const getRoomsByType = async (roomType: Room["room_type"]) => {
   const response = await supabase
     .from("rooms")
     .select("*")
@@ -71,10 +71,12 @@ export const getRoomById = async (roomId: string) => {
 export const createRoom = async (roomData: CreateRoomData) => {
   const response = await supabase
     .from("rooms")
-    .insert([{
-      ...roomData,
-      is_active: roomData.is_active ?? true,
-    }])
+    .insert([
+      {
+        ...roomData,
+        is_active: roomData.is_active ?? true,
+      },
+    ])
     .select()
     .single();
 
@@ -111,16 +113,16 @@ export const deleteRoom = async (roomId: string) => {
 
 // Hard delete room (permanent deletion)
 export const permanentDeleteRoom = async (roomId: string) => {
-  const response = await supabase
-    .from("rooms")
-    .delete()
-    .eq("room_id", roomId);
+  const response = await supabase.from("rooms").delete().eq("room_id", roomId);
 
   return response;
 };
 
 // Check if room name exists
-export const checkRoomNameExists = async (name: string, excludeRoomId?: string) => {
+export const checkRoomNameExists = async (
+  name: string,
+  excludeRoomId?: string,
+) => {
   let query = supabase
     .from("rooms")
     .select("room_id")
@@ -137,9 +139,7 @@ export const checkRoomNameExists = async (name: string, excludeRoomId?: string) 
 
 // Get room statistics
 export const getRoomStatistics = async () => {
-  const response = await supabase
-    .from("rooms")
-    .select("room_type, is_active");
+  const response = await supabase.from("rooms").select("room_type, is_active");
 
   if (response.error) {
     return response;
@@ -147,15 +147,15 @@ export const getRoomStatistics = async () => {
 
   const stats = {
     total: response.data.length,
-    active: response.data.filter(room => room.is_active).length,
-    inactive: response.data.filter(room => !room.is_active).length,
-    byType: {} as Record<Room['room_type'], number>
+    active: response.data.filter((room) => room.is_active).length,
+    inactive: response.data.filter((room) => !room.is_active).length,
+    byType: {} as Record<Room["room_type"], number>,
   };
 
   // Count by type
-  response.data.forEach(room => {
+  response.data.forEach((room) => {
     if (room.is_active && room.room_type) {
-      const roomType = room.room_type as Room['room_type'];
+      const roomType = room.room_type as Room["room_type"];
       stats.byType[roomType] = (stats.byType[roomType] || 0) + 1;
     }
   });

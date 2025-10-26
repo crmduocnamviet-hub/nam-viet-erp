@@ -12,9 +12,7 @@ export const getMedicalVisits = async (filters?: {
   limit?: number;
   offset?: number;
 }) => {
-  let query = supabase
-    .from("medical_visits")
-    .select(`
+  let query = supabase.from("medical_visits").select(`
       *,
       patients!inner(full_name, phone_number, allergy_notes, chronic_diseases),
       doctor:employees!inner(full_name, role_name),
@@ -50,7 +48,10 @@ export const getMedicalVisits = async (filters?: {
   }
 
   if (filters?.offset) {
-    query = query.range(filters.offset, (filters.offset + (filters.limit || 10)) - 1);
+    query = query.range(
+      filters.offset,
+      filters.offset + (filters.limit || 10) - 1,
+    );
   }
 
   const response = await query.order("visit_date", { ascending: false });
@@ -58,17 +59,21 @@ export const getMedicalVisits = async (filters?: {
 };
 
 // Get medical visit by ID
-export const getMedicalVisitById = async (visitId: string): Promise<PostgrestSingleResponse<IMedicalVisit | null>> => {
+export const getMedicalVisitById = async (
+  visitId: string,
+): Promise<PostgrestSingleResponse<IMedicalVisit | null>> => {
   const response = await supabase
     .from("medical_visits")
-    .select(`
+    .select(
+      `
       *,
       patients!inner(full_name, phone_number, date_of_birth, allergy_notes, chronic_diseases),
       doctor:employees!inner(full_name, role_name),
       appointments(scheduled_datetime, service_type, reason_for_visit),
       prescriptions(*),
       lab_orders(*)
-    `)
+    `,
+    )
     .eq("visit_id", visitId)
     .single();
 
@@ -79,11 +84,13 @@ export const getMedicalVisitById = async (visitId: string): Promise<PostgrestSin
 export const getMedicalVisitsByPatientId = async (patientId: string) => {
   const response = await supabase
     .from("medical_visits")
-    .select(`
+    .select(
+      `
       *,
       doctor:employees!inner(full_name, role_name),
       appointments(scheduled_datetime, service_type)
-    `)
+    `,
+    )
     .eq("patient_id", patientId)
     .order("visit_date", { ascending: false });
 
@@ -91,14 +98,19 @@ export const getMedicalVisitsByPatientId = async (patientId: string) => {
 };
 
 // Get medical visits by doctor ID
-export const getMedicalVisitsByDoctorId = async (doctorId: string, date?: string) => {
+export const getMedicalVisitsByDoctorId = async (
+  doctorId: string,
+  date?: string,
+) => {
   let query = supabase
     .from("medical_visits")
-    .select(`
+    .select(
+      `
       *,
       patients!inner(full_name, phone_number),
       appointments(scheduled_datetime, service_type)
-    `)
+    `,
+    )
     .eq("doctor_id", doctorId);
 
   if (date) {
@@ -113,7 +125,7 @@ export const getMedicalVisitsByDoctorId = async (doctorId: string, date?: string
 
 // Create new medical visit
 export const createMedicalVisit = async (
-  visit: Omit<IMedicalVisit, "visit_id" | "visit_date">
+  visit: Omit<IMedicalVisit, "visit_id" | "visit_date">,
 ): Promise<PostgrestSingleResponse<IMedicalVisit | null>> => {
   const response = await supabase
     .from("medical_visits")
@@ -127,7 +139,7 @@ export const createMedicalVisit = async (
 // Create medical visit from appointment
 export const createMedicalVisitFromAppointment = async (
   appointmentId: string,
-  doctorId: string
+  doctorId: string,
 ): Promise<PostgrestSingleResponse<IMedicalVisit | null>> => {
   // First get appointment details
   const { data: appointment } = await supabase
@@ -150,7 +162,7 @@ export const createMedicalVisitFromAppointment = async (
     assessment_diagnosis_icd10: null,
     plan_notes: null,
     is_signed_off: false,
-    signed_off_at: null
+    signed_off_at: null,
   };
 
   return createMedicalVisit(visit);
@@ -159,7 +171,7 @@ export const createMedicalVisitFromAppointment = async (
 // Update medical visit
 export const updateMedicalVisit = async (
   visitId: string,
-  updates: Partial<Omit<IMedicalVisit, "visit_id" | "visit_date">>
+  updates: Partial<Omit<IMedicalVisit, "visit_id" | "visit_date">>,
 ): Promise<PostgrestSingleResponse<IMedicalVisit | null>> => {
   const response = await supabase
     .from("medical_visits")
@@ -191,18 +203,20 @@ export const updatePlanNotes = async (visitId: string, notes: string) => {
 // Update vital signs
 export const updateVitalSigns = async (
   visitId: string,
-  vitalSigns: Record<string, any>
+  vitalSigns: Record<string, any>,
 ): Promise<PostgrestSingleResponse<IMedicalVisit | null>> => {
   return updateMedicalVisit(visitId, { vital_signs: vitalSigns });
 };
 
 // Sign off medical visit
-export const signOffMedicalVisit = async (visitId: string): Promise<PostgrestSingleResponse<IMedicalVisit | null>> => {
+export const signOffMedicalVisit = async (
+  visitId: string,
+): Promise<PostgrestSingleResponse<IMedicalVisit | null>> => {
   const response = await supabase
     .from("medical_visits")
     .update({
       is_signed_off: true,
-      signed_off_at: new Date().toISOString()
+      signed_off_at: new Date().toISOString(),
     })
     .eq("visit_id", visitId)
     .select()
@@ -220,7 +234,9 @@ export const signOffMedicalVisit = async (visitId: string): Promise<PostgrestSin
 };
 
 // Delete medical visit
-export const deleteMedicalVisit = async (visitId: string): Promise<PostgrestSingleResponse<null>> => {
+export const deleteMedicalVisit = async (
+  visitId: string,
+): Promise<PostgrestSingleResponse<null>> => {
   const response = await supabase
     .from("medical_visits")
     .delete()
@@ -233,11 +249,13 @@ export const deleteMedicalVisit = async (visitId: string): Promise<PostgrestSing
 export const getPendingMedicalVisits = async (doctorId?: string) => {
   let query = supabase
     .from("medical_visits")
-    .select(`
+    .select(
+      `
       *,
       patients!inner(full_name, phone_number),
       appointments(scheduled_datetime, service_type)
-    `)
+    `,
+    )
     .eq("is_signed_off", false);
 
   if (doctorId) {
@@ -252,7 +270,7 @@ export const getPendingMedicalVisits = async (doctorId?: string) => {
 export const getMedicalVisitStats = async (
   doctorId?: string,
   startDate?: string,
-  endDate?: string
+  endDate?: string,
 ) => {
   let query = supabase
     .from("medical_visits")
@@ -299,13 +317,15 @@ export const getMedicalVisitStats = async (
 export const getPatientMedicalHistory = async (patientId: string) => {
   const response = await supabase
     .from("medical_visits")
-    .select(`
+    .select(
+      `
       *,
       doctor:employees!inner(full_name),
       prescriptions(*, products(name)),
       lab_orders(*),
       appointments(scheduled_datetime, service_type)
-    `)
+    `,
+    )
     .eq("patient_id", patientId)
     .eq("is_signed_off", true)
     .order("visit_date", { ascending: false });
@@ -317,11 +337,13 @@ export const getPatientMedicalHistory = async (patientId: string) => {
 export const searchMedicalVisitsByDiagnosis = async (diagnosisCode: string) => {
   const response = await supabase
     .from("medical_visits")
-    .select(`
+    .select(
+      `
       *,
       patients!inner(full_name, phone_number),
       doctor:employees!inner(full_name)
-    `)
+    `,
+    )
     .ilike("assessment_diagnosis_icd10", `%${diagnosisCode}%`)
     .eq("is_signed_off", true)
     .order("visit_date", { ascending: false });

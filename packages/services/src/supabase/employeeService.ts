@@ -13,7 +13,7 @@ export const getEmployees = async (filters?: {
 
   if (filters?.search) {
     query = query.or(
-      `full_name.ilike.%${filters.search}%,employee_code.ilike.%${filters.search}%`
+      `full_name.ilike.%${filters.search}%,employee_code.ilike.%${filters.search}%`,
     );
   }
 
@@ -32,7 +32,7 @@ export const getEmployees = async (filters?: {
   if (filters?.offset) {
     query = query.range(
       filters.offset,
-      filters.offset + (filters.limit || 10) - 1
+      filters.offset + (filters.limit || 10) - 1,
     );
   }
 
@@ -42,7 +42,7 @@ export const getEmployees = async (filters?: {
 
 // Get employee by ID
 export const getEmployeeById = async (
-  employeeId: string
+  employeeId: string,
 ): Promise<PostgrestSingleResponse<IEmployee | null>> => {
   const response = await supabase
     .from("employees")
@@ -55,7 +55,7 @@ export const getEmployeeById = async (
 
 // Get employee by employee code
 export const getEmployeeByCode = async (
-  employeeCode: string
+  employeeCode: string,
 ): Promise<PostgrestSingleResponse<IEmployee | null>> => {
   const response = await supabase
     .from("employees")
@@ -68,7 +68,7 @@ export const getEmployeeByCode = async (
 
 // Get employee by user ID (for current authenticated user)
 export const getEmployeeByUserId = async (
-  userId: string
+  userId: string,
 ): Promise<PostgrestSingleResponse<IEmployee | null>> => {
   const response = await supabase
     .from("employees")
@@ -109,7 +109,7 @@ export const getCurrentEmployee = async (): Promise<
 
 // Create new employee
 export const createEmployee = async (
-  employee: Omit<IEmployee, "employee_id">
+  employee: Omit<IEmployee, "employee_id">,
 ): Promise<PostgrestSingleResponse<IEmployee | null>> => {
   const response = await supabase
     .from("employees")
@@ -123,7 +123,7 @@ export const createEmployee = async (
 // Update employee
 export const updateEmployee = async (
   employeeId: string,
-  updates: Partial<Omit<IEmployee, "employee_id">>
+  updates: Partial<Omit<IEmployee, "employee_id">>,
 ): Promise<PostgrestSingleResponse<IEmployee | null>> => {
   const response = await supabase
     .from("employees")
@@ -137,7 +137,7 @@ export const updateEmployee = async (
 
 // Delete employee (soft delete by setting is_active to false)
 export const deleteEmployee = async (
-  employeeId: string
+  employeeId: string,
 ): Promise<PostgrestSingleResponse<IEmployee | null>> => {
   const response = await supabase
     .from("employees")
@@ -151,7 +151,7 @@ export const deleteEmployee = async (
 
 // Hard delete employee (permanent removal)
 export const hardDeleteEmployee = async (
-  employeeId: string
+  employeeId: string,
 ): Promise<PostgrestSingleResponse<null>> => {
   const response = await supabase
     .from("employees")
@@ -199,17 +199,20 @@ export const getEmployeeCountByRole = async () => {
     return response;
   }
 
-  const counts = response.data?.reduce((acc, emp) => {
-    acc[emp.role_name] = (acc[emp.role_name] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
+  const counts = response.data?.reduce(
+    (acc, emp) => {
+      acc[emp.role_name] = (acc[emp.role_name] || 0) + 1;
+      return acc;
+    },
+    {} as Record<string, number>,
+  );
 
   return { data: counts, error: null };
 };
 
 // Activate/Deactivate employee
 export const toggleEmployeeStatus = async (
-  employeeId: string
+  employeeId: string,
 ): Promise<PostgrestSingleResponse<IEmployee | null>> => {
   // First get current status
   const { data: currentEmployee } = await getEmployeeById(employeeId);

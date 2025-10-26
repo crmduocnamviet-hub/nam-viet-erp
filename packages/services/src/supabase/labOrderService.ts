@@ -11,9 +11,7 @@ export const getLabOrders = async (filters?: {
   limit?: number;
   offset?: number;
 }) => {
-  let query = supabase
-    .from("lab_orders")
-    .select(`
+  let query = supabase.from("lab_orders").select(`
       *,
       medical_visits!inner(
         visit_date,
@@ -46,7 +44,7 @@ export const getLabOrders = async (filters?: {
 
     const { data: visits } = await visitQuery;
     if (visits) {
-      const visitIds = visits.map(v => v.visit_id);
+      const visitIds = visits.map((v) => v.visit_id);
       query = query.in("visit_id", visitIds);
     }
   }
@@ -56,7 +54,10 @@ export const getLabOrders = async (filters?: {
   }
 
   if (filters?.offset) {
-    query = query.range(filters.offset, (filters.offset + (filters.limit || 10)) - 1);
+    query = query.range(
+      filters.offset,
+      filters.offset + (filters.limit || 10) - 1,
+    );
   }
 
   const response = await query.order("created_at", { ascending: false });
@@ -64,10 +65,13 @@ export const getLabOrders = async (filters?: {
 };
 
 // Get lab order by ID
-export const getLabOrderById = async (orderId: string): Promise<PostgrestSingleResponse<ILabOrder | null>> => {
+export const getLabOrderById = async (
+  orderId: string,
+): Promise<PostgrestSingleResponse<ILabOrder | null>> => {
   const response = await supabase
     .from("lab_orders")
-    .select(`
+    .select(
+      `
       *,
       medical_visits!inner(
         visit_date,
@@ -75,7 +79,8 @@ export const getLabOrderById = async (orderId: string): Promise<PostgrestSingleR
         patients!inner(full_name, phone_number, date_of_birth),
         doctor:employees!inner(full_name, role_name)
       )
-    `)
+    `,
+    )
     .eq("order_id", orderId)
     .single();
 
@@ -95,7 +100,7 @@ export const getLabOrdersByVisitId = async (visitId: string) => {
 
 // Create new lab order
 export const createLabOrder = async (
-  order: Omit<ILabOrder, "order_id">
+  order: Omit<ILabOrder, "order_id">,
 ): Promise<PostgrestSingleResponse<ILabOrder | null>> => {
   const response = await supabase
     .from("lab_orders")
@@ -112,20 +117,17 @@ export const createMultipleLabOrders = async (
   orders: Array<{
     service_name: string;
     preliminary_diagnosis?: string;
-  }>
+  }>,
 ): Promise<PostgrestSingleResponse<ILabOrder[]>> => {
-  const labOrders = orders.map(order => ({
+  const labOrders = orders.map((order) => ({
     visit_id: visitId,
     service_name: order.service_name,
     preliminary_diagnosis: order.preliminary_diagnosis || null,
     is_executed: false,
-    result_received_at: null
+    result_received_at: null,
   }));
 
-  const response = await supabase
-    .from("lab_orders")
-    .insert(labOrders)
-    .select();
+  const response = await supabase.from("lab_orders").insert(labOrders).select();
 
   return response;
 };
@@ -133,7 +135,7 @@ export const createMultipleLabOrders = async (
 // Update lab order
 export const updateLabOrder = async (
   orderId: string,
-  updates: Partial<Omit<ILabOrder, "order_id">>
+  updates: Partial<Omit<ILabOrder, "order_id">>,
 ): Promise<PostgrestSingleResponse<ILabOrder | null>> => {
   const response = await supabase
     .from("lab_orders")
@@ -146,7 +148,9 @@ export const updateLabOrder = async (
 };
 
 // Mark lab order as executed
-export const executeLabOrder = async (orderId: string): Promise<PostgrestSingleResponse<ILabOrder | null>> => {
+export const executeLabOrder = async (
+  orderId: string,
+): Promise<PostgrestSingleResponse<ILabOrder | null>> => {
   const response = await supabase
     .from("lab_orders")
     .update({ is_executed: true })
@@ -158,7 +162,9 @@ export const executeLabOrder = async (orderId: string): Promise<PostgrestSingleR
 };
 
 // Mark result as received
-export const receiveLabResult = async (orderId: string): Promise<PostgrestSingleResponse<ILabOrder | null>> => {
+export const receiveLabResult = async (
+  orderId: string,
+): Promise<PostgrestSingleResponse<ILabOrder | null>> => {
   const response = await supabase
     .from("lab_orders")
     .update({ result_received_at: new Date().toISOString() })
@@ -170,7 +176,9 @@ export const receiveLabResult = async (orderId: string): Promise<PostgrestSingle
 };
 
 // Delete lab order
-export const deleteLabOrder = async (orderId: string): Promise<PostgrestSingleResponse<null>> => {
+export const deleteLabOrder = async (
+  orderId: string,
+): Promise<PostgrestSingleResponse<null>> => {
   const response = await supabase
     .from("lab_orders")
     .delete()
@@ -183,14 +191,16 @@ export const deleteLabOrder = async (orderId: string): Promise<PostgrestSingleRe
 export const getPendingLabOrders = async () => {
   const response = await supabase
     .from("lab_orders")
-    .select(`
+    .select(
+      `
       *,
       medical_visits!inner(
         visit_date,
         patients!inner(full_name, phone_number),
         doctor:employees!inner(full_name)
       )
-    `)
+    `,
+    )
     .eq("is_executed", false)
     .order("created_at", { ascending: true });
 
@@ -201,14 +211,16 @@ export const getPendingLabOrders = async () => {
 export const getCompletedLabOrdersAwaitingResults = async () => {
   const response = await supabase
     .from("lab_orders")
-    .select(`
+    .select(
+      `
       *,
       medical_visits!inner(
         visit_date,
         patients!inner(full_name, phone_number),
         doctor:employees!inner(full_name)
       )
-    `)
+    `,
+    )
     .eq("is_executed", true)
     .is("result_received_at", null)
     .order("created_at", { ascending: true });
@@ -217,7 +229,10 @@ export const getCompletedLabOrdersAwaitingResults = async () => {
 };
 
 // Get lab order statistics
-export const getLabOrderStats = async (startDate?: string, endDate?: string) => {
+export const getLabOrderStats = async (
+  startDate?: string,
+  endDate?: string,
+) => {
   let query = supabase
     .from("lab_orders")
     .select("is_executed, result_received_at, service_name");
@@ -234,7 +249,7 @@ export const getLabOrderStats = async (startDate?: string, endDate?: string) => 
 
     const { data: visits } = await visitQuery;
     if (visits) {
-      const visitIds = visits.map(v => v.visit_id);
+      const visitIds = visits.map((v) => v.visit_id);
       query = query.in("visit_id", visitIds);
     }
   }
@@ -260,7 +275,8 @@ export const getLabOrderStats = async (startDate?: string, endDate?: string) => 
 
     // Service type stats
     acc.byService = acc.byService || {};
-    acc.byService[order.service_name] = (acc.byService[order.service_name] || 0) + 1;
+    acc.byService[order.service_name] =
+      (acc.byService[order.service_name] || 0) + 1;
 
     return acc;
   }, {} as any);
@@ -270,21 +286,22 @@ export const getLabOrderStats = async (startDate?: string, endDate?: string) => 
 
 // Get popular lab services
 export const getPopularLabServices = async (limit: number = 10) => {
-  const response = await supabase
-    .from("lab_orders")
-    .select("service_name");
+  const response = await supabase.from("lab_orders").select("service_name");
 
   if (response.error) {
     return response;
   }
 
-  const serviceCounts = response.data?.reduce((acc, order) => {
-    acc[order.service_name] = (acc[order.service_name] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
+  const serviceCounts = response.data?.reduce(
+    (acc, order) => {
+      acc[order.service_name] = (acc[order.service_name] || 0) + 1;
+      return acc;
+    },
+    {} as Record<string, number>,
+  );
 
   const sortedServices = Object.entries(serviceCounts || {})
-    .sort(([,a], [,b]) => b - a)
+    .sort(([, a], [, b]) => b - a)
     .slice(0, limit)
     .map(([service, count]) => ({ service_name: service, count }));
 
@@ -294,7 +311,7 @@ export const getPopularLabServices = async (limit: number = 10) => {
 // Bulk update lab order status
 export const bulkUpdateLabOrderStatus = async (
   orderIds: string[],
-  isExecuted: boolean
+  isExecuted: boolean,
 ): Promise<PostgrestSingleResponse<ILabOrder[]>> => {
   const response = await supabase
     .from("lab_orders")

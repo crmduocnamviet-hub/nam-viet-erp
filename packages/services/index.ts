@@ -1,40 +1,43 @@
-export * from "./src/supabase";
-export * from "./src/cashLedgerService";
-export * from "./src/financialTransactionService";
-export * from "./src/promotionService";
-export * from "./src/fundService";
-export * from "./src/userService";
-export * from "./src/productService";
-export * from "./src/warehouse";
-export * from "./src/bankServices";
-export * from "./src/purchaseOrderService";
-export * from "./src/appointmentService";
-export * from "./src/posService";
-export * from "./src/comboService";
+export * from "./src/supabase/supabase";
+export * from "./src/supabase/cashLedgerService";
+export * from "./src/supabase/financialTransactionService";
+export * from "./src/supabase/promotionService";
+export * from "./src/supabase/fundService";
+export * from "./src/supabase/userService";
+export * from "./src/supabase/productService";
+export * from "./src/supabase/warehouse";
+export * from "./src/supabase/bankServices";
+export * from "./src/supabase/purchaseOrderService";
+export * from "./src/supabase/appointmentService";
+export * from "./src/supabase/posService";
+export * from "./src/supabase/comboService";
 
 // Scheduling & Medical Services
-export * from "./src/patientService";
-export * from "./src/patientPointsService";
-export * from "./src/employeeService";
-export * from "./src/userManagementService";
-export * from "./src/appointmentStatusService";
-export * from "./src/medicalVisitService";
-export * from "./src/labOrderService";
-export * from "./src/prescriptionService";
-export * from "./src/salesOrderService";
-export * from "./src/salesOrderItemService";
-export * from "./src/salesComboItemService";
-export * from "./src/b2bQuoteService";
-export * from "./src/notificationService";
+export * from "./src/supabase/patientService";
+export * from "./src/supabase/patientPointsService";
+export * from "./src/supabase/employeeService";
+export * from "./src/supabase/userManagementService";
+export * from "./src/supabase/appointmentStatusService";
+export * from "./src/supabase/medicalVisitService";
+export * from "./src/supabase/labOrderService";
+export * from "./src/supabase/prescriptionService";
+export * from "./src/supabase/salesOrderService";
+export * from "./src/supabase/salesOrderItemService";
+export * from "./src/supabase/salesComboItemService";
+export * from "./src/supabase/b2bQuoteService";
+export * from "./src/supabase/notificationService";
 
 // Warehouse Management Services
-export * from "./src/supplierService";
-export * from "./src/supplierPromotionService";
-export * from "./src/purchaseOrderService";
-export * from "./src/lotManagementService";
+export * from "./src/supabase/supplierService";
+export * from "./src/supabase/supplierPromotionService";
+export * from "./src/supabase/purchaseOrderService";
+export * from "./src/supabase/lotManagementService";
 
 // Room Management Services
-export * from "./src/roomService";
+export * from "./src/supabase/roomService";
+
+// Firebase Services
+export * from "./src/firebase/fcmService";
 
 // Seeding Services
-export * from "./src/seedDoctors";
+export * from "./src/supabase/seedDoctors";

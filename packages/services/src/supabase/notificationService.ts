@@ -1,5 +1,11 @@
 import { supabase } from "./supabase";
 import type { RealtimeChannel } from "@supabase/supabase-js";
+import {
+  initializeFCMForEmployee,
+  onForegroundMessage,
+  showBrowserNotification,
+  type INotificationPayload,
+} from "../firebase/fcmService";
 
 interface NotificationCallback {
   (payload: any): void;
@@ -15,6 +21,8 @@ interface NotificationOptions {
 class NotificationService {
   private channels: Map<string, RealtimeChannel> = new Map();
   private subscriptions: Map<string, NotificationOptions> = new Map();
+  private fcmInitialized: boolean = false;
+  private currentEmployeeId: string | null = null;
 
   /**
    * Subscribe to realtime changes on a table
@@ -45,17 +53,17 @@ class NotificationService {
           `[NotificationService] Received ${options.event || "*"} on ${
             options.table
           }:`,
-          payload
+          payload,
         );
         options.callback(payload);
-      }
+      },
     );
 
     // Subscribe to the channel
     subscription.subscribe((status) => {
       console.log(
         `[NotificationService] Channel ${channelName} status:`,
-        status
+        status,
       );
     });
 
@@ -75,7 +83,7 @@ class NotificationService {
    */
   subscribeToB2BQuotes(
     callback: NotificationCallback,
-    employeeId?: string
+    employeeId?: string,
   ): () => void {
     const channelName = `b2b_quotes_${employeeId || "all"}`;
 
@@ -105,7 +113,7 @@ class NotificationService {
    */
   subscribeToB2BQuoteItems(
     callback: NotificationCallback,
-    quoteId?: string
+    quoteId?: string,
   ): () => void {
     const channelName = `b2b_quote_items_${quoteId || "all"}`;
 
@@ -162,6 +170,73 @@ class NotificationService {
    */
   isSubscribed(channelName: string): boolean {
     return this.channels.has(channelName);
+  }
+
+  /**
+   * Initialize push notifications for an employee
+   * @param employeeId Employee ID to register FCM token for
+   * @param deviceName Optional device name
+   */
+  async initializePushNotifications(
+    employeeId: string,
+    deviceName?: string,
+  ): Promise<string | null> {
+    if (this.fcmInitialized && this.currentEmployeeId === employeeId) {
+      console.log("[NotificationService] FCM already initialized");
+      return null;
+    }
+
+    try {
+      const token = await initializeFCMForEmployee(employeeId, deviceName);
+      if (token) {
+        this.fcmInitialized = true;
+        this.currentEmployeeId = employeeId;
+        console.log(
+          "[NotificationService] Push notifications initialized successfully",
+        );
+      }
+      return token;
+    } catch (error) {
+      console.error("[NotificationService] Failed to initialize FCM:", error);
+      return null;
+    }
+  }
+
+  /**
+   * Setup foreground message listener
+   * @param callback Function to call when a push notification is received
+   */
+  setupPushNotificationListener(
+    callback?: (notification: INotificationPayload) => void,
+  ): void {
+    onForegroundMessage((notification) => {
+      console.log(
+        "[NotificationService] Push notification received:",
+        notification,
+      );
+
+      // Show browser notification
+      showBrowserNotification(notification);
+
+      // Call custom callback if provided
+      if (callback) {
+        callback(notification);
+      }
+    });
+  }
+
+  /**
+   * Check if FCM is initialized
+   */
+  isPushNotificationsEnabled(): boolean {
+    return this.fcmInitialized;
+  }
+
+  /**
+   * Get current employee ID
+   */
+  getCurrentEmployeeId(): string | null {
+    return this.currentEmployeeId;
   }
 }
 
