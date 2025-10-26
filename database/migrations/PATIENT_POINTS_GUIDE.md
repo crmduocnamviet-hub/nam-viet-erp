@@ -64,7 +64,7 @@ import {
   getPatientPointsSummary,
   calculatePointsToEarn,
   calculateDiscountFromPoints,
-} from "@nam-viet-erp/services/src/patientPointsService";
+} from "@nam-viet-erp/services";
 ```
 
 ---
@@ -179,7 +179,7 @@ if (summary) {
 
 ```typescript
 // Example: Staff gives bonus points for special promotion
-import { adjustPatientPoints } from "@nam-viet-erp/services/src/patientPointsService";
+import { adjustPatientPoints } from "@nam-viet-erp/services";
 
 try {
   const { data, error } = await adjustPatientPoints({
@@ -383,7 +383,7 @@ useEffect(() => {
 Run this as a cron job (e.g., daily at midnight):
 
 ```typescript
-import { processExpiredPoints } from "@nam-viet-erp/services/src/patientPointsService";
+import { processExpiredPoints } from "@nam-viet-erp/services";
 
 // In your scheduled task
 async function runDailyPointsExpiration() {

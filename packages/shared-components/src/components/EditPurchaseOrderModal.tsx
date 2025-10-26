@@ -53,9 +53,7 @@ const EditPurchaseOrderModal: React.FC<EditPurchaseOrderModalProps> = ({
       setLoading(true);
 
       // Import the service function
-      const { updatePurchaseOrder } = await import(
-        "@nam-viet-erp/services/src/purchaseOrderService"
-      );
+      const { updatePurchaseOrder } = await import("@nam-viet-erp/services");
 
       const updates = {
         supplier_id: values.supplier_id,

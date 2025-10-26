@@ -6,7 +6,7 @@ import "antd/dist/reset.css";
 import { BrowserRouter } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext.tsx";
 import { App as AntApp } from "antd";
-import { setupEVN } from "@nam-viet-erp/services/src/supabase.ts";
+import { setupEVN } from "@nam-viet-erp/services";
 
 setupEVN(import.meta.env);
 
@@ -21,5 +21,5 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
         </AuthProvider>
       </AntApp>
     </BrowserRouter>
-  </React.StrictMode>
+  </React.StrictMode>,
 );
