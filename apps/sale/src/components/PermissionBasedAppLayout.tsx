@@ -9,8 +9,13 @@ import {
   Button,
   Grid,
   Drawer,
+  Modal,
 } from "antd";
-import { MenuOutlined, LogoutOutlined } from "@ant-design/icons";
+import {
+  MenuOutlined,
+  LogoutOutlined,
+  ExclamationCircleOutlined,
+} from "@ant-design/icons";
 import viVN from "antd/locale/vi_VN";
 import { signOut } from "@nam-viet-erp/services";
 import {
@@ -74,9 +79,24 @@ const AppLayoutContent: React.FC = () => {
     }
   };
 
-  const handleLogout = async () => {
-    await signOut();
-    navigate("/login");
+  const handleLogout = () => {
+    Modal.confirm({
+      title: "Xác nhận đăng xuất",
+      icon: <ExclamationCircleOutlined />,
+      content: "Bạn có chắc chắn muốn đăng xuất khỏi hệ thống?",
+      okText: "Đăng xuất",
+      okType: "danger",
+      cancelText: "Hủy",
+      centered: true,
+      onOk: async () => {
+        try {
+          await signOut();
+          navigate("/login");
+        } catch (error) {
+          console.error("Error signing out:", error);
+        }
+      },
+    });
   };
 
   const ComingSoon = () => (

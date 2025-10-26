@@ -26,6 +26,8 @@ export * from "./src/supabase/salesOrderItemService";
 export * from "./src/supabase/salesComboItemService";
 export * from "./src/supabase/b2bQuoteService";
 export * from "./src/supabase/notificationService";
+export * from "./src/supabase/employeeNotificationService";
+export * from "./src/supabase/pushNotificationHelper";
 
 // Warehouse Management Services
 export * from "./src/supabase/supplierService";

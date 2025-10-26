@@ -6,6 +6,11 @@ import {
   showBrowserNotification,
   type INotificationPayload,
 } from "../firebase/fcmService";
+import {
+  subscribeToNotifications,
+  getUnreadNotificationCount,
+  type INotification,
+} from "./employeeNotificationService";
 
 interface NotificationCallback {
   (payload: any): void;
@@ -237,6 +242,96 @@ class NotificationService {
    */
   getCurrentEmployeeId(): string | null {
     return this.currentEmployeeId;
+  }
+
+  /**
+   * Subscribe to database notifications for the current employee
+   * @param callback Function to call when a new notification is received
+   */
+  subscribeToEmployeeNotifications(
+    callback: (notification: INotification) => void,
+  ): () => void {
+    if (!this.currentEmployeeId) {
+      console.warn(
+        "[NotificationService] Cannot subscribe: no employee ID set",
+      );
+      return () => {};
+    }
+
+    return subscribeToNotifications(this.currentEmployeeId, (payload) => {
+      const notification = payload.new as INotification;
+      callback(notification);
+
+      // Optionally show browser notification
+      if (notification && !notification.is_read) {
+        showBrowserNotification({
+          title: notification.title,
+          body: notification.body,
+          icon: notification.icon,
+          image: notification.image_url,
+          link: notification.action_url,
+          data: notification.metadata,
+        });
+      }
+    });
+  }
+
+  /**
+   * Get unread notification count for current employee
+   */
+  async getUnreadCount(): Promise<number> {
+    if (!this.currentEmployeeId) {
+      return 0;
+    }
+    return await getUnreadNotificationCount(this.currentEmployeeId);
+  }
+
+  /**
+   * Initialize complete notification system
+   * Includes both FCM push notifications and database notifications
+   * @param employeeId Employee ID
+   * @param deviceName Optional device name
+   * @param onNewNotification Optional callback for new notifications
+   */
+  async initializeCompleteNotificationSystem(
+    employeeId: string,
+    deviceName?: string,
+    onNewNotification?: (notification: INotification) => void,
+  ): Promise<{
+    fcmToken: string | null;
+    unreadCount: number;
+    unsubscribe: () => void;
+  }> {
+    // Initialize FCM
+    const fcmToken = await this.initializePushNotifications(
+      employeeId,
+      deviceName,
+    );
+
+    // Setup FCM listener
+    this.setupPushNotificationListener();
+
+    // Subscribe to database notifications
+    const unsubscribe = this.subscribeToEmployeeNotifications(
+      (notification) => {
+        console.log(
+          "[NotificationService] Database notification received:",
+          notification,
+        );
+        if (onNewNotification) {
+          onNewNotification(notification);
+        }
+      },
+    );
+
+    // Get initial unread count
+    const unreadCount = await this.getUnreadCount();
+
+    return {
+      fcmToken,
+      unreadCount,
+      unsubscribe,
+    };
   }
 }
 
