@@ -36,7 +36,7 @@ import {
   addPurchaseOrderItems,
   deletePurchaseOrderItem,
 } from "@nam-viet-erp/services";
-import { getSuppliers } from "@nam-viet-erp/services/src/supplierService";
+import { getSuppliers } from "@nam-viet-erp/services";
 import { searchProducts } from "@nam-viet-erp/services";
 import PageLayout from "../../components/PageLayout";
 

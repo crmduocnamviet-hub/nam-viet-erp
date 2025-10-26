@@ -163,9 +163,7 @@ export const usePurchaseOrderStore = create<PurchaseOrderState>()(
         setError(null);
 
         try {
-          const { supabase } = await import(
-            "@nam-viet-erp/services/src/supabase"
-          );
+          const { supabase } = await import("@nam-viet-erp/services");
           const { data, error } = await supabase
             .from("suppliers")
             .select("*")
@@ -196,9 +194,7 @@ export const usePurchaseOrderStore = create<PurchaseOrderState>()(
         setError(null);
 
         try {
-          const { supabase } = await import(
-            "@nam-viet-erp/services/src/supabase"
-          );
+          const { supabase } = await import("@nam-viet-erp/services");
           const { data, error } = await supabase
             .from("products")
             .select("*")
@@ -229,9 +225,7 @@ export const usePurchaseOrderStore = create<PurchaseOrderState>()(
         setError(null);
 
         try {
-          const { supabase } = await import(
-            "@nam-viet-erp/services/src/supabase"
-          );
+          const { supabase } = await import("@nam-viet-erp/services");
 
           // Try to find B2B warehouse
           const { data: warehouseData, error: warehouseError } = await supabase
