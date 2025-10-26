@@ -43,3 +43,7 @@ export * from "./src/firebase/fcmService";
 
 // Seeding Services
 export * from "./src/supabase/seedDoctors";
+
+//AI
+
+export * from "./src/gemini-ai";

@@ -361,12 +361,12 @@ interface IPatientPointsSummary {
   last_transaction_at: string | null;
 }
 
-// Employee Management - Quản lý Nhân sự (Bác sĩ, Dược sĩ, Lễ tân)
+// Employee Management - Quản lý Nhân sự (Bác sĩ, Dược sĩ, Lễ tân, Kế toán)
 interface IEmployee {
   employee_id: string;
   full_name: string;
   employee_code: string | null;
-  role_name: string; // 'BacSi', 'DuocSi', 'LeTan'
+  role_name: string; // 'BacSi', 'DuocSi', 'LeTan', 'KeToan'
   is_active: boolean;
   user_id?: string;
   permissions?: string[];
@@ -502,11 +502,21 @@ interface IB2BQuote {
   notes?: string | null;
   terms_conditions?: string | null;
   created_by_employee_id?: string | null;
+  warehouse_employee_id?: string | null;
+  delivery_employee_id?: string | null;
   created_at: string;
   updated_at: string;
   // Relations
   quote_items?: IB2BQuoteItem[];
   employee?: {
+    full_name: string;
+    employee_code: string;
+  };
+  warehouse_employee?: {
+    full_name: string;
+    employee_code: string;
+  };
+  delivery_employee?: {
     full_name: string;
     employee_code: string;
   };

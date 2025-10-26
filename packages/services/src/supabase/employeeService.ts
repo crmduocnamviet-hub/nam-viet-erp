@@ -188,6 +188,11 @@ export const getReceptionists = async () => {
   return getEmployeesByRole("LeTan");
 };
 
+// Get all accountants (KeToan)
+export const getAccountants = async () => {
+  return getEmployeesByRole("KeToan");
+};
+
 // Get active employees count by role
 export const getEmployeeCountByRole = async () => {
   const response = await supabase
