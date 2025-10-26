@@ -28,6 +28,7 @@ interface IProduct {
   wholesale_profit: number | null;
   retail_profit: number | null;
   wholesale_price: number | null;
+  vat_percent?: number;
   is_active: boolean;
   image_url: string | null;
   route: string | null;
@@ -102,13 +103,14 @@ interface IProductOrder {
   suppliers?: ISupplier;
   items?: IProductOrderItem[];
   status: string;
-  note?: string;
+  notes?: string;
   created_by?: string;
   po_number?: string;
   expected_delivery_date?: string;
   total_amount?: number;
   updated_at?: string;
   created_at?: string;
+  order_date?: string;
 }
 
 interface IProductOrderItem {
@@ -240,6 +242,7 @@ interface IInventory {
   min_stock: number;
   max_stock: number;
   warehouses?: IWarehouse;
+  products?: IProduct;
 }
 
 // Extended inventory with product details for display
@@ -299,12 +302,10 @@ interface IPatient {
   phone_number: string | null;
   date_of_birth: string | null;
   gender: string | null;
-  is_b2b_customer: boolean; // Phân biệt Khách lẻ/Bệnh nhân và Khách buôn
   loyalty_points: number;
   allergy_notes: string | null; // Dị ứng đã biết
   chronic_diseases: string | null; // Bệnh nền/Bệnh mãn tính
   created_at: string;
-  receptionist_notes?: string;
   address?: string;
 }
 
@@ -524,6 +525,7 @@ interface IB2BQuoteItem {
   discount_percent: number;
   discount_amount: number;
   subtotal: number;
+  vat_percent?: number;
   notes?: string | null;
   created_at: string;
   // Relations
@@ -683,7 +685,7 @@ interface SaleOrderProductLotItem {
   quantity: number;
   order_id: string;
   lot_id: number;
-};
+}
 
 // User Account Management Interfaces
 interface IUserAccount {

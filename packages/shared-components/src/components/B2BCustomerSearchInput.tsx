@@ -35,7 +35,7 @@ const B2BCustomerSearchInput: React.FC<B2BCustomerSearchInputProps> = ({
 
   // Search customers when debounced search term changes
   useEffect(() => {
-    if (debouncedSearchTerm && debouncedSearchTerm.length >= 2) {
+    if (debouncedSearchTerm && debouncedSearchTerm.length >= 1) {
       searchCustomers(debouncedSearchTerm);
     } else {
       setCustomers([]);
@@ -73,7 +73,7 @@ const B2BCustomerSearchInput: React.FC<B2BCustomerSearchInputProps> = ({
               .includes(term.toLowerCase())) ||
           (customer.phone_number && customer.phone_number.includes(term)) ||
           (customer.email &&
-            customer.email.toLowerCase().includes(term.toLowerCase()))
+            customer.email.toLowerCase().includes(term.toLowerCase())),
       );
 
       setCustomers(searchResults);
@@ -112,7 +112,7 @@ const B2BCustomerSearchInput: React.FC<B2BCustomerSearchInputProps> = ({
 
   const handleSelect = (selectedValue: string, option: any) => {
     const selectedCustomer = customers.find(
-      (customer) => customer.customer_id === selectedValue
+      (customer) => customer.customer_id === selectedValue,
     );
     if (selectedCustomer) {
       setSearchTerm(selectedCustomer.customer_name);

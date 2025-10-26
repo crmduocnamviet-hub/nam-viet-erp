@@ -362,6 +362,7 @@ sales_order_items (
 - Usage instructions (HDSD)
 - Chronic disease indicators
 - Multi-route administration support
+- Per-product VAT percentage (0%, 1%, 2%, 3%, 5%)
 
 **Schema**:
 
@@ -372,6 +373,8 @@ products (
   sku                     VARCHAR UNIQUE,
   cost_price              DECIMAL(10,2),
   retail_price            DECIMAL(10,2),
+  wholesale_price         DECIMAL(10,2),
+  vat_percent             DECIMAL(5,2) DEFAULT 5.00, -- VAT percentage (0, 1, 2, 3, or 5)
   category                VARCHAR,
   manufacturer            VARCHAR,
   registration_number     VARCHAR, -- Medical registration
@@ -382,7 +385,8 @@ products (
   is_chronic             BOOLEAN DEFAULT FALSE,
   route                  VARCHAR, -- Administration route
   status                 VARCHAR DEFAULT 'active',
-  created_at             TIMESTAMP DEFAULT NOW()
+  created_at             TIMESTAMP DEFAULT NOW(),
+  CONSTRAINT check_product_vat_percent_valid CHECK (vat_percent IN (0, 1, 2, 3, 5))
 )
 ```
 
@@ -580,12 +584,13 @@ b2b_quotes (
 
 ### 18. `b2b_quote_items` - Quote Line Items
 
-**Purpose**: Detailed B2B pricing with bulk discounts
+**Purpose**: Detailed B2B pricing with bulk discounts and VAT management
 
 **Key Features**:
 
 - Quantity-based pricing
 - Discount management
+- Per-product VAT percentage (0%, 1%, 2%, 3%, 5%)
 - Subtotal calculations
 - Product integration
 
@@ -599,15 +604,17 @@ b2b_quote_items (
   quantity          INTEGER NOT NULL,
   unit_price        DECIMAL(10,2) NOT NULL,
   discount_percent  DECIMAL(5,2) DEFAULT 0,
+  vat_percent       DECIMAL(5,2) DEFAULT 5.00, -- VAT percentage (0, 1, 2, 3, or 5)
   subtotal          DECIMAL(12,2) NOT NULL,
-  created_at        TIMESTAMP DEFAULT NOW()
+  created_at        TIMESTAMP DEFAULT NOW(),
+  CONSTRAINT check_vat_percent_valid CHECK (vat_percent IN (0, 1, 2, 3, 5))
 )
 ```
 
 **Relationships**:
 
 - Links to: `b2b_quotes`, `products`
-- Usage: B2B pricing, bulk discounting, quotation details
+- Usage: B2B pricing, bulk discounting, VAT calculation, quotation details
 
 ---
 

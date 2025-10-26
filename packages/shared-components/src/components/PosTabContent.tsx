@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Row,
   Col,
@@ -21,6 +22,10 @@ import {
   FloatButton,
   Badge,
   Modal,
+  Table,
+  Descriptions,
+  Form,
+  App,
 } from "antd";
 import {
   UserOutlined,
@@ -36,15 +41,26 @@ import {
   GiftOutlined,
   AppstoreOutlined,
   CloseCircleOutlined,
+  CloseCircleFilled,
+  CloseOutlined,
+  EditOutlined,
 } from "@ant-design/icons";
-import { useInventory } from "@nam-viet-erp/store";
-import { calculateProductGlobalQuantities } from "@nam-viet-erp/services";
+import { useInventory, usePosStore } from "@nam-viet-erp/store";
+import {
+  calculateProductGlobalQuantities,
+  updatePatient,
+} from "@nam-viet-erp/services";
+import ProductSearchInput from "./ProductSearchInput";
+import DateInput from "./DateInput";
 
 const { Text, Title } = Typography;
 const { Search } = Input;
 const { useBreakpoint } = Grid;
 
 interface PosTabContentProps {
+  // Tab
+  activeTabId: string;
+
   // Warehouse
   employeeWarehouse: IWarehouse | null;
   loadingWarehouse: boolean;
@@ -93,6 +109,7 @@ interface PosTabContentProps {
 }
 
 const PosTabContent: React.FC<PosTabContentProps> = ({
+  activeTabId,
   employeeWarehouse,
   loadingWarehouse,
   customerSearchTerm,
@@ -123,8 +140,155 @@ const PosTabContent: React.FC<PosTabContentProps> = ({
   isCartModalOpen,
   setIsCartModalOpen,
 }) => {
+  const navigate = useNavigate();
   const inventory = useInventory();
+  const { notification } = App.useApp();
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [isEditPatientModalOpen, setIsEditPatientModalOpen] = useState(false);
+  const [editForm] = Form.useForm();
+  const [isSavingPatient, setIsSavingPatient] = useState(false);
+  const productSearchRef = React.useRef<any>(null);
+
+  // Update tab title when customer is selected
+  useEffect(() => {
+    if (selectedCustomer) {
+      const { updateTabTitle } = usePosStore.getState();
+      const newTitle = `${selectedCustomer.full_name}-${selectedCustomer.phone_number}`;
+      updateTabTitle(activeTabId, newTitle);
+    }
+  }, [selectedCustomer, activeTabId]);
+
+  // Auto-focus product search when typing
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Get the active element
+      const activeElement = document.activeElement as HTMLElement;
+      const tagName = activeElement?.tagName.toLowerCase();
+
+      // Don't trigger if user is already typing in an input/textarea
+      if (
+        tagName === "input" ||
+        tagName === "textarea" ||
+        activeElement?.contentEditable === "true"
+      ) {
+        return;
+      }
+
+      // Don't trigger on special keys
+      if (
+        e.ctrlKey ||
+        e.metaKey ||
+        e.altKey ||
+        e.key === "Escape" ||
+        e.key === "Tab" ||
+        e.key === "Enter" ||
+        e.key === "Shift" ||
+        e.key === "Control" ||
+        e.key === "Alt" ||
+        e.key === "Meta" ||
+        e.key.startsWith("Arrow") ||
+        e.key.startsWith("F")
+      ) {
+        return;
+      }
+
+      // Only trigger on printable characters (length 1 or space)
+      if (e.key.length === 1) {
+        // Focus the product search input
+        if (productSearchRef.current) {
+          productSearchRef.current.focus();
+        }
+      }
+    };
+
+    // Add event listener
+    document.addEventListener("keydown", handleKeyDown);
+
+    // Cleanup
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
+
+  // Calculate age from date of birth
+  const calculateAge = (dateOfBirth: string | null): number | null => {
+    if (!dateOfBirth) return null;
+    const today = new Date();
+    const birthDate = new Date(dateOfBirth);
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (
+      monthDiff < 0 ||
+      (monthDiff === 0 && today.getDate() < birthDate.getDate())
+    ) {
+      age--;
+    }
+    return age;
+  };
+
+  // Get appropriate HDSD based on patient age
+  const getHDSD = (item: any): string | null => {
+    if (!item.product) return null;
+
+    const age = selectedCustomer?.date_of_birth
+      ? calculateAge(selectedCustomer.date_of_birth)
+      : null;
+    const product = item.product;
+
+    if (age === null) {
+      // If no age, show hdsd_over_18 as default
+      return (
+        product.hdsd_over_18 ||
+        product.hdsd_6_18 ||
+        product.hdsd_2_6 ||
+        product.hdsd_0_2
+      );
+    }
+
+    if (age < 2) {
+      return product.hdsd_0_2;
+    } else if (age < 6) {
+      return product.hdsd_2_6;
+    } else if (age < 18) {
+      return product.hdsd_6_18;
+    } else {
+      return product.hdsd_over_18;
+    }
+  };
+
+  // Handle saving patient edits
+  const handleSavePatient = async () => {
+    try {
+      const values = await editForm.validateFields();
+      setIsSavingPatient(true);
+
+      const { data, error } = await updatePatient(
+        selectedCustomer.patient_id,
+        values,
+      );
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      notification.success({
+        message: "Cập nhật thành công",
+        description: "Thông tin khách hàng đã được cập nhật",
+      });
+
+      // Update the selected customer with new data
+      setStoreSelectedCustomer(data);
+      setIsEditPatientModalOpen(false);
+      editForm.resetFields();
+    } catch (error: any) {
+      notification.error({
+        message: "Lỗi",
+        description: error.message || "Không thể cập nhật thông tin khách hàng",
+      });
+    } finally {
+      setIsSavingPatient(false);
+    }
+  };
 
   // Calculate global quantity for each product (including products in combos)
   const productGlobalQuantities = useMemo(() => {
@@ -204,27 +368,287 @@ const PosTabContent: React.FC<PosTabContentProps> = ({
               )}
             </Space>
           </Col>
-          <Col xs={24} sm={12} md={16}>
+        </Row>
+      </div>
+
+      <Row
+        gutter={24}
+        style={{ height: "calc(100vh - 150px)", paddingTop: "16px" }}
+      >
+        {/* Left Panel - Cart */}
+        <Col xs={24} lg={11}>
+          <div
+            style={{
+              backgroundColor: "white",
+              height: "calc(100vh - 150px)",
+              padding: "16px",
+              borderRadius: "12px",
+            }}
+          >
+            <ProductSearchInput
+              ref={productSearchRef}
+              size="large"
+              onChange={(product) => handleAddToCart(product)}
+              selectedCustomer={selectedCustomer}
+            />
+            <div
+              style={{
+                height: "calc(100% - 66px)",
+                overflowY: "auto",
+                paddingRight: "10px",
+                backgroundColor: "white",
+              }}
+            >
+              {/* Combo Suggestions */}
+              {detectedCombos.length > 0 && (
+                <Card
+                  size="small"
+                  style={{
+                    marginBottom: 12,
+                    background:
+                      "linear-gradient(135deg, #fff7e6 0%, #fffbf0 100%)",
+                    border: "2px solid #faad14",
+                  }}
+                >
+                  <Space
+                    direction="vertical"
+                    size={8}
+                    style={{ width: "100%" }}
+                  >
+                    <Text strong style={{ color: "#d46b08" }}>
+                      🎁 Combo khuyến mãi!
+                    </Text>
+                    {detectedCombos.map((combo) => {
+                      const originalPrice =
+                        combo.combo_items?.reduce((sum, item) => {
+                          return (
+                            sum +
+                            (item.products?.retail_price || 0) * item.quantity
+                          );
+                        }, 0) || 0;
+                      const discountAmount = originalPrice - combo.combo_price;
+
+                      return (
+                        <Button
+                          key={combo.id}
+                          type="primary"
+                          size="small"
+                          block
+                          onClick={() => handleAddCombo?.(combo)}
+                          style={{
+                            height: "auto",
+                            padding: "8px 12px",
+                            textAlign: "left",
+                          }}
+                        >
+                          <div>
+                            <Text strong style={{ color: "#fff" }}>
+                              {combo.name}
+                            </Text>
+                            <br />
+                            <Text style={{ fontSize: 11, color: "#fff" }}>
+                              Tiết kiệm {discountAmount.toLocaleString()}đ
+                            </Text>
+                          </div>
+                        </Button>
+                      );
+                    })}
+                  </Space>
+                </Card>
+              )}
+
+              {/* Cart Items List */}
+              <List
+                itemLayout="vertical"
+                dataSource={cartDetails.items}
+                locale={{
+                  emptyText: (
+                    <Empty
+                      image={Empty.PRESENTED_IMAGE_SIMPLE}
+                      description="Giỏ hàng trống"
+                    />
+                  ),
+                }}
+                renderItem={(item: any) => {
+                  const hdsd = item?.description ?? getHDSD(item);
+                  return (
+                    <List.Item
+                      key={item.key}
+                      style={{
+                        background: "#fff",
+                        marginBottom: "8px",
+                        padding: "12px",
+                        borderRadius: "8px",
+                        boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+                      }}
+                    >
+                      <Row align="middle" gutter={16}>
+                        <Col flex="auto">
+                          <Text
+                            strong
+                            style={{
+                              cursor: "pointer",
+                              color: "#1890ff",
+                            }}
+                            onClick={() => {
+                              if (item.product_id) {
+                                navigate(`/products/edit/${item.product_id}`);
+                              }
+                            }}
+                          >
+                            {item.name}
+                          </Text>
+                          {item.isCombo && (
+                            <Tag
+                              color="orange"
+                              style={{ marginLeft: 8, fontSize: 11 }}
+                            >
+                              COMBO
+                            </Tag>
+                          )}
+                          {item.lot_number && (
+                            <div>
+                              <Text type="secondary" style={{ fontSize: 11 }}>
+                                📦 Lô: {item.lot_number}
+                                {item.batch_code && ` (${item.batch_code})`}
+                              </Text>
+                            </div>
+                          )}
+                          <Input.TextArea
+                            value={hdsd || ""}
+                            autoSize={{ minRows: 1, maxRows: 3 }}
+                            variant="borderless"
+                            style={{
+                              padding: "4px 0",
+                              color: "rgba(0,0,0,0.45)",
+                            }}
+                            placeholder="Hướng dẫn sử dụng..."
+                          />
+                        </Col>
+                        <Col style={{ width: 80 }}>
+                          <Text>{item.finalPrice?.toLocaleString()}đ</Text>
+                        </Col>
+                        <Col style={{ width: 100 }}>
+                          <InputNumber
+                            min={1}
+                            value={item.quantity}
+                            onChange={(val) =>
+                              handleUpdateQuantity(item.key, val!)
+                            }
+                          />
+                        </Col>
+                        <Col style={{ width: 120, textAlign: "right" }}>
+                          <Text strong>
+                            {(item.finalPrice * item.quantity).toLocaleString()}
+                            đ
+                          </Text>
+                        </Col>
+                        <Col>
+                          <Button
+                            type="text"
+                            danger
+                            icon={<DeleteOutlined />}
+                            onClick={() => handleRemoveFromCart(item.key)}
+                          />
+                        </Col>
+                      </Row>
+                    </List.Item>
+                  );
+                }}
+              />
+            </div>
+          </div>
+        </Col>
+
+        {/* Middle Panel - Patient Information */}
+        <Col xs={0} lg={7}>
+          {/* Patient Search */}
+          <div
+            style={{
+              backgroundColor: "white",
+              height: "calc(100vh - 150px)",
+              padding: "16px",
+              borderRadius: "12px",
+            }}
+          >
             <div style={{ position: "relative" }}>
-              <Search
-                placeholder="🔍 Tìm khách hàng (SĐT hoặc tên)..."
-                value={customerSearchTerm}
-                onChange={(e) => setCustomerSearchTerm(e.target.value)}
-                loading={isSearchingCustomers}
-                prefix={<UserOutlined />}
-                suffix={
-                  selectedCustomer ? (
-                    <Space>
-                      <Tag color="success">{selectedCustomer.full_name}</Tag>
+              {!selectedCustomer && (
+                <Search
+                  placeholder="Tìm khách hàng (SĐT hoặc tên)..."
+                  value={customerSearchTerm}
+                  onChange={(e) => {
+                    setCustomerSearchTerm(e.target.value);
+                    if (e.target.value) {
+                      setShowCustomerDropdown(true);
+                    }
+                  }}
+                  onFocus={() => {
+                    if (customerSearchTerm) {
+                      setShowCustomerDropdown(true);
+                    }
+                  }}
+                  loading={isSearchingCustomers}
+                  size="large"
+                  prefix={<UserOutlined />}
+                  suffix={
+                    selectedCustomer ? (
                       <CloseCircleOutlined
                         style={{ cursor: "pointer", color: "#999" }}
-                        onClick={() => setStoreSelectedCustomer(null)}
+                        onClick={() => {
+                          setStoreSelectedCustomer(null);
+                          setCustomerSearchTerm("");
+                        }}
                       />
-                    </Space>
-                  ) : null
-                }
-              />
-              {showCustomerDropdown && (
+                    ) : null
+                  }
+                />
+              )}
+
+              {!!selectedCustomer && (
+                <Row
+                  style={{
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    marginBottom: 16,
+                  }}
+                >
+                  <Text strong>Thông tin khách hàng</Text>
+                  <Space>
+                    <Tooltip title="Chỉnh sửa">
+                      <Button
+                        type="text"
+                        shape="circle"
+                        icon={<EditOutlined />}
+                        onClick={() => {
+                          editForm.setFieldsValue({
+                            full_name: selectedCustomer.full_name,
+                            phone_number: selectedCustomer.phone_number,
+                            date_of_birth: selectedCustomer.date_of_birth,
+                            gender: selectedCustomer.gender,
+                            address: selectedCustomer.address,
+                            allergy_notes: selectedCustomer.allergy_notes,
+                            chronic_diseases: selectedCustomer.chronic_diseases,
+                          });
+                          setIsEditPatientModalOpen(true);
+                        }}
+                      />
+                    </Tooltip>
+                    <Tooltip title="Đóng">
+                      <Button
+                        type="text"
+                        shape="circle"
+                        icon={<CloseOutlined />}
+                        onClick={() => {
+                          setStoreSelectedCustomer(null);
+                          setCustomerSearchTerm("");
+                        }}
+                      />
+                    </Tooltip>
+                  </Space>
+                </Row>
+              )}
+
+              {showCustomerDropdown && customerSearchTerm && (
                 <Card
                   size="small"
                   style={{
@@ -238,36 +662,42 @@ const PosTabContent: React.FC<PosTabContentProps> = ({
                     marginTop: 4,
                   }}
                 >
-                  {customerSearchResults.length > 0 ? (
+                  {isSearchingCustomers ? (
+                    <div style={{ padding: "16px", textAlign: "center" }}>
+                      <Text type="secondary">Đang tìm kiếm...</Text>
+                    </div>
+                  ) : customerSearchResults.length > 0 ? (
                     <List
                       size="small"
                       dataSource={customerSearchResults}
-                      renderItem={(customer: IPatient) => (
-                        <List.Item
-                          style={{
-                            cursor: "pointer",
-                            padding: "8px 12px",
-                          }}
-                          onClick={() => {
-                            setStoreSelectedCustomer(customer);
-                            setCustomerSearchTerm("");
-                            setShowCustomerDropdown(false);
-                          }}
-                        >
-                          <div>
-                            <Text strong>{customer.full_name}</Text>
-                            <br />
-                            <Text type="secondary">
-                              {customer.phone_number}
-                            </Text>
-                            {customer.loyalty_points > 0 && (
-                              <Tag color="gold" style={{ marginLeft: 8 }}>
-                                {customer.loyalty_points} điểm
-                              </Tag>
-                            )}
-                          </div>
-                        </List.Item>
-                      )}
+                      renderItem={(customer: IPatient) => {
+                        return (
+                          <List.Item
+                            style={{
+                              cursor: "pointer",
+                              padding: "8px 12px",
+                            }}
+                            onClick={() => {
+                              setStoreSelectedCustomer(customer);
+                              setCustomerSearchTerm("");
+                              setShowCustomerDropdown(false);
+                            }}
+                          >
+                            <div>
+                              <Text strong>{customer.full_name}</Text>
+                              <br />
+                              <Text type="secondary">
+                                {customer.phone_number}
+                              </Text>
+                              {customer.loyalty_points > 0 && (
+                                <Tag color="gold" style={{ marginLeft: 8 }}>
+                                  {customer.loyalty_points} điểm
+                                </Tag>
+                              )}
+                            </div>
+                          </List.Item>
+                        );
+                      }}
                     />
                   ) : (
                     <div style={{ padding: "8px 12px", textAlign: "center" }}>
@@ -288,193 +718,69 @@ const PosTabContent: React.FC<PosTabContentProps> = ({
                 </Card>
               )}
             </div>
-          </Col>
-        </Row>
-      </div>
 
-      <Row gutter={[16, 16]}>
-        {/* Left Panel - Product Grid */}
-        <Col xs={24} lg={16} xl={17}>
-          <Card
-            style={{
-              borderRadius: 8,
-              height: isMobile ? "auto" : "calc(100vh - 120px)",
-              display: "flex",
-              flexDirection: "column",
-            }}
-            styles={{
-              body: {
-                flex: 1,
-                overflow: isMobile ? "visible" : "hidden",
-                display: "flex",
-                flexDirection: "column",
-                padding: 16,
-              },
-            }}
-          >
-            {/* Search Bar */}
-            <Space.Compact style={{ width: "100%", marginBottom: 16 }}>
-              <Search
-                placeholder="Tìm sản phẩm theo tên, mã vạch..."
-                size="large"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                loading={isSearching}
-                style={{ width: "100%" }}
-                prefix={<SearchOutlined />}
-              />
-              <Tooltip title="Quét mã QR">
-                <Button
-                  icon={<QrcodeOutlined />}
-                  size="large"
-                  onClick={() => setIsQRScannerOpen(true)}
-                  type="primary"
-                />
-              </Tooltip>
-            </Space.Compact>
-
-            {/* Category Tabs */}
-            {categories.length > 0 && (
-              <Tabs
-                activeKey={selectedCategory}
-                onChange={setSelectedCategory}
-                size="small"
-                style={{ marginBottom: 12 }}
-                items={[
-                  { key: "all", label: "Tất cả" },
-                  ...categories.map((cat) => ({
-                    key: cat,
-                    label: cat,
-                  })),
-                ]}
-              />
+            {selectedCustomer && (
+              <Card
+                style={{
+                  borderRadius: 8,
+                  borderWidth: 0,
+                  height: "calc(100vh - 186px)",
+                }}
+              >
+                {/* Name */}
+                <Descriptions
+                  bordered
+                  column={1}
+                  size="small"
+                  style={{ marginRight: -25, marginLeft: -25 }}
+                >
+                  <Descriptions.Item label="Khách hàng">
+                    <Space>
+                      <Avatar size="small" icon={<UserOutlined />} />
+                      <Text strong>{selectedCustomer.full_name}</Text>
+                    </Space>
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Điểm tích lũy">
+                    <Text strong style={{ color: "#52c41a" }}>
+                      {selectedCustomer.loyalty_points}
+                    </Text>
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Tuổi">
+                    {selectedCustomer.date_of_birth &&
+                      calculateAge(selectedCustomer.date_of_birth) !== null &&
+                      calculateAge(selectedCustomer.date_of_birth) + " tuổi"}
+                  </Descriptions.Item>
+                  {/* <Descriptions.Item label="Cân nặng">
+                    12
+                  </Descriptions.Item> */}
+                  <Descriptions.Item label="Dị ứng">
+                    <Tag color="volcano">{selectedCustomer.allergy_notes}</Tag>
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Tiền sử bệnh">
+                    {selectedCustomer.chronic_diseases}
+                  </Descriptions.Item>
+                </Descriptions>
+                {/* Address */}
+                {selectedCustomer.address && (
+                  <div
+                    style={{ marginRight: -25, marginLeft: -25, marginTop: 25 }}
+                  >
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      Địa chỉ
+                    </Text>
+                    <div>
+                      <Text>{selectedCustomer.address}</Text>
+                    </div>
+                  </div>
+                )}
+              </Card>
             )}
-
-            {/* Product Grid */}
-            <div
-              style={{
-                flex: 1,
-                overflow: "auto",
-                minHeight: isMobile ? 400 : "auto",
-              }}
-            >
-              {isSearching ? (
-                <div style={{ textAlign: "center", padding: 40 }}>
-                  <Text type="secondary">Đang tìm kiếm...</Text>
-                </div>
-              ) : filteredProducts.length === 0 ? (
-                <Empty
-                  image={Empty.PRESENTED_IMAGE_SIMPLE}
-                  description={
-                    searchTerm
-                      ? "Không tìm thấy sản phẩm"
-                      : "Nhập từ khóa để tìm kiếm sản phẩm"
-                  }
-                  style={{ marginTop: 60 }}
-                />
-              ) : (
-                <Row gutter={[12, 12]}>
-                  {filteredProducts.map((product) => (
-                    <Col xs={12} sm={8} md={8} lg={6} xl={4} key={product.id}>
-                      <Card
-                        hoverable
-                        style={{
-                          borderRadius: 8,
-                          height: "100%",
-                          cursor: "pointer",
-                          border:
-                            product.stock_quantity === 0
-                              ? "1px solid #ff4d4f"
-                              : "1px solid #d9d9d9",
-                        }}
-                        styles={{ body: { padding: 12 } }}
-                        onClick={() => handleAddToCart(product)}
-                        cover={
-                          <div
-                            style={{
-                              height: 120,
-                              background: product.image_url
-                                ? `url(${product.image_url})`
-                                : "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                              backgroundSize: "cover",
-                              backgroundPosition: "center",
-                              borderRadius: "8px 8px 0 0",
-                              position: "relative",
-                            }}
-                          >
-                            {product.stock_quantity !== undefined && (
-                              <Tag
-                                color={
-                                  product.stock_quantity === 0
-                                    ? "red"
-                                    : product.stock_quantity <= 5
-                                      ? "orange"
-                                      : "green"
-                                }
-                                style={{
-                                  position: "absolute",
-                                  top: 4,
-                                  right: 4,
-                                  margin: 0,
-                                  fontSize: 11,
-                                }}
-                              >
-                                {product.stock_quantity === 0
-                                  ? "Hết"
-                                  : `${product.stock_quantity}`}
-                              </Tag>
-                            )}
-                          </div>
-                        }
-                      >
-                        <div>
-                          <Tooltip title={product.name}>
-                            <Text
-                              strong
-                              style={{
-                                display: "block",
-                                marginBottom: 4,
-                                fontSize: 13,
-                                height: 36,
-                                overflow: "hidden",
-                                lineHeight: "18px",
-                              }}
-                            >
-                              {product.name}
-                            </Text>
-                          </Tooltip>
-                          <Text
-                            strong
-                            style={{
-                              color: "#1890ff",
-                              fontSize: 15,
-                              display: "block",
-                            }}
-                          >
-                            {(product.retail_price || 0).toLocaleString()}đ
-                          </Text>
-                        </div>
-                      </Card>
-                    </Col>
-                  ))}
-                </Row>
-              )}
-            </div>
-          </Card>
+          </div>
         </Col>
 
-        {/* Right Panel - Cart & Payment */}
-        <Col xs={0} lg={8} xl={7}>
+        {/* Right Panel - Payment */}
+        <Col xs={0} lg={6}>
           <Card
-            title={
-              <Space>
-                <ShoppingCartOutlined />
-                <span>Đơn hàng</span>
-                {cart.length > 0 && (
-                  <Tag color="blue">{cart.length} sản phẩm</Tag>
-                )}
-              </Space>
-            }
             style={{
               borderRadius: 8,
               height: "calc(100vh - 120px)",
@@ -484,233 +790,82 @@ const PosTabContent: React.FC<PosTabContentProps> = ({
             styles={{
               body: {
                 flex: 1,
-                overflow: "hidden",
                 display: "flex",
                 flexDirection: "column",
                 padding: 16,
               },
             }}
           >
-            {/* Combo Suggestions */}
-            {detectedCombos.length > 0 && (
-              <Card
-                size="small"
+            {/* Spacer to push content to bottom */}
+            <div style={{ flex: 1 }} />
+
+            {/* Total & Payment Buttons */}
+            <Space direction="vertical" size={12} style={{ width: "100%" }}>
+              {/* Total */}
+              <div style={{ textAlign: "center" }}>
+                {cartDetails.totalDiscount > 0 && (
+                  <>
+                    <Text delete style={{ color: "#999", fontSize: 14 }}>
+                      {cartDetails.originalTotal.toLocaleString()}đ
+                    </Text>
+                    <br />
+                    <Text type="success" style={{ fontSize: 13 }}>
+                      Tiết kiệm: {cartDetails.totalDiscount.toLocaleString()}đ
+                    </Text>
+                    <br />
+                  </>
+                )}
+                <Title level={3} style={{ margin: "4px 0", color: "#1890ff" }}>
+                  {cartDetails.itemTotal.toLocaleString()}đ
+                </Title>
+              </div>
+
+              <Divider style={{ margin: "12px 0" }} />
+
+              {/* Payment Buttons */}
+              <Button
+                type="primary"
+                block
+                size="large"
+                icon={<DollarOutlined />}
+                disabled={cart.length === 0 || hasStockViolation}
+                loading={isProcessingPayment}
+                onClick={() => handleOpenPaymentModal("cash")}
                 style={{
-                  marginBottom: 12,
+                  height: 50,
+                  fontSize: 16,
+                  fontWeight: "bold",
                   background:
-                    "linear-gradient(135deg, #fff7e6 0%, #fffbf0 100%)",
-                  border: "2px solid #faad14",
+                    "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                  border: "none",
                 }}
               >
-                <Space direction="vertical" size={8} style={{ width: "100%" }}>
-                  <Text strong style={{ color: "#d46b08" }}>
-                    🎁 Combo khuyến mãi!
-                  </Text>
-                  {detectedCombos.map((combo) => {
-                    const originalPrice =
-                      combo.combo_items?.reduce((sum, item) => {
-                        return (
-                          sum +
-                          (item.products?.retail_price || 0) * item.quantity
-                        );
-                      }, 0) || 0;
-                    const discountAmount = originalPrice - combo.combo_price;
+                Thanh toán - Tiền mặt
+              </Button>
+              <Button
+                block
+                size="large"
+                icon={<CreditCardOutlined />}
+                disabled={cart.length === 0 || hasStockViolation}
+                onClick={() => handleOpenPaymentModal("card")}
+                style={{ height: 42 }}
+              >
+                Thẻ / Chuyển khoản
+              </Button>
 
-                    return (
-                      <Button
-                        key={combo.id}
-                        type="primary"
-                        size="small"
-                        block
-                        onClick={() => handleAddCombo?.(combo)}
-                        style={{
-                          height: "auto",
-                          padding: "8px 12px",
-                          textAlign: "left",
-                        }}
-                      >
-                        <div>
-                          <Text strong style={{ color: "#fff" }}>
-                            {combo.name}
-                          </Text>
-                          <br />
-                          <Text style={{ fontSize: 11, color: "#fff" }}>
-                            Tiết kiệm {discountAmount.toLocaleString()}đ
-                          </Text>
-                        </div>
-                      </Button>
-                    );
-                  })}
-                </Space>
-              </Card>
-            )}
-
-            {/* Cart Items */}
-            <div style={{ flex: 1, overflow: "auto", marginBottom: 12 }}>
-              {cart.length === 0 ? (
-                <Empty
-                  image={Empty.PRESENTED_IMAGE_SIMPLE}
-                  description="Giỏ hàng trống"
-                  style={{ marginTop: 40 }}
-                />
-              ) : (
-                <List
-                  size="small"
-                  dataSource={cartDetails.items}
-                  renderItem={(item: any) => (
-                    <List.Item
-                      style={{
-                        padding: "8px 0",
-                        borderBottom: "1px solid #f0f0f0",
-                      }}
-                    >
-                      <List.Item.Meta
-                        avatar={
-                          <Avatar
-                            src={item.image_url}
-                            size={48}
-                            icon={<AppstoreOutlined />}
-                          />
-                        }
-                        title={
-                          <Space>
-                            <Text strong style={{ fontSize: 13 }}>
-                              {item.name}
-                            </Text>
-                            {item.isCombo && (
-                              <Tag
-                                color="orange"
-                                style={{ margin: 0, fontSize: 11 }}
-                              >
-                                COMBO
-                              </Tag>
-                            )}
-                          </Space>
-                        }
-                        description={
-                          <Space
-                            direction="vertical"
-                            size={2}
-                            style={{ width: "100%" }}
-                          >
-                            {item.lot_number && (
-                              <Text type="secondary" style={{ fontSize: 11 }}>
-                                📦 Lô: {item.lot_number}
-                                {item.batch_code && ` (${item.batch_code})`}
-                              </Text>
-                            )}
-                            <Space>
-                              <Text style={{ color: "#1890ff", fontSize: 13 }}>
-                                {item.finalPrice.toLocaleString()}đ
-                              </Text>
-                              <InputNumber
-                                size="small"
-                                min={1}
-                                value={item.quantity}
-                                onChange={(val) =>
-                                  handleUpdateQuantity(item.key, val!)
-                                }
-                                style={{ width: 55 }}
-                              />
-                              <Button
-                                type="text"
-                                danger
-                                size="small"
-                                icon={<DeleteOutlined />}
-                                onClick={() => handleRemoveFromCart(item.key)}
-                              />
-                            </Space>
-                            <Text strong style={{ fontSize: 14 }}>
-                              ={" "}
-                              {(
-                                item.finalPrice * item.quantity
-                              ).toLocaleString()}
-                              đ
-                            </Text>
-                          </Space>
-                        }
-                      />
-                    </List.Item>
-                  )}
-                />
-              )}
-            </div>
-
-            {/* Payment Section */}
-            <div
-              style={{
-                borderTop: "2px solid #f0f0f0",
-                paddingTop: 12,
-              }}
-            >
-              <Space direction="vertical" size={12} style={{ width: "100%" }}>
-                {/* Total */}
-                <div style={{ textAlign: "center" }}>
-                  {cartDetails.totalDiscount > 0 && (
-                    <>
-                      <Text delete style={{ color: "#999", fontSize: 14 }}>
-                        {cartDetails.originalTotal.toLocaleString()}đ
-                      </Text>
-                      <br />
-                      <Text type="success" style={{ fontSize: 13 }}>
-                        Tiết kiệm: {cartDetails.totalDiscount.toLocaleString()}đ
-                      </Text>
-                      <br />
-                    </>
-                  )}
-                  <Title
-                    level={3}
-                    style={{ margin: "4px 0", color: "#1890ff" }}
-                  >
-                    {cartDetails.itemTotal.toLocaleString()}đ
-                  </Title>
-                </div>
-
-                {/* Payment Buttons */}
-                <Button
-                  type="primary"
-                  block
-                  size="large"
-                  icon={<DollarOutlined />}
-                  disabled={cart.length === 0 || hasStockViolation}
-                  loading={isProcessingPayment}
-                  onClick={() => handleOpenPaymentModal("cash")}
+              {hasStockViolation && (
+                <Text
+                  type="danger"
                   style={{
-                    height: 50,
-                    fontSize: 16,
-                    fontWeight: "bold",
-                    background:
-                      "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                    border: "none",
+                    fontSize: 12,
+                    textAlign: "center",
+                    display: "block",
                   }}
                 >
-                  Thanh toán - Tiền mặt
-                </Button>
-                <Button
-                  block
-                  size="large"
-                  icon={<CreditCardOutlined />}
-                  disabled={cart.length === 0 || hasStockViolation}
-                  onClick={() => handleOpenPaymentModal("card")}
-                  style={{ height: 42 }}
-                >
-                  Thẻ / Chuyển khoản
-                </Button>
-
-                {hasStockViolation && (
-                  <Text
-                    type="danger"
-                    style={{
-                      fontSize: 12,
-                      textAlign: "center",
-                      display: "block",
-                    }}
-                  >
-                    ⚠️ Số lượng vượt tồn kho
-                  </Text>
-                )}
-              </Space>
-            </div>
+                  ⚠️ Số lượng vượt tồn kho
+                </Text>
+              )}
+            </Space>
           </Card>
         </Col>
       </Row>
@@ -817,78 +972,116 @@ const PosTabContent: React.FC<PosTabContentProps> = ({
             <List
               size="small"
               dataSource={cartDetails.items}
-              renderItem={(item: any) => (
-                <List.Item
-                  style={{
-                    padding: "8px 0",
-                    borderBottom: "1px solid #f0f0f0",
-                  }}
-                >
-                  <List.Item.Meta
-                    avatar={
-                      <Avatar
-                        src={item.image_url}
-                        size={48}
-                        icon={<AppstoreOutlined />}
-                      />
-                    }
-                    title={
-                      <Space>
-                        <Text strong style={{ fontSize: 13 }}>
-                          {item.name}
-                        </Text>
-                        {item.isCombo && (
-                          <Tag
-                            color="orange"
-                            style={{ margin: 0, fontSize: 11 }}
-                          >
-                            COMBO
-                          </Tag>
-                        )}
-                      </Space>
-                    }
-                    description={
-                      <Space
-                        direction="vertical"
-                        size={2}
-                        style={{ width: "100%" }}
-                      >
-                        {item.lot_number && (
-                          <Text type="secondary" style={{ fontSize: 11 }}>
-                            📦 Lô: {item.lot_number}
-                            {item.batch_code && ` (${item.batch_code})`}
-                          </Text>
-                        )}
+              renderItem={(item: any) => {
+                const hdsd = getHDSD(item);
+                return (
+                  <List.Item
+                    style={{
+                      padding: "8px 0",
+                      borderBottom: "1px solid #f0f0f0",
+                    }}
+                  >
+                    <List.Item.Meta
+                      avatar={
+                        <Avatar
+                          src={item.image_url}
+                          size={48}
+                          icon={<AppstoreOutlined />}
+                        />
+                      }
+                      title={
                         <Space>
-                          <Text style={{ color: "#1890ff", fontSize: 13 }}>
-                            {item.finalPrice.toLocaleString()}đ
+                          <Text
+                            strong
+                            style={{
+                              fontSize: 13,
+                              cursor: "pointer",
+                              color: "#1890ff",
+                              textDecoration: "none",
+                            }}
+                            onClick={() => {
+                              if (item.product?.id) {
+                                navigate(`/products/${item.product.id}`);
+                              }
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.textDecoration =
+                                "underline";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.textDecoration = "none";
+                            }}
+                          >
+                            {item.name}
                           </Text>
-                          <InputNumber
-                            size="small"
-                            min={1}
-                            value={item.quantity}
-                            onChange={(val) =>
-                              handleUpdateQuantity(item.key, val!)
-                            }
-                            style={{ width: 55 }}
-                          />
-                          <Button
-                            type="text"
-                            danger
-                            size="small"
-                            icon={<DeleteOutlined />}
-                            onClick={() => handleRemoveFromCart(item.key)}
-                          />
+                          {item.isCombo && (
+                            <Tag
+                              color="orange"
+                              style={{ margin: 0, fontSize: 11 }}
+                            >
+                              COMBO
+                            </Tag>
+                          )}
                         </Space>
-                        <Text strong style={{ fontSize: 14 }}>
-                          = {(item.finalPrice * item.quantity).toLocaleString()}
-                          đ
-                        </Text>
-                      </Space>
-                    }
-                  />
-                </List.Item>
-              )}
+                      }
+                      description={
+                        <Space
+                          direction="vertical"
+                          size={2}
+                          style={{ width: "100%" }}
+                        >
+                          {item.lot_number && (
+                            <Text type="secondary" style={{ fontSize: 11 }}>
+                              📦 Lô: {item.lot_number}
+                              {item.batch_code && ` (${item.batch_code})`}
+                            </Text>
+                          )}
+                          {hdsd && (
+                            <div
+                              style={{
+                                marginTop: 4,
+                                padding: "4px 8px",
+                                backgroundColor: "#f0f5ff",
+                                borderRadius: 4,
+                              }}
+                            >
+                              <Text style={{ fontSize: 11, color: "#1890ff" }}>
+                                💊 HDSD: {hdsd}
+                              </Text>
+                            </div>
+                          )}
+                          <Space>
+                            <Text style={{ color: "#1890ff", fontSize: 13 }}>
+                              {item.finalPrice.toLocaleString()}đ
+                            </Text>
+                            <InputNumber
+                              size="small"
+                              min={1}
+                              value={item.quantity}
+                              onChange={(val) =>
+                                handleUpdateQuantity(item.key, val!)
+                              }
+                              style={{ width: 55 }}
+                            />
+                            <Button
+                              type="text"
+                              danger
+                              size="small"
+                              icon={<DeleteOutlined />}
+                              onClick={() => handleRemoveFromCart(item.key)}
+                            />
+                          </Space>
+                          <Text strong style={{ fontSize: 14 }}>
+                            ={" "}
+                            {(item.finalPrice * item.quantity).toLocaleString()}
+                            đ
+                          </Text>
+                        </Space>
+                      }
+                    />
+                  </List.Item>
+                );
+              }}
             />
 
             <Divider />
@@ -966,6 +1159,71 @@ const PosTabContent: React.FC<PosTabContentProps> = ({
             </Space>
           </>
         )}
+      </Modal>
+
+      {/* Edit Patient Modal */}
+      <Modal
+        title="Chỉnh sửa thông tin khách hàng"
+        open={isEditPatientModalOpen}
+        onOk={handleSavePatient}
+        onCancel={() => {
+          setIsEditPatientModalOpen(false);
+          editForm.resetFields();
+        }}
+        confirmLoading={isSavingPatient}
+        okText="Lưu"
+        cancelText="Hủy"
+        width={600}
+      >
+        <Form form={editForm} layout="vertical">
+          <Form.Item
+            label="Họ và tên"
+            name="full_name"
+            rules={[{ required: true, message: "Vui lòng nhập họ và tên" }]}
+          >
+            <Input placeholder="Nhập họ và tên" />
+          </Form.Item>
+
+          <Form.Item
+            label="Số điện thoại"
+            name="phone_number"
+            rules={[{ required: true, message: "Vui lòng nhập số điện thoại" }]}
+          >
+            <Input placeholder="Nhập số điện thoại" />
+          </Form.Item>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item label="Ngày sinh" name="date_of_birth">
+                <DateInput />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="Giới tính" name="gender">
+                <Select placeholder="Chọn giới tính">
+                  <Select.Option value="Nam">Nam</Select.Option>
+                  <Select.Option value="Nữ">Nữ</Select.Option>
+                  <Select.Option value="Khác">Khác</Select.Option>
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Form.Item label="Địa chỉ" name="address">
+            <Input.TextArea rows={2} placeholder="Nhập địa chỉ" />
+          </Form.Item>
+
+          <Form.Item label="Dị ứng" name="allergy_notes">
+            <Input.TextArea rows={2} placeholder="Nhập thông tin dị ứng" />
+          </Form.Item>
+
+          <Form.Item label="Bệnh nền / Tiền sử bệnh" name="chronic_diseases">
+            <Input.TextArea
+              rows={2}
+              placeholder="Nhập bệnh nền hoặc tiền sử bệnh"
+            />
+          </Form.Item>
+        </Form>
       </Modal>
     </div>
   );

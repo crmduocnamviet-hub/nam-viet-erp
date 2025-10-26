@@ -62,6 +62,8 @@ import PurchaseOrderReceivingDetailPage from "./warehouse/PurchaseOrderReceiving
 import CreatePurchaseImportPage from "./warehouse/CreatePurchaseImportPage";
 import SalesOrderPickingPage from "./warehouse/SalesOrderPickingPage";
 import SuppliersPage from "./warehouse/SuppliersPage";
+import SupplierFormPage from "./warehouse/SupplierFormPage";
+import SupplierPromotionsPage from "./warehouse/SupplierPromotionsPage";
 import VATInventoryDashboard from "./warehouse/VATInventoryDashboard";
 import VATReconciliationPage from "./warehouse/VATReconciliationPage";
 
@@ -415,6 +417,21 @@ export const SCREEN_REGISTRY: ScreenRegistry = {
     title: "Nhà Cung Cấp",
     description: "Quản lý thông tin nhà cung cấp và đối tác",
   },
+  "warehouse.suppliers.form": {
+    component: SupplierFormPage,
+    permissions: ["warehouse.access", "warehouse.suppliers.view"],
+    category: "warehouse",
+    title: "Thông Tin Nhà Cung Cấp",
+    description: "Thêm hoặc chỉnh sửa thông tin nhà cung cấp",
+  },
+  "warehouse.suppliers.promotions": {
+    component: SupplierPromotionsPage,
+    permissions: ["warehouse.access", "warehouse.suppliers.view"],
+    category: "warehouse",
+    title: "Chương Trình Khuyến Mại",
+    description:
+      "Quản lý chương trình khuyến mại và chiết khấu của nhà cung cấp",
+  },
   "warehouse.vat-inventory": {
     component: VATInventoryDashboard,
     permissions: ["warehouse.access", "warehouse.vat.view"],
@@ -596,6 +613,11 @@ export const ROLE_PERMISSIONS = {
     "b2b.notification",
     "quotes.view",
     "quotes.create",
+    "medical.access",
+    "patients.view",
+    "patients.create",
+    "patients.edit",
+    "patients.delete",
   ],
 
   "sales-manager": [
@@ -826,6 +848,8 @@ export {
   CreatePurchaseImportPage,
   SalesOrderPickingPage,
   SuppliersPage,
+  SupplierFormPage,
+  SupplierPromotionsPage,
   VATInventoryDashboard,
   VATReconciliationPage,
 };

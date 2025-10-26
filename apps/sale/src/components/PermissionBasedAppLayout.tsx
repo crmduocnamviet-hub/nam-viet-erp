@@ -9,9 +9,15 @@ import {
   Button,
   Grid,
   Drawer,
+  Modal,
 } from "antd";
-import { MenuOutlined } from "@ant-design/icons";
+import {
+  MenuOutlined,
+  LogoutOutlined,
+  ExclamationCircleOutlined,
+} from "@ant-design/icons";
 import viVN from "antd/locale/vi_VN";
+import { signOut } from "@nam-viet-erp/services";
 import {
   ScreenProvider,
   useScreens,
@@ -63,13 +69,34 @@ const AppLayoutContent: React.FC = () => {
   const menuItems = user ? generateMenu(SALE_APP_MENU, user.permissions) : [];
 
   // Check if current route is POS - show fullscreen
-  const isFullscreenRoute = location.pathname === "/pos";
+  const isFullscreenRoute =
+    location.pathname === "/pos" || location.pathname === "/create-quote";
 
   const handleMenuClick = (e: any) => {
     navigate(e.key);
     if (isMobile) {
       setMobileMenuOpen(false);
     }
+  };
+
+  const handleLogout = () => {
+    Modal.confirm({
+      title: "Xác nhận đăng xuất",
+      icon: <ExclamationCircleOutlined />,
+      content: "Bạn có chắc chắn muốn đăng xuất khỏi hệ thống?",
+      okText: "Đăng xuất",
+      okType: "danger",
+      cancelText: "Hủy",
+      centered: true,
+      onOk: async () => {
+        try {
+          await signOut();
+          navigate("/login");
+        } catch (error) {
+          console.error("Error signing out:", error);
+        }
+      },
+    });
   };
 
   const ComingSoon = () => (
@@ -84,6 +111,10 @@ const AppLayoutContent: React.FC = () => {
       <div style={{ width: "100vw", height: "100vh", overflow: "hidden" }}>
         <Routes>
           <Route path="/pos" element={renderScreen("pos.main")} />
+          <Route
+            path="/create-quote"
+            element={renderScreen("b2b.create-quote")}
+          />
         </Routes>
       </div>
     );
@@ -111,6 +142,8 @@ const AppLayoutContent: React.FC = () => {
               left: 0,
               top: 0,
               bottom: 0,
+              display: "flex",
+              flexDirection: "column",
             }}
           >
             <div
@@ -140,8 +173,30 @@ const AppLayoutContent: React.FC = () => {
               mode="inline"
               items={menuItems}
               onClick={handleMenuClick}
-              style={{ fontSize: "16px" }}
+              style={{ fontSize: "16px", flex: 1 }}
             />
+            <div
+              style={{
+                padding: collapsed ? "8px" : "16px",
+                borderTop: "1px solid rgba(255, 255, 255, 0.1)",
+              }}
+            >
+              <Button
+                type="text"
+                icon={<LogoutOutlined />}
+                onClick={handleLogout}
+                block
+                style={{
+                  color: "rgba(255, 255, 255, 0.75)",
+                  height: "40px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: collapsed ? "center" : "flex-start",
+                }}
+              >
+                {!collapsed && "Đăng xuất"}
+              </Button>
+            </div>
           </Sider>
         )}
 
@@ -197,49 +252,28 @@ const AppLayoutContent: React.FC = () => {
                 style={{ fontSize: "16px", flex: 1 }}
               />
 
-              {/* User Info Section for Mobile */}
+              {/* Logout Button for Mobile */}
               <div
                 style={{
                   padding: "16px",
                   borderTop: "1px solid rgba(255, 255, 255, 0.1)",
-                  backgroundColor: "rgba(255, 255, 255, 0.05)",
                 }}
               >
-                <div
-                  style={{ display: "flex", alignItems: "center", gap: "12px" }}
+                <Button
+                  type="text"
+                  icon={<LogoutOutlined />}
+                  onClick={handleLogout}
+                  block
+                  style={{
+                    color: "rgba(255, 255, 255, 0.75)",
+                    height: "40px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "flex-start",
+                  }}
                 >
-                  <Avatar
-                    size="default"
-                    style={{
-                      backgroundColor: "rgba(255, 255, 255, 0.2)",
-                      color: "white",
-                      fontWeight: "bold",
-                    }}
-                  >
-                    {user?.name ? user.name.charAt(0).toUpperCase() : "U"}
-                  </Avatar>
-                  <div style={{ flex: 1 }}>
-                    <div
-                      style={{
-                        fontSize: "14px",
-                        fontWeight: "500",
-                        color: "white",
-                        lineHeight: "1.2",
-                      }}
-                    >
-                      {user?.name || "Người dùng"}
-                    </div>
-                    <div
-                      style={{
-                        fontSize: "12px",
-                        color: "rgba(255, 255, 255, 0.7)",
-                        lineHeight: "1.2",
-                      }}
-                    >
-                      {/* Add employee code if available */}
-                    </div>
-                  </div>
-                </div>
+                  Đăng xuất
+                </Button>
               </div>
             </div>
           </Drawer>
@@ -389,6 +423,18 @@ const AppLayoutContent: React.FC = () => {
                 <Route
                   path="/warehouse/suppliers"
                   element={renderScreen("warehouse.suppliers")}
+                />
+                <Route
+                  path="/warehouse/suppliers/new"
+                  element={renderScreen("warehouse.suppliers.form")}
+                />
+                <Route
+                  path="/warehouse/suppliers/:supplierId"
+                  element={renderScreen("warehouse.suppliers.form")}
+                />
+                <Route
+                  path="/warehouse/suppliers/:supplierId/promotions"
+                  element={renderScreen("warehouse.suppliers.promotions")}
                 />
                 <Route
                   path="/warehouse/vat-inventory"

@@ -1,0 +1,15 @@
+{
+  "tasks": {
+    "dev": "deno run --allow-net --allow-read --allow-env --watch push-notification.js"
+  },
+  "imports": {
+    "firebase-admin/app": "npm:firebase-admin@^12.0.0/app",
+    "firebase-admin/messaging": "npm:firebase-admin@^12.0.0/messaging",
+    "@supabase/supabase-js": "npm:@supabase/supabase-js@^2.39.0",
+    "@supabase/functions-js": "jsr:@supabase/functions-js@^2.1.5"
+  },
+  "compilerOptions": {
+    "lib": ["deno.window", "dom"],
+    "strict": true
+  }
+}

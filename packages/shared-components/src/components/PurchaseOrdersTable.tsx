@@ -45,7 +45,9 @@ const PurchaseOrdersTable: React.FC<PurchaseOrdersTableProps> = ({
       dataIndex: "po_number",
       key: "po_number",
       width: 150,
-      render: (text: string) => <a>{text}</a>,
+      render: (text: string, record) => (
+        <a onClick={() => onView?.(record)}>{text}</a>
+      ),
     },
     {
       title: "Nhà Cung Cấp",
@@ -131,14 +133,6 @@ const PurchaseOrdersTable: React.FC<PurchaseOrdersTableProps> = ({
 
         return (
           <Space size="middle">
-            <Tooltip title="Xem">
-              <Button
-                type="link"
-                size="middle"
-                icon={<EyeOutlined />}
-                onClick={() => onView?.(record)}
-              />
-            </Tooltip>
             {canEdit && canModify && (
               <Tooltip title="Sửa">
                 <Button
@@ -209,6 +203,14 @@ const PurchaseOrdersTable: React.FC<PurchaseOrdersTableProps> = ({
         showSizeChanger: true,
         showTotal: (total) => `Tổng ${total} đơn hàng`,
       }}
+      onRow={(record) => ({
+        // onClick() {
+        //   onView?.(record);
+        // },
+        style: {
+          cursor: "pointer",
+        },
+      })}
     />
   );
 };

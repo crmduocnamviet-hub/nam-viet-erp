@@ -15,6 +15,7 @@ import {
   Grid,
   Descriptions,
   notification,
+  Select,
 } from "antd";
 import {
   UserOutlined,
@@ -47,6 +48,15 @@ const { Text, Title } = Typography;
 const { TextArea } = Input;
 const { useBreakpoint } = Grid;
 
+// VAT percentage options
+const VAT_OPTIONS = [
+  { label: "0%", value: 0 },
+  { label: "1%", value: 1 },
+  { label: "2%", value: 2 },
+  { label: "3%", value: 3 },
+  { label: "5%", value: 5 },
+];
+
 interface Employee {
   employee_id: string;
   full_name: string;
@@ -73,6 +83,7 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
   const [form] = Form.useForm();
   const selectedClient = useSelectedCustomerByIndex(index);
   const isCreatingOrder = useIsCreatingOrder();
+  const productSearchRef = React.useRef<any>(null);
 
   const orderItems = useOrderItemsByIndex(index);
 
@@ -83,6 +94,7 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
     updateOrderItemByIndex,
     removeOrderItemByIndex,
     addOrderItemByIndex,
+    updateTabTitle,
   } = useB2BOrderStore();
 
   // Use the new useCreateB2BQuoteHandler hook
@@ -115,22 +127,110 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
     }
   }, [selectedClient]);
 
-  // Watch form values to calculate totals
-  const discountPercent = Form.useWatch("discount_percent", form) || 0;
-  const taxPercent = Form.useWatch("tax_percent", form) || 0;
+  // Update tab title when customer is selected
+  React.useEffect(() => {
+    const currentTab = tabs[index];
+    if (selectedClient && currentTab) {
+      const newTitle = `${selectedClient.customer_name}-${selectedClient.phone_number || selectedClient.customer_code}`;
+      updateTabTitle(currentTab.id, newTitle);
+    }
+  }, [selectedClient, tabs, index, updateTabTitle]);
+
+  // State for discount and tax to ensure proper re-rendering
+  const [discountPercent, setDiscountPercent] = React.useState(0);
+  const [taxPercent, setTaxPercent] = React.useState(10);
+
+  // Sync form values with state when tab data is loaded
+  React.useEffect(() => {
+    const currentTab = tabs[index];
+    if (currentTab?.formData) {
+      const discount = currentTab.formData.discount_percent ?? 0;
+      const tax = currentTab.formData.tax_percent ?? 10;
+      setDiscountPercent(discount);
+      setTaxPercent(tax);
+    }
+  }, [tabs, index]);
+
+  // Auto-focus product search when typing
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Get the active element
+      const activeElement = document.activeElement as HTMLElement;
+      const tagName = activeElement?.tagName.toLowerCase();
+
+      // Don't trigger if user is already typing in an input/textarea
+      if (
+        tagName === "input" ||
+        tagName === "textarea" ||
+        activeElement?.contentEditable === "true"
+      ) {
+        return;
+      }
+
+      // Don't trigger on special keys
+      if (
+        e.ctrlKey ||
+        e.metaKey ||
+        e.altKey ||
+        e.key === "Escape" ||
+        e.key === "Tab" ||
+        e.key === "Enter" ||
+        e.key === "Shift" ||
+        e.key === "Control" ||
+        e.key === "Alt" ||
+        e.key === "Meta" ||
+        e.key.startsWith("Arrow") ||
+        e.key.startsWith("F")
+      ) {
+        return;
+      }
+
+      // Only trigger on printable characters (length 1 or space)
+      if (e.key.length === 1) {
+        // Focus the product search input
+        if (productSearchRef.current) {
+          productSearchRef.current.focus();
+        }
+      }
+    };
+
+    // Add event listener
+    document.addEventListener("keydown", handleKeyDown);
+
+    // Cleanup
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
 
   // Calculate totals based on order items and form values
   const totals = React.useMemo(() => {
-    const subtotal = orderItems.reduce(
+    // Subtotal without VAT
+    const subtotalBeforeVAT = orderItems.reduce(
       (sum, item) => sum + item.total_price,
       0,
     );
+
+    // Total VAT from all products
+    const totalVAT = orderItems.reduce((sum, item) => {
+      const vatPercent = item.vat_percent ?? 5;
+      return sum + (item.total_price * vatPercent) / 100;
+    }, 0);
+
+    // Subtotal with VAT
+    const subtotal = subtotalBeforeVAT + totalVAT;
+
+    // Discount applied to subtotal (with VAT)
     const discountAmount = (subtotal * discountPercent) / 100;
     const taxableAmount = subtotal - discountAmount;
+
+    // Tax applied after discount
     const taxAmount = (taxableAmount * taxPercent) / 100;
     const totalAmount = taxableAmount + taxAmount;
 
     return {
+      subtotalBeforeVAT,
+      totalVAT,
       subtotal,
       discountAmount,
       taxAmount,
@@ -342,6 +442,7 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
         total_price: product.wholesale_price || 0,
         packaging: product.packaging,
         unit: product.unit || "Hộp",
+        vat_percent: product.vat_percent ?? 5, // Use product's VAT or default to 5%
       } as never);
     });
 
@@ -416,6 +517,20 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
           onChange={(val) => handleUpdateItem(record.key, "quantity", val || 1)}
           style={{ width: "100%" }}
           min={1}
+        />
+      ),
+    },
+    {
+      title: "VAT (%)",
+      dataIndex: "vat_percent",
+      key: "vat_percent",
+      width: isMd ? 90 : "12%",
+      render: (value, record) => (
+        <Select
+          value={value ?? 5}
+          onChange={(val) => handleUpdateItem(record.key, "vat_percent", val)}
+          style={{ width: "100%" }}
+          options={VAT_OPTIONS}
         />
       ),
     },
@@ -512,278 +627,9 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
         </Row>
       </Card>
 
-      <Form
-        form={form}
-        layout="vertical"
-        onValuesChange={handleFormValuesChange}
-        initialValues={{
-          quote_date: dayjs(),
-          valid_until: dayjs().add(30, "days"),
-          discount_percent: 0,
-          tax_percent: 10,
-        }}
-      >
-        <Row gutter={16}>
-          <Col xs={24} lg={12}>
-            {/* Client Information */}
-            <Card
-              title={
-                <Space>
-                  <UserOutlined />
-                  Thông tin Khách hàng
-                  {selectedClient && (
-                    <Tag color="green">
-                      Đã chọn: {selectedClient.customer_name}
-                    </Tag>
-                  )}
-                </Space>
-              }
-              style={{ marginBottom: 16 }}
-            >
-              {/* B2B Customer Search Input */}
-              <Row gutter={16} style={{ marginBottom: 16 }}>
-                <Col span={24}>
-                  <B2BCustomerSearchInput
-                    value={selectedClient}
-                    onChange={(customer: IB2BCustomer | null) => {
-                      if (customer) {
-                        handleSelectClient(customer);
-                      } else {
-                        setSelectedCustomerByIndex(index, null);
-                      }
-                    }}
-                    placeholder="Tìm kiếm khách hàng B2B theo tên, mã, số điện thoại..."
-                    size="large"
-                    style={{ width: "100%" }}
-                  />
-                  <Text
-                    type="secondary"
-                    style={{ fontSize: 12, marginTop: 8, display: "block" }}
-                  >
-                    Hoặc
-                    <Button
-                      type="link"
-                      size="small"
-                      style={{ padding: 0, fontSize: 12, marginLeft: 4 }}
-                      onClick={onOpenClientSelectModal}
-                    >
-                      chọn từ danh sách tất cả khách hàng B2B
-                    </Button>
-                  </Text>
-                </Col>
-              </Row>
-
-              <Table
-                dataSource={[
-                  {
-                    key: "1",
-                    label: "Đơn vị mua",
-                    value: selectedClient?.customer_name,
-                  },
-                  {
-                    key: "2",
-                    label: "Mã khách hàng",
-                    value: selectedClient?.customer_code,
-                  },
-                  {
-                    key: "3",
-                    label: "Tên Chủ sở hữu",
-                    value:
-                      selectedClient?.contact_person ||
-                      selectedClient?.customer_name,
-                  },
-                  {
-                    key: "4",
-                    label: "Số điện thoại",
-                    value: selectedClient?.phone_number,
-                  },
-                ]}
-                columns={[
-                  {
-                    title: "",
-                    dataIndex: "label",
-                    key: "label",
-                    width: isMd ? "40%" : "30%",
-                    render: (text) => (
-                      <div
-                        style={{
-                          backgroundColor: "#f4f4f4",
-                          padding: "8px",
-                          margin: "-8px",
-                        }}
-                      >
-                        <Text strong>{text}</Text>
-                      </div>
-                    ),
-                  },
-                  {
-                    title: "",
-                    dataIndex: "value",
-                    key: "value",
-                    render: (text) => <Text>{text}</Text>,
-                  },
-                ]}
-                pagination={false}
-                showHeader={false}
-                size="small"
-                bordered
-                style={{ marginBottom: 16 }}
-              />
-
-              {/* Hidden form fields for form validation */}
-              {selectedClient && (
-                <div style={{ display: "none" }}>
-                  <Form.Item
-                    name="customer_name"
-                    rules={[
-                      {
-                        required: true,
-                        message: "Vui lòng chọn khách hàng từ danh sách",
-                      },
-                    ]}
-                  >
-                    <Input />
-                  </Form.Item>
-                  <Form.Item
-                    name="customer_phone"
-                    rules={[
-                      {
-                        required: true,
-                        message: "Vui lòng chọn khách hàng từ danh sách",
-                      },
-                    ]}
-                  >
-                    <Input />
-                  </Form.Item>
-                </div>
-              )}
-            </Card>
-          </Col>
-
-          <Col xs={24} lg={12}>
-            {/* Address Information */}
-            <Card
-              title={
-                <Space>
-                  <HomeOutlined />
-                  Địa chỉ
-                </Space>
-              }
-              style={{ marginBottom: 16, height: 365 }}
-            >
-              <Row gutter={16}>
-                <Col xs={24} lg={12}>
-                  <Form.Item
-                    name="customer_address"
-                    label="Địa chỉ khách hàng"
-                    rules={[
-                      {
-                        required: true,
-                        message: "Vui lòng nhập địa chỉ khách hàng",
-                      },
-                    ]}
-                  >
-                    <TextArea
-                      rows={7}
-                      placeholder="Địa chỉ khách hàng"
-                      style={{ height: 150 }}
-                    />
-                  </Form.Item>
-                </Col>
-                <Col xs={24} lg={12}>
-                  <Form.Item name="delivery_address" label="Địa chỉ giao hàng">
-                    <TextArea
-                      rows={7}
-                      style={{ height: 150 }}
-                      placeholder="Địa chỉ giao hàng (để trống nếu trùng với địa chỉ khách hàng)"
-                    />
-                  </Form.Item>
-                </Col>
-              </Row>
-            </Card>
-          </Col>
-        </Row>
-
-        {/* Order Information */}
-        <Card
-          title={
-            <Space>
-              <CalendarOutlined />
-              Thông tin Đơn hàng
-            </Space>
-          }
-          style={{ marginBottom: 16 }}
-        >
-          {/* Row 1: Ngày tạo and Hạn báo giá */}
-          <Row gutter={16}>
-            <Col xs={24} sm={12}>
-              <Form.Item name="quote_date" label="Ngày tạo">
-                <DatePicker style={{ width: "100%" }} disabled />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={12}>
-              <Form.Item
-                name="valid_until"
-                label="Hạn báo giá"
-                rules={[
-                  { required: true, message: "Vui lòng chọn ngày hết hạn" },
-                ]}
-              >
-                <DatePicker
-                  style={{ width: "100%" }}
-                  placeholder="Chọn ngày hết hạn"
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          {/* Row 2: Chiết khấu and Thuế */}
-          <Row gutter={16}>
-            <Col xs={24} sm={12}>
-              <Form.Item name="discount_percent" label="Chiết khấu (%)">
-                <InputNumber
-                  style={{ width: "100%" }}
-                  min={0}
-                  max={100}
-                  placeholder="0"
-                />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={12}>
-              <Form.Item name="tax_percent" label="Thuế (%)">
-                <InputNumber
-                  style={{ width: "100%" }}
-                  min={0}
-                  max={100}
-                  placeholder="10"
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          {/* Row 3: Nhân viên tạo (full screen) */}
-          <Row gutter={16}>
-            <Col span={24}>
-              <Form.Item label="Nhân viên tạo">
-                <Input value={employee?.full_name} disabled />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          {/* Row 4: Ghi chú (full screen) */}
-          <Row gutter={16}>
-            <Col span={24}>
-              <Form.Item name="notes" label="Ghi chú">
-                <TextArea rows={7} placeholder="Ghi chú cho đơn hàng..." />
-              </Form.Item>
-            </Col>
-          </Row>
-        </Card>
-      </Form>
-
       <Row gutter={24}>
-        <Col xs={24} lg={18}>
-          {/* Order Items */}
+        {/* Order Items - Left Position */}
+        <Col xs={24} md={12}>
           <Card
             title={
               <Space>
@@ -796,6 +642,7 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
             {/* Product Search Input */}
             <div style={{ marginBottom: 16 }}>
               <ProductSearchInput
+                ref={productSearchRef}
                 onChange={(product) => {
                   if (product) {
                     handleAddProducts([product]);
@@ -821,8 +668,277 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
             />
           </Card>
         </Col>
+
+        <Col xs={24} md={6}>
+          <Form
+            form={form}
+            layout="vertical"
+            onValuesChange={handleFormValuesChange}
+            initialValues={{
+              quote_date: dayjs(),
+              valid_until: dayjs().add(30, "days"),
+              discount_percent: 0,
+              tax_percent: 10,
+            }}
+          >
+            <Row gutter={16}>
+              <Col xs={24}>
+                {/* Client Information */}
+                <Card
+                  title={
+                    <Space>
+                      <UserOutlined />
+                      Thông tin Khách hàng
+                      {selectedClient && (
+                        <Tag color="green">
+                          Đã chọn: {selectedClient.customer_name}
+                        </Tag>
+                      )}
+                    </Space>
+                  }
+                  style={{ marginBottom: 16 }}
+                >
+                  {/* B2B Customer Search Input */}
+                  <Row gutter={16} style={{ marginBottom: 16 }}>
+                    <Col span={24}>
+                      <B2BCustomerSearchInput
+                        value={selectedClient}
+                        onChange={(customer: IB2BCustomer | null) => {
+                          if (customer) {
+                            handleSelectClient(customer);
+                          } else {
+                            setSelectedCustomerByIndex(index, null);
+                          }
+                        }}
+                        placeholder="Tìm kiếm khách hàng B2B theo tên, mã, số điện thoại..."
+                        size="large"
+                        style={{ width: "100%" }}
+                      />
+                      <Text
+                        type="secondary"
+                        style={{ fontSize: 12, marginTop: 8, display: "block" }}
+                      >
+                        Hoặc
+                        <Button
+                          type="link"
+                          size="small"
+                          style={{ padding: 0, fontSize: 12, marginLeft: 4 }}
+                          onClick={onOpenClientSelectModal}
+                        >
+                          chọn từ danh sách tất cả khách hàng B2B
+                        </Button>
+                      </Text>
+                    </Col>
+                  </Row>
+
+                  <Table
+                    dataSource={[
+                      {
+                        key: "1",
+                        label: "Đơn vị mua",
+                        value: selectedClient?.customer_name,
+                      },
+                      {
+                        key: "2",
+                        label: "Mã khách hàng",
+                        value: selectedClient?.customer_code,
+                      },
+                      {
+                        key: "3",
+                        label: "Tên Chủ sở hữu",
+                        value:
+                          selectedClient?.contact_person ||
+                          selectedClient?.customer_name,
+                      },
+                      {
+                        key: "4",
+                        label: "Số điện thoại",
+                        value: selectedClient?.phone_number,
+                      },
+                    ]}
+                    columns={[
+                      {
+                        title: "",
+                        dataIndex: "label",
+                        key: "label",
+                        width: isMd ? "40%" : "30%",
+                        render: (text) => (
+                          <div
+                            style={{
+                              backgroundColor: "#f4f4f4",
+                              padding: "8px",
+                              margin: "-8px",
+                            }}
+                          >
+                            <Text strong>{text}</Text>
+                          </div>
+                        ),
+                      },
+                      {
+                        title: "",
+                        dataIndex: "value",
+                        key: "value",
+                        render: (text) => <Text>{text}</Text>,
+                      },
+                    ]}
+                    pagination={false}
+                    showHeader={false}
+                    size="small"
+                    bordered
+                    style={{ marginBottom: 16 }}
+                  />
+
+                  {/* Hidden form fields for form validation */}
+                  {selectedClient && (
+                    <div style={{ display: "none" }}>
+                      <Form.Item
+                        name="customer_name"
+                        rules={[
+                          {
+                            required: true,
+                            message: "Vui lòng chọn khách hàng từ danh sách",
+                          },
+                        ]}
+                      >
+                        <Input />
+                      </Form.Item>
+                      <Form.Item
+                        name="customer_phone"
+                        rules={[
+                          {
+                            required: true,
+                            message: "Vui lòng chọn khách hàng từ danh sách",
+                          },
+                        ]}
+                      >
+                        <Input />
+                      </Form.Item>
+                    </div>
+                  )}
+                </Card>
+              </Col>
+
+              <Col xs={24}>
+                {/* Address Information */}
+                <Card
+                  title={
+                    <Space>
+                      <HomeOutlined />
+                      Địa chỉ
+                    </Space>
+                  }
+                  style={{ marginBottom: 16, height: 365 }}
+                >
+                  <Row gutter={16}>
+                    <Col xs={24}>
+                      <Form.Item
+                        name="customer_address"
+                        label="Địa chỉ khách hàng"
+                        rules={[
+                          {
+                            required: true,
+                            message: "Vui lòng nhập địa chỉ khách hàng",
+                          },
+                        ]}
+                      >
+                        <TextArea rows={3} placeholder="Địa chỉ khách hàng" />
+                      </Form.Item>
+                    </Col>
+                    <Col xs={24}>
+                      <Form.Item
+                        name="delivery_address"
+                        label="Địa chỉ giao hàng"
+                      >
+                        <TextArea
+                          rows={3}
+                          placeholder="Địa chỉ giao hàng (để trống nếu trùng với địa chỉ khách hàng)"
+                        />
+                      </Form.Item>
+                    </Col>
+                  </Row>
+                </Card>
+              </Col>
+            </Row>
+          </Form>
+        </Col>
+
         {/* Order Summary Sidebar */}
-        <Col xs={24} lg={6}>
+        <Col xs={24} md={6}>
+          <Card
+            title={
+              <Space>
+                <CalendarOutlined />
+                Thông tin Đơn hàng
+              </Space>
+            }
+            style={{ marginBottom: 16 }}
+          >
+            {/* Row 1: Ngày tạo and Hạn báo giá */}
+            <Row gutter={16}>
+              <Col xs={24} sm={12}>
+                <Form.Item name="quote_date" label="Ngày tạo" layout="vertical">
+                  <DatePicker style={{ width: "100%" }} disabled />
+                </Form.Item>
+              </Col>
+              <Col xs={24} sm={12}>
+                <Form.Item
+                  name="valid_until"
+                  label="Hạn báo giá"
+                  layout="vertical"
+                  rules={[
+                    { required: true, message: "Vui lòng chọn ngày hết hạn" },
+                  ]}
+                >
+                  <DatePicker
+                    style={{ width: "100%" }}
+                    placeholder="Chọn ngày hết hạn"
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+
+            {/* Row 2: Chiết khấu and Thuế */}
+            <Row gutter={16}>
+              <Col xs={24} sm={12}>
+                <Form.Item
+                  name="discount_percent"
+                  layout="vertical"
+                  label="Chiết khấu (%)"
+                >
+                  <InputNumber
+                    style={{ width: "100%" }}
+                    min={0}
+                    max={100}
+                    placeholder="0"
+                    onChange={(value) => setDiscountPercent(value || 0)}
+                  />
+                </Form.Item>
+              </Col>
+              <Col xs={24} sm={12}>
+                <Form.Item
+                  name="tax_percent"
+                  layout="vertical"
+                  label="Thuế (%)"
+                >
+                  <InputNumber
+                    style={{ width: "100%" }}
+                    min={0}
+                    max={100}
+                    placeholder="10"
+                    onChange={(value) => setTaxPercent(value || 10)}
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+            {/* Row 4: Ghi chú (full screen) */}
+            <Row gutter={16}>
+              <Col span={24}>
+                <Form.Item name="notes" layout="vertical" label="Ghi chú">
+                  <TextArea rows={5} placeholder="Ghi chú cho đơn hàng..." />
+                </Form.Item>
+              </Col>
+            </Row>
+          </Card>
           <Card
             title={
               <Space>
@@ -839,14 +955,26 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
               <Descriptions.Item label="Tổng số lượng">
                 <Text strong>{totals.totalQuantity}</Text>
               </Descriptions.Item>
-              <Descriptions.Item label="Tạm tính">
-                <Text>{formatCurrency(totals.subtotal)}</Text>
+              <Descriptions.Item label="Tạm tính (chưa VAT)">
+                <Text>{formatCurrency(totals.subtotalBeforeVAT)}</Text>
+              </Descriptions.Item>
+              <Descriptions.Item label="VAT">
+                <Text style={{ color: "#1890ff" }}>
+                  +{formatCurrency(totals.totalVAT)}
+                </Text>
+              </Descriptions.Item>
+              <Descriptions.Item label="Tổng sau VAT">
+                <Text strong>{formatCurrency(totals.subtotal)}</Text>
               </Descriptions.Item>
               <Descriptions.Item label="Chiết khấu">
-                <Text>-{formatCurrency(totals.discountAmount)}</Text>
+                <Text style={{ color: "#ff4d4f" }}>
+                  -{formatCurrency(totals.discountAmount)}
+                </Text>
               </Descriptions.Item>
               <Descriptions.Item label="Thuế">
-                <Text>+{formatCurrency(totals.taxAmount)}</Text>
+                <Text style={{ color: "#1890ff" }}>
+                  +{formatCurrency(totals.taxAmount)}
+                </Text>
               </Descriptions.Item>
               <Descriptions.Item label="Tổng cộng">
                 <Title level={4} style={{ color: "#52c41a", margin: 0 }}>

@@ -14,6 +14,8 @@ import {
   App,
   Checkbox,
   Grid,
+  Modal,
+  Space,
 } from "antd";
 import type { TabsProps } from "antd";
 
@@ -24,6 +26,7 @@ import {
   HomeOutlined,
   QrcodeOutlined,
   UsergroupAddOutlined, // Import icon for new tab
+  PlusOutlined,
 } from "@ant-design/icons";
 import ImageUpload from "./ImageUpload";
 import {
@@ -34,6 +37,7 @@ import {
   disableLotManagement,
   getSuppliers,
   getProductSupplierMappings,
+  createSupplier,
 } from "@nam-viet-erp/services";
 import PdfUpload from "./PdfUpload";
 import QRScannerModal from "./QRScannerModal";
@@ -69,6 +73,17 @@ const ProductForm: React.FC<ProductFormProps> = ({
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [loadingSuppliers, setLoadingSuppliers] = useState(false);
 
+  // New supplier modal state
+  const [isAddSupplierModalOpen, setIsAddSupplierModalOpen] = useState(false);
+  const [newSupplierName, setNewSupplierName] = useState("");
+  const [newSupplierPhone, setNewSupplierPhone] = useState("");
+  const [newSupplierEmail, setNewSupplierEmail] = useState("");
+  const [newSupplierAddress, setNewSupplierAddress] = useState("");
+  const [creatingSupplier, setCreatingSupplier] = useState(false);
+
+  // Supplier SKU state (single supplier)
+  const [supplierSku, setSupplierSku] = useState<string>("");
+
   // Responsive column spans
   const isMobile = !screens.md;
   const imageColSpan = isMobile ? 24 : 8;
@@ -100,6 +115,69 @@ const ProductForm: React.FC<ProductFormProps> = ({
       setSuppliers(data || []);
     }
     setLoadingSuppliers(false);
+  };
+
+  const handleAddSupplier = () => {
+    setIsAddSupplierModalOpen(true);
+  };
+
+  const handleCreateSupplier = async () => {
+    if (!newSupplierName.trim()) {
+      notification.error({
+        message: "Lỗi",
+        description: "Vui lòng nhập tên nhà cung cấp",
+      });
+      return;
+    }
+
+    setCreatingSupplier(true);
+    try {
+      const { data, error } = await createSupplier({
+        name: newSupplierName.trim(),
+        phone: newSupplierPhone.trim() || null,
+        email: newSupplierEmail.trim() || null,
+        address: newSupplierAddress.trim() || null,
+        is_active: false,
+      });
+
+      if (error) throw error;
+
+      notification.success({
+        message: "Thành công",
+        description: "Đã tạo nhà cung cấp mới",
+      });
+
+      // Refresh suppliers list
+      await fetchSuppliers();
+
+      // Add to current selection
+      const currentSupplierIds = form.getFieldValue("supplier_ids") || [];
+      form.setFieldsValue({
+        supplier_ids: [...currentSupplierIds, data.id],
+      });
+
+      // Reset and close modal
+      setNewSupplierName("");
+      setNewSupplierPhone("");
+      setNewSupplierEmail("");
+      setNewSupplierAddress("");
+      setIsAddSupplierModalOpen(false);
+    } catch (error: any) {
+      notification.error({
+        message: "Lỗi",
+        description: error.message || "Không thể tạo nhà cung cấp",
+      });
+    } finally {
+      setCreatingSupplier(false);
+    }
+  };
+
+  const handleCancelAddSupplier = () => {
+    setNewSupplierName("");
+    setNewSupplierPhone("");
+    setNewSupplierEmail("");
+    setNewSupplierAddress("");
+    setIsAddSupplierModalOpen(false);
   };
 
   useEffect(() => {
@@ -197,15 +275,17 @@ const ProductForm: React.FC<ProductFormProps> = ({
 
   useEffect(() => {
     if (initialData && warehouses.length > 0) {
-      // Fetch supplier mappings for existing product
+      // Fetch supplier mapping for existing product (primary supplier)
       if (initialData.id) {
         const fetchMappings = async () => {
-          const { data, error } = await getProductSupplierMappings(
-            initialData.id,
-          );
-          if (data) {
-            const supplierIds = data.map((m) => m.supplier_id);
-            form.setFieldsValue({ supplier_ids: supplierIds });
+          const { data } = await getProductSupplierMappings(initialData.id);
+          if (data && data.length > 0) {
+            // Get the first/primary supplier
+            const primaryMapping = data[0];
+            form.setFieldsValue({ supplier_id: primaryMapping.supplier_id });
+            if (primaryMapping.supplier_product_code) {
+              setSupplierSku(primaryMapping.supplier_product_code);
+            }
           }
         };
         fetchMappings();
@@ -251,6 +331,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
           wholesale_price: initialData.wholesale_price || 0,
           retail_price: initialData.retail_price || 0,
           cost_price: initialData.cost_price || 0,
+          vat_percent: initialData.vat_percent ?? 5,
           hdsd_0_2: initialData.hdsd_0_2 || "",
           hdsd_2_6: initialData.hdsd_2_6 || "",
           hdsd_6_18: initialData.hdsd_6_18 || "",
@@ -268,12 +349,20 @@ const ProductForm: React.FC<ProductFormProps> = ({
 
   const handleOk = async (values: any) => {
     const finalImageUrl = values.image_url_manual || values.image_url || "";
-    const { inventory_settings, ...productData } = values;
+    const { inventory_settings, supplier_id, ...productData } = values;
 
     const finalValues = {
       ...productData,
       image_url: finalImageUrl,
       inventory_settings: inventory_settings || {},
+      // Supplier mapping data (separate from product)
+      supplier_mapping: supplier_id
+        ? {
+            supplier_id: supplier_id,
+            supplier_product_code: supplierSku,
+            is_primary: true,
+          }
+        : null,
     };
 
     delete finalValues.image_url_manual;
@@ -329,171 +418,206 @@ const ProductForm: React.FC<ProductFormProps> = ({
       ),
       children: (
         <Row gutter={[16, 16]}>
-          <Col span={imageColSpan}>
-            <Form.Item name="image_url" label="Ảnh sản phẩm">
-              <ImageUpload />
-            </Form.Item>
-            <Form.Item name="image_url_manual">
-              <Input
-                placeholder="Hoặc dán URL ảnh trực tiếp vào đây"
-                size="large"
-              />
-            </Form.Item>
+          <Col xs={24} sm={24} md={12} lg={8}>
+            <Col xs={24}>
+              <Form.Item name="image_url" label="Ảnh sản phẩm">
+                <ImageUpload />
+              </Form.Item>
+              <Form.Item name="image_url_manual">
+                <Input
+                  placeholder="Hoặc dán URL ảnh trực tiếp vào đây"
+                  size="large"
+                />
+              </Form.Item>
+            </Col>
+            <Col xs={24}>
+              <Row gutter={[16, 0]}>
+                <Col span={halfColSpan}>
+                  <Form.Item
+                    name="name"
+                    label="Tên sản phẩm"
+                    rules={[{ required: true }]}
+                  >
+                    <Input size="large" />
+                  </Form.Item>
+                </Col>
+                <Col span={halfColSpan}>
+                  <Form.Item
+                    name="sku"
+                    label="Mã SKU"
+                    rules={[{ required: true }]}
+                  >
+                    <Input size="large" />
+                  </Form.Item>
+                </Col>
+                <Col span={halfColSpan}>
+                  <Form.Item name="barcode" label="Mã vạch (Barcode)">
+                    <Input
+                      addonAfter={
+                        <QrcodeOutlined
+                          style={{ cursor: "pointer" }}
+                          onClick={() => setIsQRScannerOpen(true)}
+                        />
+                      }
+                      placeholder="Nhập hoặc quét mã vạch"
+                      size="large"
+                    />
+                  </Form.Item>
+                </Col>
+                <Col span={halfColSpan}>
+                  <Form.Item name="category" label="Phân loại SP (Gợi ý từ AI)">
+                    <Select size="large" />
+                  </Form.Item>
+                </Col>
+                <Col span={24}>
+                  <Form.Item name="tags" label="Tags (hoạt chất, từ khóa...)">
+                    <Select mode="tags" size="large" />
+                  </Form.Item>
+                </Col>
+                <Col span={halfColSpan}>
+                  <Form.Item name="manufacturer" label="Công ty sản xuất">
+                    <Input size="large" />
+                  </Form.Item>
+                </Col>
+                <Col span={halfColSpan}>
+                  <Form.Item name="distributor" label="Công ty phân phối">
+                    <Input size="large" />
+                  </Form.Item>
+                </Col>
+                <Col span={halfColSpan}>
+                  <Form.Item name="supplier_id" label="Nhà cung cấp chính">
+                    <Select
+                      allowClear
+                      showSearch
+                      loading={loadingSuppliers}
+                      placeholder="Chọn nhà cung cấp"
+                      optionFilterProp="children"
+                      filterOption={(input, option) =>
+                        (option?.label ?? "")
+                          .toLowerCase()
+                          .includes(input.toLowerCase())
+                      }
+                      options={suppliers.map((s) => ({
+                        value: s.id,
+                        label: s.name,
+                      }))}
+                      size="large"
+                      dropdownRender={(menu) => (
+                        <>
+                          {menu}
+                          <Divider style={{ margin: "8px 0" }} />
+                          <Button
+                            type="text"
+                            icon={<PlusOutlined />}
+                            onClick={handleAddSupplier}
+                            block
+                            style={{ textAlign: "left" }}
+                          >
+                            Thêm nhà cung cấp mới
+                          </Button>
+                        </>
+                      )}
+                    />
+                  </Form.Item>
+                </Col>
+                <Col span={halfColSpan}>
+                  <Form.Item
+                    label="Mã SKU của nhà cung cấp"
+                    tooltip="Mã sản phẩm/SKU do nhà cung cấp sử dụng"
+                  >
+                    <Input
+                      placeholder="Nhập mã SKU từ nhà cung cấp"
+                      value={supplierSku}
+                      onChange={(e) => setSupplierSku(e.target.value)}
+                      size="large"
+                      disabled={!form.getFieldValue("supplier_id")}
+                    />
+                  </Form.Item>
+                </Col>
+                <Col span={halfColSpan}>
+                  <Form.Item name="packaging" label="Quy cách đóng gói">
+                    <Input size="large" />
+                  </Form.Item>
+                </Col>
+                <Col span={halfColSpan}>
+                  <Form.Item name="route" label="Đường dùng">
+                    <Select
+                      options={[
+                        { value: "Uống", label: "Uống" },
+                        { value: "Tiêm", label: "Tiêm" },
+                        { value: "Bôi ngoài da", label: "Bôi ngoài da" },
+                        { value: "Đặt", label: "Đặt" },
+                        { value: "Ngậm", label: "Ngậm" },
+                      ]}
+                      size="large"
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
+            </Col>
           </Col>
-          <Col span={infoColSpan}>
-            <Row gutter={[16, 0]}>
-              <Col span={halfColSpan}>
-                <Form.Item
-                  name="name"
-                  label="Tên sản phẩm"
-                  rules={[{ required: true }]}
-                >
+          <Col span={24} sm={24} md={12} lg={16}>
+            <Row gutter={[16, 16]}>
+              <Col xs={24} lg={12}>
+                <Form.Item name="description" label="Mô tả & HDSD chung">
+                  <Input.TextArea rows={4} size="large" />
+                </Form.Item>
+              </Col>
+              <Col xs={24} lg={12}>
+                <Form.Item name="disease" label="Bệnh áp dụng (Gợi ý từ AI)">
                   <Input size="large" />
-                </Form.Item>
-              </Col>
-              <Col span={halfColSpan}>
-                <Form.Item
-                  name="sku"
-                  label="Mã SKU"
-                  rules={[{ required: true }]}
-                >
-                  <Input size="large" />
-                </Form.Item>
-              </Col>
-              <Col span={halfColSpan}>
-                <Form.Item name="barcode" label="Mã vạch (Barcode)">
-                  <Input
-                    addonAfter={
-                      <QrcodeOutlined
-                        style={{ cursor: "pointer" }}
-                        onClick={() => setIsQRScannerOpen(true)}
-                      />
-                    }
-                    placeholder="Nhập hoặc quét mã vạch"
-                    size="large"
-                  />
-                </Form.Item>
-              </Col>
-              <Col span={halfColSpan}>
-                <Form.Item name="category" label="Phân loại SP (Gợi ý từ AI)">
-                  <Select size="large" />
-                </Form.Item>
-              </Col>
-              <Col span={24}>
-                <Form.Item name="tags" label="Tags (hoạt chất, từ khóa...)">
-                  <Select mode="tags" size="large" />
-                </Form.Item>
-              </Col>
-              <Col span={halfColSpan}>
-                <Form.Item name="manufacturer" label="Công ty sản xuất">
-                  <Input size="large" />
-                </Form.Item>
-              </Col>
-              <Col span={halfColSpan}>
-                <Form.Item name="distributor" label="Công ty phân phối">
-                  <Input size="large" />
-                </Form.Item>
-              </Col>
-              <Col span={halfColSpan}>
-                <Form.Item
-                  name="supplier_ids"
-                  label="Danh sách nhà cung cấp cho sản phẩm này"
-                >
-                  <Select
-                    allowClear
-                    showSearch
-                    loading={loadingSuppliers}
-                    placeholder="Tìm và chọn các nhà cung cấp"
-                    optionFilterProp="children"
-                    filterOption={(input, option) =>
-                      (option?.label ?? "")
-                        .toLowerCase()
-                        .includes(input.toLowerCase())
-                    }
-                    options={suppliers.map((s) => ({
-                      value: s.id,
-                      label: s.name,
-                    }))}
-                    size="large"
-                  />
-                </Form.Item>
-              </Col>
-              <Col span={halfColSpan}>
-                <Form.Item name="packaging" label="Quy cách đóng gói">
-                  <Input size="large" />
-                </Form.Item>
-              </Col>
-              <Col span={halfColSpan}>
-                <Form.Item name="route" label="Đường dùng">
-                  <Select
-                    options={[
-                      { value: "Uống", label: "Uống" },
-                      { value: "Tiêm", label: "Tiêm" },
-                      { value: "Bôi ngoài da", label: "Bôi ngoài da" },
-                      { value: "Đặt", label: "Đặt" },
-                      { value: "Ngậm", label: "Ngậm" },
-                    ]}
-                    size="large"
-                  />
                 </Form.Item>
               </Col>
             </Row>
-          </Col>
-          <Col span={24}>
-            <Form.Item name="description" label="Mô tả & HDSD chung">
-              <Input.TextArea rows={4} size="large" />
-            </Form.Item>
-          </Col>
-
-          <Col span={24}>
-            <Divider>Hướng dẫn sử dụng chi tiết theo độ tuổi</Divider>
-          </Col>
-          <Col xs={24} sm={12}>
-            <Form.Item name="hdsd_0_2" label="Từ 0-2 tuổi">
-              <Input.TextArea rows={2} size="large" />
-            </Form.Item>
-          </Col>
-          <Col xs={24} sm={12}>
-            <Form.Item name="hdsd_2_6" label="Từ 2-6 tuổi">
-              <Input.TextArea rows={2} size="large" />
-            </Form.Item>
-          </Col>
-          <Col xs={24} sm={12}>
-            <Form.Item name="hdsd_6_18" label="Từ 6-18 tuổi">
-              <Input.TextArea rows={2} size="large" />
-            </Form.Item>
-          </Col>
-          <Col xs={24} sm={12}>
-            <Form.Item name="hdsd_over_18" label="Trên 18 tuổi">
-              <Input.TextArea rows={2} size="large" />
-            </Form.Item>
-          </Col>
-
-          <Col span={24}>
-            <Form.Item name="disease" label="Bệnh áp dụng (Gợi ý từ AI)">
-              <Input size="large" />
-            </Form.Item>
-          </Col>
-
-          <Col span={24}>
-            <Divider>Quản lý Lô hàng</Divider>
-            <Row gutter={16}>
-              <Col>
-                <Form.Item name="enable_lot_management" valuePropName="checked">
-                  <Checkbox>
-                    <strong>Bật quản lý theo lô/batch</strong>
-                  </Checkbox>
+            <Col span={24}>
+              <Divider>Hướng dẫn sử dụng chi tiết theo độ tuổi</Divider>
+            </Col>
+            <Row gutter={[16, 16]}>
+              <Col xs={24} lg={12}>
+                <Form.Item name="hdsd_0_2" label="Từ 0-2 tuổi">
+                  <Input.TextArea rows={2} size="large" />
+                </Form.Item>
+              </Col>
+              <Col xs={24} lg={12}>
+                <Form.Item name="hdsd_2_6" label="Từ 2-6 tuổi">
+                  <Input.TextArea rows={2} size="large" />
                 </Form.Item>
               </Col>
             </Row>
-
-            {initialData?.id && initialData.enable_lot_management && (
-              <ProductLotManagement
-                productId={initialData.id}
-                isEnabled={initialData.enable_lot_management}
-                warehouses={warehouses}
-              />
-            )}
+            <Row gutter={[16, 16]}>
+              <Col xs={24} lg={12}>
+                <Form.Item name="hdsd_6_18" label="Từ 6-18 tuổi">
+                  <Input.TextArea rows={2} size="large" />
+                </Form.Item>
+              </Col>
+              <Col xs={24} lg={12}>
+                <Form.Item name="hdsd_over_18" label="Trên 18 tuổi">
+                  <Input.TextArea rows={2} size="large" />
+                </Form.Item>
+              </Col>
+            </Row>
+            <Col span={24}>
+              <Divider>Quản lý Lô hàng</Divider>
+              <Row gutter={16}>
+                <Col>
+                  <Form.Item
+                    name="enable_lot_management"
+                    valuePropName="checked"
+                  >
+                    <Checkbox>
+                      <strong>Bật quản lý theo lô/batch</strong>
+                    </Checkbox>
+                  </Form.Item>
+                </Col>
+              </Row>
+              {initialData?.id && initialData.enable_lot_management && (
+                <ProductLotManagement
+                  productId={initialData.id}
+                  isEnabled={initialData.enable_lot_management}
+                  warehouses={warehouses}
+                />
+              )}
+            </Col>
           </Col>
         </Row>
       ),
@@ -561,6 +685,27 @@ const ProductForm: React.FC<ProductFormProps> = ({
                 }
                 parser={(value) => value!.replace(/\./g, "")}
                 size="large"
+              />
+            </Form.Item>
+          </Col>
+
+          <Col xs={24} sm={12} lg={8}>
+            <Form.Item
+              name="vat_percent"
+              label="VAT (%)"
+              tooltip="Thuế giá trị gia tăng áp dụng cho sản phẩm này"
+              initialValue={5}
+            >
+              <Select
+                style={{ width: "100%" }}
+                size="large"
+                options={[
+                  { label: "0%", value: 0 },
+                  { label: "1%", value: 1 },
+                  { label: "2%", value: 2 },
+                  { label: "3%", value: 3 },
+                  { label: "5%", value: 5 },
+                ]}
               />
             </Form.Item>
           </Col>
@@ -644,6 +789,61 @@ const ProductForm: React.FC<ProductFormProps> = ({
         onClose={() => setIsQRScannerOpen(false)}
         onScan={handleQRScan}
       />
+
+      {/* Add Supplier Modal */}
+      <Modal
+        title="Thêm Nhà Cung Cấp Mới"
+        open={isAddSupplierModalOpen}
+        onOk={handleCreateSupplier}
+        onCancel={handleCancelAddSupplier}
+        confirmLoading={creatingSupplier}
+        okText="Tạo"
+        cancelText="Hủy"
+      >
+        <Space direction="vertical" style={{ width: "100%" }} size="middle">
+          <div>
+            <label style={{ display: "block", marginBottom: 4 }}>
+              Tên nhà cung cấp <span style={{ color: "red" }}>*</span>
+            </label>
+            <Input
+              placeholder="Nhập tên nhà cung cấp"
+              value={newSupplierName}
+              onChange={(e) => setNewSupplierName(e.target.value)}
+              size="large"
+            />
+          </div>
+          <div>
+            <label style={{ display: "block", marginBottom: 4 }}>
+              Số điện thoại
+            </label>
+            <Input
+              placeholder="Nhập số điện thoại"
+              value={newSupplierPhone}
+              onChange={(e) => setNewSupplierPhone(e.target.value)}
+              size="large"
+            />
+          </div>
+          <div>
+            <label style={{ display: "block", marginBottom: 4 }}>Email</label>
+            <Input
+              placeholder="Nhập email"
+              value={newSupplierEmail}
+              onChange={(e) => setNewSupplierEmail(e.target.value)}
+              size="large"
+              type="email"
+            />
+          </div>
+          <div>
+            <label style={{ display: "block", marginBottom: 4 }}>Địa chỉ</label>
+            <Input.TextArea
+              placeholder="Nhập địa chỉ"
+              value={newSupplierAddress}
+              onChange={(e) => setNewSupplierAddress(e.target.value)}
+              rows={3}
+            />
+          </div>
+        </Space>
+      </Modal>
     </Form>
   );
 };

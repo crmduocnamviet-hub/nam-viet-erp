@@ -3,6 +3,10 @@ interface BaseCartItem {
   id: number;
   name: string;
   description?: string;
+  hdsd_0_2?: string;
+  hdsd_2_6?: string;
+  hdsd_6_18?: string;
+  hdsd_over_18?: string;
   quantity: number;
   finalPrice: number;
   originalPrice: number;

@@ -29,6 +29,7 @@ import {
   PlusOutlined,
   DeleteOutlined,
   InboxOutlined,
+  HomeOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import PageLayout from "../../components/PageLayout";
@@ -509,6 +510,17 @@ const PurchaseOrderReceivingPage: React.FC = () => {
   return (
     <PageLayout
       title="Nhận Hàng"
+      breadcrumbs={[
+        {
+          title: "Trang chủ",
+          href: "/",
+          icon: <HomeOutlined />,
+        },
+        {
+          title: "Nhận Hàng",
+          icon: <InboxOutlined />,
+        },
+      ]}
       extra={
         <Space>
           {!selectedPO && (

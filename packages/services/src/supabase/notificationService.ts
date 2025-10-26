@@ -1,0 +1,342 @@
+import { supabase } from "./supabase";
+import type { RealtimeChannel } from "@supabase/supabase-js";
+import {
+  initializeFCMForEmployee,
+  onForegroundMessage,
+  showBrowserNotification,
+  type INotificationPayload,
+} from "../firebase/fcmService";
+import {
+  subscribeToNotifications,
+  getUnreadNotificationCount,
+  type INotification,
+} from "./employeeNotificationService";
+
+interface NotificationCallback {
+  (payload: any): void;
+}
+
+interface NotificationOptions {
+  table: string;
+  event?: "INSERT" | "UPDATE" | "DELETE" | "*";
+  filter?: string;
+  callback: NotificationCallback;
+}
+
+class NotificationService {
+  private channels: Map<string, RealtimeChannel> = new Map();
+  private subscriptions: Map<string, NotificationOptions> = new Map();
+  private fcmInitialized: boolean = false;
+  private currentEmployeeId: string | null = null;
+
+  /**
+   * Subscribe to realtime changes on a table
+   * @param channelName Unique name for this subscription
+   * @param options Subscription options
+   * @returns Unsubscribe function
+   */
+  subscribe(channelName: string, options: NotificationOptions): () => void {
+    // If already subscribed, unsubscribe first
+    if (this.channels.has(channelName)) {
+      this.unsubscribe(channelName);
+    }
+
+    // Create channel
+    const channel = supabase.channel(channelName);
+
+    // Setup subscription based on options
+    let subscription = channel.on(
+      "postgres_changes" as any,
+      {
+        event: options.event || "*",
+        schema: "public",
+        table: options.table,
+        filter: options.filter,
+      },
+      (payload) => {
+        console.log(
+          `[NotificationService] Received ${options.event || "*"} on ${
+            options.table
+          }:`,
+          payload,
+        );
+        options.callback(payload);
+      },
+    );
+
+    // Subscribe to the channel
+    subscription.subscribe((status) => {
+      console.log(
+        `[NotificationService] Channel ${channelName} status:`,
+        status,
+      );
+    });
+
+    // Store references
+    this.channels.set(channelName, channel);
+    this.subscriptions.set(channelName, options);
+
+    // Return unsubscribe function
+    return () => this.unsubscribe(channelName);
+  }
+
+  /**
+   * Subscribe specifically to B2B quotes table changes
+   * @param callback Function to call when quotes change
+   * @param employeeId Optional filter by employee ID
+   * @returns Unsubscribe function
+   */
+  subscribeToB2BQuotes(
+    callback: NotificationCallback,
+    employeeId?: string,
+  ): () => void {
+    const channelName = `b2b_quotes_${employeeId || "all"}`;
+
+    return this.subscribe(channelName, {
+      table: "b2b_quotes",
+      event: "*", // Listen to all events (INSERT, UPDATE, DELETE)
+      filter: employeeId
+        ? `created_by_employee_id=eq.${employeeId}`
+        : undefined,
+      callback: (payload) => {
+        // Add additional processing for B2B quotes
+        const processedPayload = {
+          ...payload,
+          timestamp: new Date().toISOString(),
+          table: "b2b_quotes",
+        };
+        callback(processedPayload);
+      },
+    });
+  }
+
+  /**
+   * Subscribe specifically to B2B quote items table changes
+   * @param callback Function to call when quote items change
+   * @param quoteId Optional filter by quote ID
+   * @returns Unsubscribe function
+   */
+  subscribeToB2BQuoteItems(
+    callback: NotificationCallback,
+    quoteId?: string,
+  ): () => void {
+    const channelName = `b2b_quote_items_${quoteId || "all"}`;
+
+    return this.subscribe(channelName, {
+      table: "b2b_quote_items",
+      event: "*",
+      filter: quoteId ? `quote_id=eq.${quoteId}` : undefined,
+      callback: (payload) => {
+        const processedPayload = {
+          ...payload,
+          timestamp: new Date().toISOString(),
+          table: "b2b_quote_items",
+        };
+        callback(processedPayload);
+      },
+    });
+  }
+
+  /**
+   * Unsubscribe from a specific channel
+   * @param channelName Name of the channel to unsubscribe from
+   */
+  unsubscribe(channelName: string): void {
+    const channel = this.channels.get(channelName);
+    if (channel) {
+      supabase.removeChannel(channel);
+      this.channels.delete(channelName);
+      this.subscriptions.delete(channelName);
+      console.log(`[NotificationService] Unsubscribed from ${channelName}`);
+    }
+  }
+
+  /**
+   * Unsubscribe from all channels
+   */
+  unsubscribeAll(): void {
+    this.channels.forEach((channel, channelName) => {
+      supabase.removeChannel(channel);
+      console.log(`[NotificationService] Unsubscribed from ${channelName}`);
+    });
+    this.channels.clear();
+    this.subscriptions.clear();
+  }
+
+  /**
+   * Get list of active subscriptions
+   */
+  getActiveSubscriptions(): string[] {
+    return Array.from(this.channels.keys());
+  }
+
+  /**
+   * Check if a specific channel is subscribed
+   */
+  isSubscribed(channelName: string): boolean {
+    return this.channels.has(channelName);
+  }
+
+  /**
+   * Initialize push notifications for an employee
+   * @param employeeId Employee ID to register FCM token for
+   * @param deviceName Optional device name
+   */
+  async initializePushNotifications(
+    employeeId: string,
+    deviceName?: string,
+  ): Promise<string | null> {
+    if (this.fcmInitialized && this.currentEmployeeId === employeeId) {
+      console.log("[NotificationService] FCM already initialized");
+      return null;
+    }
+
+    try {
+      const token = await initializeFCMForEmployee(employeeId, deviceName);
+      if (token) {
+        this.fcmInitialized = true;
+        this.currentEmployeeId = employeeId;
+        console.log(
+          "[NotificationService] Push notifications initialized successfully",
+        );
+      }
+      return token;
+    } catch (error) {
+      console.error("[NotificationService] Failed to initialize FCM:", error);
+      return null;
+    }
+  }
+
+  /**
+   * Setup foreground message listener
+   * @param callback Function to call when a push notification is received
+   */
+  setupPushNotificationListener(
+    callback?: (notification: INotificationPayload) => void,
+  ): void {
+    onForegroundMessage((notification) => {
+      console.log(
+        "[NotificationService] Push notification received:",
+        notification,
+      );
+
+      // Show browser notification
+      showBrowserNotification(notification);
+
+      // Call custom callback if provided
+      if (callback) {
+        callback(notification);
+      }
+    });
+  }
+
+  /**
+   * Check if FCM is initialized
+   */
+  isPushNotificationsEnabled(): boolean {
+    return this.fcmInitialized;
+  }
+
+  /**
+   * Get current employee ID
+   */
+  getCurrentEmployeeId(): string | null {
+    return this.currentEmployeeId;
+  }
+
+  /**
+   * Subscribe to database notifications for the current employee
+   * @param callback Function to call when a new notification is received
+   */
+  subscribeToEmployeeNotifications(
+    callback: (notification: INotification) => void,
+  ): () => void {
+    if (!this.currentEmployeeId) {
+      console.warn(
+        "[NotificationService] Cannot subscribe: no employee ID set",
+      );
+      return () => {};
+    }
+
+    return subscribeToNotifications(this.currentEmployeeId, (payload) => {
+      const notification = payload.new as INotification;
+      callback(notification);
+
+      // Optionally show browser notification
+      if (notification && !notification.is_read) {
+        showBrowserNotification({
+          title: notification.title,
+          body: notification.body,
+          icon: notification.icon,
+          image: notification.image_url,
+          link: notification.action_url,
+          data: notification.metadata,
+        });
+      }
+    });
+  }
+
+  /**
+   * Get unread notification count for current employee
+   */
+  async getUnreadCount(): Promise<number> {
+    if (!this.currentEmployeeId) {
+      return 0;
+    }
+    return await getUnreadNotificationCount(this.currentEmployeeId);
+  }
+
+  /**
+   * Initialize complete notification system
+   * Includes both FCM push notifications and database notifications
+   * @param employeeId Employee ID
+   * @param deviceName Optional device name
+   * @param onNewNotification Optional callback for new notifications
+   */
+  async initializeCompleteNotificationSystem(
+    employeeId: string,
+    deviceName?: string,
+    onNewNotification?: (notification: INotification) => void,
+  ): Promise<{
+    fcmToken: string | null;
+    unreadCount: number;
+    unsubscribe: () => void;
+  }> {
+    // Initialize FCM
+    const fcmToken = await this.initializePushNotifications(
+      employeeId,
+      deviceName,
+    );
+
+    // Setup FCM listener
+    this.setupPushNotificationListener();
+
+    // Subscribe to database notifications
+    const unsubscribe = this.subscribeToEmployeeNotifications(
+      (notification) => {
+        console.log(
+          "[NotificationService] Database notification received:",
+          notification,
+        );
+        if (onNewNotification) {
+          onNewNotification(notification);
+        }
+      },
+    );
+
+    // Get initial unread count
+    const unreadCount = await this.getUnreadCount();
+
+    return {
+      fcmToken,
+      unreadCount,
+      unsubscribe,
+    };
+  }
+}
+
+// Export a singleton instance
+export const notificationService = new NotificationService();
+
+// Export types for use in other files
+export type { NotificationCallback, NotificationOptions };

@@ -18,6 +18,8 @@ export { default as ComboFormModal } from "./components/ComboFormModal";
 export { default as ComboLotSelectionModal } from "./components/ComboLotSelectionModal";
 export { default as PageLayout } from "./components/PageLayout";
 export { default as WarehouseQuantityModal } from "./components/WarehouseQuantityModal";
+export { default as DateInput } from "./components/DateInput";
+export { default as QuickQuoteTabContent } from "./components/QuickQuoteTabContent";
 export * from "./hooks/useDebounce";
 
 // Screens and Permission System

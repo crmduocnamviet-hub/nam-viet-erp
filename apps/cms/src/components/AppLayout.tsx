@@ -10,6 +10,7 @@ import {
   MenuOutlined,
   RocketOutlined,
   UserOutlined, // <-- IMPORT ICON MỚI
+  LogoutOutlined,
 } from "@ant-design/icons";
 import type { MenuProps } from "antd";
 import { Routes, Route, useNavigate } from "react-router-dom";
@@ -24,6 +25,7 @@ import {
   Drawer,
 } from "antd";
 import viVN from "antd/locale/vi_VN";
+import { signOut } from "@nam-viet-erp/services";
 import {
   Screen,
   CreateProductPage,
@@ -92,6 +94,7 @@ const menuItems: MenuProps["items"] = [
     children: [
       { label: "Quản lý Nhân viên", key: "/employees" },
       { label: "Quản lý Tài khoản", key: "/users" },
+      { label: "Quản lý Bệnh nhân", key: "/patients" },
     ],
   },
   {
@@ -144,10 +147,17 @@ const namVietTheme = {
 const ComingSoon = () => <h1>Tính năng này sắp ra mắt!</h1>;
 
 // Tách nội dung của Sider ra một component riêng để tái sử dụng
-const SiderContent: React.FC<{ onMenuClick: MenuProps["onClick"] }> = ({
-  onMenuClick,
-}) => (
-  <>
+const SiderContent: React.FC<{
+  onMenuClick: MenuProps["onClick"];
+  onLogout: () => void;
+}> = ({ onMenuClick, onLogout }) => (
+  <div
+    style={{
+      display: "flex",
+      flexDirection: "column",
+      height: "100%",
+    }}
+  >
     <div
       style={{
         height: "48px",
@@ -173,9 +183,31 @@ const SiderContent: React.FC<{ onMenuClick: MenuProps["onClick"] }> = ({
       mode="inline"
       items={menuItems}
       onClick={onMenuClick}
-      style={{ fontSize: "16px" }}
+      style={{ fontSize: "16px", flex: 1 }}
     />
-  </>
+    <div
+      style={{
+        padding: "16px",
+        borderTop: "1px solid rgba(255, 255, 255, 0.1)",
+      }}
+    >
+      <Button
+        type="text"
+        icon={<LogoutOutlined />}
+        onClick={onLogout}
+        block
+        style={{
+          color: "rgba(255, 255, 255, 0.75)",
+          height: "40px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "flex-start",
+        }}
+      >
+        Đăng xuất
+      </Button>
+    </div>
+  </div>
 );
 
 const AppLayout: React.FC = () => {
@@ -190,6 +222,11 @@ const AppLayout: React.FC = () => {
     if (isMobile) {
       setMobileMenuOpen(false); // Tự động đóng menu sau khi chọn trên mobile
     }
+  };
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate("/login");
   };
 
   return (
@@ -212,6 +249,8 @@ const AppLayout: React.FC = () => {
               left: 0,
               top: 0,
               bottom: 0,
+              display: "flex",
+              flexDirection: "column",
             }}
           >
             {/* Dùng lại SiderContent nhưng bỏ qua title vì đã có ở trên */}
@@ -242,8 +281,30 @@ const AppLayout: React.FC = () => {
               mode="inline"
               items={menuItems}
               onClick={handleMenuClick}
-              style={{ fontSize: "16px" }}
+              style={{ fontSize: "16px", flex: 1 }}
             />
+            <div
+              style={{
+                padding: collapsed ? "8px" : "16px",
+                borderTop: "1px solid rgba(255, 255, 255, 0.1)",
+              }}
+            >
+              <Button
+                type="text"
+                icon={<LogoutOutlined />}
+                onClick={handleLogout}
+                block
+                style={{
+                  color: "rgba(255, 255, 255, 0.75)",
+                  height: "40px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: collapsed ? "center" : "flex-start",
+                }}
+              >
+                {!collapsed && "Đăng xuất"}
+              </Button>
+            </div>
           </Sider>
         )}
 
@@ -258,11 +319,17 @@ const AppLayout: React.FC = () => {
               body: {
                 padding: 0,
                 background: namVietTheme.components.Layout.siderBg,
+                display: "flex",
+                flexDirection: "column",
+                height: "100vh",
               },
             }}
             width={230}
           >
-            <SiderContent onMenuClick={handleMenuClick} />
+            <SiderContent
+              onMenuClick={handleMenuClick}
+              onLogout={handleLogout}
+            />
           </Drawer>
         )}
 
@@ -383,6 +450,10 @@ const AppLayout: React.FC = () => {
                 />
 
                 {/* --- ROUTE CHO MODULE BỆNH NHÂN --- */}
+                <Route
+                  path="/patients"
+                  element={<Screen screenKey="medical.patients" />}
+                />
                 <Route
                   path="/patients/:patientId"
                   element={<Screen screenKey="medical.patient-detail" />}
