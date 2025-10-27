@@ -11,6 +11,7 @@ import {
   RocketOutlined,
   UserOutlined, // <-- IMPORT ICON MỚI
   LogoutOutlined,
+  SwapOutlined,
 } from "@ant-design/icons";
 import type { MenuProps } from "antd";
 import { Routes, Route, useNavigate } from "react-router-dom";
@@ -48,6 +49,11 @@ const menuItems: MenuProps["items"] = [
       { label: "Danh sách Sản phẩm", key: "/products" },
       { label: "Thêm sản phẩm mới", key: "/products/create" },
       { label: "Quản lý Đặt hàng", key: "/purchase-orders" },
+      {
+        label: "Chuyển kho",
+        key: "/warehouse/transfers",
+        icon: <SwapOutlined />,
+      },
     ],
   },
   {
@@ -497,6 +503,20 @@ const AppLayout: React.FC = () => {
                 <Route
                   path="/missing-documentation"
                   element={<MissingDocumentationWarning />}
+                />
+
+                {/* --- WAREHOUSE TRANSFER ROUTES --- */}
+                <Route
+                  path="/warehouse/transfers"
+                  element={<Screen screenKey="warehouse.transfers" />}
+                />
+                <Route
+                  path="/warehouse/transfers/create"
+                  element={<Screen screenKey="warehouse.transfers.create" />}
+                />
+                <Route
+                  path="/warehouse/transfers/:id"
+                  element={<Screen screenKey="warehouse.transfers.detail" />}
                 />
 
                 <Route path="*" element={<ComingSoon />} />

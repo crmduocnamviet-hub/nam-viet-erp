@@ -66,6 +66,9 @@ import SupplierFormPage from "./warehouse/SupplierFormPage";
 import SupplierPromotionsPage from "./warehouse/SupplierPromotionsPage";
 import VATInventoryDashboard from "./warehouse/VATInventoryDashboard";
 import VATReconciliationPage from "./warehouse/VATReconciliationPage";
+import WarehouseTransfersListPage from "./warehouse/WarehouseTransfersListPage";
+import WarehouseTransferDetailPage from "./warehouse/WarehouseTransferDetailPage";
+import CreateWarehouseTransferPage from "./warehouse/CreateWarehouseTransferPage";
 
 // Screen Registry Interface
 export interface ScreenConfig {
@@ -446,6 +449,27 @@ export const SCREEN_REGISTRY: ScreenRegistry = {
     title: "Đối Chiếu VAT",
     description: "Đối chiếu hóa đơn VAT mua vào và bán ra",
   },
+  "warehouse.transfers": {
+    component: WarehouseTransfersListPage,
+    permissions: ["warehouse.access", "warehouse.transfers.view"],
+    category: "warehouse",
+    title: "Chuyển kho",
+    description: "Quản lý phiếu chuyển kho giữa các kho",
+  },
+  "warehouse.transfers.detail": {
+    component: WarehouseTransferDetailPage,
+    permissions: ["warehouse.access", "warehouse.transfers.view"],
+    category: "warehouse",
+    title: "Chi tiết Phiếu chuyển kho",
+    description: "Xem chi tiết phiếu chuyển kho",
+  },
+  "warehouse.transfers.create": {
+    component: CreateWarehouseTransferPage,
+    permissions: ["warehouse.access", "warehouse.transfers.create"],
+    category: "warehouse",
+    title: "Tạo Phiếu chuyển kho",
+    description: "Tạo phiếu chuyển kho mới",
+  },
 };
 
 // ==================== PERMISSION CATEGORIES ====================
@@ -530,6 +554,14 @@ export const PERMISSIONS = {
   "warehouse.vat.view": "Xem kho VAT",
   "warehouse.vat.reconcile": "Đối chiếu VAT",
   "warehouse.vat.create-invoice": "Tạo hóa đơn VAT",
+  "warehouse.transfers.view": "Xem phiếu chuyển kho",
+  "warehouse.transfers.create": "Tạo phiếu chuyển kho",
+  "warehouse.transfers.edit": "Chỉnh sửa phiếu chuyển kho",
+  "warehouse.transfers.delete": "Xóa phiếu chuyển kho",
+  "warehouse.transfers.approve": "Duyệt phiếu chuyển kho",
+  "warehouse.transfers.send": "Xuất kho chuyển hàng",
+  "warehouse.transfers.receive": "Nhận hàng chuyển kho",
+  "warehouse.transfers.cancel": "Hủy phiếu chuyển kho",
 
   // Delivery & Shipping Permissions
   "delivery.access": "Truy cập chức năng giao hàng",
@@ -714,6 +746,14 @@ export const ROLE_PERMISSIONS = {
     "warehouse.vat.view",
     "warehouse.vat.reconcile",
     "warehouse.vat.create-invoice",
+    "warehouse.transfers.view",
+    "warehouse.transfers.create",
+    "warehouse.transfers.edit",
+    "warehouse.transfers.delete",
+    "warehouse.transfers.approve",
+    "warehouse.transfers.send",
+    "warehouse.transfers.receive",
+    "warehouse.transfers.cancel",
     "inventory.access",
     "products.view",
   ],
@@ -727,6 +767,9 @@ export const ROLE_PERMISSIONS = {
     "warehouse.picking.confirm",
     "warehouse.suppliers.view",
     "warehouse.vat.view",
+    "warehouse.transfers.view",
+    "warehouse.transfers.send",
+    "warehouse.transfers.receive",
   ],
 
   "delivery-staff": [
@@ -852,6 +895,9 @@ export {
   SupplierPromotionsPage,
   VATInventoryDashboard,
   VATReconciliationPage,
+  WarehouseTransfersListPage,
+  WarehouseTransferDetailPage,
+  CreateWarehouseTransferPage,
 };
 
 // Helper function to get screen by key

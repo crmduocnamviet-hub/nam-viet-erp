@@ -140,6 +140,12 @@ export const SALE_APP_MENU: MenuItemConfig[] = [
         screenKey: "warehouse.vat-reconciliation",
         permissions: ["warehouse.vat.reconcile"],
       },
+      {
+        label: "Chuyển kho",
+        key: "/warehouse/transfers",
+        screenKey: "warehouse.transfers",
+        permissions: ["warehouse.transfers.view"],
+      },
     ],
   },
   {
