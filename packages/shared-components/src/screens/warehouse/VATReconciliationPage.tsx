@@ -190,10 +190,14 @@ const VATReconciliationPage: React.FC = () => {
       cancelText: "Hủy",
       onOk: async () => {
         try {
-          const { error } = await issueVATInvoice(id);
+          const { data, error } = await issueVATInvoice(id);
           if (error) throw error;
 
-          message.success("Đã phát hành hóa đơn VAT");
+          // data is now an array of issued invoices (may have multiple products)
+          const invoiceCount = data ? data.length : 1;
+          message.success(
+            `Đã phát hành hóa đơn VAT với ${invoiceCount} sản phẩm`,
+          );
           loadData();
         } catch (error) {
           console.error("Error issuing VAT invoice:", error);

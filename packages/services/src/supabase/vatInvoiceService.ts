@@ -474,27 +474,60 @@ export const updateVATInvoiceOut = async (
 
 /**
  * Generate and issue VAT invoice (change status from pending to done)
+ * This now supports multi-product invoices: groups all pending items from the same source
  */
 export const issueVATInvoice = async (id: number, invoiceDate?: string) => {
   try {
-    // Generate invoice number
+    // First, get the invoice to find its source
+    const { data: firstInvoice, error: fetchError } = await supabase
+      .from("vat_invoices_out")
+      .select("*")
+      .eq("id", id)
+      .single();
+
+    if (fetchError) throw fetchError;
+
+    // Determine source field (sale_order_id or b2b_quote_id)
+    const isFromSaleOrder = firstInvoice.sale_order_id !== null;
+    const sourceId = isFromSaleOrder
+      ? firstInvoice.sale_order_id
+      : firstInvoice.b2b_quote_id;
+
+    // Find ALL pending invoices from the same source (to support multi-product invoices)
+    const filterField = isFromSaleOrder ? "sale_order_id" : "b2b_quote_id";
+
+    const { data: allPendingInvoices, error: findError } = await supabase
+      .from("vat_invoices_out")
+      .select("*")
+      .eq(filterField, sourceId)
+      .eq("status", "pending");
+
+    if (findError) throw findError;
+
+    if (!allPendingInvoices || allPendingInvoices.length === 0) {
+      throw new Error("No pending invoices found for this source");
+    }
+
+    // Generate ONE invoice number for all items from this source
     const { data: invoiceNumber, error: genError } = await supabase.rpc(
       "generate_vat_invoice_number",
     );
 
     if (genError) throw genError;
 
-    // Update invoice with number and status
+    // Update ALL pending invoices from the same source with the SAME invoice number
     const updates: Partial<IVATInvoiceOut> = {
       invoice_no: invoiceNumber,
       invoice_date: invoiceDate || new Date().toISOString().split("T")[0],
       status: "done",
     };
 
+    const invoiceIds = allPendingInvoices.map((inv) => inv.id);
+
     const { data, error } = await supabase
       .from("vat_invoices_out")
       .update(updates)
-      .eq("id", id)
+      .in("id", invoiceIds)
       .select(
         `
         *,
@@ -502,12 +535,11 @@ export const issueVATInvoice = async (id: number, invoiceDate?: string) => {
         products:product_id(id, name, sku, barcode),
         product_lots:product_lot_id(id, lot_number)
       `,
-      )
-      .single();
+      );
 
     if (error) throw error;
 
-    return { data: data as IVATInvoiceOutWithDetails, error: null };
+    return { data: data as IVATInvoiceOutWithDetails[], error: null };
   } catch (error) {
     console.error("Error issuing VAT invoice:", error);
     return { data: null, error };

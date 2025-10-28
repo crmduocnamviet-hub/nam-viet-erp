@@ -27,6 +27,7 @@ import {
   ClockCircleOutlined,
   CloseCircleOutlined,
   PlusOutlined,
+  DeleteOutlined,
 } from "@ant-design/icons";
 import { Statistic } from "antd";
 import {
@@ -70,6 +71,9 @@ const VATInvoiceB2BPage: React.FC = () => {
     null,
   );
   const [form] = Form.useForm();
+
+  // Multiple products support
+  const [invoiceItems, setInvoiceItems] = useState<any[]>([]);
 
   // Filters
   const [searchText, setSearchText] = useState("");
@@ -128,6 +132,110 @@ const VATInvoiceB2BPage: React.FC = () => {
     loadData();
   };
 
+  // Handle adding multiple products to invoice
+  const handleAddProductToInvoice = (values: any) => {
+    const selectedProducts = values.product_id;
+    const productsToAdd = Array.isArray(selectedProducts)
+      ? selectedProducts
+      : [selectedProducts];
+
+    if (productsToAdd.length === 0) {
+      message.error("Vui lòng chọn ít nhất 1 sản phẩm");
+      return;
+    }
+
+    if (!values.quantity || !values.unit_price) {
+      message.error("Vui lòng nhập Số lượng và Đơn giá");
+      return;
+    }
+
+    const quantity = Math.floor(values.quantity); // Integer quantity
+    const unitPrice = values.unit_price;
+    const vatPercent = values.vat_percent || 10;
+    const totalAmount = quantity * unitPrice;
+    const vatAmount = (totalAmount * vatPercent) / 100;
+
+    const newItems = productsToAdd.map((productId: number) => ({
+      id: Date.now() + productId,
+      product_id: productId,
+      product_lot_id: null,
+      quantity: quantity,
+      unit_price: unitPrice,
+      total_amount: totalAmount,
+      vat_amount: vatAmount,
+      vat_percent: vatPercent,
+      notes: values.notes || null,
+    }));
+
+    setInvoiceItems([...invoiceItems, ...newItems]);
+
+    // Reset product fields but keep header info
+    form.resetFields([
+      "product_id",
+      "quantity",
+      "unit_price",
+      "vat_percent",
+      "notes",
+    ]);
+    message.success(`Đã thêm ${newItems.length} sản phẩm vào hóa đơn`);
+  };
+
+  const handleRemoveProductFromInvoice = (id: number) => {
+    setInvoiceItems(invoiceItems.filter((item) => item.id !== id));
+    message.success("Đã xóa sản phẩm khỏi hóa đơn");
+  };
+
+  const handleSubmitInvoice = async () => {
+    if (invoiceItems.length === 0) {
+      message.error("Vui lòng thêm ít nhất 1 sản phẩm vào hóa đơn");
+      return;
+    }
+
+    const warehouseId = form.getFieldValue("warehouse_id");
+    const b2bQuoteId = form.getFieldValue("b2b_quote_id");
+
+    if (!warehouseId) {
+      message.error("Vui lòng chọn kho");
+      return;
+    }
+
+    try {
+      // Create multiple invoice records (one per product)
+      const promises = invoiceItems.map((item) => {
+        const invoiceData: ICreateVATInvoiceOut = {
+          warehouse_id: warehouseId,
+          product_id: item.product_id,
+          product_lot_id: null,
+          quantity: item.quantity,
+          unit_price: item.unit_price || null,
+          total_amount: item.total_amount || null,
+          vat_amount: item.vat_amount || null,
+          vat_percent: item.vat_percent || 0,
+          b2b_quote_id: b2bQuoteId || null,
+          notes: item.notes || null,
+        };
+
+        return createVATInvoiceOut(invoiceData);
+      });
+
+      const results = await Promise.all(promises);
+      const errors = results.filter((r) => r.error);
+
+      if (errors.length > 0) {
+        throw errors[0].error;
+      }
+
+      message.success(`Đã tạo hóa đơn VAT với ${invoiceItems.length} sản phẩm`);
+      setShowCreateModal(false);
+      form.resetFields();
+      setInvoiceItems([]);
+      loadData();
+    } catch (error) {
+      console.error("Error saving VAT invoice:", error);
+      message.error("Không thể lưu hóa đơn VAT");
+    }
+  };
+
   const handleIssueInvoice = (id: number) => {
     console.log("handleIssueInvoice called with id:", id);
     setSelectedInvoiceId(id);
@@ -147,7 +255,9 @@ const VATInvoiceB2BPage: React.FC = () => {
         );
         return;
       }
-      message.success("Xuất hóa đơn VAT thành công");
+      // data is now an array of issued invoices (may have multiple products)
+      const invoiceCount = data ? data.length : 1;
+      message.success(`Đã xuất hóa đơn VAT với ${invoiceCount} sản phẩm`);
       setShowIssueModal(false);
       setSelectedInvoiceId(null);
       loadData();
@@ -466,34 +576,9 @@ const VATInvoiceB2BPage: React.FC = () => {
         <Form
           form={form}
           layout="vertical"
-          onFinish={async (values) => {
-            try {
-              const invoiceData: ICreateVATInvoiceOut = {
-                warehouse_id: values.warehouse_id,
-                product_id: values.product_id,
-                product_lot_id: values.product_lot_id || null,
-                quantity: values.quantity,
-                unit_price: values.unit_price,
-                total_amount: values.unit_price * values.quantity,
-                vat_amount:
-                  (values.unit_price * values.quantity * values.vat_percent) /
-                  100,
-                vat_percent: values.vat_percent || 10,
-                b2b_quote_id: values.b2b_quote_id || null,
-                notes: values.notes || null,
-              };
-
-              const { error } = await createVATInvoiceOut(invoiceData);
-              if (error) throw error;
-
-              message.success("Tạo hóa đơn VAT thành công");
-              setShowCreateModal(false);
-              form.resetFields();
-              loadData();
-            } catch (error) {
-              console.error("Error creating VAT invoice:", error);
-              message.error("Không thể tạo hóa đơn VAT");
-            }
+          onFinish={handleAddProductToInvoice}
+          initialValues={{
+            vat_percent: 10,
           }}
         >
           <Row gutter={16}>
@@ -514,13 +599,14 @@ const VATInvoiceB2BPage: React.FC = () => {
             </Col>
             <Col xs={24} sm={24} md={12}>
               <Form.Item
-                label="Sản phẩm"
+                label="Sản phẩm (có thể chọn nhiều)"
                 name="product_id"
                 rules={[{ required: true, message: "Vui lòng chọn sản phẩm" }]}
               >
                 <Select
+                  mode="multiple"
                   showSearch
-                  placeholder="Chọn sản phẩm"
+                  placeholder="Chọn sản phẩm (có thể chọn nhiều)"
                   filterOption={(input, option) =>
                     String(option?.label || option?.children || "")
                       .toLowerCase()
@@ -536,6 +622,75 @@ const VATInvoiceB2BPage: React.FC = () => {
               </Form.Item>
             </Col>
           </Row>
+
+          {/* Display invoice items list */}
+          {invoiceItems.length > 0 && (
+            <div style={{ marginBottom: 16 }}>
+              <Divider orientation="left">
+                <Text strong>Sản phẩm đã thêm ({invoiceItems.length})</Text>
+              </Divider>
+              <Table
+                dataSource={invoiceItems}
+                columns={[
+                  {
+                    title: "SP",
+                    dataIndex: "product_id",
+                    key: "product_id",
+                    render: (id) =>
+                      products.find((p) => p.id === id)?.name || "-",
+                    ellipsis: true,
+                  },
+                  {
+                    title: "SL",
+                    dataIndex: "quantity",
+                    key: "quantity",
+                    align: "right",
+                  },
+                  {
+                    title: "Đơn giá",
+                    dataIndex: "unit_price",
+                    key: "unit_price",
+                    render: (v) => (v ? `₫${v.toLocaleString()}` : "-"),
+                    align: "right",
+                  },
+                  {
+                    title: "Thành tiền",
+                    dataIndex: "total_amount",
+                    key: "total_amount",
+                    render: (v) => (v ? `₫${v.toLocaleString()}` : "-"),
+                    align: "right",
+                  },
+                  {
+                    title: "VAT",
+                    dataIndex: "vat_amount",
+                    key: "vat_amount",
+                    render: (v) => (v ? `₫${v.toLocaleString()}` : "-"),
+                    align: "right",
+                  },
+                  {
+                    title: "Thao tác",
+                    key: "action",
+                    render: (_, record: any) => (
+                      <Button
+                        type="text"
+                        danger
+                        size="small"
+                        icon={<DeleteOutlined />}
+                        onClick={() =>
+                          handleRemoveProductFromInvoice(record.id)
+                        }
+                      >
+                        Xóa
+                      </Button>
+                    ),
+                  },
+                ]}
+                pagination={false}
+                size="small"
+                rowKey="id"
+              />
+            </div>
+          )}
 
           <Row gutter={16}>
             <Col xs={24} sm={24} md={12}>
@@ -593,11 +748,20 @@ const VATInvoiceB2BPage: React.FC = () => {
           <Form.Item>
             <Space>
               <Button type="primary" htmlType="submit">
-                Tạo
+                + Thêm sản phẩm
+              </Button>
+              <Button
+                type="primary"
+                danger
+                onClick={handleSubmitInvoice}
+                disabled={invoiceItems.length === 0}
+              >
+                Lưu hóa đơn ({invoiceItems.length} SP)
               </Button>
               <Button
                 onClick={() => {
                   setShowCreateModal(false);
+                  setInvoiceItems([]);
                   form.resetFields();
                 }}
               >

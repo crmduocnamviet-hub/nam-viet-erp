@@ -113,9 +113,11 @@ const VATInvoicePOSPage: React.FC = () => {
   const confirmIssueInvoice = async () => {
     if (!selectedInvoiceId) return;
     try {
-      const { error } = await issueVATInvoice(selectedInvoiceId);
+      const { data, error } = await issueVATInvoice(selectedInvoiceId);
       if (error) throw error;
-      message.success("Xuất hóa đơn VAT thành công");
+      // data is now an array of issued invoices (may have multiple products)
+      const invoiceCount = data ? data.length : 1;
+      message.success(`Đã xuất hóa đơn VAT với ${invoiceCount} sản phẩm`);
       setShowIssueModal(false);
       setSelectedInvoiceId(null);
       loadData();
