@@ -32,11 +32,11 @@ export const getAllVATInvoicesIn = async (filters?: {
       .select(
         `
         *,
-        warehouses:warehouse_id(id, name, type),
+        warehouses:warehouse_id(id, name),
         products:product_id(id, name, sku, barcode),
         product_lots:product_lot_id(id, lot_number, expiry_date),
         suppliers:supplier_id(id, name, contact_person),
-        purchase_orders:purchase_order_id(id, order_number)
+        purchase_orders:purchase_order_id(id, po_number)
       `,
       )
       .order("invoice_date", { ascending: false })
@@ -91,11 +91,11 @@ export const getVATInvoiceInById = async (id: number) => {
       .select(
         `
         *,
-        warehouses:warehouse_id(id, name, type),
+        warehouses:warehouse_id(id, name),
         products:product_id(id, name, sku, barcode, unit),
         product_lots:product_lot_id(id, lot_number, expiry_date, quantity),
         suppliers:supplier_id(id, name, contact_person, phone),
-        purchase_orders:purchase_order_id(id, order_number, order_date)
+        purchase_orders:purchase_order_id(id, po_number, order_date)
       `,
       )
       .eq("id", id)
@@ -121,11 +121,11 @@ export const createVATInvoiceIn = async (invoiceData: ICreateVATInvoiceIn) => {
       .select(
         `
         *,
-        warehouses:warehouse_id(id, name, type),
+        warehouses:warehouse_id(id, name),
         products:product_id(id, name, sku, barcode),
         product_lots:product_lot_id(id, lot_number, expiry_date),
         suppliers:supplier_id(id, name),
-        purchase_orders:purchase_order_id(id, order_number)
+        purchase_orders:purchase_order_id(id, po_number)
       `,
       )
       .single();
@@ -182,7 +182,7 @@ export const updateVATInvoiceIn = async (
       .select(
         `
         *,
-        warehouses:warehouse_id(id, name, type),
+        warehouses:warehouse_id(id, name),
         products:product_id(id, name, sku, barcode),
         product_lots:product_lot_id(id, lot_number, expiry_date)
       `,
@@ -240,10 +240,11 @@ export const getAllVATInvoicesOut = async (filters?: {
       .select(
         `
         *,
-        warehouses:warehouse_id(id, name, type),
+        warehouses:warehouse_id(id, name),
         products:product_id(id, name, sku, barcode),
         product_lots:product_lot_id(id, lot_number, expiry_date),
-        b2b_quotes:b2b_quote_id(id, quote_number, customer_id)
+        b2b_quotes:b2b_quote_id(quote_id, quote_number, customer_name),
+        sales_orders:sale_order_id(order_id, order_datetime, total_value)
       `,
       )
       .order("created_at", { ascending: false });
@@ -305,10 +306,10 @@ export const getVATInvoiceOutById = async (id: number) => {
       .select(
         `
         *,
-        warehouses:warehouse_id(id, name, type),
+        warehouses:warehouse_id(id, name),
         products:product_id(id, name, sku, barcode, unit),
         product_lots:product_lot_id(id, lot_number, expiry_date, quantity),
-        b2b_quotes:b2b_quote_id(id, quote_number, customer_id, status)
+        b2b_quotes:b2b_quote_id(quote_id, quote_number, customer_name)
       `,
       )
       .eq("id", id)
@@ -390,10 +391,10 @@ export const createVATInvoiceOut = async (
       .select(
         `
         *,
-        warehouses:warehouse_id(id, name, type),
+        warehouses:warehouse_id(id, name),
         products:product_id(id, name, sku, barcode),
         product_lots:product_lot_id(id, lot_number, expiry_date),
-        b2b_quotes:b2b_quote_id(id, quote_number)
+        b2b_quotes:b2b_quote_id(quote_id, quote_number)
       `,
       )
       .single();
@@ -455,7 +456,7 @@ export const updateVATInvoiceOut = async (
       .select(
         `
         *,
-        warehouses:warehouse_id(id, name, type),
+        warehouses:warehouse_id(id, name),
         products:product_id(id, name, sku, barcode),
         product_lots:product_lot_id(id, lot_number, expiry_date)
       `,

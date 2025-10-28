@@ -165,3 +165,8 @@ export const getPrimarySupplierForProduct = async (productId: number) => {
     .eq("is_primary", true)
     .single();
 };
+
+/**
+ * Alias for backward compatibility
+ */
+export const getAllSuppliers = getSuppliers;

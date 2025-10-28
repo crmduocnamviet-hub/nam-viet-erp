@@ -66,6 +66,9 @@ import SupplierFormPage from "./warehouse/SupplierFormPage";
 import SupplierPromotionsPage from "./warehouse/SupplierPromotionsPage";
 import VATInventoryDashboard from "./warehouse/VATInventoryDashboard";
 import VATReconciliationPage from "./warehouse/VATReconciliationPage";
+import VATInvoiceInputPage from "./warehouse/VATInvoiceInputPage";
+import VATInvoicePOSPage from "./warehouse/VATInvoicePOSPage";
+import VATInvoiceB2BPage from "./warehouse/VATInvoiceB2BPage";
 import WarehouseTransfersListPage from "./warehouse/WarehouseTransfersListPage";
 import WarehouseTransferDetailPage from "./warehouse/WarehouseTransferDetailPage";
 import CreateWarehouseTransferPage from "./warehouse/CreateWarehouseTransferPage";
@@ -449,6 +452,27 @@ export const SCREEN_REGISTRY: ScreenRegistry = {
     title: "Đối Chiếu VAT",
     description: "Đối chiếu hóa đơn VAT mua vào và bán ra",
   },
+  "warehouse.vat-invoice-input": {
+    component: VATInvoiceInputPage,
+    permissions: ["warehouse.access", "warehouse.vat.create-invoice"],
+    category: "warehouse",
+    title: "Nhập Hóa Đơn VAT",
+    description: "Nhập hóa đơn VAT từ nhà cung cấp",
+  },
+  "warehouse.vat-invoice-pos": {
+    component: VATInvoicePOSPage,
+    permissions: ["warehouse.access", "warehouse.vat.create-invoice"],
+    category: "warehouse",
+    title: "Xuất Hóa Đơn VAT cho POS",
+    description: "Xuất hóa đơn VAT sau khi khách hàng thanh toán (POS)",
+  },
+  "warehouse.vat-invoice-b2b": {
+    component: VATInvoiceB2BPage,
+    permissions: ["warehouse.access", "warehouse.vat.create-invoice"],
+    category: "warehouse",
+    title: "Xuất Hóa Đơn VAT cho B2B",
+    description: "Kế toán vào khi cần để xuất VAT cho đơn hàng B2B",
+  },
   "warehouse.transfers": {
     component: WarehouseTransfersListPage,
     permissions: ["warehouse.access", "warehouse.transfers.view"],
@@ -553,7 +577,9 @@ export const PERMISSIONS = {
   "warehouse.suppliers.delete": "Xóa nhà cung cấp",
   "warehouse.vat.view": "Xem kho VAT",
   "warehouse.vat.reconcile": "Đối chiếu VAT",
-  "warehouse.vat.create-invoice": "Tạo hóa đơn VAT",
+  "warehouse.vat.create-invoice": "Tạo và quản lý hóa đơn VAT",
+  "warehouse.vat.invoice-input": "Nhập hóa đơn VAT từ supplier",
+  "warehouse.vat.invoice-output": "Xuất hóa đơn VAT cho B2B và POS",
   "warehouse.transfers.view": "Xem phiếu chuyển kho",
   "warehouse.transfers.create": "Tạo phiếu chuyển kho",
   "warehouse.transfers.edit": "Chỉnh sửa phiếu chuyển kho",
@@ -828,6 +854,8 @@ export const ROLE_PERMISSIONS = {
     "warehouse.vat.view",
     "warehouse.vat.reconcile",
     "warehouse.vat.create-invoice",
+    "warehouse.vat.invoice-input",
+    "warehouse.vat.invoice-output",
     "warehouse.purchase-orders.view",
   ],
 };
@@ -895,6 +923,9 @@ export {
   SupplierPromotionsPage,
   VATInventoryDashboard,
   VATReconciliationPage,
+  VATInvoiceInputPage,
+  VATInvoicePOSPage,
+  VATInvoiceB2BPage,
   WarehouseTransfersListPage,
   WarehouseTransferDetailPage,
   CreateWarehouseTransferPage,

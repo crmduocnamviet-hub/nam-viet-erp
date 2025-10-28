@@ -54,6 +54,10 @@ const menuItems: MenuProps["items"] = [
         key: "/warehouse/transfers",
         icon: <SwapOutlined />,
       },
+      { type: "divider" },
+      { label: "Nhập HĐ VAT", key: "/warehouse/vat-invoice-input" },
+      { label: "Xuất HĐ VAT cho POS", key: "/warehouse/vat-invoice-pos" },
+      { label: "Xuất HĐ VAT cho B2B", key: "/warehouse/vat-invoice-b2b" },
     ],
   },
   {
@@ -517,6 +521,28 @@ const AppLayout: React.FC = () => {
                 <Route
                   path="/warehouse/transfers/:id"
                   element={<Screen screenKey="warehouse.transfers.detail" />}
+                />
+
+                {/* --- WAREHOUSE VAT ROUTES --- */}
+                <Route
+                  path="/warehouse/vat-inventory"
+                  element={<Screen screenKey="warehouse.vat-inventory" />}
+                />
+                <Route
+                  path="/warehouse/vat-reconciliation"
+                  element={<Screen screenKey="warehouse.vat-reconciliation" />}
+                />
+                <Route
+                  path="/warehouse/vat-invoice-input"
+                  element={<Screen screenKey="warehouse.vat-invoice-input" />}
+                />
+                <Route
+                  path="/warehouse/vat-invoice-pos"
+                  element={<Screen screenKey="warehouse.vat-invoice-pos" />}
+                />
+                <Route
+                  path="/warehouse/vat-invoice-b2b"
+                  element={<Screen screenKey="warehouse.vat-invoice-b2b" />}
                 />
 
                 <Route path="*" element={<ComingSoon />} />
