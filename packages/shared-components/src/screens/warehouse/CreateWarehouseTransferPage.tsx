@@ -14,24 +14,32 @@ import {
   Popconfirm,
   Row,
   Col,
+  Typography,
+  List,
+  Empty,
+  Spin,
+  Badge,
 } from "antd";
 import {
-  ArrowLeftOutlined,
   SaveOutlined,
   PlusOutlined,
   DeleteOutlined,
+  SearchOutlined,
 } from "@ant-design/icons";
 import PageLayout from "../../components/PageLayout";
+import LotSelectionModal from "../../components/LotSelectionModal";
+import { useDebounce } from "../../hooks/useDebounce";
 import {
   createWarehouseTransfer,
   getWarehouse,
   getProductWithInventory,
-  getProductLotByProductIds,
 } from "@nam-viet-erp/services";
 import dayjs from "dayjs";
 import type { ColumnsType } from "antd/es/table";
+import ProductSearchInput from "../../components/ProductSearchInput";
 
 const { TextArea } = Input;
+const { Text } = Typography;
 
 interface TransferItem {
   key: number;
@@ -44,6 +52,11 @@ interface TransferItem {
   quantity_requested: number;
   unit_price?: number;
   notes?: string;
+  // For unit conversion display
+  original_quantity?: number;
+  original_unit?: string;
+  converted_unit?: string;
+  conversion_rate?: number;
 }
 
 const CreateWarehouseTransferPage: React.FC = () => {
@@ -52,10 +65,78 @@ const CreateWarehouseTransferPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [warehouses, setWarehouses] = useState<IWarehouse[]>([]);
   const [products, setProducts] = useState<IProduct[]>([]);
-  const [lots, setLots] = useState<IProductLot[]>([]);
   const [items, setItems] = useState<TransferItem[]>([]);
-  const [selectedProduct, setSelectedProduct] = useState<number | null>(null);
   const [itemCounter, setItemCounter] = useState(1);
+
+  // Filter state (for product list)
+  const [listFilterTerm, setListFilterTerm] = useState("");
+  const debouncedListFilter = useDebounce(listFilterTerm, 300);
+
+  // From warehouse for ProductSearchInput
+  const [fromWarehouse, setFromWarehouse] = useState<IWarehouse | null>(null);
+
+  // Lot selection modal state
+  const [isLotSelectionModalOpen, setIsLotSelectionModalOpen] = useState(false);
+  const [selectedProductForLot, setSelectedProductForLot] =
+    useState<IProduct | null>(null);
+  const [tempUnitPrice, setTempUnitPrice] = useState<number | undefined>(
+    undefined,
+  );
+  const [tempNotes, setTempNotes] = useState<string | undefined>(undefined);
+
+  const productSearchRef = React.useRef<any>(null);
+
+  // Auto-focus product search when typing
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Get the active element
+      const activeElement = document.activeElement as HTMLElement;
+      const tagName = activeElement?.tagName.toLowerCase();
+
+      // Don't trigger if user is already typing in an input/textarea
+      if (
+        tagName === "input" ||
+        tagName === "textarea" ||
+        activeElement?.contentEditable === "true"
+      ) {
+        return;
+      }
+
+      // Don't trigger on special keys
+      if (
+        e.ctrlKey ||
+        e.metaKey ||
+        e.altKey ||
+        e.key === "Escape" ||
+        e.key === "Tab" ||
+        e.key === "Enter" ||
+        e.key === "Shift" ||
+        e.key === "Control" ||
+        e.key === "Alt" ||
+        e.key === "Meta" ||
+        e.key.startsWith("Arrow") ||
+        e.key.startsWith("F")
+      ) {
+        return;
+      }
+
+      // Only trigger on printable characters (length 1 or space)
+      if (e.key.length === 1) {
+        // Focus the product search input
+        if (productSearchRef.current) {
+          productSearchRef.current.focus();
+        }
+      }
+    };
+
+    // Add event listener
+    document.addEventListener("keydown", handleKeyDown);
+
+    // Cleanup
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
 
   // Load warehouses
   const loadWarehouses = async () => {
@@ -63,13 +144,23 @@ const CreateWarehouseTransferPage: React.FC = () => {
       const { data, error } = await getWarehouse();
       if (!error && data) {
         setWarehouses(data);
+
+        // Set default warehouse to B2B
+        const b2bWarehouse = data.find((w) =>
+          w.name.toLowerCase().includes("b2b"),
+        );
+
+        if (b2bWarehouse) {
+          form.setFieldsValue({ from_warehouse_id: b2bWarehouse.id });
+          setFromWarehouse(b2bWarehouse);
+        }
       }
     } catch (error) {
       console.error("Error loading warehouses:", error);
     }
   };
 
-  // Load products
+  // Load products (for fallback)
   const loadProducts = async () => {
     try {
       const { data, error } = await getProductWithInventory();
@@ -81,79 +172,237 @@ const CreateWarehouseTransferPage: React.FC = () => {
     }
   };
 
-  // Load lots for selected product
-  const loadLotsForProduct = async (productId: number) => {
-    try {
-      const { data, error } = await getProductLotByProductIds([productId]);
-      if (!error && data) {
-        // Filter lots by from_warehouse_id if selected
-        const fromWarehouseId = form.getFieldValue("from_warehouse_id");
-        if (fromWarehouseId) {
-          const filteredLots = data.filter(
-            (lot) => lot.warehouse_id === fromWarehouseId,
-          );
-          setLots(filteredLots);
-        } else {
-          setLots(data);
-        }
-      }
-    } catch (error) {
-      console.error("Error loading lots:", error);
-    }
-  };
-
   useEffect(() => {
     loadWarehouses();
     loadProducts();
   }, []);
 
-  // Handle add item
-  const handleAddItem = () => {
-    const product_id = form.getFieldValue("item_product_id");
-    const lot_id = form.getFieldValue("item_lot_id");
-    const quantity_requested = form.getFieldValue("item_quantity");
-    const unit_price = form.getFieldValue("item_unit_price");
-    const notes = form.getFieldValue("item_notes");
+  // Check if transfer is from B2B to pharmacy (B2C)
+  const isB2BToPharmacyTransfer = (): boolean => {
+    const fromWarehouseId = form.getFieldValue("from_warehouse_id");
+    const toWarehouseId = form.getFieldValue("to_warehouse_id");
 
-    if (!product_id || !quantity_requested || quantity_requested <= 0) {
+    if (!fromWarehouseId || !toWarehouseId) return false;
+
+    const fromWh = warehouses.find((w) => w.id === fromWarehouseId);
+    const toWh = warehouses.find((w) => w.id === toWarehouseId);
+
+    if (!fromWh || !toWh) return false;
+
+    // Check if from warehouse is B2B and to warehouse is pharmacy
+    const isFromB2B = fromWh.name.toLowerCase().includes("b2b");
+    const isToPharmacy = !toWh.name.toLowerCase().includes("b2b");
+
+    return isFromB2B && isToPharmacy;
+  };
+
+  // Calculate converted quantity if needed
+  const calculateConvertedQuantity = (
+    product: IProduct,
+    originalQuantity: number,
+  ): {
+    quantity: number;
+    originalQuantity: number;
+    originalUnit: string;
+    convertedUnit: string;
+    conversionRate: number;
+    needsConversion: boolean;
+  } => {
+    const needsConversion = isB2BToPharmacyTransfer();
+
+    if (!needsConversion || !product.conversion_rate) {
+      return {
+        quantity: originalQuantity,
+        originalQuantity,
+        originalUnit: product.wholesale_unit || "Đơn vị",
+        convertedUnit: product.retail_unit || "Đơn vị",
+        conversionRate: 1,
+        needsConversion: false,
+      };
+    }
+
+    return {
+      quantity: originalQuantity * product.conversion_rate,
+      originalQuantity,
+      originalUnit: product.wholesale_unit || "Thùng",
+      convertedUnit: product.retail_unit || "Hộp",
+      conversionRate: product.conversion_rate,
+      needsConversion: true,
+    };
+  };
+
+  // Handle product selection from ProductSearchInput
+  const handleProductSelect = (product: IProduct | null) => {
+    if (!product) return;
+
+    const fromWarehouseId = form.getFieldValue("from_warehouse_id");
+    const toWarehouseId = form.getFieldValue("to_warehouse_id");
+
+    if (!fromWarehouseId) {
       notification.warning({
         message: "Thiếu thông tin",
-        description: "Vui lòng chọn sản phẩm và nhập số lượng",
+        description: "Vui lòng chọn kho xuất trước",
       });
       return;
     }
 
-    const product = products.find((p) => p.id === product_id);
-    const lot = lots.find((l) => l.id === lot_id);
+    if (!toWarehouseId) {
+      notification.warning({
+        message: "Thiếu thông tin",
+        description: "Vui lòng chọn kho nhận trước khi thêm sản phẩm",
+      });
+      return;
+    }
 
+    // Check stock
+    if (!product.stock_quantity || product.stock_quantity <= 0) {
+      notification.error({
+        message: "Không thể thêm sản phẩm",
+        description: `${product.name} đã hết hàng trong kho.`,
+        duration: 4,
+      });
+      return;
+    }
+
+    // Set default quantity to 1 (in source warehouse unit)
+    const originalQuantity = 1;
+    const unit_price = product.retail_price;
+
+    // Calculate converted quantity
+    const conversionInfo = calculateConvertedQuantity(
+      product,
+      originalQuantity,
+    );
+
+    // Check if product has lot management enabled
+    if (product.enable_lot_management) {
+      // Save temp values and open lot selection modal
+      setTempUnitPrice(unit_price);
+      setTempNotes(undefined);
+      setSelectedProductForLot(product);
+      setIsLotSelectionModalOpen(true);
+      return;
+    }
+
+    // If no lot management, add directly
+    addItemToList(
+      product,
+      null,
+      conversionInfo.quantity,
+      unit_price,
+      undefined,
+      conversionInfo,
+    );
+
+    const quantityDisplay = conversionInfo.needsConversion
+      ? `${conversionInfo.originalQuantity} ${conversionInfo.originalUnit} = ${conversionInfo.quantity} ${conversionInfo.convertedUnit}`
+      : `${conversionInfo.quantity}`;
+
+    notification.success({
+      message: "Đã thêm sản phẩm",
+      description: `${product.name} (${quantityDisplay})`,
+      duration: 3,
+    });
+  };
+
+  // Handle lot selection from modal
+  const handleLotSelect = (lot: IProductLot, quantity: number) => {
+    if (!selectedProductForLot) return;
+
+    // Check if lot has sufficient quantity
+    if (lot.quantity < quantity) {
+      notification.error({
+        message: "Số lượng không đủ",
+        description: `Lô ${lot.lot_number} chỉ còn ${lot.quantity} sản phẩm`,
+      });
+      return;
+    }
+
+    // Add item with selected lot
+    addItemToList(
+      selectedProductForLot,
+      lot,
+      quantity,
+      tempUnitPrice,
+      tempNotes,
+    );
+
+    notification.success({
+      message: "Đã thêm sản phẩm",
+      description: `${selectedProductForLot.name} - Lô: ${lot.lot_number} (${quantity})`,
+      duration: 2,
+    });
+
+    // Close modal and reset
+    setIsLotSelectionModalOpen(false);
+    setSelectedProductForLot(null);
+    resetItemForm();
+  };
+
+  // Add item to list (common logic)
+  const addItemToList = (
+    product: IProduct,
+    lot: IProductLot | null,
+    quantity: number,
+    unit_price?: number,
+    notes?: string,
+    conversionInfo?: {
+      originalQuantity: number;
+      originalUnit: string;
+      convertedUnit: string;
+      conversionRate: number;
+      needsConversion: boolean;
+    },
+  ) => {
     const newItem: TransferItem = {
       key: itemCounter,
-      product_id,
-      product_name: product?.name,
-      product_sku: product?.sku,
-      lot_id: lot_id || null,
+      product_id: product.id,
+      product_name: product.name,
+      product_sku: product.sku,
+      lot_id: lot?.id || null,
       lot_number: lot?.lot_number,
       expiry_date: lot?.expiry_date,
-      quantity_requested,
-      unit_price,
+      quantity_requested: quantity,
+      unit_price: unit_price || product.retail_price,
       notes,
+      // Conversion info
+      original_quantity: conversionInfo?.originalQuantity,
+      original_unit: conversionInfo?.originalUnit,
+      converted_unit: conversionInfo?.convertedUnit,
+      conversion_rate: conversionInfo?.conversionRate,
     };
 
     setItems([...items, newItem]);
     setItemCounter(itemCounter + 1);
 
-    // Reset item form fields
+    // Reset if not from lot modal
+    if (!lot) {
+      resetItemForm();
+    }
+  };
+
+  // Reset item form fields
+  const resetItemForm = () => {
     form.setFieldsValue({
       item_product_id: undefined,
-      item_lot_id: undefined,
       item_quantity: undefined,
       item_unit_price: undefined,
       item_notes: undefined,
     });
-    setSelectedProduct(null);
-    setLots([]);
+    setTempUnitPrice(undefined);
+    setTempNotes(undefined);
   };
 
+  // Handle item quantity update in the table
+  const handleUpdateItemQuantity = (key: number, newQuantity: number) => {
+    setItems((prevItems) =>
+      prevItems.map((item) =>
+        item.key === key
+          ? { ...item, quantity_requested: newQuantity || 1 }
+          : item,
+      ),
+    );
+  };
   // Handle delete item
   const handleDeleteItem = (key: number) => {
     setItems(items.filter((item) => item.key !== key));
@@ -227,12 +476,16 @@ const CreateWarehouseTransferPage: React.FC = () => {
     }
   };
 
-  // Handle from warehouse change - reload lots if product is selected
-  const handleFromWarehouseChange = () => {
-    if (selectedProduct) {
-      loadLotsForProduct(selectedProduct);
-    }
-  };
+  // Filter items based on search term
+  const filteredItems = items.filter((item) => {
+    if (!debouncedListFilter) return true;
+    const searchLower = debouncedListFilter.toLowerCase();
+    return (
+      item.product_name?.toLowerCase().includes(searchLower) ||
+      item.product_sku?.toLowerCase().includes(searchLower) ||
+      item.lot_number?.toLowerCase().includes(searchLower)
+    );
+  });
 
   // Table columns
   const columns: ColumnsType<TransferItem> = [
@@ -253,7 +506,7 @@ const CreateWarehouseTransferPage: React.FC = () => {
       dataIndex: "lot_number",
       key: "lot_number",
       width: 120,
-      render: (value) => value || "-",
+      render: (value) => value || <Text type="secondary">Không có lô</Text>,
     },
     {
       title: "Hạn sử dụng",
@@ -268,7 +521,15 @@ const CreateWarehouseTransferPage: React.FC = () => {
       key: "quantity_requested",
       width: 100,
       align: "right",
-      render: (value: number) => value?.toFixed(0),
+      render: (value: number, record: TransferItem) => (
+        <InputNumber
+          min={1}
+          value={value}
+          onChange={(newValue) =>
+            handleUpdateItemQuantity(record.key, newValue || 1)
+          }
+        />
+      ),
     },
     {
       title: "Đơn giá",
@@ -326,15 +587,12 @@ const CreateWarehouseTransferPage: React.FC = () => {
     <PageLayout
       title="Tạo phiếu chuyển kho"
       breadcrumbs={[
-        { title: "Kho hàng", path: "/warehouse" },
-        { title: "Chuyển kho", path: "/warehouse/transfers" },
+        { title: "Kho hàng", href: "/warehouse" },
+        { title: "Chuyển kho", href: "/warehouse/transfers" },
         { title: "Tạo mới" },
       ]}
       extra={
         <Space>
-          <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)}>
-            Hủy
-          </Button>
           <Button
             type="primary"
             icon={<SaveOutlined />}
@@ -346,239 +604,227 @@ const CreateWarehouseTransferPage: React.FC = () => {
         </Space>
       }
     >
-      <Space direction="vertical" size="large" style={{ width: "100%" }}>
-        {/* Transfer Information */}
-        <Card title="Thông tin chuyển kho">
-          <Form form={form} layout="vertical">
-            <Row gutter={16}>
-              <Col xs={24} sm={12}>
-                <Form.Item
-                  name="from_warehouse_id"
-                  label="Từ kho"
-                  rules={[
-                    { required: true, message: "Vui lòng chọn kho xuất" },
-                  ]}
-                >
-                  <Select
-                    placeholder="Chọn kho xuất"
-                    onChange={handleFromWarehouseChange}
-                  >
-                    {warehouses.map((warehouse) => (
-                      <Select.Option key={warehouse.id} value={warehouse.id}>
-                        {warehouse.name}
-                      </Select.Option>
-                    ))}
-                  </Select>
-                </Form.Item>
-              </Col>
-
-              <Col xs={24} sm={12}>
-                <Form.Item
-                  name="to_warehouse_id"
-                  label="Đến kho"
-                  rules={[
-                    { required: true, message: "Vui lòng chọn kho nhận" },
-                    {
-                      validator: (_, value) => {
-                        const fromWarehouseId =
-                          form.getFieldValue("from_warehouse_id");
-                        if (value && value === fromWarehouseId) {
-                          return Promise.reject("Kho nhận phải khác kho xuất");
-                        }
-                        return Promise.resolve();
-                      },
-                    },
-                  ]}
-                >
-                  <Select placeholder="Chọn kho nhận">
-                    {warehouses.map((warehouse) => (
-                      <Select.Option key={warehouse.id} value={warehouse.id}>
-                        {warehouse.name}
-                      </Select.Option>
-                    ))}
-                  </Select>
-                </Form.Item>
-              </Col>
-
-              <Col xs={24} sm={12}>
-                <Form.Item
-                  name="transfer_date"
-                  label="Ngày chuyển"
-                  initialValue={dayjs()}
-                >
-                  <DatePicker
-                    style={{ width: "100%" }}
-                    format="DD/MM/YYYY"
-                    placeholder="Chọn ngày chuyển"
-                  />
-                </Form.Item>
-              </Col>
-
-              <Col xs={24} sm={12}>
-                <Form.Item
-                  name="expected_delivery_date"
-                  label="Ngày dự kiến giao"
-                >
-                  <DatePicker
-                    style={{ width: "100%" }}
-                    format="DD/MM/YYYY"
-                    placeholder="Chọn ngày dự kiến giao"
-                  />
-                </Form.Item>
-              </Col>
-
-              <Col xs={24}>
-                <Form.Item name="notes" label="Ghi chú">
-                  <TextArea rows={3} placeholder="Nhập ghi chú" />
-                </Form.Item>
-              </Col>
-            </Row>
-          </Form>
-        </Card>
-
-        {/* Add Product */}
-        <Card title="Thêm sản phẩm">
-          <Form form={form} layout="vertical">
-            <Row gutter={16}>
-              <Col xs={24} sm={8}>
-                <Form.Item name="item_product_id" label="Sản phẩm">
-                  <Select
-                    showSearch
-                    placeholder="Chọn sản phẩm"
-                    optionFilterProp="children"
-                    onChange={(value) => {
-                      setSelectedProduct(value);
-                      loadLotsForProduct(value);
-                      // Auto-fill unit price
-                      const product = products.find((p) => p.id === value);
-                      if (product?.retail_price) {
-                        form.setFieldValue(
-                          "item_unit_price",
-                          product.retail_price,
-                        );
-                      }
-                    }}
-                  >
-                    {products.map((product) => (
-                      <Select.Option key={product.id} value={product.id}>
-                        {product.name} ({product.sku})
-                      </Select.Option>
-                    ))}
-                  </Select>
-                </Form.Item>
-              </Col>
-
-              <Col xs={24} sm={6}>
-                <Form.Item name="item_lot_id" label="Số lô (tùy chọn)">
-                  <Select
-                    placeholder="Chọn lô"
-                    allowClear
-                    disabled={!selectedProduct}
-                  >
-                    {lots.map((lot) => (
-                      <Select.Option key={lot.id} value={lot.id}>
-                        {lot.lot_number} - HSD:{" "}
-                        {lot.expiry_date
-                          ? dayjs(lot.expiry_date).format("DD/MM/YYYY")
-                          : "N/A"}
-                      </Select.Option>
-                    ))}
-                  </Select>
-                </Form.Item>
-              </Col>
-
-              <Col xs={24} sm={4}>
-                <Form.Item name="item_quantity" label="Số lượng">
-                  <InputNumber
-                    min={1}
-                    style={{ width: "100%" }}
-                    placeholder="SL"
-                  />
-                </Form.Item>
-              </Col>
-
-              <Col xs={24} sm={4}>
-                <Form.Item name="item_unit_price" label="Đơn giá">
-                  <InputNumber
-                    min={0}
-                    style={{ width: "100%" }}
-                    placeholder="Đơn giá"
-                    formatter={(value) =>
-                      `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
-                    }
-                  />
-                </Form.Item>
-              </Col>
-
-              <Col xs={24} sm={2}>
-                <Form.Item label=" ">
-                  <Button
-                    type="primary"
-                    icon={<PlusOutlined />}
-                    onClick={handleAddItem}
-                    block
-                  >
-                    Thêm
-                  </Button>
-                </Form.Item>
-              </Col>
-            </Row>
-
-            <Row>
-              <Col xs={24}>
-                <Form.Item name="item_notes" label="Ghi chú cho sản phẩm">
-                  <Input placeholder="Ghi chú" />
-                </Form.Item>
-              </Col>
-            </Row>
-          </Form>
-        </Card>
-
-        {/* Items List */}
-        <Card title={`Danh sách sản phẩm (${items.length})`}>
-          <Table
-            columns={columns}
-            dataSource={items}
-            rowKey="key"
-            scroll={{ x: 1200 }}
-            pagination={false}
-            summary={(data) => {
-              const totalQuantity = data.reduce(
-                (sum, item) => sum + item.quantity_requested,
-                0,
-              );
-              const totalValue = data.reduce(
-                (sum, item) =>
-                  sum + item.quantity_requested * (item.unit_price || 0),
-                0,
-              );
-
-              return (
-                <Table.Summary fixed>
-                  <Table.Summary.Row>
-                    <Table.Summary.Cell index={0} colSpan={4}>
-                      <strong>Tổng cộng</strong>
-                    </Table.Summary.Cell>
-                    <Table.Summary.Cell index={1} align="right">
-                      <strong>{totalQuantity.toFixed(0)}</strong>
-                    </Table.Summary.Cell>
-                    <Table.Summary.Cell index={2} />
-                    <Table.Summary.Cell index={3} align="right">
-                      <strong>
-                        {new Intl.NumberFormat("vi-VN", {
-                          style: "currency",
-                          currency: "VND",
-                        }).format(totalValue)}
-                      </strong>
-                    </Table.Summary.Cell>
-                    <Table.Summary.Cell index={4} colSpan={2} />
-                  </Table.Summary.Row>
-                </Table.Summary>
-              );
+      <Row
+        gutter={24}
+        style={{
+          height: "calc(100vh - 150px)",
+          paddingTop: "16px",
+          width: "100%",
+        }}
+      >
+        <Col
+          xs={24}
+          sm={16}
+          md={18}
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            height: "100%",
+          }}
+        >
+          <Card
+            title={`Danh sách sản phẩm (${items.length})`}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              height: "100%",
+              overflow: "hidden",
             }}
-          />
-        </Card>
-      </Space>
+            styles={{
+              body: {
+                flex: 1,
+                overflow: "auto",
+                display: "flex",
+                flexDirection: "column",
+              },
+            }}
+          >
+            {/* Product Search */}
+            <ProductSearchInput
+              ref={productSearchRef}
+              size="large"
+              onChange={handleProductSelect}
+              employeeWarehouse={fromWarehouse}
+              placeholder="Tìm kiếm sản phẩm theo tên, SKU, barcode... (hoặc bắt đầu gõ)"
+            />
+            <div style={{ flex: 1, overflow: "auto", marginTop: 16 }}>
+              <Table
+                columns={columns}
+                dataSource={filteredItems}
+                rowKey="key"
+                scroll={{ x: 1200 }}
+                pagination={false}
+                size="small"
+                summary={(data) => {
+                  const totalQuantity = data.reduce(
+                    (sum, item) => sum + item.quantity_requested,
+                    0,
+                  );
+                  const totalValue = data.reduce(
+                    (sum, item) =>
+                      sum + item.quantity_requested * (item.unit_price || 0),
+                    0,
+                  );
+
+                  return (
+                    <Table.Summary fixed>
+                      <Table.Summary.Row>
+                        <Table.Summary.Cell index={0} colSpan={4}>
+                          <strong>Tổng cộng</strong>
+                        </Table.Summary.Cell>
+                        <Table.Summary.Cell index={1} align="right">
+                          <strong>{totalQuantity.toFixed(0)}</strong>
+                        </Table.Summary.Cell>
+                        <Table.Summary.Cell index={2} />
+                        <Table.Summary.Cell index={3} align="right">
+                          <strong>
+                            {new Intl.NumberFormat("vi-VN", {
+                              style: "currency",
+                              currency: "VND",
+                            }).format(totalValue)}
+                          </strong>
+                        </Table.Summary.Cell>
+                        <Table.Summary.Cell index={4} colSpan={2} />
+                      </Table.Summary.Row>
+                    </Table.Summary>
+                  );
+                }}
+              />
+            </div>
+          </Card>
+        </Col>
+
+        <Col
+          xs={24}
+          sm={8}
+          md={6}
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            height: "100%",
+          }}
+        >
+          <Card
+            title="Thông tin chuyển kho"
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              height: "100%",
+              overflow: "hidden",
+            }}
+            styles={{
+              body: {
+                flex: 1,
+                overflow: "auto",
+                display: "flex",
+                flexDirection: "column",
+              },
+            }}
+          >
+            <Form form={form} layout="vertical">
+              <Row gutter={[16, 16]}>
+                <Col xs={24} sm={12}>
+                  <Form.Item
+                    name="from_warehouse_id"
+                    label="Từ kho"
+                    rules={[
+                      { required: true, message: "Vui lòng chọn kho xuất" },
+                    ]}
+                  >
+                    <Select
+                      placeholder="Chọn kho xuất"
+                      onChange={(warehouseId) => {
+                        // Update fromWarehouse for ProductSearchInput
+                        const warehouse = warehouses.find(
+                          (w) => w.id === warehouseId,
+                        );
+                        setFromWarehouse(warehouse || null);
+                      }}
+                    >
+                      {warehouses.map((warehouse) => (
+                        <Select.Option key={warehouse.id} value={warehouse.id}>
+                          {warehouse.name}
+                        </Select.Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+                </Col>
+                <Col xs={24} sm={12}>
+                  <Form.Item
+                    name="to_warehouse_id"
+                    label="Đến kho"
+                    rules={[
+                      { required: true, message: "Vui lòng chọn kho nhận" },
+                      {
+                        validator: (_, value) => {
+                          const fromWarehouseId =
+                            form.getFieldValue("from_warehouse_id");
+                          if (value && value === fromWarehouseId) {
+                            return Promise.reject(
+                              "Kho nhận phải khác kho xuất",
+                            );
+                          }
+                          return Promise.resolve();
+                        },
+                      },
+                    ]}
+                  >
+                    <Select placeholder="Chọn kho nhận">
+                      {warehouses.map((warehouse) => (
+                        <Select.Option key={warehouse.id} value={warehouse.id}>
+                          {warehouse.name}
+                        </Select.Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+                </Col>
+                <Col xs={24} sm={12}>
+                  <Form.Item
+                    name="transfer_date"
+                    label="Ngày chuyển"
+                    initialValue={dayjs()}
+                  >
+                    <DatePicker
+                      style={{ width: "100%" }}
+                      format="DD/MM/YYYY"
+                      placeholder="Chọn ngày chuyển"
+                    />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} sm={12}>
+                  <Form.Item
+                    name="expected_delivery_date"
+                    label="Ngày dự kiến giao"
+                  >
+                    <DatePicker
+                      style={{ width: "100%" }}
+                      format="DD/MM/YYYY"
+                      placeholder="Chọn ngày dự kiến giao"
+                    />
+                  </Form.Item>
+                </Col>
+                <Col xs={24}>
+                  <Form.Item name="notes" label="Ghi chú">
+                    <TextArea rows={4} placeholder="Nhập ghi chú" />
+                  </Form.Item>
+                </Col>
+              </Row>
+            </Form>
+          </Card>
+        </Col>
+      </Row>
+
+      {/* Lot Selection Modal */}
+      <LotSelectionModal
+        open={isLotSelectionModalOpen}
+        onClose={() => {
+          setIsLotSelectionModalOpen(false);
+          setSelectedProductForLot(null);
+        }}
+        onSelect={handleLotSelect}
+        product={selectedProductForLot}
+        warehouseId={form.getFieldValue("from_warehouse_id") || null}
+      />
     </PageLayout>
   );
 };

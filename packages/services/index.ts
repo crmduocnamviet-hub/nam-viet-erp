@@ -49,3 +49,7 @@ export * from "./src/supabase/seedDoctors";
 //AI
 
 export * from "./src/gemini-ai";
+
+// TABLE
+
+export * from "./src/supabase/constants";

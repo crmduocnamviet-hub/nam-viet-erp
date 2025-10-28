@@ -104,8 +104,8 @@ const WarehouseTransferDetailPage: React.FC = () => {
   // Load lots for selected product
   const loadLotsForProduct = async (productId: number) => {
     try {
-      const { data, error } = await getProductLotByProductIds([productId]);
-      if (!error && data) {
+      const data = await getProductLotByProductIds([productId]);
+      if (!!data) {
         setLots(data);
       }
     } catch (error) {
@@ -293,7 +293,8 @@ const WarehouseTransferDetailPage: React.FC = () => {
 
     const initialValues = transfer.warehouse_transfer_items?.reduce(
       (acc: any, item) => {
-        acc[`quantity_received_${item.id}`] = item.quantity_sent;
+        acc[`quantity_received_${item.id}`] =
+          item.quantity_sent * (item.products?.conversion_rate || 1);
         return acc;
       },
       {},
@@ -441,7 +442,9 @@ const WarehouseTransferDetailPage: React.FC = () => {
       key: "quantity_sent",
       width: 100,
       align: "right",
-      render: (value: number) => value?.toFixed(0),
+      render: (value: number, record) => {
+        return `${value?.toFixed(0)} (${record?.products?.wholesale_unit ?? "Hộp"})`;
+      },
     },
     {
       title: "SL nhận",
@@ -449,7 +452,9 @@ const WarehouseTransferDetailPage: React.FC = () => {
       key: "quantity_received",
       width: 100,
       align: "right",
-      render: (value: number) => value?.toFixed(0),
+      render: (value: number, record) => {
+        return `${value?.toFixed(0)} (${record?.products?.retail_unit ?? "Vỉ"})`;
+      },
     },
     {
       title: "Đơn giá",
@@ -501,23 +506,23 @@ const WarehouseTransferDetailPage: React.FC = () => {
   }
 
   if (!transfer) {
-    return <PageLayout title="Đang tải..." loading />;
+    return (
+      <PageLayout title="Đang tải...">
+        <></>
+      </PageLayout>
+    );
   }
 
   return (
     <PageLayout
       title={`Phiếu chuyển kho ${transfer.transfer_number}`}
       breadcrumbs={[
-        { title: "Kho hàng", path: "/warehouse" },
-        { title: "Chuyển kho", path: "/warehouse/transfers" },
+        { title: "Kho hàng", href: "/warehouse" },
+        { title: "Chuyển kho", href: "/warehouse/transfers" },
         { title: transfer.transfer_number },
       ]}
       extra={
         <Space>
-          <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)}>
-            Quay lại
-          </Button>
-
           {transfer.status === "draft" && (
             <>
               <Button
@@ -848,7 +853,9 @@ const WarehouseTransferDetailPage: React.FC = () => {
                       { required: true, message: "Nhập số lượng" },
                       {
                         type: "number",
-                        max: item.quantity_sent,
+                        max:
+                          item.quantity_sent *
+                          (item.products?.conversion_rate || 1),
                         message: `Không vượt quá ${item.quantity_sent}`,
                       },
                     ]}

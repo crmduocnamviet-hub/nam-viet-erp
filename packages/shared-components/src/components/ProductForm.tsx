@@ -328,6 +328,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
           image_url_manual: "",
           wholesale_unit: initialData.wholesale_unit || "",
           retail_unit: initialData.retail_unit || "",
+          conversion_rate: initialData.conversion_rate || null,
           wholesale_price: initialData.wholesale_price || 0,
           retail_price: initialData.retail_price || 0,
           cost_price: initialData.cost_price || 0,
@@ -639,6 +640,20 @@ const ProductForm: React.FC<ProductFormProps> = ({
           <Col xs={24} sm={12} lg={8}>
             <Form.Item name="retail_unit" label="Đơn vị Bán lẻ">
               <Input placeholder="ví dụ: Hộp" size="large" />
+            </Form.Item>
+          </Col>
+          <Col xs={24} sm={12} lg={8}>
+            <Form.Item
+              name="conversion_rate"
+              label="Đơn vị quy đổi"
+              tooltip="Số lượng đơn vị bán lẻ trong 1 đơn vị bán buôn (VD: 1 Thùng = 20 Hộp thì nhập 20)"
+            >
+              <InputNumber
+                style={{ width: "100%" }}
+                min={1}
+                placeholder="ví dụ: 20"
+                size="large"
+              />
             </Form.Item>
           </Col>
 

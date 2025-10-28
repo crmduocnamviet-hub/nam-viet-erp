@@ -96,7 +96,7 @@ CREATE TABLE IF NOT EXISTS vat_invoices_out (
     vat_percent NUMERIC(5,2) DEFAULT 0,
 
     -- Reference to source transaction
-    b2b_quote_id BIGINT REFERENCES b2b_quotes(id) ON DELETE SET NULL,
+    b2b_quote_id UUID REFERENCES b2b_quotes(quote_id) ON DELETE SET NULL,
     sale_order_id BIGINT REFERENCES sales_orders(order_id) ON DELETE SET NULL,
 
     -- Status
