@@ -25,6 +25,8 @@ type CartItem = BaseCartItem & {
   prescription_id?: string;
   total?: number;
   price?: number;
+  manufacturer?: string; // Product manufacturer for promo code conditions
+  category?: string; // Product category for promo code conditions
 
   // Combo-related fields
   isCombo?: boolean; // True if this is a combo item (not a regular product)
@@ -54,6 +56,8 @@ type CartDetails = {
   itemTotal: number;
   originalTotal: number;
   totalDiscount: number;
+  promoDiscount?: number; // Promo code discount
+  finalTotal?: number; // Final total after promo discount
 };
 
 type PriceInfo = {

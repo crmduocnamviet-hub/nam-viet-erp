@@ -24,6 +24,7 @@ interface PaymentModalProps {
   cartTotal: number;
   cartItems?: CartItem[];
   customerInfo?: any;
+  promoDiscount?: number; // Promo code discount
   onCancel: () => void;
   onFinish: (values: PaymentValues, tabIndex?: number) => void;
   okButtonProps?: ButtonProps;
@@ -38,6 +39,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
   cartTotal,
   cartItems = [],
   customerInfo,
+  promoDiscount = 0,
   onCancel,
   onFinish,
   okButtonProps,
@@ -72,8 +74,8 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
       paymentMethod === "cash"
         ? "Tiền mặt"
         : paymentMethod === "card"
-        ? "Thẻ"
-        : "Mã QR";
+          ? "Thẻ"
+          : "Mã QR";
 
     const baseTitle = `Thanh toán ${paymentTypeText}`;
 
@@ -174,7 +176,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                   ? `<div style="font-size: 12px; color: #666; margin-left: 10px;">📝 ${item.prescriptionNote}</div>`
                   : ""
               }
-            `
+            `,
               )
               .join("")}
           </div>
@@ -250,8 +252,8 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                 {paymentMethod === "cash"
                   ? "Tiền mặt"
                   : paymentMethod === "card"
-                  ? "Thẻ"
-                  : "Chuyển khoản"}
+                    ? "Thẻ"
+                    : "Chuyển khoản"}
               </Descriptions.Item>
             </Descriptions>
 

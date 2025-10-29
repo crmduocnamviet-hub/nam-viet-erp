@@ -67,6 +67,7 @@ const menuItems: MenuProps["items"] = [
     children: [
       { label: "Quản lý Đơn hàng B2B", key: "/b2b-orders" },
       { label: "Xem Nhanh Báo Giá", key: "/quick-quote" },
+      { label: "Tạo Báo Giá / Đơn Hàng", key: "/create-quote" },
     ],
   },
   // --- MENU MARKETING ĐƯỢC NÂNG CẤP ---
@@ -405,6 +406,10 @@ const AppLayout: React.FC = () => {
                 <Route
                   path="/quick-quote"
                   element={<Screen screenKey="b2b.quick-quote" />}
+                />
+                <Route
+                  path="/create-quote"
+                  element={<Screen screenKey="b2b.create-quote" />}
                 />
                 <Route
                   path="/promotions"

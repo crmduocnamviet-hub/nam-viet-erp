@@ -92,11 +92,22 @@ interface PosTabContentProps {
     itemTotal: number;
     originalTotal: number;
     totalDiscount: number;
+    promoDiscount?: number;
+    finalTotal?: number;
   };
   handleRemoveFromCart: (itemKey: string) => void;
   handleUpdateQuantity: (itemKey: string, quantity: number) => void;
   handleOpenPaymentModal: (method: "cash" | "card") => void;
   isProcessingPayment: boolean;
+
+  // Promo code
+  promoCode?: string;
+  setPromoCode?: (code: string) => void;
+  appliedPromoCode?: string | null;
+  promoDiscount?: number;
+  promoCodeError?: string;
+  handleApplyPromoCode?: () => void;
+  handleRemovePromoCode?: () => void;
 
   // Combos
   detectedCombos?: IComboWithItems[];
@@ -139,6 +150,13 @@ const PosTabContent: React.FC<PosTabContentProps> = ({
   isMobile,
   isCartModalOpen,
   setIsCartModalOpen,
+  promoCode,
+  setPromoCode,
+  appliedPromoCode,
+  promoDiscount,
+  promoCodeError,
+  handleApplyPromoCode,
+  handleRemovePromoCode,
 }) => {
   const navigate = useNavigate();
   const inventory = useInventory();
@@ -801,6 +819,66 @@ const PosTabContent: React.FC<PosTabContentProps> = ({
 
             {/* Total & Payment Buttons */}
             <Space direction="vertical" size={12} style={{ width: "100%" }}>
+              {/* Promo Code */}
+              {promoCode !== undefined && (
+                <Space
+                  direction="vertical"
+                  size="small"
+                  style={{ width: "100%" }}
+                >
+                  {!appliedPromoCode ? (
+                    <Space.Compact style={{ width: "100%" }}>
+                      <Input
+                        placeholder="Nhập mã khuyến mãi"
+                        value={promoCode}
+                        onChange={(e) => {
+                          setPromoCode?.(e.target.value);
+                        }}
+                        onPressEnter={handleApplyPromoCode}
+                        status={promoCodeError ? "error" : ""}
+                      />
+                      <Button type="primary" onClick={handleApplyPromoCode}>
+                        Áp dụng
+                      </Button>
+                    </Space.Compact>
+                  ) : (
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        background: "#e6f7ff",
+                        padding: "8px 12px",
+                        borderRadius: 4,
+                      }}
+                    >
+                      <Text>
+                        Mã:{" "}
+                        <Text strong style={{ color: "#52c41a" }}>
+                          {appliedPromoCode}
+                        </Text>
+                        <Text style={{ color: "#ff4d4f", marginLeft: 8 }}>
+                          -{promoDiscount?.toLocaleString() || 0}đ
+                        </Text>
+                      </Text>
+                      <Button
+                        size="small"
+                        type="text"
+                        onClick={handleRemovePromoCode}
+                        danger
+                      >
+                        Xóa
+                      </Button>
+                    </div>
+                  )}
+                  {promoCodeError && (
+                    <Text type="danger" style={{ fontSize: 12 }}>
+                      {promoCodeError}
+                    </Text>
+                  )}
+                </Space>
+              )}
+
               {/* Total */}
               <div style={{ textAlign: "center" }}>
                 {cartDetails.totalDiscount > 0 && (
@@ -815,8 +893,23 @@ const PosTabContent: React.FC<PosTabContentProps> = ({
                     <br />
                   </>
                 )}
+                {cartDetails.promoDiscount && cartDetails.promoDiscount > 0 && (
+                  <>
+                    <Text delete style={{ color: "#999", fontSize: 14 }}>
+                      {cartDetails.itemTotal.toLocaleString()}đ
+                    </Text>
+                    <br />
+                    <Text type="success" style={{ fontSize: 13 }}>
+                      Giảm mã KM: -{cartDetails.promoDiscount.toLocaleString()}đ
+                    </Text>
+                    <br />
+                  </>
+                )}
                 <Title level={3} style={{ margin: "4px 0", color: "#1890ff" }}>
-                  {cartDetails.itemTotal.toLocaleString()}đ
+                  {(
+                    cartDetails.finalTotal ?? cartDetails.itemTotal
+                  ).toLocaleString()}
+                  đ
                 </Title>
               </div>
 
@@ -1088,6 +1181,66 @@ const PosTabContent: React.FC<PosTabContentProps> = ({
 
             {/* Payment Section */}
             <Space direction="vertical" size={12} style={{ width: "100%" }}>
+              {/* Promo Code */}
+              {promoCode !== undefined && (
+                <Space
+                  direction="vertical"
+                  size="small"
+                  style={{ width: "100%" }}
+                >
+                  {!appliedPromoCode ? (
+                    <Space.Compact style={{ width: "100%" }}>
+                      <Input
+                        placeholder="Nhập mã khuyến mãi"
+                        value={promoCode}
+                        onChange={(e) => {
+                          setPromoCode?.(e.target.value);
+                        }}
+                        onPressEnter={handleApplyPromoCode}
+                        status={promoCodeError ? "error" : ""}
+                      />
+                      <Button type="primary" onClick={handleApplyPromoCode}>
+                        Áp dụng
+                      </Button>
+                    </Space.Compact>
+                  ) : (
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        background: "#e6f7ff",
+                        padding: "8px 12px",
+                        borderRadius: 4,
+                      }}
+                    >
+                      <Text>
+                        Mã:{" "}
+                        <Text strong style={{ color: "#52c41a" }}>
+                          {appliedPromoCode}
+                        </Text>
+                        <Text style={{ color: "#ff4d4f", marginLeft: 8 }}>
+                          -{promoDiscount?.toLocaleString() || 0}đ
+                        </Text>
+                      </Text>
+                      <Button
+                        size="small"
+                        type="text"
+                        onClick={handleRemovePromoCode}
+                        danger
+                      >
+                        Xóa
+                      </Button>
+                    </div>
+                  )}
+                  {promoCodeError && (
+                    <Text type="danger" style={{ fontSize: 12 }}>
+                      {promoCodeError}
+                    </Text>
+                  )}
+                </Space>
+              )}
+
               {/* Total */}
               <div style={{ textAlign: "center" }}>
                 {cartDetails.totalDiscount > 0 && (
@@ -1102,8 +1255,23 @@ const PosTabContent: React.FC<PosTabContentProps> = ({
                     <br />
                   </>
                 )}
+                {cartDetails.promoDiscount && cartDetails.promoDiscount > 0 && (
+                  <>
+                    <Text delete style={{ color: "#999", fontSize: 14 }}>
+                      {cartDetails.itemTotal.toLocaleString()}đ
+                    </Text>
+                    <br />
+                    <Text type="success" style={{ fontSize: 13 }}>
+                      Giảm mã KM: -{cartDetails.promoDiscount.toLocaleString()}đ
+                    </Text>
+                    <br />
+                  </>
+                )}
                 <Title level={3} style={{ margin: "4px 0", color: "#1890ff" }}>
-                  {cartDetails.itemTotal.toLocaleString()}đ
+                  {(
+                    cartDetails.finalTotal ?? cartDetails.itemTotal
+                  ).toLocaleString()}
+                  đ
                 </Title>
               </div>
 
