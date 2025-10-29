@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import {
   Card,
   Button,
@@ -17,77 +17,61 @@ import {
   Col,
   Statistic,
   Popconfirm,
-  Divider,
 } from "antd";
 import {
-  ArrowLeftOutlined,
-  EditOutlined,
   CheckCircleOutlined,
   SendOutlined,
   CloseCircleOutlined,
   PlusOutlined,
   DeleteOutlined,
-  SaveOutlined,
+  HomeOutlined,
+  ShoppingOutlined,
 } from "@ant-design/icons";
 import PageLayout from "../../components/PageLayout";
 import {
-  getWarehouseTransferById,
-  submitWarehouseTransfer,
-  approveWarehouseTransfer,
-  cancelWarehouseTransfer,
-  sendWarehouseTransfer,
-  receiveWarehouseTransfer,
-  updateWarehouseTransferItem,
-  deleteWarehouseTransferItem,
-  addWarehouseTransferItem,
-  updateWarehouseTransfer,
   getProductWithInventory,
   getProductLotByProductIds,
+  IProduct,
+  IProductLot,
 } from "@nam-viet-erp/services";
 import dayjs from "dayjs";
 import type { ColumnsType } from "antd/es/table";
+import {
+  useAddWarehouseTransferItem,
+  useApproveWarehouseTransfer,
+  useCancelWarehouseTransfer,
+  useDeleteWarehouseTransferItem,
+  useReceiveWarehouseTransfer,
+  useSendWarehouseTransfer,
+  useSubmitWarehouseTransfer,
+  useTransferProductData,
+  useWarehouses,
+} from "@nam-viet-erp/store";
+import ProductSearchInput from "../../components/ProductSearchInput";
+import LotSelectionModal from "../../components/LotSelectionModal";
 
 const { TextArea } = Input;
 
 const WarehouseTransferDetailPage: React.FC = () => {
-  const navigate = useNavigate();
-  const { id } = useParams<{ id: string }>();
-  const [loading, setLoading] = useState(false);
-  const [transfer, setTransfer] =
-    useState<IWarehouseTransferWithDetails | null>(null);
-  const [editMode, setEditMode] = useState(false);
+  const { id } = useParams<{ id: string }>() as { id: string };
+  const {
+    data: transfer,
+    isLoading: loading,
+    refetch: fetchTransfer,
+  } = useTransferProductData(parseInt(id));
   const [addProductModal, setAddProductModal] = useState(false);
   const [sendModal, setSendModal] = useState(false);
-  const [receiveModal, setReceiveModal] = useState(false);
   const [products, setProducts] = useState<IProduct[]>([]);
   const [lots, setLots] = useState<IProductLot[]>([]);
   const [form] = Form.useForm();
   const [sendForm] = Form.useForm();
+  const [receiveModal, setReceiveModal] = useState(false);
   const [receiveForm] = Form.useForm();
 
-  // Fetch transfer details
-  const fetchTransfer = async () => {
-    if (!id) return;
-
-    setLoading(true);
-    try {
-      const { data, error } = await getWarehouseTransferById(parseInt(id));
-
-      if (error) {
-        throw error;
-      }
-
-      setTransfer(data);
-    } catch (error: any) {
-      notification.error({
-        message: "Lỗi",
-        description:
-          error.message || "Không thể tải thông tin phiếu chuyển kho",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+  // States for new product adding flow
+  const [isLotSelectionModalOpen, setIsLotSelectionModalOpen] = useState(false);
+  const [selectedProductForLot, setSelectedProductForLot] =
+    useState<IProduct | null>(null);
 
   // Load products for adding items
   const loadProducts = async () => {
@@ -114,7 +98,6 @@ const WarehouseTransferDetailPage: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchTransfer();
     loadProducts();
   }, [id]);
 
@@ -144,37 +127,64 @@ const WarehouseTransferDetailPage: React.FC = () => {
     return labels[status];
   };
 
+  // --- Mutation Hooks ---
+  const { submit: submitTransfer, isLoading: isSubmitting } =
+    useSubmitWarehouseTransfer(transfer?.id, {
+      onSuccess: () => {
+        notification.success({
+          message: "Thành công",
+          description: "Đã gửi phiếu chuyển kho để duyệt",
+        });
+        fetchTransfer();
+      },
+      onError: (error: any) => {
+        notification.error({
+          message: "Lỗi",
+          description: error.message || "Không thể gửi phiếu chuyển kho",
+        });
+      },
+    });
+
+  const { submit: approveTransfer, isLoading: isApproving } =
+    useApproveWarehouseTransfer(transfer?.id, {
+      onSuccess: () => {
+        notification.success({
+          message: "Thành công",
+          description: "Đã duyệt phiếu chuyển kho",
+        });
+        fetchTransfer();
+      },
+      onError: (error: any) => {
+        notification.error({
+          message: "Lỗi",
+          description: error.message || "Không thể duyệt phiếu chuyển kho",
+        });
+      },
+    });
+
+  const { submit: cancelTransfer, isLoading: isCancelling } =
+    useCancelWarehouseTransfer(transfer?.id, {
+      onSuccess: () => {
+        notification.success({
+          message: "Thành công",
+          description: "Đã hủy phiếu chuyển kho",
+        });
+        fetchTransfer();
+      },
+      onError: (error: any) => {
+        notification.error({
+          message: "Lỗi",
+          description: error.message || "Không thể hủy phiếu chuyển kho",
+        });
+      },
+    });
+
   // Handle submit for approval
   const handleSubmit = async () => {
     if (!transfer) return;
 
     try {
-      const { error } = await submitWarehouseTransfer(transfer.id);
-
-      if (error) {
-        throw error;
-      }
-
-      notification.success({
-        message: "Thành công",
-        description: "Đã gửi phiếu chuyển kho để duyệt",
-      });
-
-      fetchTransfer();
-    } catch (error: any) {
-      notification.error({
-        message: "Lỗi",
-        description: error.message || "Không thể gửi phiếu chuyển kho",
-      });
-    }
-  };
-
-  // Handle approve
-  const handleApprove = async () => {
-    if (!transfer) return;
-
-    try {
-      const { error } = await approveWarehouseTransfer(transfer.id);
+      const { error } = await submitTransfer();
 
       if (error) {
         throw error;
@@ -192,6 +202,12 @@ const WarehouseTransferDetailPage: React.FC = () => {
         description: error.message || "Không thể duyệt phiếu chuyển kho",
       });
     }
+  };
+
+  // Handle approve
+  const handleApprove = async () => {
+    if (!transfer) return;
+    await approveTransfer();
   };
 
   // Handle cancel
@@ -215,24 +231,8 @@ const WarehouseTransferDetailPage: React.FC = () => {
             (document.getElementById("rejection-reason") as HTMLTextAreaElement)
               ?.value || "";
 
-          const { error } = await cancelWarehouseTransfer(transfer.id, reason);
-
-          if (error) {
-            throw error;
-          }
-
-          notification.success({
-            message: "Thành công",
-            description: "Đã hủy phiếu chuyển kho",
-          });
-
-          fetchTransfer();
-        } catch (error: any) {
-          notification.error({
-            message: "Lỗi",
-            description: error.message || "Không thể hủy phiếu chuyển kho",
-          });
-        }
+          await cancelTransfer(reason);
+        } catch {}
       },
     });
   };
@@ -253,6 +253,26 @@ const WarehouseTransferDetailPage: React.FC = () => {
     setSendModal(true);
   };
 
+  const { submit: sendItems, isLoading: isSending } = useSendWarehouseTransfer(
+    transfer?.id,
+    {
+      onSuccess: () => {
+        notification.success({
+          message: "Thành công",
+          description: "Đã xuất hàng từ kho",
+        });
+        setSendModal(false);
+        fetchTransfer();
+      },
+      onError: (error: any) => {
+        notification.error({
+          message: "Lỗi",
+          description: error.message || "Không thể xuất hàng",
+        });
+      },
+    },
+  );
+
   const handleSendSubmit = async () => {
     if (!transfer) return;
 
@@ -264,27 +284,8 @@ const WarehouseTransferDetailPage: React.FC = () => {
         quantity_sent: values[`quantity_sent_${item.id}`] || 0,
       }));
 
-      const { error } = await sendWarehouseTransfer(transfer.id, {
-        items: items || [],
-      });
-
-      if (error) {
-        throw error;
-      }
-
-      notification.success({
-        message: "Thành công",
-        description: "Đã xuất hàng từ kho",
-      });
-
-      setSendModal(false);
-      fetchTransfer();
-    } catch (error: any) {
-      notification.error({
-        message: "Lỗi",
-        description: error.message || "Không thể xuất hàng",
-      });
-    }
+      await sendItems({ items: items || [] });
+    } catch (error) {}
   };
 
   // Handle receive
@@ -304,6 +305,24 @@ const WarehouseTransferDetailPage: React.FC = () => {
     setReceiveModal(true);
   };
 
+  const { submit: receiveItems, isLoading: isReceiving } =
+    useReceiveWarehouseTransfer(transfer?.id, {
+      onSuccess: () => {
+        notification.success({
+          message: "Thành công",
+          description: "Đã nhận hàng vào kho",
+        });
+        setReceiveModal(false);
+        fetchTransfer();
+      },
+      onError: (error: any) => {
+        notification.error({
+          message: "Lỗi",
+          description: error.message || "Không thể nhận hàng",
+        });
+      },
+    });
+
   const handleReceiveSubmit = async () => {
     if (!transfer) return;
 
@@ -316,27 +335,8 @@ const WarehouseTransferDetailPage: React.FC = () => {
         damage_notes: values[`damage_notes_${item.id}`] || "",
       }));
 
-      const { error } = await receiveWarehouseTransfer(transfer.id, {
-        items: items || [],
-      });
-
-      if (error) {
-        throw error;
-      }
-
-      notification.success({
-        message: "Thành công",
-        description: "Đã nhận hàng vào kho",
-      });
-
-      setReceiveModal(false);
-      fetchTransfer();
-    } catch (error: any) {
-      notification.error({
-        message: "Lỗi",
-        description: error.message || "Không thể nhận hàng",
-      });
-    }
+      await receiveItems({ items: items || [] });
+    } catch (error) {}
   };
 
   // Handle add product
@@ -345,60 +345,118 @@ const WarehouseTransferDetailPage: React.FC = () => {
     setAddProductModal(true);
   };
 
+  const { submit: addItem, isLoading: isAddingItem } =
+    useAddWarehouseTransferItem(transfer?.id, {
+      onSuccess: () => {
+        notification.success({
+          message: "Thành công",
+          description: "Đã thêm sản phẩm",
+        });
+        setAddProductModal(false);
+        fetchTransfer();
+      },
+      onError: (error: any) => {
+        notification.error({
+          message: "Lỗi",
+          description: error.message || "Không thể thêm sản phẩm",
+        });
+      },
+    });
+
   const handleAddProductSubmit = async () => {
     if (!transfer) return;
 
     try {
       const values = await form.validateFields();
 
-      const { error } = await addWarehouseTransferItem(transfer.id, {
+      await addItem({
         product_id: values.product_id,
         lot_id: values.lot_id,
         quantity_requested: values.quantity_requested,
         unit_price: values.unit_price,
         notes: values.notes,
       });
+    } catch (error) {}
+  };
 
-      if (error) {
-        throw error;
-      }
+  const { submit: deleteItem, isLoading: isDeletingItem } =
+    useDeleteWarehouseTransferItem({
+      onSuccess: () => {
+        notification.success({
+          message: "Thành công",
+          description: "Đã xóa sản phẩm",
+        });
+        fetchTransfer();
+      },
+      onError: (error: any) => {
+        notification.error({
+          message: "Lỗi",
+          description: error.message || "Không thể xóa sản phẩm",
+        });
+      },
+    });
 
-      notification.success({
-        message: "Thành công",
-        description: "Đã thêm sản phẩm",
-      });
+  const handleLotSelect = (lot: IProductLot, quantity: number) => {
+    if (!selectedProductForLot) return;
 
-      setAddProductModal(false);
-      fetchTransfer();
-    } catch (error: any) {
+    // Check if lot has sufficient quantity
+    if ((lot.quantity || 0) < quantity) {
       notification.error({
-        message: "Lỗi",
-        description: error.message || "Không thể thêm sản phẩm",
+        message: "Số lượng không đủ",
+        description: `Lô ${lot.lot_number} chỉ còn ${lot.quantity || 0} sản phẩm.`,
+      });
+      return;
+    }
+
+    // Add item with selected lot
+    addItem({
+      product_id: selectedProductForLot.id,
+      lot_id: lot.id,
+      quantity_requested: quantity,
+      unit_price: selectedProductForLot.retail_price,
+    });
+
+    // Close modal and reset
+    setIsLotSelectionModalOpen(false);
+    setSelectedProductForLot(null);
+  };
+
+  // --- New Product Adding Flow ---
+
+  const handleProductSelect = (product: IProduct | null) => {
+    if (!product || !transfer) return;
+
+    // Check stock in the 'from' warehouse
+    const fromWarehouseId = transfer.from_warehouse_id;
+    const inventoryInWarehouse = product.inventory?.find(
+      (inv) => inv.warehouse_id === fromWarehouseId,
+    );
+    const stockQuantity = inventoryInWarehouse?.quantity || 0;
+
+    if (stockQuantity <= 0) {
+      notification.error({
+        message: "Hết hàng",
+        description: `${product.name} đã hết hàng trong kho xuất.`,
+      });
+      return;
+    }
+
+    if (product.enable_lot_management) {
+      setSelectedProductForLot(product);
+      setIsLotSelectionModalOpen(true);
+    } else {
+      // Add item directly with quantity 1
+      addItem({
+        product_id: product.id,
+        quantity_requested: 1,
+        unit_price: product.retail_price,
       });
     }
   };
 
   // Handle delete item
   const handleDeleteItem = async (itemId: number) => {
-    try {
-      const { error } = await deleteWarehouseTransferItem(itemId);
-
-      if (error) {
-        throw error;
-      }
-
-      notification.success({
-        message: "Thành công",
-        description: "Đã xóa sản phẩm",
-      });
-
-      fetchTransfer();
-    } catch (error: any) {
-      notification.error({
-        message: "Lỗi",
-        description: error.message || "Không thể xóa sản phẩm",
-      });
-    }
+    await deleteItem(itemId);
   };
 
   // Table columns
@@ -443,7 +501,7 @@ const WarehouseTransferDetailPage: React.FC = () => {
       width: 100,
       align: "right",
       render: (value: number, record) => {
-        return `${value?.toFixed(0)} (${record?.products?.wholesale_unit ?? "Hộp"})`;
+        return `${value?.toFixed(0)} (${record?.products?.wholesale_unit ? record?.products?.wholesale_unit : "Hộp"})`;
       },
     },
     {
@@ -453,7 +511,7 @@ const WarehouseTransferDetailPage: React.FC = () => {
       width: 100,
       align: "right",
       render: (value: number, record) => {
-        return `${value?.toFixed(0)} (${record?.products?.retail_unit ?? "Vỉ"})`;
+        return `${value?.toFixed(0)} (${record?.products?.retail_unit ? record?.products?.retail_unit : "Vỉ"})`;
       },
     },
     {
@@ -529,6 +587,7 @@ const WarehouseTransferDetailPage: React.FC = () => {
                 type="primary"
                 icon={<SendOutlined />}
                 onClick={handleSubmit}
+                loading={isSubmitting}
               >
                 Gửi duyệt
               </Button>
@@ -541,6 +600,7 @@ const WarehouseTransferDetailPage: React.FC = () => {
                 type="primary"
                 icon={<CheckCircleOutlined />}
                 onClick={handleApprove}
+                loading={isApproving}
               >
                 Duyệt
               </Button>
@@ -548,6 +608,7 @@ const WarehouseTransferDetailPage: React.FC = () => {
                 danger
                 icon={<CloseCircleOutlined />}
                 onClick={handleCancel}
+                loading={isCancelling}
               >
                 Từ chối
               </Button>
@@ -565,6 +626,7 @@ const WarehouseTransferDetailPage: React.FC = () => {
               type="primary"
               icon={<CheckCircleOutlined />}
               onClick={handleReceive}
+              loading={isReceiving}
             >
               Nhận hàng
             </Button>
@@ -575,6 +637,7 @@ const WarehouseTransferDetailPage: React.FC = () => {
               danger
               icon={<CloseCircleOutlined />}
               onClick={handleCancel}
+              loading={isCancelling}
             >
               Hủy phiếu
             </Button>
@@ -677,13 +740,14 @@ const WarehouseTransferDetailPage: React.FC = () => {
           title="Danh sách sản phẩm"
           extra={
             transfer.status === "draft" && (
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={handleAddProduct}
-              >
-                Thêm sản phẩm
-              </Button>
+              <div style={{ width: 400 }}>
+                <ProductSearchInput
+                  size="middle"
+                  onChange={handleProductSelect}
+                  employeeWarehouse={transfer.from_warehouse}
+                  placeholder="Tìm kiếm để thêm sản phẩm..."
+                />
+              </div>
             )
           }
         >
@@ -697,81 +761,6 @@ const WarehouseTransferDetailPage: React.FC = () => {
           />
         </Card>
       </Space>
-
-      {/* Add Product Modal */}
-      <Modal
-        title="Thêm sản phẩm"
-        open={addProductModal}
-        onOk={handleAddProductSubmit}
-        onCancel={() => setAddProductModal(false)}
-        okText="Thêm"
-        cancelText="Hủy"
-        width={600}
-      >
-        <Form form={form} layout="vertical">
-          <Form.Item
-            name="product_id"
-            label="Sản phẩm"
-            rules={[{ required: true, message: "Vui lòng chọn sản phẩm" }]}
-          >
-            <Select
-              showSearch
-              placeholder="Chọn sản phẩm"
-              optionFilterProp="children"
-              onChange={(value) => loadLotsForProduct(value)}
-            >
-              {products.map((product) => (
-                <Select.Option key={product.id} value={product.id}>
-                  {product.name} ({product.sku})
-                </Select.Option>
-              ))}
-            </Select>
-          </Form.Item>
-
-          <Form.Item name="lot_id" label="Số lô (tùy chọn)">
-            <Select placeholder="Chọn lô hàng" allowClear>
-              {lots.map((lot) => (
-                <Select.Option key={lot.id} value={lot.id}>
-                  {lot.lot_number} - HSD:{" "}
-                  {lot.expiry_date
-                    ? dayjs(lot.expiry_date).format("DD/MM/YYYY")
-                    : "N/A"}
-                </Select.Option>
-              ))}
-            </Select>
-          </Form.Item>
-
-          <Form.Item
-            name="quantity_requested"
-            label="Số lượng"
-            rules={[
-              { required: true, message: "Vui lòng nhập số lượng" },
-              { type: "number", min: 1, message: "Số lượng phải lớn hơn 0" },
-            ]}
-          >
-            <InputNumber
-              min={1}
-              style={{ width: "100%" }}
-              placeholder="Nhập số lượng"
-            />
-          </Form.Item>
-
-          <Form.Item name="unit_price" label="Đơn giá">
-            <InputNumber
-              min={0}
-              style={{ width: "100%" }}
-              placeholder="Nhập đơn giá"
-              formatter={(value) =>
-                `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
-              }
-            />
-          </Form.Item>
-
-          <Form.Item name="notes" label="Ghi chú">
-            <TextArea rows={3} placeholder="Nhập ghi chú" />
-          </Form.Item>
-        </Form>
-      </Modal>
 
       {/* Send Modal */}
       <Modal
@@ -880,6 +869,18 @@ const WarehouseTransferDetailPage: React.FC = () => {
           ))}
         </Form>
       </Modal>
+
+      {/* Lot Selection Modal for adding products */}
+      <LotSelectionModal
+        open={isLotSelectionModalOpen}
+        onClose={() => {
+          setIsLotSelectionModalOpen(false);
+          setSelectedProductForLot(null);
+        }}
+        onSelect={handleLotSelect}
+        product={selectedProductForLot}
+        warehouseId={transfer.from_warehouse_id}
+      />
     </PageLayout>
   );
 };

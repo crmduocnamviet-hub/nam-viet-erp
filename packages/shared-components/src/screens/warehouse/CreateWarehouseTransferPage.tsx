@@ -15,17 +15,8 @@ import {
   Row,
   Col,
   Typography,
-  List,
-  Empty,
-  Spin,
-  Badge,
 } from "antd";
-import {
-  SaveOutlined,
-  PlusOutlined,
-  DeleteOutlined,
-  SearchOutlined,
-} from "@ant-design/icons";
+import { SaveOutlined, DeleteOutlined } from "@ant-design/icons";
 import PageLayout from "../../components/PageLayout";
 import LotSelectionModal from "../../components/LotSelectionModal";
 import { useDebounce } from "../../hooks/useDebounce";
@@ -49,6 +40,7 @@ interface TransferItem {
   lot_id?: number | null;
   lot_number?: string;
   expiry_date?: string;
+  lot_quantity?: number; // Add lot stock quantity
   quantity_requested: number;
   unit_price?: number;
   notes?: string;
@@ -361,6 +353,7 @@ const CreateWarehouseTransferPage: React.FC = () => {
       product_sku: product.sku,
       lot_id: lot?.id || null,
       lot_number: lot?.lot_number,
+      lot_quantity: lot?.quantity, // Store lot quantity
       expiry_date: lot?.expiry_date,
       quantity_requested: quantity,
       unit_price: unit_price || product.retail_price,
@@ -395,6 +388,22 @@ const CreateWarehouseTransferPage: React.FC = () => {
 
   // Handle item quantity update in the table
   const handleUpdateItemQuantity = (key: number, newQuantity: number) => {
+    const itemToUpdate = items.find((item) => item.key === key);
+
+    if (!itemToUpdate) return;
+
+    // Check against lot quantity if it exists
+    if (
+      itemToUpdate.lot_quantity !== undefined &&
+      newQuantity > itemToUpdate.lot_quantity
+    ) {
+      notification.error({
+        message: "Vượt quá tồn kho của lô",
+        description: `Số lượng tồn kho của lô "${itemToUpdate.lot_number}" chỉ còn ${itemToUpdate.lot_quantity}.`,
+      });
+      return; // Do not update state
+    }
+
     setItems((prevItems) =>
       prevItems.map((item) =>
         item.key === key

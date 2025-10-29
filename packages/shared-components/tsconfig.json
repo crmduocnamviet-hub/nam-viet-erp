@@ -29,7 +29,12 @@
     "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src", "../../types"],
-  "exclude": ["../services/**/*", "../../services/**/*", "**/node_modules", "dist"],
+  "include": ["src", "../../types", "../services/src/supabase/constants.ts"],
+  "exclude": [
+    "../services/**/*",
+    "../../services/**/*",
+    "**/node_modules",
+    "dist"
+  ],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

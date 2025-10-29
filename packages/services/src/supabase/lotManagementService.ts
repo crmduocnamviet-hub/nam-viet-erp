@@ -4,12 +4,10 @@
  * Implements NÚT 2, 3, 4 functionalities
  */
 
-import {
-  getB2BWarehouseProducts,
-  getProductInventoryInWarehouse,
-} from "./productService";
+import { TABLES } from "./constants";
+import { getProductInventoryInWarehouse } from "./productService";
 import { supabase } from "./supabase";
-import { getInventoryByProductId, upsetInventory } from "./warehouse";
+import { upsetInventory } from "./warehouse";
 
 // =====================================================
 // LOT OPERATIONS
@@ -45,7 +43,7 @@ export const searchProductLots = async (
   warehouseId?: number,
 ) => {
   let query = supabase
-    .from("product_lots")
+    .from(TABLES.PRODUCT_LOTS)
     .select("lot_number")
     .eq("product_id", productId)
     .ilike("lot_number", `%${searchText}%`)
@@ -86,7 +84,7 @@ export const createProductLot = async (
   };
 
   const { data, error } = await supabase
-    .from("product_lots")
+    .from(TABLES.PRODUCT_LOTS)
     .insert(lotData)
     .select()
     .single();
@@ -142,7 +140,7 @@ export const updateProductLot = async (
   updates: Partial<IProductLot>,
 ) => {
   const { data, error } = await supabase
-    .from("product_lots")
+    .from(TABLES.PRODUCT_LOTS)
     .update(updates)
     .eq("id", lotId)
     .select()
@@ -154,7 +152,7 @@ export const updateProductLot = async (
 export const getProductLotByProductIds = async (productId: number[]) => {
   try {
     const { data } = await supabase
-      .from("product_lots")
+      .from(TABLES.PRODUCT_LOTS)
       .select(
         `
       *,
@@ -221,7 +219,7 @@ export const sellLotQuantity = async (params: {
  */
 export const getLotMovements = async (lotId: number) => {
   const { data, error } = await supabase
-    .from("lot_movements")
+    .from(TABLES.LOT_MOVEMENTS)
     .select(
       `
       *,
@@ -247,7 +245,7 @@ export const getLotMovements = async (lotId: number) => {
  */
 export const createVatInvoice = async (invoice: Partial<VatInvoice>) => {
   const { data, error } = await supabase
-    .from("vat_invoices")
+    .from(TABLES.VAT_INVOICES)
     .insert(invoice)
     .select()
     .single();
@@ -276,7 +274,7 @@ export const addVatInvoiceItems = async (
   }>,
 ) => {
   const { data, error } = await supabase
-    .from("vat_invoice_items")
+    .from(TABLES.VAT_INVOICE_ITEMS)
     .insert(items)
     .select();
 
@@ -288,7 +286,7 @@ export const addVatInvoiceItems = async (
  */
 export const checkVatAvailability = async (lotId: number) => {
   const { data, error } = await supabase
-    .from("vat_warehouse")
+    .from(TABLES.VAT_WAREHOUSE)
     .select("quantity_available")
     .eq("lot_id", lotId)
     .single();
@@ -309,7 +307,7 @@ export const getVatReconciliation = async (params?: {
   customerId?: number;
 }) => {
   let query = supabase
-    .from("lot_movements")
+    .from(TABLES.LOT_MOVEMENTS)
     .select(
       `
       *,
@@ -378,7 +376,7 @@ export const getBarcodeVerificationHistory = async (params?: {
   limit?: number;
 }) => {
   let query = supabase
-    .from("barcode_verifications")
+    .from(TABLES.BARCODE_VERIFICATIONS)
     .select(
       `
       *,
@@ -468,7 +466,7 @@ export const processVatInvoiceOCR = async (params: {
 
   // Update invoice with OCR data
   await supabase
-    .from("vat_invoices")
+    .from(TABLES.VAT_INVOICES)
     .update({
       ocr_status: "completed",
       ocr_data: result.data,
@@ -500,7 +498,7 @@ export const bulkCreateLotsFromOCR = async (params: {
   for (const item of params.ocrData) {
     // Map supplier product to internal product
     const { data: mapping } = await supabase
-      .from("product_supplier_mapping")
+      .from(TABLES.PRODUCT_SUPPLIER_MAPPING)
       .select("product_id")
       .ilike("supplier_product_name", `%${item.supplier_product_name}%`)
       .single();
@@ -771,7 +769,7 @@ export const deleteProductLot = async (params: {
  */
 export const deleteAllProductLots = async (productId: number) => {
   const { error } = await supabase
-    .from("product_lots")
+    .from(TABLES.PRODUCT_LOTS)
     .delete()
     .eq("product_id", productId);
 
@@ -836,7 +834,7 @@ export const deductProductLotQuantity = async (params: {
   try {
     // Get current lot data
     const { data: lot, error: fetchError } = await supabase
-      .from("product_lots")
+      .from(TABLES.PRODUCT_LOTS)
       .select("quantity, product_id, warehouse_id")
       .eq("id", lotId)
       .single();
@@ -855,7 +853,7 @@ export const deductProductLotQuantity = async (params: {
 
     // Update lot quantity
     const { error: updateError } = await supabase
-      .from("product_lots")
+      .from(TABLES.PRODUCT_LOTS)
       .update({ quantity: newQuantity })
       .eq("id", lotId);
 
@@ -1008,6 +1006,37 @@ export const syncAllLotsToInventory = async (productId: number) => {
     };
   } catch (error: any) {
     return { success: false, warehousesSynced: 0, error };
+  }
+};
+
+/**
+ * Sync all product lots to inventory for multiple products at once.
+ * Uses a more efficient database function for batch operations.
+ */
+export const syncMultipleProductsToInventory = async (productIds: number[]) => {
+  if (!productIds || productIds.length === 0) {
+    return {
+      success: true,
+      productsProcessed: 0,
+      inventoryRecordsAffected: 0,
+      error: null,
+    };
+  }
+
+  try {
+    const { data, error } = await supabase.rpc(
+      "sync_multiple_products_to_inventory",
+      {
+        p_product_ids: productIds,
+      },
+    );
+
+    if (error) throw error;
+
+    return { ...data, success: data.success, error: null };
+  } catch (error: any) {
+    console.error("Error syncing multiple products to inventory:", error);
+    return { success: false, error };
   }
 };
 
@@ -1245,7 +1274,7 @@ export const enableLotManagement = async (productId: number) => {
   try {
     // Get all inventory records for this product
     const { data: inventoryRecords, error: fetchError } = await supabase
-      .from("inventory")
+      .from(TABLES.INVENTORY)
       .select("*")
       .eq("product_id", productId);
 
@@ -1259,13 +1288,15 @@ export const enableLotManagement = async (productId: number) => {
       .filter((inv) => inv.quantity > 0)
       .map(async (inv) => {
         // Create default lot in product_lots table
-        const { error: lotError } = await supabase.from("product_lots").insert({
-          product_id: productId,
-          warehouse_id: inv.warehouse_id,
-          lot_number: "Lô mặc định",
-          received_date: new Date().toISOString().split("T")[0],
-          quantity: inv.quantity,
-        });
+        const { error: lotError } = await supabase
+          .from(TABLES.PRODUCT_LOTS)
+          .insert({
+            product_id: productId,
+            warehouse_id: inv.warehouse_id,
+            lot_number: "Lô mặc định",
+            received_date: new Date().toISOString().split("T")[0],
+            quantity: inv.quantity,
+          });
 
         return { success: !lotError, error: lotError };
       });
@@ -1294,7 +1325,7 @@ export const disableLotManagement = async (productId: number) => {
   try {
     // Delete all lots for this product
     const { error } = await supabase
-      .from("product_lots")
+      .from(TABLES.PRODUCT_LOTS)
       .delete()
       .eq("product_id", productId);
 
@@ -1369,6 +1400,7 @@ export default {
   updateInventoryQuantity,
   syncLotQuantityToInventory,
   syncAllLotsToInventory,
+  syncMultipleProductsToInventory,
   getLotById,
   fetchLotDetailWithInventory,
 
