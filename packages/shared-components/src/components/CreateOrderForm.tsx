@@ -43,6 +43,7 @@ import {
 import { exportB2BOrderToPdf, formatCurrency } from "../utils";
 import ProductSearchInput from "./ProductSearchInput";
 import { ColumnsType } from "antd/es/table";
+import { applyPromoCode } from "@nam-viet-erp/services";
 
 const { Text, Title } = Typography;
 const { TextArea } = Input;
@@ -140,6 +141,14 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
   const [discountPercent, setDiscountPercent] = React.useState(0);
   const [taxPercent, setTaxPercent] = React.useState(10);
 
+  // Promo code state
+  const [promoCode, setPromoCode] = React.useState("");
+  const [appliedPromoCode, setAppliedPromoCode] = React.useState<string | null>(
+    null,
+  );
+  const [promoDiscount, setPromoDiscount] = React.useState(0);
+  const [promoCodeError, setPromoCodeError] = React.useState("");
+
   // Sync form values with state when tab data is loaded
   React.useEffect(() => {
     const currentTab = tabs[index];
@@ -222,7 +231,10 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
 
     // Discount applied to subtotal (with VAT)
     const discountAmount = (subtotal * discountPercent) / 100;
-    const taxableAmount = subtotal - discountAmount;
+
+    // Promo code discount (already calculated by applyPromoCode)
+    const finalDiscountAmount = discountAmount + promoDiscount;
+    const taxableAmount = subtotal - finalDiscountAmount;
 
     // Tax applied after discount
     const taxAmount = (taxableAmount * taxPercent) / 100;
@@ -232,13 +244,83 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
       subtotalBeforeVAT,
       totalVAT,
       subtotal,
-      discountAmount,
+      discountAmount: finalDiscountAmount,
       taxAmount,
       totalAmount,
       itemCount: orderItems.length,
       totalQuantity: orderItems.reduce((sum, item) => sum + item.quantity, 0),
     };
-  }, [orderItems, discountPercent, taxPercent]);
+  }, [orderItems, discountPercent, taxPercent, promoDiscount]);
+
+  // Handle promo code application
+  const handleApplyPromoCode = async () => {
+    if (!promoCode.trim()) {
+      setPromoCodeError("Vui lòng nhập mã khuyến mãi");
+      return;
+    }
+
+    try {
+      // Calculate base subtotal for promo code (without promo discount)
+      const baseSubtotal = (() => {
+        const subtotalBeforeVAT = orderItems.reduce(
+          (sum, item) => sum + item.total_price,
+          0,
+        );
+        const totalVAT = orderItems.reduce((sum, item) => {
+          const vatPercent = item.vat_percent ?? 5;
+          return sum + (item.total_price * vatPercent) / 100;
+        }, 0);
+        const subtotal = subtotalBeforeVAT + totalVAT;
+        const discountAmount = (subtotal * discountPercent) / 100;
+        const finalSubtotal = subtotal - discountAmount; // Subtotal after percentage discount
+        return finalSubtotal;
+      })();
+
+      // Pass order items for condition checking
+      const {
+        discountAmount,
+        promoCode: appliedCode,
+        promoName,
+        error,
+      } = await applyPromoCode(
+        promoCode.trim(),
+        baseSubtotal, // Use base subtotal without promo discount
+        orderItems, // Pass items to check manufacturers and categories
+      );
+
+      if (error) {
+        setPromoCodeError(error.message);
+        setPromoDiscount(0);
+        setAppliedPromoCode(null);
+      } else if (discountAmount === 0) {
+        // Edge case: promotion valid but discount = 0 (should not happen normally)
+        setPromoCodeError(
+          "Mã khuyến mãi không thể áp dụng cho đơn hàng này. Vui lòng kiểm tra lại điều kiện.",
+        );
+        setPromoDiscount(0);
+        setAppliedPromoCode(null);
+      } else {
+        setPromoCodeError("");
+        setPromoDiscount(discountAmount);
+        setAppliedPromoCode(promoName || appliedCode);
+        notification.success({
+          message: "Áp dụng mã khuyến mãi thành công!",
+          description: `Giảm ${discountAmount.toLocaleString()}đ`,
+        });
+      }
+    } catch (error) {
+      setPromoCodeError("Không thể áp dụng mã khuyến mãi");
+      setPromoDiscount(0);
+      setAppliedPromoCode(null);
+    }
+  };
+
+  const handleRemovePromoCode = () => {
+    setPromoCode("");
+    setAppliedPromoCode(null);
+    setPromoDiscount(0);
+    setPromoCodeError("");
+  };
 
   // Handle client selection
   const handleSelectClient = (client: IB2BCustomer) => {
@@ -948,6 +1030,65 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
             }
             style={{ position: isMd ? "static" : "sticky", top: 24 }}
           >
+            {/* Promo Code Section */}
+            <Space
+              direction="vertical"
+              size="small"
+              style={{ width: "100%", marginBottom: 16 }}
+            >
+              {!appliedPromoCode ? (
+                <Space.Compact style={{ width: "100%" }}>
+                  <Input
+                    placeholder="Nhập mã khuyến mãi"
+                    value={promoCode}
+                    onChange={(e) => {
+                      setPromoCode(e.target.value);
+                      setPromoCodeError("");
+                    }}
+                    onPressEnter={handleApplyPromoCode}
+                    status={promoCodeError ? "error" : ""}
+                  />
+                  <Button type="primary" onClick={handleApplyPromoCode}>
+                    Áp dụng
+                  </Button>
+                </Space.Compact>
+              ) : (
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    background: "#e6f7ff",
+                    padding: "8px 12px",
+                    borderRadius: 4,
+                  }}
+                >
+                  <Text>
+                    Mã:{" "}
+                    <Text strong style={{ color: "#52c41a" }}>
+                      {appliedPromoCode}
+                    </Text>
+                    <Text style={{ color: "#ff4d4f", marginLeft: 8 }}>
+                      -{promoDiscount.toLocaleString()}đ
+                    </Text>
+                  </Text>
+                  <Button
+                    size="small"
+                    type="text"
+                    onClick={handleRemovePromoCode}
+                    danger
+                  >
+                    Xóa
+                  </Button>
+                </div>
+              )}
+              {promoCodeError && (
+                <Text type="danger" style={{ fontSize: 12 }}>
+                  {promoCodeError}
+                </Text>
+              )}
+            </Space>
+
             <Descriptions column={1} size="small">
               <Descriptions.Item label="Số lượng sản phẩm">
                 <Text strong>{totals.itemCount}</Text>

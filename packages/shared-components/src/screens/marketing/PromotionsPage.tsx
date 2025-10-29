@@ -9,15 +9,15 @@ const getErrorMessage = (error: unknown): string => {
     return error.message;
   }
 
-  if (typeof error === 'string') {
+  if (typeof error === "string") {
     return error;
   }
 
-  if (typeof error === 'object' && error !== null && 'message' in error) {
+  if (typeof error === "object" && error !== null && "message" in error) {
     return (error as any).message;
   }
 
-  return 'An unknown error occurred';
+  return "An unknown error occurred";
 };
 
 const { Title } = Typography;
@@ -73,6 +73,13 @@ const Promotions: React.FC = () => {
 
   const columns = [
     { title: "Tên Chương trình", dataIndex: "name", key: "name" },
+    {
+      title: "Mã khuyến mãi",
+      dataIndex: "code",
+      key: "code",
+      render: (code: string) =>
+        code ? <Tag color="blue">{code}</Tag> : <Tag>-</Tag>,
+    },
     { title: "Loại", dataIndex: "type", key: "type" },
     {
       title: "Trạng thái",
