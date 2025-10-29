@@ -301,6 +301,55 @@ export const processSaleTransaction = async (
     }
   }
 
+  // Step 6: Create VAT invoice records (auto-create pending VAT invoices for POS)
+  // Map ALL items from orderItems and comboItems, not just productLotItems
+  const vatInvoiceItems: any[] = [];
+
+  // Regular order items - VAT mặc định 10%
+  orderItems.forEach((item) => {
+    vatInvoiceItems.push({
+      warehouse_id: warehouseId,
+      product_id: item.product_id,
+      product_lot_id: item.lot_id,
+      quantity: item.quantity,
+      unit_price: item.unit_price,
+      total_amount: item.unit_price * item.quantity,
+      vat_amount: (item.unit_price * item.quantity * 10) / 100,
+      vat_percent: 10,
+      b2b_quote_id: null,
+      sale_order_id: orderData.order_id,
+      status: "pending" as const,
+    });
+  });
+
+  // Combo items - VAT mặc định 10%
+  comboItems.forEach((item) => {
+    vatInvoiceItems.push({
+      warehouse_id: warehouseId,
+      product_id: item.product_id,
+      product_lot_id: item.lot_id,
+      quantity: item.quantity,
+      unit_price: item.unit_price,
+      total_amount: item.unit_price * item.quantity,
+      vat_amount: (item.unit_price * item.quantity * 10) / 100,
+      vat_percent: 10,
+      b2b_quote_id: null,
+      sale_order_id: orderData.order_id,
+      status: "pending" as const,
+    });
+  });
+
+  if (vatInvoiceItems.length > 0) {
+    // Import VAT service
+    const { createBulkVATInvoicesOut } = await import("./vatInvoiceService");
+    const { error: vatError } = await createBulkVATInvoicesOut(vatInvoiceItems);
+
+    if (vatError) {
+      console.warn("Failed to create VAT invoices:", vatError);
+      // Don't throw error - VAT invoice can be created manually later
+    }
+  }
+
   return { transactionData, orderData };
 };
 

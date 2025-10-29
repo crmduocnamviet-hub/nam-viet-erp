@@ -417,6 +417,7 @@ export const analyticInvoicePdf = async (
     quantity?: number;
     unitPrice?: number;
     totalPrice?: number;
+    lotNumber?: string;
   }>;
   subtotal?: number;
   taxAmount?: number;
@@ -435,6 +436,7 @@ Phân tích hóa đơn PDF này và trích xuất thông tin sau (trả lời b�
    - Số lượng
    - Đơn giá
    - Thành tiền
+   - Số lô
 6. Tổng tiền trước thuế
 7. Thuế VAT (số tiền)
 8. Tổng cộng tiền thanh toán
@@ -450,6 +452,7 @@ Trả lời theo format JSON với cấu trúc sau:
       "ten": "Tên hàng hóa",
       "so_luong": 10,
       "don_gia": 50000,
+      "so_lo": "25004",
       "thanh_tien": 500000
     }
   ],
@@ -471,6 +474,7 @@ Trả lời theo format JSON với cấu trúc sau:
     quantity?: number;
     unitPrice?: number;
     totalPrice?: number;
+    lotNumber?: string;
   }> = [];
   let subtotal: number | undefined;
   let taxAmount: number | undefined;
@@ -494,6 +498,7 @@ Trả lời theo format JSON với cấu trúc sau:
         quantity: item.so_luong || item.quantity,
         unitPrice: item.don_gia || item.unit_price || item.unitPrice,
         totalPrice: item.thanh_tien || item.total_price || item.totalPrice,
+        lotNumber: item.so_lo || item.lotNumber || item.lot_number,
       }));
     }
   } catch (e) {
