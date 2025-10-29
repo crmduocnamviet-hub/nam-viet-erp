@@ -31,8 +31,6 @@ import PageLayout from "../../components/PageLayout";
 import {
   getProductWithInventory,
   getProductLotByProductIds,
-  IProduct,
-  IProductLot,
 } from "@nam-viet-erp/services";
 import dayjs from "dayjs";
 import type { ColumnsType } from "antd/es/table";
