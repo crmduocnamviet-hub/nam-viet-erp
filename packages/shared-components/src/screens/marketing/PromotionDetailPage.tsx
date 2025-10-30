@@ -38,15 +38,15 @@ const getErrorMessage = (error: unknown): string => {
     return error.message;
   }
 
-  if (typeof error === 'string') {
+  if (typeof error === "string") {
     return error;
   }
 
-  if (typeof error === 'object' && error !== null && 'message' in error) {
+  if (typeof error === "object" && error !== null && "message" in error) {
     return (error as any).message;
   }
 
-  return 'An unknown error occurred';
+  return "An unknown error occurred";
 };
 
 const { Title } = Typography;
@@ -83,7 +83,7 @@ const PromotionDetail: React.FC = () => {
       if (categoryRes.data) {
         const uniqueCategories = [
           ...new Set(
-            categoryRes.data.map((item) => item.category).filter(Boolean)
+            categoryRes.data.map((item) => item.category).filter(Boolean),
           ),
         ];
         setCategories(uniqueCategories.map((c) => ({ value: c, label: c })));
@@ -91,11 +91,11 @@ const PromotionDetail: React.FC = () => {
       if (manuRes.data) {
         const uniqueManufacturers = [
           ...new Set(
-            manuRes.data.map((item) => item.manufacturer).filter(Boolean)
+            manuRes.data.map((item) => item.manufacturer).filter(Boolean),
           ),
         ];
         setManufacturers(
-          uniqueManufacturers.map((m) => ({ value: m, label: m }))
+          uniqueManufacturers.map((m) => ({ value: m, label: m })),
         );
       }
     };
@@ -105,9 +105,8 @@ const PromotionDetail: React.FC = () => {
   const isCreating = !params.id;
 
   const fetchVouchers = async (promoId: string) => {
-    const { data: voucherData, error: voucherError } = await getPromotionDetail(
-      promoId
-    );
+    const { data: voucherData, error: voucherError } =
+      await getPromotionDetail(promoId);
     if (voucherError) {
       notification.error({
         message: "Lỗi tải danh sách voucher",
@@ -123,7 +122,7 @@ const PromotionDetail: React.FC = () => {
       const fetchPromotionDetail = async () => {
         setLoading(true);
         const { data: promoData, error: promoError } = await getPromotionDetail(
-          params.id!
+          params.id!,
         );
 
         if (promoData) {
@@ -149,13 +148,14 @@ const PromotionDetail: React.FC = () => {
     try {
       const values = await form.validateFields();
       setLoading(true);
-      const record = {
+      const record: any = {
         name: values.name,
         type: values.type,
         value: values.value,
         start_date: values.dateRange[0].toISOString(),
         end_date: values.dateRange[1].toISOString(),
         is_active: values.is_active ?? true,
+        code: values.code || null, // Add code field
         conditions: {
           min_order_value: values.min_order_value, // Giảm giá theo giá trị đơn hàng
           manufacturers: values.manufacturers,
@@ -175,9 +175,15 @@ const PromotionDetail: React.FC = () => {
         notification?.success({ message: "Cập nhật thành công!" });
       }
     } catch (error: unknown) {
+      const errorMsg = getErrorMessage(error);
+      // Check if error is about duplicate code
+      const isDuplicateCode =
+        errorMsg.includes("unique") || errorMsg.includes("duplicate");
       notification.error({
-        message: "Lưu thất bại",
-        description: getErrorMessage(error),
+        message: isDuplicateCode ? "Mã khuyến mãi đã tồn tại" : "Lưu thất bại",
+        description: isDuplicateCode
+          ? "Vui lòng chọn mã khuyến mãi khác. Mã khuyến mãi phải là duy nhất."
+          : errorMsg,
       });
     } finally {
       setLoading(false);
@@ -257,6 +263,13 @@ const PromotionDetail: React.FC = () => {
             rules={[{ required: true }]}
           >
             <Input />
+          </Form.Item>
+          <Form.Item
+            name="code"
+            label="Mã khuyến mãi"
+            help="Mã để nhập khi áp dụng (ví dụ: TEST10, GIAM20K)"
+          >
+            <Input placeholder="Nhập mã khuyến mãi (tùy chọn)" />
           </Form.Item>
           <Form.Item
             name="type"

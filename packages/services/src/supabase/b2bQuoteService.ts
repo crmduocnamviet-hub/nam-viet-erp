@@ -14,6 +14,8 @@ export const getB2BQuotes = async (filters?: {
   let query = supabase.from("b2b_quotes").select(`
       *,
       employees!created_by_employee_id(full_name, employee_code),
+      warehouse_employee:employees!warehouse_employee_id(full_name, employee_code),
+      delivery_employee:employees!delivery_employee_id(full_name, employee_code),
       quote_items:b2b_quote_items(
         *,
         products!product_id(name, sku, manufacturer, retail_price)
@@ -65,6 +67,8 @@ export const getB2BQuoteById = async (
       `
       *,
       employees!created_by_employee_id(full_name, employee_code),
+      warehouse_employee:employees!warehouse_employee_id(full_name, employee_code),
+      delivery_employee:employees!delivery_employee_id(full_name, employee_code),
       quote_items:b2b_quote_items(
         *,
         products!product_id(name, sku, manufacturer, retail_price)
@@ -97,7 +101,9 @@ export const createB2BQuote = async (
     .select(
       `
       *,
-      employees!created_by_employee_id(full_name, employee_code)
+      employees!created_by_employee_id(full_name, employee_code),
+      warehouse_employee:employees!warehouse_employee_id(full_name, employee_code),
+      delivery_employee:employees!delivery_employee_id(full_name, employee_code)
     `,
     )
     .single();
@@ -127,7 +133,9 @@ export const updateB2BQuote = async (
     .select(
       `
       *,
-      employees!created_by_employee_id(full_name, employee_code)
+      employees!created_by_employee_id(full_name, employee_code),
+      warehouse_employee:employees!warehouse_employee_id(full_name, employee_code),
+      delivery_employee:employees!delivery_employee_id(full_name, employee_code)
     `,
     )
     .single();
@@ -351,4 +359,102 @@ export const getQuoteStatistics = async (filters?: {
   };
 
   return { data: stats, error: null };
+};
+
+// Assign warehouse employee to quote
+export const assignWarehouseEmployee = async (
+  quoteId: string,
+  employeeId: string | null,
+): Promise<PostgrestSingleResponse<IB2BQuote | null>> => {
+  return updateB2BQuote(quoteId, { warehouse_employee_id: employeeId });
+};
+
+// Assign delivery employee to quote
+export const assignDeliveryEmployee = async (
+  quoteId: string,
+  employeeId: string | null,
+): Promise<PostgrestSingleResponse<IB2BQuote | null>> => {
+  return updateB2BQuote(quoteId, { delivery_employee_id: employeeId });
+};
+
+// Get quotes by warehouse employee
+export const getQuotesByWarehouseEmployee = async (
+  employeeId: string,
+  filters?: {
+    stage?: string;
+    startDate?: string;
+    endDate?: string;
+  },
+) => {
+  let query = supabase
+    .from("b2b_quotes")
+    .select(
+      `
+      *,
+      employees!created_by_employee_id(full_name, employee_code),
+      warehouse_employee:employees!warehouse_employee_id(full_name, employee_code),
+      delivery_employee:employees!delivery_employee_id(full_name, employee_code),
+      quote_items:b2b_quote_items(
+        *,
+        products!product_id(name, sku, manufacturer, retail_price)
+      )
+    `,
+    )
+    .eq("warehouse_employee_id", employeeId);
+
+  if (filters?.stage) {
+    query = query.eq("quote_stage", filters.stage);
+  }
+
+  if (filters?.startDate) {
+    query = query.gte("quote_date", filters.startDate);
+  }
+
+  if (filters?.endDate) {
+    query = query.lte("quote_date", filters.endDate);
+  }
+
+  const response = await query.order("quote_date", { ascending: false });
+  return response;
+};
+
+// Get quotes by delivery employee
+export const getQuotesByDeliveryEmployee = async (
+  employeeId: string,
+  filters?: {
+    stage?: string;
+    startDate?: string;
+    endDate?: string;
+  },
+) => {
+  let query = supabase
+    .from("b2b_quotes")
+    .select(
+      `
+      *,
+      employees!created_by_employee_id(full_name, employee_code),
+      warehouse_employee:employees!warehouse_employee_id(full_name, employee_code),
+      delivery_employee:employees!delivery_employee_id(full_name, employee_code),
+      quote_items:b2b_quote_items(
+        *,
+        products!product_id(name, sku, manufacturer, retail_price)
+      )
+    `,
+    )
+    .eq("delivery_employee_id", employeeId);
+
+  if (filters?.stage) {
+    query = query.eq("quote_stage", filters.stage);
+  }
+
+  if (filters?.startDate) {
+    query = query.gte("quote_date", filters.startDate);
+  }
+
+  if (filters?.endDate) {
+    query = query.lte("quote_date", filters.endDate);
+  }
+
+  const response = await query.order("quote_date", { ascending: false });
+  return response;
 };

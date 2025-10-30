@@ -11,6 +11,7 @@ import {
   RocketOutlined,
   UserOutlined, // <-- IMPORT ICON MỚI
   LogoutOutlined,
+  SwapOutlined,
 } from "@ant-design/icons";
 import type { MenuProps } from "antd";
 import { Routes, Route, useNavigate } from "react-router-dom";
@@ -48,6 +49,15 @@ const menuItems: MenuProps["items"] = [
       { label: "Danh sách Sản phẩm", key: "/products" },
       { label: "Thêm sản phẩm mới", key: "/products/create" },
       { label: "Quản lý Đặt hàng", key: "/purchase-orders" },
+      {
+        label: "Chuyển kho",
+        key: "/warehouse/transfers",
+        icon: <SwapOutlined />,
+      },
+      { type: "divider" },
+      { label: "Nhập HĐ VAT", key: "/warehouse/vat-invoice-input" },
+      { label: "Xuất HĐ VAT cho POS", key: "/warehouse/vat-invoice-pos" },
+      { label: "Xuất HĐ VAT cho B2B", key: "/warehouse/vat-invoice-b2b" },
     ],
   },
   {
@@ -57,6 +67,7 @@ const menuItems: MenuProps["items"] = [
     children: [
       { label: "Quản lý Đơn hàng B2B", key: "/b2b-orders" },
       { label: "Xem Nhanh Báo Giá", key: "/quick-quote" },
+      { label: "Tạo Báo Giá / Đơn Hàng", key: "/create-quote" },
     ],
   },
   // --- MENU MARKETING ĐƯỢC NÂNG CẤP ---
@@ -397,6 +408,10 @@ const AppLayout: React.FC = () => {
                   element={<Screen screenKey="b2b.quick-quote" />}
                 />
                 <Route
+                  path="/create-quote"
+                  element={<Screen screenKey="b2b.create-quote" />}
+                />
+                <Route
                   path="/promotions"
                   element={<Screen screenKey="marketing.promotions" />}
                 />
@@ -497,6 +512,42 @@ const AppLayout: React.FC = () => {
                 <Route
                   path="/missing-documentation"
                   element={<MissingDocumentationWarning />}
+                />
+
+                {/* --- WAREHOUSE TRANSFER ROUTES --- */}
+                <Route
+                  path="/warehouse/transfers"
+                  element={<Screen screenKey="warehouse.transfers" />}
+                />
+                <Route
+                  path="/warehouse/transfers/create"
+                  element={<Screen screenKey="warehouse.transfers.create" />}
+                />
+                <Route
+                  path="/warehouse/transfers/:id"
+                  element={<Screen screenKey="warehouse.transfers.detail" />}
+                />
+
+                {/* --- WAREHOUSE VAT ROUTES --- */}
+                <Route
+                  path="/warehouse/vat-inventory"
+                  element={<Screen screenKey="warehouse.vat-inventory" />}
+                />
+                <Route
+                  path="/warehouse/vat-reconciliation"
+                  element={<Screen screenKey="warehouse.vat-reconciliation" />}
+                />
+                <Route
+                  path="/warehouse/vat-invoice-input"
+                  element={<Screen screenKey="warehouse.vat-invoice-input" />}
+                />
+                <Route
+                  path="/warehouse/vat-invoice-pos"
+                  element={<Screen screenKey="warehouse.vat-invoice-pos" />}
+                />
+                <Route
+                  path="/warehouse/vat-invoice-b2b"
+                  element={<Screen screenKey="warehouse.vat-invoice-b2b" />}
                 />
 
                 <Route path="*" element={<ComingSoon />} />

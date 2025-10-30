@@ -444,6 +444,18 @@ const AppLayoutContent: React.FC = () => {
                   path="/warehouse/vat-reconciliation"
                   element={renderScreen("warehouse.vat-reconciliation")}
                 />
+                <Route
+                  path="/warehouse/transfers"
+                  element={renderScreen("warehouse.transfers")}
+                />
+                <Route
+                  path="/warehouse/transfers/create"
+                  element={renderScreen("warehouse.transfers.create")}
+                />
+                <Route
+                  path="/warehouse/transfers/:id"
+                  element={renderScreen("warehouse.transfers.detail")}
+                />
                 {/* Management Routes */}
                 <Route
                   path="/employees/create"

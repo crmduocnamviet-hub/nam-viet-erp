@@ -26,6 +26,7 @@ interface EditQuoteModalProps {
   isSalesStaff: boolean;
   isInventoryStaff: boolean;
   isDeliveryStaff: boolean;
+  employees?: IEmployee[];
 }
 
 const EditQuoteModal: React.FC<EditQuoteModalProps> = ({
@@ -40,6 +41,7 @@ const EditQuoteModal: React.FC<EditQuoteModalProps> = ({
   isSalesStaff,
   isInventoryStaff,
   isDeliveryStaff,
+  employees = [],
 }) => {
   return (
     <Modal
@@ -142,9 +144,7 @@ const EditQuoteModal: React.FC<EditQuoteModalProps> = ({
                     )}
                 </span>
               }
-              rules={[
-                { required: true, message: "Vui lòng chọn trạng thái" },
-              ]}
+              rules={[{ required: true, message: "Vui lòng chọn trạng thái" }]}
             >
               <Select
                 placeholder="Chọn trạng thái đơn hàng"
@@ -154,14 +154,12 @@ const EditQuoteModal: React.FC<EditQuoteModalProps> = ({
                     : false
                 }
               >
-                {getAllowedStatuses(selectedOrder?.quote_stage).map(
-                  (stage) => (
-                    <Select.Option key={stage.key} value={stage.key}>
-                      <Tag color={stage.color}>{stage.title}</Tag> -{" "}
-                      {stage.description}
-                    </Select.Option>
-                  )
-                )}
+                {getAllowedStatuses(selectedOrder?.quote_stage).map((stage) => (
+                  <Select.Option key={stage.key} value={stage.key}>
+                    <Tag color={stage.color}>{stage.title}</Tag> -{" "}
+                    {stage.description}
+                  </Select.Option>
+                ))}
               </Select>
             </Form.Item>
           </Col>
@@ -246,6 +244,47 @@ const EditQuoteModal: React.FC<EditQuoteModalProps> = ({
               <Input
                 placeholder="Số điện thoại liên hệ"
                 disabled={isInventoryStaff}
+              />
+            </Form.Item>
+          </Col>
+        </Row>
+
+        <Row gutter={16}>
+          <Col span={12}>
+            <Form.Item name="warehouse_employee_id" label="Nhân viên kho">
+              <Select
+                placeholder="Chọn nhân viên kho"
+                allowClear
+                showSearch
+                optionFilterProp="children"
+                filterOption={(input, option) =>
+                  (option?.label ?? "")
+                    .toLowerCase()
+                    .includes(input.toLowerCase())
+                }
+                options={employees.map((emp) => ({
+                  value: emp.employee_id,
+                  label: `${emp.full_name}${emp.employee_code ? ` (${emp.employee_code})` : ""}`,
+                }))}
+              />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item name="delivery_employee_id" label="Nhân viên giao hàng">
+              <Select
+                placeholder="Chọn nhân viên giao hàng"
+                allowClear
+                showSearch
+                optionFilterProp="children"
+                filterOption={(input, option) =>
+                  (option?.label ?? "")
+                    .toLowerCase()
+                    .includes(input.toLowerCase())
+                }
+                options={employees.map((emp) => ({
+                  value: emp.employee_id,
+                  label: `${emp.full_name}${emp.employee_code ? ` (${emp.employee_code})` : ""}`,
+                }))}
               />
             </Form.Item>
           </Col>

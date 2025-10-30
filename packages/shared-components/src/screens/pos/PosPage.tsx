@@ -31,6 +31,7 @@ import {
   searchProductInWarehouseByBarcode,
   calculateProductGlobalQuantities,
   supabase,
+  applyPromoCode,
 } from "@nam-viet-erp/services";
 import {
   usePosStore,
@@ -123,6 +124,12 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "card">("cash");
   const [promotions, setPromotions] = useState<IPromotion[]>([]);
+
+  // Promo code state
+  const [promoCode, setPromoCode] = useState("");
+  const [appliedPromoCode, setAppliedPromoCode] = useState<string | null>(null);
+  const [promoDiscount, setPromoDiscount] = useState(0);
+  const [promoCodeError, setPromoCodeError] = useState("");
 
   // Customer management
   const [customerSearchTerm, setCustomerSearchTerm] = useState("");
@@ -1016,7 +1023,8 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
     });
   };
 
-  const cartDetails = useMemo((): CartDetails => {
+  // Calculate cart items and totals (without promo code)
+  const cartItemsWithPricing = useMemo(() => {
     const items = (cart || []).map((item) => {
       // Create a mock product object with the required IProduct properties
       const mockProduct: IProduct = {
@@ -1024,8 +1032,8 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
         id: item.id,
         name: item.name,
         retail_price: item.price,
-        manufacturer: "",
-        category: "",
+        manufacturer: item.manufacturer || "", // Use actual manufacturer
+        category: item.category || "", // Use actual category
         sku: "",
         cost_price: 0,
         created_at: "",
@@ -1053,13 +1061,72 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
       0,
     );
 
+    return { items, itemTotal, originalTotal };
+  }, [cart, promotions]);
+
+  // Calculate final cart details including promo discount
+  const cartDetails = useMemo((): CartDetails => {
+    const { items, itemTotal, originalTotal } = cartItemsWithPricing;
+
+    // Calculate final total after promo code discount
+    const finalTotal = itemTotal - promoDiscount;
+
     return {
       items,
       itemTotal,
       originalTotal,
       totalDiscount: originalTotal - itemTotal,
+      promoDiscount,
+      finalTotal: Math.max(0, finalTotal), // Ensure non-negative
     };
-  }, [cart, promotions]);
+  }, [cartItemsWithPricing, promoDiscount]);
+
+  // Handle promo code application
+  const handleApplyPromoCode = async () => {
+    if (!promoCode.trim()) {
+      setPromoCodeError("Vui lòng nhập mã khuyến mãi");
+      return;
+    }
+
+    try {
+      // Pass cart items for condition checking
+      const {
+        discountAmount,
+        promoCode: appliedCode,
+        promoName,
+        error,
+      } = await applyPromoCode(
+        promoCode.trim(),
+        cartItemsWithPricing.itemTotal, // Apply to total after product discounts
+        cart, // Pass cart items to check manufacturers and categories
+      );
+
+      if (error) {
+        setPromoCodeError(error.message);
+        setPromoDiscount(0);
+        setAppliedPromoCode(null);
+      } else {
+        setPromoCodeError("");
+        setPromoDiscount(discountAmount);
+        setAppliedPromoCode(promoName || appliedCode);
+        notification.success({
+          message: "Áp dụng mã khuyến mãi thành công!",
+          description: `Giảm ${discountAmount.toLocaleString()}đ`,
+        });
+      }
+    } catch (error) {
+      setPromoCodeError("Không thể áp dụng mã khuyến mãi");
+      setPromoDiscount(0);
+      setAppliedPromoCode(null);
+    }
+  };
+
+  const handleRemovePromoCode = () => {
+    setPromoCode("");
+    setAppliedPromoCode(null);
+    setPromoDiscount(0);
+    setPromoCodeError("");
+  };
 
   // Payment Handlers
   const handleOpenPaymentModal = (method: "cash" | "card") => {
@@ -1133,7 +1200,7 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
       await processPayment(
         {
           cart: cartDetails.items || [],
-          total: cartDetails.itemTotal,
+          total: cartDetails.finalTotal, // Use final total after promo discount
           paymentMethod: values.payment_method,
           warehouseId,
           fundId,
@@ -1144,9 +1211,12 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
         inventory,
       );
 
+      // Reset promo code after successful payment
+      handleRemovePromoCode();
+
       notification?.success({
         message: "Thanh toán thành công!",
-        description: `Đã ghi nhận hóa đơn ${cartDetails.itemTotal.toLocaleString()}đ.`,
+        description: `Đã ghi nhận hóa đơn ${cartDetails.finalTotal.toLocaleString()}đ.`,
       });
 
       // setIsPaymentModalOpen(false);
@@ -1274,6 +1344,13 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
               isMobile={isMobile}
               isCartModalOpen={isCartModalOpen}
               setIsCartModalOpen={setIsCartModalOpen}
+              promoCode={promoCode}
+              setPromoCode={setPromoCode}
+              appliedPromoCode={appliedPromoCode}
+              promoDiscount={cartDetails.promoDiscount}
+              promoCodeError={promoCodeError}
+              handleApplyPromoCode={handleApplyPromoCode}
+              handleRemovePromoCode={handleRemovePromoCode}
             />
           ),
         }))}
@@ -1286,9 +1363,10 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
       <PaymentModal
         open={isPaymentModalOpen}
         paymentMethod={paymentMethod}
-        cartTotal={cartDetails.itemTotal}
+        cartTotal={cartDetails.finalTotal}
         cartItems={cartDetails.items}
         customerInfo={selectedCustomer}
+        promoDiscount={cartDetails.promoDiscount}
         onCancel={() => setIsPaymentModalOpen(false)}
         onFinish={handleFinishPayment}
         okButtonProps={{ loading: isProcessingPayment }}

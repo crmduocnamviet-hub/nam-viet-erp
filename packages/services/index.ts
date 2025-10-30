@@ -34,6 +34,8 @@ export * from "./src/supabase/supplierService";
 export * from "./src/supabase/supplierPromotionService";
 export * from "./src/supabase/purchaseOrderService";
 export * from "./src/supabase/lotManagementService";
+export * from "./src/supabase/warehouseTransferService";
+export * from "./src/supabase/vatInvoiceService";
 
 // Room Management Services
 export * from "./src/supabase/roomService";
@@ -43,3 +45,7 @@ export * from "./src/firebase/fcmService";
 
 // Seeding Services
 export * from "./src/supabase/seedDoctors";
+
+//AI
+
+export * from "./src/gemini-ai";

@@ -223,6 +223,107 @@ interface IWarehouse {
   is_b2b_warehouse: boolean;
 }
 
+type TransferStatus =
+  | "draft"
+  | "pending"
+  | "approved"
+  | "in_transit"
+  | "completed"
+  | "cancelled";
+
+interface IWarehouseTransfer {
+  id: number;
+  transfer_number: string;
+  from_warehouse_id: number;
+  to_warehouse_id: number;
+  status: TransferStatus;
+  transfer_date: string;
+  expected_delivery_date?: string | null;
+  actual_delivery_date?: string | null;
+  created_by?: string | null;
+  approved_by?: string | null;
+  sent_by?: string | null;
+  received_by?: string | null;
+  approved_at?: string | null;
+  sent_at?: string | null;
+  received_at?: string | null;
+  notes?: string | null;
+  rejection_reason?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+interface IWarehouseTransferItem {
+  id: number;
+  transfer_id: number;
+  product_id: number;
+  lot_id?: number | null;
+  quantity_requested: number;
+  quantity_sent: number;
+  quantity_received: number;
+  unit_price?: number | null;
+  notes?: string | null;
+  damage_notes?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// Extended transfer with warehouse and items details
+interface IWarehouseTransferWithDetails extends IWarehouseTransfer {
+  from_warehouse?: IWarehouse;
+  to_warehouse?: IWarehouse;
+  warehouse_transfer_items?: (IWarehouseTransferItem & {
+    products?: IProduct;
+    product_lots?: IProductLot;
+  })[];
+  total_quantity_requested?: number;
+  total_quantity_sent?: number;
+  total_quantity_received?: number;
+  total_value?: number;
+}
+
+// For creating new transfer
+interface ICreateWarehouseTransfer {
+  from_warehouse_id: number;
+  to_warehouse_id: number;
+  transfer_date?: string;
+  expected_delivery_date?: string;
+  notes?: string;
+  items: Array<{
+    product_id: number;
+    lot_id?: number | null;
+    quantity_requested: number;
+    unit_price?: number;
+    notes?: string;
+  }>;
+}
+
+// For updating transfer
+interface IUpdateWarehouseTransfer {
+  status?: TransferStatus;
+  expected_delivery_date?: string;
+  actual_delivery_date?: string;
+  notes?: string;
+  rejection_reason?: string;
+}
+
+// For sending transfer (updating quantities sent)
+interface ISendWarehouseTransfer {
+  items: Array<{
+    id: number; // item id
+    quantity_sent: number;
+  }>;
+}
+
+// For receiving transfer (updating quantities received)
+interface IReceiveWarehouseTransfer {
+  items: Array<{
+    id: number; // item id
+    quantity_received: number;
+    damage_notes?: string;
+  }>;
+}
+
 interface IBank {
   id: number;
   name: string;
@@ -231,6 +332,120 @@ interface IBank {
   short_name: string;
   logo: string;
   created_at: string;
+}
+
+// ==================== VAT INVOICE TRACKING ====================
+
+type VATInvoiceStatus = "pending" | "done" | "cancelled";
+
+interface IVATInvoiceIn {
+  id: number;
+  invoice_no: string;
+  invoice_date: string;
+  warehouse_id: number;
+  product_id: number;
+  product_lot_id?: number | null;
+  quantity: number;
+  unit_price?: number | null;
+  total_amount?: number | null;
+  vat_amount?: number | null;
+  vat_percent?: number;
+  supplier_id?: number | null;
+  purchase_order_id?: number | null;
+  notes?: string | null;
+  created_at: string;
+  updated_at: string;
+  created_by?: string | null;
+}
+
+interface IVATInvoiceOut {
+  id: number;
+  invoice_no?: string | null;
+  invoice_date?: string | null;
+  warehouse_id: number;
+  product_id: number;
+  product_lot_id?: number | null;
+  quantity: number;
+  unit_price?: number | null;
+  total_amount?: number | null;
+  vat_amount?: number | null;
+  vat_percent?: number;
+  b2b_quote_id?: number | null;
+  sale_order_id?: string | null;
+  status: VATInvoiceStatus;
+  notes?: string | null;
+  created_at: string;
+  updated_at: string;
+  created_by?: string | null;
+}
+
+// Extended interfaces with joined data
+interface IVATInvoiceInWithDetails extends IVATInvoiceIn {
+  warehouses?: IWarehouse;
+  products?: IProduct;
+  product_lots?: IProductLot;
+  suppliers?: ISupplier;
+  purchase_orders?: IPurchaseOrder;
+}
+
+interface IVATInvoiceOutWithDetails extends IVATInvoiceOut {
+  warehouses?: IWarehouse;
+  products?: IProduct;
+  product_lots?: IProductLot;
+  b2b_quotes?: any;
+  sales_orders?: any;
+}
+
+// For creating new VAT invoice in
+interface ICreateVATInvoiceIn {
+  invoice_no: string;
+  invoice_date: string;
+  warehouse_id: number;
+  product_id: number;
+  product_lot_id?: number | null;
+  quantity: number;
+  unit_price?: number;
+  total_amount?: number;
+  vat_amount?: number;
+  vat_percent?: number;
+  supplier_id?: number;
+  purchase_order_id?: number;
+  notes?: string;
+}
+
+// For creating new VAT invoice out
+interface ICreateVATInvoiceOut {
+  warehouse_id: number;
+  product_id: number;
+  product_lot_id?: number | null;
+  quantity: number;
+  unit_price?: number;
+  total_amount?: number;
+  vat_amount?: number;
+  vat_percent?: number;
+  b2b_quote_id?: number | null;
+  sale_order_id?: string | null;
+  status?: VATInvoiceStatus;
+  notes?: string;
+}
+
+// VAT Inventory Summary
+interface IVATInventorySummary {
+  warehouse_id: number;
+  warehouse_name: string;
+  product_id: number;
+  product_name: string;
+  sku: string;
+  barcode?: string | null;
+  lot_id?: number | null;
+  lot_number?: string | null;
+  expiry_date?: string | null;
+  total_vat_in: number;
+  total_vat_out: number;
+  pending_vat_out: number;
+  current_vat_inventory: number;
+  physical_inventory: number;
+  inventory_difference: number;
 }
 
 interface IInventory {
@@ -361,12 +576,12 @@ interface IPatientPointsSummary {
   last_transaction_at: string | null;
 }
 
-// Employee Management - Quản lý Nhân sự (Bác sĩ, Dược sĩ, Lễ tân)
+// Employee Management - Quản lý Nhân sự (Bác sĩ, Dược sĩ, Lễ tân, Kế toán)
 interface IEmployee {
   employee_id: string;
   full_name: string;
   employee_code: string | null;
-  role_name: string; // 'BacSi', 'DuocSi', 'LeTan'
+  role_name: string; // 'BacSi', 'DuocSi', 'LeTan', 'KeToan'
   is_active: boolean;
   user_id?: string;
   permissions?: string[];
@@ -502,11 +717,21 @@ interface IB2BQuote {
   notes?: string | null;
   terms_conditions?: string | null;
   created_by_employee_id?: string | null;
+  warehouse_employee_id?: string | null;
+  delivery_employee_id?: string | null;
   created_at: string;
   updated_at: string;
   // Relations
   quote_items?: IB2BQuoteItem[];
   employee?: {
+    full_name: string;
+    employee_code: string;
+  };
+  warehouse_employee?: {
+    full_name: string;
+    employee_code: string;
+  };
+  delivery_employee?: {
     full_name: string;
     employee_code: string;
   };

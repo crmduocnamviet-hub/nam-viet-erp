@@ -58,3 +58,6 @@ export const getB2BWarehouse = async () => {
     .single();
   return response;
 };
+
+// Alias for backward compatibility
+export const getAllWarehouses = getWarehouse;

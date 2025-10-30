@@ -1,4 +1,5 @@
 RULE
+
 - Sử dụng yarn workspace
 - Services: sử dụng @nam-viet-erp/services
 - Nếu thư tính năng yêu cầu cần phải tạo bảng mới thì câu lệnh sql query sẽ được viết ở @nam-viet-erp/services/query/"name".txt

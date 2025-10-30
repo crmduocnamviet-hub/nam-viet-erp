@@ -38,6 +38,7 @@ import {
   getQuoteItems,
   getB2BWarehouseProductByBarCode,
   notificationService,
+  getEmployees,
 } from "@nam-viet-erp/services";
 import {
   OrderDetailModal,
@@ -100,6 +101,7 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
   const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
   const [bulkUpdateModalOpen, setBulkUpdateModalOpen] = useState(false);
   const [bulkUpdateLoading, setBulkUpdateLoading] = useState(false);
+  const [employees, setEmployees] = useState<IEmployee[]>([]);
   const screens = useBreakpoint();
   const isMobile = !screens.lg;
 
@@ -291,6 +293,23 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
   useEffect(() => {
     loadOrders();
   }, [current, searchKeyword, filters]);
+
+  // Load employees for assignment
+  useEffect(() => {
+    const loadEmployees = async () => {
+      try {
+        const { data, error } = await getEmployees({ isActive: true });
+        if (error) {
+          console.error("Error loading employees:", error);
+        } else {
+          setEmployees(data || []);
+        }
+      } catch (error) {
+        console.error("Error loading employees:", error);
+      }
+    };
+    loadEmployees();
+  }, []);
 
   // Realtime subscription for B2B quotes with permission check
   useEffect(() => {
@@ -854,6 +873,8 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
       valid_until: quote.valid_until ? dayjs(quote.valid_until) : null,
       notes: quote.notes,
       terms_conditions: quote.terms_conditions,
+      warehouse_employee_id: quote.warehouse_employee_id,
+      delivery_employee_id: quote.delivery_employee_id,
     });
     setEditQuoteModalOpen(true);
   };
@@ -1080,6 +1101,8 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
           : null,
         notes: values.notes,
         terms_conditions: values.terms_conditions,
+        warehouse_employee_id: values.warehouse_employee_id || null,
+        delivery_employee_id: values.delivery_employee_id || null,
       };
 
       console.log("Updating quote with data:", updateData);
@@ -1764,6 +1787,7 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
         isSalesStaff={isSalesStaff}
         isInventoryStaff={isInventoryStaff}
         isDeliveryStaff={isDeliveryStaff}
+        employees={employees}
       />
 
       {/* Create Customer Modal */}
