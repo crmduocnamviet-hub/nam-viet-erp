@@ -434,91 +434,47 @@ export const analyzeProductsNeedingReorder = async (
   totalAmount: number;
   supplierCount: number;
 }> => {
-  // Step 1: Get inventory items that need restocking
-  const { data: inventoryData, error: inventoryError } = await supabase
-    .from("inventory")
-    .select(
-      `
-      *,
-      products(*, suppliers(*))
-    `,
-    )
+  // Query the view which already has all the filtering logic
+  const { data: productsToOrder, error } = await supabase
+    .from("products_needing_reorder")
+    .select("*")
     .eq("warehouse_id", warehouseId)
-    .not("products.supplier_id", "is", null);
+    .order("quantity_needed", { ascending: false });
 
-  if (inventoryError) {
-    throw new Error(`Failed to fetch inventory: ${inventoryError.message}`);
+  if (error) {
+    throw new Error(
+      `Failed to fetch products needing reorder: ${error.message}`,
+    );
   }
 
-  // Step 2: Get all pending purchase orders to check for products already ordered
-  const { data: pendingPOs, error: poError } = await supabase
-    .from("purchase_orders")
-    .select(
-      `
-      id,
-      items:purchase_order_items(product_id)
-    `,
-    )
-    .in("status", ["draft", "sent", "ordered", "partially_received"]);
-
-  if (poError) {
-    console.error("Error fetching pending POs:", poError);
+  if (!productsToOrder || productsToOrder.length === 0) {
+    return { productsToOrder: [], totalAmount: 0, supplierCount: 0 };
   }
 
-  // Create a Set of product IDs that are already in pending orders
-  const productsInPendingOrders = new Set(
-    (pendingPOs || []).flatMap((po: any) =>
-      (po.items || []).map((item: any) => item.product_id),
-    ),
-  );
-
-  // Step 3: Filter products that need to be ordered
-  const productsToOrder: any[] = [];
-
-  (inventoryData || []).forEach((inv: any) => {
-    const product = inv.products;
-    if (!product) return;
-
-    const currentStock = inv.quantity || 0;
-    // Use min_stock and max_stock from inventory table, not product table
-    const minStock = inv.min_stock || 0;
-    const maxStock = inv.max_stock || 0;
-
-    // Check conditions
-    const needsRestocking = currentStock <= minStock;
-    const hasSupplier = product.supplier_id !== null;
-    const notAlreadyOrdered = !productsInPendingOrders.has(product.id);
-    const hasMaxStock = maxStock > 0;
-
-    if (needsRestocking && hasSupplier && notAlreadyOrdered && hasMaxStock) {
-      const quantityNeeded = maxStock - currentStock;
-      if (quantityNeeded > 0) {
-        productsToOrder.push({
-          product_id: product.id,
-          product_name: product.name,
-          supplier_id: product.supplier_id,
-          supplier_name: product.suppliers?.name || "Unknown",
-          current_stock: currentStock,
-          min_stock: minStock,
-          max_stock: maxStock,
-          quantity_needed: quantityNeeded,
-          unit_price: product.wholesale_price || product.cost_price || 0,
-        });
-      }
-    }
-  });
+  // Map to the expected format
+  const formattedProducts = productsToOrder.map((p: any) => ({
+    product_id: p.product_id,
+    product_name: p.product_name,
+    supplier_id: p.supplier_id,
+    supplier_name: p.supplier_name || "Unknown",
+    current_stock: p.current_quantity,
+    min_stock: p.min_stock,
+    max_stock: p.max_stock,
+    quantity_needed: p.quantity_needed,
+    unit_price: p.wholesale_price || p.cost_price || 0,
+  }));
 
   // Group by supplier to count
-  const supplierIds = new Set(productsToOrder.map((p) => p.supplier_id));
+  const supplierIds = new Set(formattedProducts.map((p) => p.supplier_id));
 
   // Calculate total amount
-  const totalAmount = productsToOrder.reduce(
+  const totalAmount = formattedProducts.reduce(
     (sum, p) => sum + p.quantity_needed * p.unit_price,
     0,
   );
 
   return {
-    productsToOrder,
+    productsToOrder: formattedProducts,
     totalAmount,
     supplierCount: supplierIds.size,
   };
@@ -770,85 +726,37 @@ export const autoGeneratePurchaseOrders = async (
   warehouseId: number,
   createdBy: string | null,
 ) => {
-  // Step 1: Get inventory items that need restocking
-  const { data: inventoryData, error: inventoryError } = await supabase
-    .from("inventory")
-    .select(
-      `
-      *,
-      products(*, suppliers(*))
-    `,
-    )
+  // Step 1: Query the view which already has all the filtering logic
+  const { data: viewData, error } = await supabase
+    .from("products_needing_reorder")
+    .select("*")
     .eq("warehouse_id", warehouseId)
-    .not("products.supplier_id", "is", null);
+    .order("quantity_needed", { ascending: false });
 
-  if (inventoryError) {
-    throw new Error(`Failed to fetch inventory: ${inventoryError.message}`);
+  if (error) {
+    throw new Error(
+      `Failed to fetch products needing reorder: ${error.message}`,
+    );
   }
 
-  // Step 2: Get all pending purchase orders to check for products already ordered
-  const { data: pendingPOs, error: poError } = await supabase
-    .from("purchase_orders")
-    .select(
-      `
-      id,
-      items:purchase_order_items(product_id)
-    `,
-    )
-    .in("status", ["draft", "sent", "ordered", "partially_received"]);
-
-  if (poError) {
-    console.error("Error fetching pending POs:", poError);
-  }
-
-  // Create a Set of product IDs that are already in pending orders
-  const productsInPendingOrders = new Set(
-    (pendingPOs || []).flatMap((po: any) =>
-      (po.items || []).map((item: any) => item.product_id),
-    ),
-  );
-
-  // Step 3: Filter products that need to be ordered
-  const productsToOrder: any[] = [];
-
-  (inventoryData || []).forEach((inv: any) => {
-    const product = inv.products;
-    if (!product) return;
-
-    const currentStock = inv.quantity || 0;
-    // Use min_stock and max_stock from inventory table, not product table
-    const minStock = inv.min_stock || 0;
-    const maxStock = inv.max_stock || 0;
-
-    // Check conditions
-    const needsRestocking = currentStock <= minStock;
-    const hasSupplier = product.supplier_id !== null;
-    const notAlreadyOrdered = !productsInPendingOrders.has(product.id);
-    const hasMaxStock = maxStock > 0;
-
-    if (needsRestocking && hasSupplier && notAlreadyOrdered && hasMaxStock) {
-      const quantityNeeded = maxStock - currentStock;
-      if (quantityNeeded > 0) {
-        productsToOrder.push({
-          product_id: product.id,
-          product_name: product.name,
-          supplier_id: product.supplier_id,
-          supplier_name: product.suppliers?.name || "Unknown",
-          current_stock: currentStock,
-          min_stock: minStock,
-          max_stock: maxStock,
-          quantity_needed: quantityNeeded,
-          unit_price: product.wholesale_price || product.cost_price || 0,
-        });
-      }
-    }
-  });
-
-  if (productsToOrder.length === 0) {
+  if (!viewData || viewData.length === 0) {
     return { message: "No products need restocking", purchaseOrders: [] };
   }
 
-  // Step 4: Group products by supplier
+  // Step 2: Map to expected format
+  const productsToOrder = viewData.map((p: any) => ({
+    product_id: p.product_id,
+    product_name: p.product_name,
+    supplier_id: p.supplier_id,
+    supplier_name: p.supplier_name || "Unknown",
+    current_stock: p.current_quantity,
+    min_stock: p.min_stock,
+    max_stock: p.max_stock,
+    quantity_needed: p.quantity_needed,
+    unit_price: p.wholesale_price || p.cost_price || 0,
+  }));
+
+  // Step 3: Group products by supplier
   const productsBySupplier: Record<number, any[]> = {};
   productsToOrder.forEach((product) => {
     const supplierId = product.supplier_id;
@@ -858,7 +766,7 @@ export const autoGeneratePurchaseOrders = async (
     productsBySupplier[supplierId].push(product);
   });
 
-  // Step 5: Create one purchase order per supplier
+  // Step 4: Create one purchase order per supplier
   const createdPurchaseOrders: any[] = [];
 
   for (const [supplierId, products] of Object.entries(productsBySupplier)) {

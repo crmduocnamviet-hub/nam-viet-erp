@@ -14,6 +14,171 @@ import {
  */
 
 /**
+ * Generate transfer suggestions for pharmacies based on inventory levels
+ * Suggests products that need to be transferred from B2B warehouse to pharmacies
+ * based on min/max stock levels and excluding products already in pending/in_transit transfers
+ */
+export const generateTransferSuggestions = async () => {
+  try {
+    // Step 1: Get all warehouses
+    const { data: warehouses, error: whError } = await supabase
+      .from("warehouses")
+      .select("*")
+      .eq("is_active", true)
+      .order("name");
+
+    if (whError) throw whError;
+
+    // Find B2B warehouse and pharmacy warehouses
+    const b2bWarehouse = warehouses?.find((w) =>
+      w.name.toLowerCase().includes("b2b"),
+    );
+    const pharmacyWarehouses = warehouses?.filter(
+      (w) => !w.name.toLowerCase().includes("b2b"),
+    );
+
+    if (
+      !b2bWarehouse ||
+      !pharmacyWarehouses ||
+      pharmacyWarehouses.length === 0
+    ) {
+      return {
+        data: [],
+        error: { message: "Không tìm thấy kho B2B hoặc kho nhà thuốc" },
+      };
+    }
+
+    // Step 2: Get all pending/in_transit transfers to exclude products already being transferred
+    const { data: activeTransfers } = await supabase
+      .from("warehouse_transfers")
+      .select(
+        `
+        *,
+        warehouse_transfer_items(product_id, lot_id, quantity_requested)
+      `,
+      )
+      .in("status", ["pending", "in_transit", "approved"]);
+
+    // Create map of product IDs that are already being transferred to each warehouse
+    const productsInTransit = new Map<number, Set<number>>();
+    activeTransfers?.forEach((transfer: any) => {
+      const toWarehouseId = transfer.to_warehouse_id;
+      if (!productsInTransit.has(toWarehouseId)) {
+        productsInTransit.set(toWarehouseId, new Set());
+      }
+      transfer.warehouse_transfer_items?.forEach((item: any) => {
+        productsInTransit.get(toWarehouseId)?.add(item.product_id);
+      });
+    });
+
+    // Step 3: For each pharmacy, find products that need replenishment
+    const suggestions = [];
+
+    for (const pharmacy of pharmacyWarehouses) {
+      // Get inventory for this pharmacy with min/max settings
+      const { data: inventory } = await supabase
+        .from("inventory")
+        .select(
+          `
+          *,
+          products!inner(
+            id,
+            name,
+            sku,
+            retail_price,
+            conversion_rate,
+            wholesale_unit,
+            retail_unit,
+            enable_lot_management
+          ),
+          inventory_settings!inner(min_stock, max_stock)
+        `,
+        )
+        .eq("warehouse_id", pharmacy.id)
+        .eq("inventory_settings.warehouse_id", pharmacy.id);
+
+      const productsNeedingReplenishment = inventory
+        ?.filter((inv: any) => {
+          const minStock = inv.inventory_settings?.min_stock || 0;
+          const currentQty = inv.quantity || 0;
+          const productId = inv.product_id;
+
+          // Check if product is below min stock
+          const isBelowMin = currentQty < minStock;
+
+          // Check if product is not already in a pending transfer
+          const inTransitSet = productsInTransit.get(pharmacy.id);
+          const notInTransit = !inTransitSet || !inTransitSet.has(productId);
+
+          return isBelowMin && notInTransit && minStock > 0;
+        })
+        .map((inv: any) => {
+          const maxStock = inv.inventory_settings?.max_stock || 0;
+          const currentQty = inv.quantity || 0;
+          const product = inv.products;
+
+          // Calculate quantity needed (in pharmacy units)
+          const quantityNeeded = Math.max(0, maxStock - currentQty);
+
+          // If transferring from B2B, we need to convert to wholesale units
+          const conversionRate = product.conversion_rate || 1;
+          const quantityInWholesaleUnits = Math.ceil(
+            quantityNeeded / conversionRate,
+          );
+
+          return {
+            product_id: product.id,
+            product_name: product.name,
+            product_sku: product.sku,
+            current_quantity: currentQty,
+            min_stock: inv.inventory_settings?.min_stock || 0,
+            max_stock: maxStock,
+            quantity_needed_retail: quantityNeeded,
+            quantity_needed_wholesale: quantityInWholesaleUnits,
+            conversion_rate: conversionRate,
+            wholesale_unit: product.wholesale_unit || "Thùng",
+            retail_unit: product.retail_unit || "Hộp",
+            unit_price: product.retail_price || 0,
+            enable_lot_management: product.enable_lot_management,
+          };
+        });
+
+      if (
+        productsNeedingReplenishment &&
+        productsNeedingReplenishment.length > 0
+      ) {
+        suggestions.push({
+          warehouse_id: pharmacy.id,
+          warehouse_name: pharmacy.name,
+          products: productsNeedingReplenishment,
+          total_products: productsNeedingReplenishment.length,
+          total_value: productsNeedingReplenishment.reduce(
+            (sum, p) => sum + p.quantity_needed_retail * p.unit_price,
+            0,
+          ),
+        });
+      }
+    }
+
+    return {
+      data: {
+        b2b_warehouse: b2bWarehouse,
+        suggestions: suggestions,
+        total_pharmacies: suggestions.length,
+        total_products: suggestions.reduce(
+          (sum, s) => sum + s.total_products,
+          0,
+        ),
+      },
+      error: null,
+    };
+  } catch (error: any) {
+    console.error("Error generating transfer suggestions:", error);
+    return { data: null, error };
+  }
+};
+
+/**
  * Get all warehouse transfers with filters
  */
 export const getAllWarehouseTransfers = async (filters?: {
