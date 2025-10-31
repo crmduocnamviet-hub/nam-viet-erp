@@ -230,20 +230,40 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
     fetchCombos();
   }, [fetchCombos]);
 
+  // Cache promotions to avoid too many API calls (fix claim/quota errors)
   useEffect(() => {
+    let mounted = true;
+    let timeoutId: NodeJS.Timeout;
+
     const fetchPromos = async () => {
-      const { data, error } = await getActivePromotions();
-      if (error) {
-        notification.error({
-          message: "Lỗi tải khuyến mãi",
-          description: error.message,
-        });
-      } else {
-        setPromotions((data as IPromotion[]) || []);
+      try {
+        const { data, error } = await getActivePromotions();
+        if (!mounted) return;
+
+        if (error) {
+          console.error("Error loading promotions:", error);
+          // Don't show notification on every error to avoid spam
+          setPromotions([]);
+        } else {
+          setPromotions((data as IPromotion[]) || []);
+        }
+      } catch (err) {
+        if (!mounted) return;
+        console.error("Error in fetchPromos:", err);
+        setPromotions([]);
       }
     };
-    fetchPromos();
-  }, [notification]);
+
+    // Debounce to avoid too many calls
+    timeoutId = setTimeout(() => {
+      fetchPromos();
+    }, 500);
+
+    return () => {
+      mounted = false;
+      clearTimeout(timeoutId);
+    };
+  }, []); // Only fetch once on mount
 
   // Detect combos whenever cart changes
   const detectedCombos = useMemo(() => {
@@ -1026,8 +1046,8 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
   // Calculate cart items and totals (without promo code)
   const cartItemsWithPricing = useMemo(() => {
     const items = (cart || []).map((item) => {
-      // Create a mock product object with the required IProduct properties
-      const mockProduct: IProduct = {
+      // Format cart item to IProduct interface for price calculation
+      const productForPricing: IProduct = {
         ...item,
         id: item.id,
         name: item.name,
@@ -1045,7 +1065,7 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
         supplier_id: null,
       } as never;
 
-      const priceInfo = calculateBestPrice(mockProduct, promotions);
+      const priceInfo = calculateBestPrice(productForPricing, promotions);
       return {
         ...item,
         ...priceInfo,
