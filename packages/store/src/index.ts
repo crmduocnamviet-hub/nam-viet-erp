@@ -22,6 +22,13 @@ export * from "./fetchStore";
 export * from "./fetchSubmitStore";
 export * from "./entityStore"; // New normalized entity store
 
+// Export new stores
+export * from "./promotionStore";
+export * from "./vatInvoiceStore";
+export * from "./patientStore";
+export * from "./userManagementStore";
+export * from "./employeeManagementStore";
+
 export { FETCH_QUERY_KEY } from "./constants";
 
 // Export services
@@ -35,6 +42,13 @@ export * from "./hooks/useInventory";
 export * from "./hooks/useProductLot";
 export * from "./hooks/useProduct";
 export * from "./hooks/useB2BOrder";
+
+// Export new hooks
+export * from "./hooks/usePromotion";
+export * from "./hooks/useVATInvoice";
+export * from "./hooks/usePatient";
+export * from "./hooks/useUserManagement";
+export * from "./hooks/useEmployeeManagement";
 
 export const useQuery = _useQuery;
 export const setQueryData = _setQueryData;
