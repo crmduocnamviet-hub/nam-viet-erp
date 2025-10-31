@@ -16,6 +16,7 @@ import {
   Tag,
   Grid,
 } from "antd";
+import { getResponsivePadding } from "../../constants/spacing";
 import { PlusOutlined, DeleteOutlined } from "@ant-design/icons";
 import {
   createVoucher,
@@ -185,7 +186,7 @@ const Vouchers: React.FC = () => {
   ];
 
   return (
-    <>
+    <div style={{ padding: getResponsivePadding(screens) }}>
       <Row justify="space-between" align="middle" style={{ marginBottom: 24 }}>
         <Col>
           <Title level={2}>Quản lý Mã Giảm Giá</Title>
@@ -249,7 +250,7 @@ const Vouchers: React.FC = () => {
           </Form.Item>
         </Form>
       </Modal>
-    </>
+    </div>
   );
 };
 

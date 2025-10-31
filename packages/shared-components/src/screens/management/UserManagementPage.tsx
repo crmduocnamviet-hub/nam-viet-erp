@@ -19,9 +19,11 @@ import {
   Tooltip,
   Badge,
   App,
+  Grid,
 } from "antd";
 import {
   PlusOutlined,
+  EditOutlined,
   DeleteOutlined,
   UserOutlined,
   MailOutlined,
@@ -37,9 +39,11 @@ import {
   updateUserAccount,
   deleteUserAccount,
 } from "@nam-viet-erp/services";
+import { COMMON_SPACING, getResponsivePadding } from "../../constants/spacing";
 
 const { Title, Text } = Typography;
 const { Search } = Input;
+const { useBreakpoint } = Grid;
 
 interface IUserAccount {
   id: string;
@@ -67,6 +71,7 @@ interface UserFormData {
 
 const UserManagementPageContent: React.FC = () => {
   const { notification } = App.useApp();
+  const screens = useBreakpoint();
   const [users, setUsers] = useState<IUserAccount[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
@@ -118,7 +123,10 @@ const UserManagementPageContent: React.FC = () => {
 
         const { error } = await updateUserAccount(editingUser.id, updateData);
         if (error) {
-          message.error("Lỗi khi cập nhật tài khoản");
+          notification.error({
+            message: "Lỗi cập nhật tài khoản",
+            description: error.message || "Không thể cập nhật tài khoản",
+          });
           return;
         }
         notification.success({
@@ -145,8 +153,11 @@ const UserManagementPageContent: React.FC = () => {
       setEditingUser(null);
       form.resetFields();
       loadUsers();
-    } catch (error) {
-      message.error("Lỗi khi xử lý tài khoản");
+    } catch (error: any) {
+      notification.error({
+        message: "Lỗi xử lý",
+        description: error?.message || "Lỗi khi xử lý tài khoản",
+      });
     }
   };
 
@@ -240,28 +251,46 @@ const UserManagementPageContent: React.FC = () => {
     {
       title: "Hành động",
       key: "actions",
-      width: 80,
+      width: 100,
       fixed: "right" as const,
       render: (_, record: IUserAccount) => (
-        <Popconfirm
-          title="Bạn có chắc chắn muốn xóa tài khoản này?"
-          onConfirm={(e) => {
-            e?.stopPropagation();
-            handleDelete(record.id);
-          }}
-          okText="Xóa"
-          cancelText="Hủy"
-        >
-          <Tooltip title="Xóa">
+        <Space size="small">
+          <Tooltip title="Sửa">
             <Button
-              type="primary"
-              danger
-              icon={<DeleteOutlined />}
+              type="link"
               size="small"
-              onClick={(e) => e.stopPropagation()}
+              icon={<EditOutlined />}
+              onClick={(e) => {
+                e.stopPropagation();
+                openModal(record);
+              }}
             />
           </Tooltip>
-        </Popconfirm>
+          <Popconfirm
+            title="Xóa tài khoản?"
+            description={`Bạn có chắc chắn muốn xóa tài khoản "${record.email}"?`}
+            onConfirm={(e) => {
+              e?.stopPropagation();
+              handleDelete(record.id);
+            }}
+            onCancel={(e) => {
+              e?.stopPropagation();
+            }}
+            okText="Xóa"
+            cancelText="Hủy"
+            okButtonProps={{ danger: true }}
+          >
+            <Tooltip title="Xóa">
+              <Button
+                type="link"
+                size="small"
+                danger
+                icon={<DeleteOutlined />}
+                onClick={(e) => e.stopPropagation()}
+              />
+            </Tooltip>
+          </Popconfirm>
+        </Space>
       ),
     },
   ];
@@ -271,7 +300,7 @@ const UserManagementPageContent: React.FC = () => {
   const activeUsers = users.length; // All users are active since Supabase Auth doesn't have is_active field
 
   return (
-    <div>
+    <div style={{ padding: getResponsivePadding(screens) }}>
       <div style={{ marginBottom: 24 }}>
         <Title level={2}>Quản lý Tài khoản Người dùng</Title>
         <Text type="secondary">

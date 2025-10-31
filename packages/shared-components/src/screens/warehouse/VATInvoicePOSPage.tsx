@@ -40,6 +40,7 @@ import type {
   ICreateVATInvoiceOut,
   VATInvoiceStatus,
 } from "../../../../../types";
+import { COMMON_SPACING, getResponsivePadding } from "../../constants/spacing";
 import dayjs from "dayjs";
 
 const { Title, Text } = Typography;
@@ -241,7 +242,7 @@ const VATInvoicePOSPage: React.FC = () => {
   };
 
   return (
-    <div style={{ padding: isMobile ? "12px" : "24px" }}>
+    <div style={{ padding: getResponsivePadding(screens) }}>
       <Space direction="vertical" size="large" style={{ width: "100%" }}>
         {/* Header */}
         <Row justify="space-between" align="middle" gutter={[16, 16]}>

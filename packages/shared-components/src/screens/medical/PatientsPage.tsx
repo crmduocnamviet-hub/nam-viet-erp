@@ -15,6 +15,9 @@ import {
   DatePicker,
   Select,
   Statistic,
+  Popconfirm,
+  Tooltip,
+  Grid,
 } from "antd";
 import type { Breakpoint } from "antd";
 import dayjs from "dayjs";
@@ -35,12 +38,15 @@ import {
   deletePatient,
   getPatientPointsHistory,
 } from "@nam-viet-erp/services";
+import { COMMON_SPACING, getResponsivePadding } from "../../constants/spacing";
 
 const { Title, Text } = Typography;
 const { Search } = Input;
+const { useBreakpoint } = Grid;
 
 const PatientsPage: React.FC = () => {
   const { notification, modal } = AntApp.useApp();
+  const screens = useBreakpoint();
   const [patients, setPatients] = useState<IPatient[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -421,28 +427,40 @@ const PatientsPage: React.FC = () => {
       key: "actions",
       width: 120,
       render: (record: IPatient) => (
-        <Space>
-          <Button
-            type="text"
-            icon={<EditOutlined />}
-            onClick={() => handleEditPatient(record)}
-            title="Chỉnh sửa"
-          />
-          <Button
-            type="text"
-            danger
-            icon={<DeleteOutlined />}
-            loading={deletingPatientId === record.patient_id}
-            onClick={() => handleDeletePatient(record.patient_id)}
-            title="Xóa"
-          />
+        <Space size="small">
+          <Tooltip title="Chỉnh sửa">
+            <Button
+              type="link"
+              size="small"
+              icon={<EditOutlined />}
+              onClick={() => handleEditPatient(record)}
+            />
+          </Tooltip>
+          <Popconfirm
+            title="Xóa bệnh nhân"
+            description={`Bạn có chắc chắn muốn xóa bệnh nhân "${record.full_name}"?`}
+            onConfirm={() => handleDeletePatient(record.patient_id)}
+            okText="Xóa"
+            cancelText="Hủy"
+            okButtonProps={{ danger: true }}
+          >
+            <Tooltip title="Xóa">
+              <Button
+                type="link"
+                size="small"
+                danger
+                icon={<DeleteOutlined />}
+                loading={deletingPatientId === record.patient_id}
+              />
+            </Tooltip>
+          </Popconfirm>
         </Space>
       ),
     },
   ];
 
   return (
-    <div>
+    <div style={{ padding: getResponsivePadding(screens) }}>
       <Row style={{ marginBottom: 24 }} gutter={[16, 16]} align="middle">
         <Col xs={24} sm={24} md={12} lg={12} xl={12}>
           <Title level={2} style={{ margin: 0 }}>
