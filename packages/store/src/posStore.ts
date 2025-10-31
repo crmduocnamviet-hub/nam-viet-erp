@@ -179,7 +179,7 @@ export const usePosStore = create<PosState>()(
                 tab.cart[existingIndex].quantity += item.quantity;
                 tab.cart[existingIndex].total =
                   tab.cart[existingIndex].quantity *
-                  tab.cart[existingIndex].price;
+                  (tab.cart[existingIndex]?.price || 1);
               } else {
                 // Add new item
                 tab.cart.push(item);
@@ -202,7 +202,7 @@ export const usePosStore = create<PosState>()(
                   updates.quantity !== undefined ||
                   updates.price !== undefined
                 ) {
-                  item.total = item.quantity * item.price;
+                  item.total = item.quantity * (item.price || 1);
                 }
               }
             },
@@ -297,7 +297,7 @@ export const usePosStore = create<PosState>()(
                 tab.cart[existingIndex].quantity += item.quantity;
                 tab.cart[existingIndex].total =
                   tab.cart[existingIndex].quantity *
-                  tab.cart[existingIndex].price;
+                  (tab.cart[existingIndex]?.price || 1);
               } else {
                 // Add new item
                 tab.cart.push(item);
@@ -320,7 +320,7 @@ export const usePosStore = create<PosState>()(
                   updates.quantity !== undefined ||
                   updates.price !== undefined
                 ) {
-                  item.total = item.quantity * item.price;
+                  item.total = item.quantity * (item.price || 1);
                 }
               }
             },

@@ -29,6 +29,7 @@ import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   CloseCircleOutlined,
+  ShoppingOutlined,
 } from "@ant-design/icons";
 import PageLayout from "../../components/PageLayout";
 import {
@@ -461,7 +462,7 @@ const WarehouseTransfersListPage: React.FC = () => {
     <PageLayout
       title="Quản lý chuyển kho"
       breadcrumbs={[
-        { title: "Kho hàng", path: "/warehouse" },
+        { title: "Kho hàng", href: "/warehouse" },
         { title: "Chuyển kho" },
       ]}
     >

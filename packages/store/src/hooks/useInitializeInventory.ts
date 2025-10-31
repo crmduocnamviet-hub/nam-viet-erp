@@ -45,6 +45,12 @@ export function useInitializeInventory() {
 
     const initializeInventory = async () => {
       try {
+        if (!employee.warehouse_id) {
+          console.error(
+            "[useInitializeInventory] Employee has no warehouse_id",
+          );
+          return;
+        }
         await fetchInventory(employee.warehouse_id);
       } catch (error: any) {
         console.error(

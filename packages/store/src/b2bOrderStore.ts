@@ -89,7 +89,7 @@ export interface B2BOrderState {
   updateOrderItemByIndex: (
     index: number,
     key: string,
-    updates: Partial<IB2BQuoteItem>
+    updates: Partial<IB2BQuoteItem>,
   ) => void;
   removeOrderItemByIndex: (index: number, key: string) => void;
   clearOrderItemsByIndex: (index: number) => void;
@@ -101,7 +101,7 @@ export interface B2BOrderState {
   // Customer actions by index
   setSelectedCustomerByIndex: (
     index: number,
-    customer: Customer | null
+    customer: Customer | null,
   ) => void;
   updateFormDataByIndex: (index: number, data: Partial<OrderFormData>) => void;
 
@@ -112,7 +112,7 @@ export interface B2BOrderState {
       items: IB2BQuoteItem[];
     },
     createB2BQuote: (data: any) => Promise<any>,
-    addQuoteItem: (data: any) => Promise<any>
+    addQuoteItem: (data: any) => Promise<any>,
   ) => Promise<void>;
 
   // Reset (operate on active tab)
@@ -156,7 +156,7 @@ export const useB2BOrderStore = create<B2BOrderState>()(
               state.activeTabId = newTabId;
             },
             false,
-            "createTab"
+            "createTab",
           );
 
           return newTabId;
@@ -182,13 +182,13 @@ export const useB2BOrderStore = create<B2BOrderState>()(
               if (state.activeTabId === tabId) {
                 const newActiveIndex = Math.min(
                   tabIndex,
-                  state.tabs.length - 1
+                  state.tabs.length - 1,
                 );
                 state.activeTabId = state.tabs[newActiveIndex].id;
               }
             },
             false,
-            "closeTab"
+            "closeTab",
           ),
 
         switchTab: (tabId) =>
@@ -199,7 +199,7 @@ export const useB2BOrderStore = create<B2BOrderState>()(
               }
             },
             false,
-            "switchTab"
+            "switchTab",
           ),
 
         updateTabTitle: (tabId, title) =>
@@ -211,7 +211,7 @@ export const useB2BOrderStore = create<B2BOrderState>()(
               }
             },
             false,
-            "updateTabTitle"
+            "updateTabTitle",
           ),
 
         // Order item actions (operate on active tab)
@@ -222,7 +222,7 @@ export const useB2BOrderStore = create<B2BOrderState>()(
               if (!tab) return;
 
               const existingIndex = tab.orderItems.findIndex(
-                (i) => i.product_id === item.product_id
+                (i) => i.product_id === item.product_id,
               );
 
               if (existingIndex >= 0) {
@@ -237,7 +237,7 @@ export const useB2BOrderStore = create<B2BOrderState>()(
               }
             },
             false,
-            "addOrderItem"
+            "addOrderItem",
           ),
 
         updateOrderItem: (key, updates) =>
@@ -258,7 +258,7 @@ export const useB2BOrderStore = create<B2BOrderState>()(
               }
             },
             false,
-            "updateOrderItem"
+            "updateOrderItem",
           ),
 
         removeOrderItem: (key) =>
@@ -270,7 +270,7 @@ export const useB2BOrderStore = create<B2BOrderState>()(
               tab.orderItems = tab.orderItems.filter((i) => i.key !== key);
             },
             false,
-            "removeOrderItem"
+            "removeOrderItem",
           ),
 
         clearOrderItems: () =>
@@ -282,7 +282,7 @@ export const useB2BOrderStore = create<B2BOrderState>()(
               tab.orderItems = [];
             },
             false,
-            "clearOrderItems"
+            "clearOrderItems",
           ),
 
         // Customer actions (operate on active tab)
@@ -305,7 +305,7 @@ export const useB2BOrderStore = create<B2BOrderState>()(
               }
             },
             false,
-            "setSelectedCustomer"
+            "setSelectedCustomer",
           ),
 
         updateFormData: (data) =>
@@ -317,7 +317,7 @@ export const useB2BOrderStore = create<B2BOrderState>()(
               tab.formData = { ...tab.formData, ...data };
             },
             false,
-            "updateFormData"
+            "updateFormData",
           ),
 
         // Order item actions by index
@@ -328,7 +328,7 @@ export const useB2BOrderStore = create<B2BOrderState>()(
               if (!tab) return;
 
               const existingIndex = tab.orderItems.findIndex(
-                (i) => i.product_id === item.product_id
+                (i) => i.product_id === item.product_id,
               );
 
               if (existingIndex >= 0) {
@@ -343,7 +343,7 @@ export const useB2BOrderStore = create<B2BOrderState>()(
               }
             },
             false,
-            "addOrderItemByIndex"
+            "addOrderItemByIndex",
           ),
 
         updateOrderItemByIndex: (index, key, updates) =>
@@ -364,7 +364,7 @@ export const useB2BOrderStore = create<B2BOrderState>()(
               }
             },
             false,
-            "updateOrderItemByIndex"
+            "updateOrderItemByIndex",
           ),
 
         removeOrderItemByIndex: (index, key) =>
@@ -376,7 +376,7 @@ export const useB2BOrderStore = create<B2BOrderState>()(
               tab.orderItems = tab.orderItems.filter((i) => i.key !== key);
             },
             false,
-            "removeOrderItemByIndex"
+            "removeOrderItemByIndex",
           ),
 
         clearOrderItemsByIndex: (index) =>
@@ -388,7 +388,7 @@ export const useB2BOrderStore = create<B2BOrderState>()(
               tab.orderItems = [];
             },
             false,
-            "clearOrderItemsByIndex"
+            "clearOrderItemsByIndex",
           ),
 
         // Customer actions by index
@@ -411,7 +411,7 @@ export const useB2BOrderStore = create<B2BOrderState>()(
               }
             },
             false,
-            "setSelectedCustomerByIndex"
+            "setSelectedCustomerByIndex",
           ),
 
         updateFormDataByIndex: (index, data) =>
@@ -423,7 +423,7 @@ export const useB2BOrderStore = create<B2BOrderState>()(
               tab.formData = { ...tab.formData, ...data };
             },
             false,
-            "updateFormDataByIndex"
+            "updateFormDataByIndex",
           ),
 
         // Create order action
@@ -448,8 +448,8 @@ export const useB2BOrderStore = create<B2BOrderState>()(
 
             // Calculate totals
             const subtotal = items.reduce(
-              (sum, item) => sum + item.total_price,
-              0
+              (sum, item) => sum + (item?.total_price || 0),
+              0,
             );
             const discountAmount = subtotal * (formData.discount_percent / 100);
             const taxableAmount = subtotal - discountAmount;
@@ -471,7 +471,7 @@ export const useB2BOrderStore = create<B2BOrderState>()(
 
             if (quoteResult.error) {
               throw new Error(
-                quoteResult.error.message || "Failed to create quote"
+                quoteResult.error.message || "Failed to create quote",
               );
             }
 
@@ -523,7 +523,7 @@ export const useB2BOrderStore = create<B2BOrderState>()(
             if (currentState.tabs.length > 1) {
               // Remove current tab if there are multiple tabs
               const tabIndex = currentState.tabs.findIndex(
-                (t) => t.id === currentTabId
+                (t) => t.id === currentTabId,
               );
 
               set((state) => {
@@ -534,7 +534,7 @@ export const useB2BOrderStore = create<B2BOrderState>()(
                   // Switch to another tab
                   const newActiveIndex = Math.min(
                     tabIndex,
-                    state.tabs.length - 1
+                    state.tabs.length - 1,
                   );
                   state.activeTabId = state.tabs[newActiveIndex].id;
                 }
@@ -574,13 +574,13 @@ export const useB2BOrderStore = create<B2BOrderState>()(
               tab.error = null;
             },
             false,
-            "resetOrder"
+            "resetOrder",
           ),
       };
 
       return store;
-    })
-  )
+    }),
+  ),
 );
 
 // Helper to get active tab
@@ -660,8 +660,8 @@ export const useOrderTotals = (): OrderTotals => {
   const formData = useOrderFormData();
 
   const subtotal = items.reduce(
-    (sum: number, item: IB2BQuoteItem) => sum + item.total_price,
-    0
+    (sum: number, item: IB2BQuoteItem) => sum + (item?.total_price || 0),
+    0,
   );
   const discountPercent = formData.discount_percent || 0;
   const taxPercent = formData.tax_percent || 10;
@@ -679,7 +679,7 @@ export const useOrderTotals = (): OrderTotals => {
     itemCount: items.length,
     totalQuantity: items.reduce(
       (sum: number, item: IB2BQuoteItem) => sum + item.quantity,
-      0
+      0,
     ),
   };
 };
@@ -689,8 +689,8 @@ export const useOrderTotalsByIndex = (index: number): OrderTotals => {
   const formData = useOrderFormDataByIndex(index);
 
   const subtotal = items.reduce(
-    (sum: number, item: IB2BQuoteItem) => sum + item.total_price,
-    0
+    (sum: number, item: IB2BQuoteItem) => sum + (item?.total_price || 0),
+    0,
   );
   const discountPercent = formData.discount_percent || 0;
   const taxPercent = formData.tax_percent || 10;
@@ -708,7 +708,7 @@ export const useOrderTotalsByIndex = (index: number): OrderTotals => {
     itemCount: items.length,
     totalQuantity: items.reduce(
       (sum: number, item: IB2BQuoteItem) => sum + item.quantity,
-      0
+      0,
     ),
   };
 };

@@ -92,7 +92,7 @@ const useQuery = <T = any>({
 
 export const refreshQuery = async (key: any[]) => {
   const fetch = fetchStore.getState().fetchData[getQueryKey(key)]?.fetch;
-  return fetch();
+  return fetch?.();
 };
 
 export const setQueryData = async <T = any>(

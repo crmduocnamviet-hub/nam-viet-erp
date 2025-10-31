@@ -78,10 +78,14 @@ export const useCreateB2BQuoteHandler = ({
       quoteData: any;
       orderItems: any[];
     },
-    { quote_id: number; quote_number: string }
+    { quote_id: string; quote_number: string }
   >({
     key: [FETCH_SUBMIT_QUERY_KEY.CREATE_B2B_QUOTE],
     onSubmit: async (values) => {
+      if (!values) {
+        throw new Error("Missing quote data");
+      }
+
       try {
         const { quoteData, orderItems } = values;
 

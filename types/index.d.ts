@@ -41,6 +41,7 @@ interface IProduct {
   batch_number?: string | null;
   expiry_date?: string | null;
   enable_lot_management?: boolean;
+  inventory?: IInventory[];
 }
 
 // Combo table - represents a product bundle/package deal

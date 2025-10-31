@@ -260,7 +260,7 @@ export const useProductStore = create<ProductState>()(
 );
 
 // Selectors
-export const useProducts = () => useProductStore((state) => state.products);
+export const useProductList = () => useProductStore((state) => state.products);
 export const useCurrentProduct = () =>
   useProductStore((state) => state.currentProduct);
 export const useIsLoadingProducts = () =>

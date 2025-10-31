@@ -16,7 +16,7 @@ export const useInventoryOfWarehouseByLotId = (lotId: number) => {
     queryFn: async () => {
       // const result = await fetchInventoryByLotId(lotId);
       // return result as IInventory[];
-      return null;
+      return [];
     },
   });
 
@@ -26,12 +26,12 @@ export const useInventoryOfWarehouseByLotId = (lotId: number) => {
 export const useTransferProduct = () => {};
 
 export const useTransferProductData = (transferId: number) => {
-  return useQuery<IWarehouseTransferWithDetails>({
+  return useQuery<IWarehouseTransferWithDetails | null>({
     key: [FETCH_QUERY_KEY.TRANSFER, transferId],
     disableCache: true,
     async queryFn() {
       const { data } = await getWarehouseTransferById(transferId);
-      return data;
+      return data || null;
     },
   });
 };
@@ -76,7 +76,10 @@ export const useSendWarehouseTransfer = (
 ) => {
   return useSubmitQuery({
     key: [FETCH_QUERY_KEY.TRANSFER, transferId, "send"],
-    onSubmit: async (sendData: ISendWarehouseTransfer) => {
+    onSubmit: async (sendData) => {
+      if (!sendData) {
+        throw new Error("Missing send data");
+      }
       const res = await sendWarehouseTransfer(transferId, sendData);
       return res;
     },
@@ -90,8 +93,12 @@ export const useReceiveWarehouseTransfer = (
 ) => {
   return useSubmitQuery({
     key: [FETCH_QUERY_KEY.TRANSFER, transferId, "receive"],
-    onSubmit: (receiveData: IReceiveWarehouseTransfer) =>
-      receiveWarehouseTransfer(transferId, receiveData),
+    onSubmit: (receiveData) => {
+      if (!receiveData) {
+        throw new Error("Missing receive data");
+      }
+      return receiveWarehouseTransfer(transferId, receiveData);
+    },
     ...options,
   });
 };
@@ -102,13 +109,12 @@ export const useAddWarehouseTransferItem = (
 ) => {
   return useSubmitQuery({
     key: [FETCH_QUERY_KEY.TRANSFER, transferId, "addItem"],
-    onSubmit: (itemData: {
-      product_id: number;
-      lot_id?: number | null;
-      quantity_requested: number;
-      unit_price?: number;
-      notes?: string;
-    }) => addWarehouseTransferItem(transferId, itemData),
+    onSubmit: (itemData) => {
+      if (!itemData) {
+        throw new Error("Missing item data");
+      }
+      return addWarehouseTransferItem(transferId, itemData);
+    },
     ...options,
   });
 };
@@ -119,7 +125,12 @@ export const useDeleteWarehouseTransferItem = (options?: {
 }) => {
   return useSubmitQuery({
     key: [FETCH_QUERY_KEY.TRANSFER, "deleteItem"],
-    onSubmit: (itemId: number) => deleteWarehouseTransferItem(itemId),
+    onSubmit: (itemId) => {
+      if (itemId === undefined) {
+        throw new Error("Missing item ID");
+      }
+      return deleteWarehouseTransferItem(itemId);
+    },
     ...options,
   });
 };

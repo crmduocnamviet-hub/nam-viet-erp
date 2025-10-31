@@ -327,12 +327,12 @@
 
 ../../packages/shared-components/src/utils/b2bOrder.ts:234:59 - error TS18048: 'item.total_price' is possibly 'undefined'.
 
-234   const subtotal = orderItems.reduce((sum, item) => sum + item.total_price, 0);
+234   const subtotal = orderItems.reduce((sum, item) => sum + (item.total_price ?? 0), 0);
                                                               ~~~~~~~~~~~~~~~~
 
 ../../packages/store/src/b2bOrderStore.ts:451:36 - error TS18048: 'item.total_price' is possibly 'undefined'.
 
-451               (sum, item) => sum + item.total_price,
+451               (sum, item) => sum + (item.total_price ?? 0),
                                        ~~~~~~~~~~~~~~~~
 
 ../../packages/store/src/b2bOrderStore.ts:457:19 - error TS6133: 'totalAmount' is declared but its value is never read.
@@ -342,12 +342,12 @@
 
 ../../packages/store/src/b2bOrderStore.ts:663:49 - error TS18048: 'item.total_price' is possibly 'undefined'.
 
-663     (sum: number, item: IB2BQuoteItem) => sum + item.total_price,
+663     (sum: number, item: IB2BQuoteItem) => sum + (item.total_price ?? 0),
                                                     ~~~~~~~~~~~~~~~~
 
 ../../packages/store/src/b2bOrderStore.ts:692:49 - error TS18048: 'item.total_price' is possibly 'undefined'.
 
-692     (sum: number, item: IB2BQuoteItem) => sum + item.total_price,
+692     (sum: number, item: IB2BQuoteItem) => sum + (item.total_price ?? 0),
                                                     ~~~~~~~~~~~~~~~~
 
 ../../packages/store/src/hooks/useB2BOrder.ts:84:5 - error TS2322: Type '(values: { quoteData: any; orderItems: any[]; } | undefined) => Promise<{ quote_id: string; quote_number: string; }>' is not assignable to type '(data?: { quoteData: any; orderItems: any[]; } | undefined) => Promise<{ quote_id: number; quote_number: string; }>'.

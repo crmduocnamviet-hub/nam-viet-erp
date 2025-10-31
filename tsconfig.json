@@ -17,6 +17,9 @@
     "baseUrl": ".",
     "paths": {
       "@nam-viet-erp/*": ["apps/packages/*/src", "./apps/*/src"]
-    }
+    },
+    // Disable "never read" warnings
+    "noUnusedLocals": false,
+    "noUnusedParameters": false
   }
 }

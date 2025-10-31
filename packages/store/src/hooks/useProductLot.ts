@@ -43,7 +43,7 @@ export const useFilterProductLot = (
       ((ms) => {
         return new Promise((resolve) => setTimeout(resolve, ms));
       })(1000);
-      return result.data;
+      return result.data || [];
     },
     gcTime: 0, // Don't cache - always fetch fresh data after mutations
     disableCache: true,
@@ -58,17 +58,16 @@ export const useUpdateQuantityByLot = ({
   onSuccess,
 }: {
   lotId: number | null;
-  onError?: (e) => any;
+  onError?: (e: any) => any;
   onSuccess?: () => any;
 }) => {
   const { submit, isLoading } = useSubmitQuery({
     key: [FETCH_SUBMIT_QUERY_KEY.UPDATE_INVENTORY_BY_LOT, lotId],
-    onSubmit: async (params: {
-      lotId: number | null;
-      productId: number;
-      warehouseId: number;
-      newQuantityAvailable: number;
-    }) => {
+    onSubmit: async (params) => {
+      if (!params) {
+        throw new Error("Missing parameters");
+      }
+
       try {
         const { error } = await updateProductLotQuantity({
           lotId: params.lotId,

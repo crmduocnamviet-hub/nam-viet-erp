@@ -59,7 +59,7 @@ export const useUpdateProductHandler = ({
   onSuccess,
 }: {
   productId: number;
-  onError?: (e) => any;
+  onError?: (e: any) => any;
   onSuccess?: () => any;
 }) => {
   const refetchProductWithInventory = useFetchStore(
@@ -71,7 +71,11 @@ export const useUpdateProductHandler = ({
 
   const { submit, isLoading } = useSubmitQuery({
     key: [FETCH_SUBMIT_QUERY_KEY.UPDATE_PRODUCT, productId],
-    onSubmit: async (values: ProductFormData) => {
+    onSubmit: async (values) => {
+      if (!values) {
+        throw new Error("Missing product data");
+      }
+
       try {
         const {
           inventory_settings,
@@ -94,7 +98,7 @@ export const useUpdateProductHandler = ({
           // Convert inventory_settings to array format for upsert
           const inventoryData = Object.entries(inventory_settings)
             .filter(([_, settings]) => settings && typeof settings === "object")
-            .map(([warehouseId, settings]) => ({
+            .map(([warehouseId, settings]: [string, any]) => ({
               product_id: productId,
               warehouse_id: parseInt(warehouseId),
               min_stock: settings?.min_stock || 0,

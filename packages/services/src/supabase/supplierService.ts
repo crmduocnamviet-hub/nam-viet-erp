@@ -67,7 +67,7 @@ export const getSupplierById = async (id: number) => {
  * Create a new supplier
  */
 export const createSupplier = async (
-  supplier: Omit<ISupplier, "id" | "created_at" | "updated_at">,
+  supplier?: Omit<ISupplier, "id" | "created_at" | "updated_at">,
 ) => {
   return await supabase.from("suppliers").insert(supplier).select().single();
 };

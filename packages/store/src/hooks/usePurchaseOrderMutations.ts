@@ -25,16 +25,16 @@ interface UpdatePurchaseOrderParams {
   };
 }
 
-interface CreateSupplierParams {
-  name: string;
-  email?: string | null;
-  phone?: string | null;
-  address?: string | null;
-  tax_code?: string | null;
-  contact_person?: string | null;
-  payment_terms?: string | null;
-  is_active: boolean;
-}
+// interface CreateSupplierParams {
+//   name: string;
+//   email?: string | null;
+//   phone?: string | null;
+//   address?: string | null;
+//   tax_code?: string | null;
+//   contact_person?: string | null;
+//   payment_terms?: string | null;
+//   is_active: boolean;
+// }
 
 interface UpdatePurchaseOrderItemParams {
   itemId: number;
@@ -120,13 +120,16 @@ export const useCreateSupplier = (callbacks?: {
   onSuccess?: (supplier: any) => void;
   onError?: (error: any) => void;
 }) => {
-  return useSubmitQuery<CreateSupplierParams, any>({
+  return useSubmitQuery<
+    Omit<ISupplier, "id" | "created_at" | "updated_at">,
+    any
+  >({
     key: ["create-supplier"],
     onSubmit: async (params) => {
       if (!params) {
         throw new Error("Missing parameters");
       }
-      const response = await createSupplier(params);
+      const response = await createSupplier(params as any);
       if (response.error || !response.data) {
         throw new Error("Không thể tạo nhà cung cấp mới");
       }

@@ -1,4 +1,4 @@
-import { FormInstance } from "antd";
+import type { FormInstance } from "antd";
 import dayjs from "dayjs";
 
 export interface OrderItem {
@@ -36,11 +36,11 @@ export interface Employee {
 /**
  * Format currency to Vietnamese Dong
  */
-export const formatCurrency = (amount: number): string => {
+export const formatCurrency = (amount?: number): string => {
   return new Intl.NumberFormat("vi-VN", {
     style: "currency",
     currency: "VND",
-  }).format(amount);
+  }).format(amount ?? 0);
 };
 
 /**
@@ -50,7 +50,7 @@ export const generateB2BOrderPdfContent = (
   orderItems: IB2BQuoteItem[],
   totals: OrderTotals,
   formValues: OrderFormValues,
-  employee?: Employee | null
+  employee?: Employee | null,
 ): string => {
   return `
     <!DOCTYPE html>
@@ -127,13 +127,13 @@ export const generateB2BOrderPdfContent = (
                 <td>${item.unit || "Hộp"}</td>
                 <td style="text-align: center;">${item.quantity}</td>
                 <td style="text-align: right;">${formatCurrency(
-                  item.unit_price
+                  item.unit_price,
                 )}</td>
                 <td style="text-align: right;">${formatCurrency(
-                  item.total_price
+                  item?.total_price ?? 0,
                 )}</td>
               </tr>
-            `
+            `,
               )
               .join("")}
           </tbody>
@@ -142,7 +142,7 @@ export const generateB2BOrderPdfContent = (
 
       <div class="total-section">
         <div class="total-row">Tạm tính: ${formatCurrency(
-          totals.subtotal
+          totals.subtotal,
         )}</div>
         <div class="total-row">Chiết khấu (${
           formValues.discount_percent || 0
@@ -151,7 +151,7 @@ export const generateB2BOrderPdfContent = (
           formValues.tax_percent || 0
         }%): +${formatCurrency(totals.taxAmount)}</div>
         <div class="total-row final">Tổng cộng: ${formatCurrency(
-          totals.totalAmount
+          totals.totalAmount,
         )}</div>
       </div>
 
@@ -180,7 +180,7 @@ export const exportB2BOrderToPdf = (
   orderItems: IB2BQuoteItem[],
   totals: OrderTotals,
   formValues: OrderFormValues,
-  employee?: Employee | null
+  employee?: Employee | null,
 ): { success: boolean; error?: string } => {
   try {
     // Validate order items
@@ -196,7 +196,7 @@ export const exportB2BOrderToPdf = (
       orderItems,
       totals,
       formValues,
-      employee
+      employee,
     );
 
     // Open print dialog
@@ -229,9 +229,12 @@ export const exportB2BOrderToPdf = (
 
 export const calculateTotals = (
   orderItems: IB2BQuoteItem[],
-  form: FormInstance
+  form: FormInstance,
 ) => {
-  const subtotal = orderItems.reduce((sum, item) => sum + item.total_price, 0);
+  const subtotal = orderItems.reduce(
+    (sum, item: IB2BQuoteItem) => sum + (item?.total_price ?? 0),
+    0,
+  );
   const discountPercent = form.getFieldValue("discount_percent") || 0;
   const taxPercent = form.getFieldValue("tax_percent") || 0;
 

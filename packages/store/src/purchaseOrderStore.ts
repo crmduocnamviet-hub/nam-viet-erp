@@ -342,7 +342,7 @@ export const usePurchaseOrders = () =>
   usePurchaseOrderStore((state) => state.purchaseOrders);
 export const useSuppliers = () =>
   usePurchaseOrderStore((state) => state.suppliers);
-export const useProducts = () =>
+export const useProductsStore = () =>
   usePurchaseOrderStore((state) => state.products);
 export const useB2bWarehouse = () =>
   usePurchaseOrderStore((state) => state.b2bWarehouse);

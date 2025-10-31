@@ -216,7 +216,7 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
   const totals = React.useMemo(() => {
     // Subtotal without VAT
     const subtotalBeforeVAT = orderItems.reduce(
-      (sum, item) => sum + item.total_price,
+      (sum, item) => sum + (item.total_price ?? 0),
       0,
     );
 
@@ -263,7 +263,7 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
       // Calculate base subtotal for promo code (without promo discount)
       const baseSubtotal = (() => {
         const subtotalBeforeVAT = orderItems.reduce(
-          (sum, item) => sum + item.total_price,
+          (sum, item) => sum + (item.total_price ?? 0),
           0,
         );
         const totalVAT = orderItems.reduce((sum, item) => {

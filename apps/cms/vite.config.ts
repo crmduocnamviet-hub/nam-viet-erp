@@ -15,6 +15,10 @@ export default defineConfig({
         short_name: "NamVietEMS",
         theme_color: "#0D5EA6",
       },
+      workbox: {
+        // Tăng giới hạn kích thước file có thể cache lên 5MB (mặc định là 2MB)
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5MB
+      },
     }),
   ],
   server: {

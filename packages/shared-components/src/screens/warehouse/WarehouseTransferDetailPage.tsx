@@ -10,7 +10,6 @@ import {
   Tag,
   Modal,
   Form,
-  Select,
   InputNumber,
   Input,
   Row,
@@ -22,10 +21,7 @@ import {
   CheckCircleOutlined,
   SendOutlined,
   CloseCircleOutlined,
-  PlusOutlined,
   DeleteOutlined,
-  HomeOutlined,
-  ShoppingOutlined,
 } from "@ant-design/icons";
 import PageLayout from "../../components/PageLayout";
 import {
@@ -43,7 +39,6 @@ import {
   useSendWarehouseTransfer,
   useSubmitWarehouseTransfer,
   useTransferProductData,
-  useWarehouses,
 } from "@nam-viet-erp/store";
 import ProductSearchInput from "../../components/ProductSearchInput";
 import LotSelectionModal from "../../components/LotSelectionModal";
