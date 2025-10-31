@@ -30,14 +30,11 @@ import {
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 import {
-  getPurchaseOrderById,
-  updatePurchaseOrder,
-  updatePurchaseOrderItem,
-  addPurchaseOrderItems,
-  deletePurchaseOrderItem,
-} from "@nam-viet-erp/services";
-import { getSuppliers } from "@nam-viet-erp/services";
-import { searchProducts } from "@nam-viet-erp/services";
+  usePurchaseOrder,
+  useSuppliersQuery,
+  useProductsQuery,
+  useSavePurchaseOrder,
+} from "@nam-viet-erp/store";
 import PageLayout from "../../components/PageLayout";
 
 const { Title, Text } = Typography;
@@ -63,67 +60,89 @@ const EditPurchaseOrderPageContent: React.FC = () => {
   const { notification } = App.useApp();
   const [form] = Form.useForm();
 
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [purchaseOrder, setPurchaseOrder] = useState<IProductOrder>(null);
-  const [suppliers, setSuppliers] = useState<any[]>([]);
+  const purchaseOrderId = id ? parseInt(id) : null;
+
+  // Fetch data using hooks
+  const {
+    data: purchaseOrder,
+    isLoading: isPurchaseOrderLoading,
+    error: purchaseOrderError,
+  } = usePurchaseOrder(purchaseOrderId);
+
+  const { data: suppliers, isLoading: isSuppliersLoading } =
+    useSuppliersQuery();
+
+  const { data: products, isLoading: isProductsLoading } =
+    useProductsQuery(1000);
+
   const [items, setItems] = useState<POItem[]>([]);
-  const [products, setProducts] = useState<any[]>([]);
   const [addingProduct, setAddingProduct] = useState(false);
+  const [isCreatingNewSupplier, setIsCreatingNewSupplier] = useState(false);
+  const [newSupplierName, setNewSupplierName] = useState("");
 
-  useEffect(() => {
-    const fetchData = async () => {
-      if (!id) return;
-
-      setLoading(true);
-      try {
-        // Fetch purchase order, suppliers, and products in parallel
-        const [poResponse, suppliersResponse, productsResponse] =
-          await Promise.all([
-            getPurchaseOrderById(parseInt(id)),
-            getSuppliers(),
-            searchProducts({ pageSize: 1000 }),
-          ]);
-
-        if (poResponse.error) {
-          throw new Error(poResponse.error.message || "Không thể tải đơn hàng");
+  // Comprehensive save hook that handles the entire flow
+  const { submit: savePurchaseOrder, isLoading: isSaving } =
+    useSavePurchaseOrder({
+      onSuccess: (result) => {
+        if (result.newSupplierName) {
+          notification.success({
+            message: "Đã tạo nhà cung cấp",
+            description: `Nhà cung cấp "${result.newSupplierName}" đã được tạo`,
+          });
         }
-
-        if (suppliersResponse.error) {
-          throw new Error(
-            suppliersResponse.error.message || "Không thể tải nhà cung cấp",
-          );
-        }
-
-        const poData = poResponse.data;
-        setPurchaseOrder(poData);
-        setSuppliers(suppliersResponse.data || []);
-        setProducts(productsResponse.data || []);
-        setItems(poData.items || []);
-        console.log(poData);
-        // Set form values
-        form.setFieldsValue({
-          supplier_id: poData.supplier_id,
-          order_date: poData.order_date ? dayjs(poData.order_date) : null,
-          expected_delivery_date: poData.expected_delivery_date
-            ? dayjs(poData.expected_delivery_date)
-            : null,
-          status: poData.status,
-          notes: poData.notes,
-        });
-      } catch (error: any) {
-        notification.error({
-          message: "Lỗi tải dữ liệu",
-          description: error.message,
+        notification.success({
+          message: "Cập nhật thành công",
+          description: "Đơn đặt hàng đã được cập nhật",
         });
         navigate("/warehouse/purchase-orders");
-      } finally {
-        setLoading(false);
-      }
-    };
+      },
+      onError: (error) => {
+        notification.error({
+          message: "Lỗi cập nhật",
+          description: error.message || "Không thể cập nhật đơn đặt hàng",
+        });
+      },
+    });
 
-    fetchData();
-  }, [id]);
+  // Calculate combined loading state
+  const loading =
+    isPurchaseOrderLoading || isSuppliersLoading || isProductsLoading;
+
+  // Handle purchase order error
+  useEffect(() => {
+    if (purchaseOrderError) {
+      notification.error({
+        message: "Lỗi tải dữ liệu",
+        description: purchaseOrderError.message || "Không thể tải đơn hàng",
+      });
+      navigate("/warehouse/purchase-orders");
+    }
+  }, [purchaseOrderError]);
+
+  // Initialize form when purchase order data is loaded
+  useEffect(() => {
+    if (purchaseOrder) {
+      setItems(purchaseOrder.items || []);
+
+      // Check if PO has no supplier - enable create new mode
+      if (!purchaseOrder.supplier_id) {
+        setIsCreatingNewSupplier(true);
+      }
+
+      // Set form values
+      form.setFieldsValue({
+        supplier_id: purchaseOrder.supplier_id || "new",
+        order_date: purchaseOrder.order_date
+          ? dayjs(purchaseOrder.order_date)
+          : null,
+        expected_delivery_date: purchaseOrder.expected_delivery_date
+          ? dayjs(purchaseOrder.expected_delivery_date)
+          : null,
+        status: purchaseOrder.status,
+        notes: purchaseOrder.notes,
+      });
+    }
+  }, [purchaseOrder, form]);
 
   const calculateTotalAmount = () => {
     return items.reduce((total, item) => {
@@ -137,6 +156,8 @@ const EditPurchaseOrderPageContent: React.FC = () => {
   };
 
   const handleProductSelect = (productId: number) => {
+    if (!products) return;
+
     const product = products.find((p) => p.id === productId);
     if (!product) return;
 
@@ -179,77 +200,16 @@ const EditPurchaseOrderPageContent: React.FC = () => {
   };
 
   const handleSave = async (values: any) => {
-    if (!id) return;
+    if (!purchaseOrderId || !purchaseOrder) return;
 
-    if (items.length === 0) {
-      notification.error({
-        message: "Lỗi",
-        description: "Đơn hàng phải có ít nhất một sản phẩm",
-      });
-      return;
-    }
-
-    setSaving(true);
-    try {
-      const poId = parseInt(id);
-      const totalAmount = calculateTotalAmount();
-
-      // Update PO header
-      const updates = {
-        supplier_id: values.supplier_id,
-        order_date: values.order_date?.format("YYYY-MM-DD"),
-        expected_delivery_date:
-          values.expected_delivery_date?.format("YYYY-MM-DD"),
-        status: values.status,
-        notes: values.notes,
-        total_amount: totalAmount,
-      };
-
-      const { error: poError } = await updatePurchaseOrder(poId, updates);
-      if (poError) throw poError;
-
-      // Handle items: update existing, add new, delete removed
-      const originalItemIds = new Set(
-        purchaseOrder.items?.map((item: any) => item.id) || [],
-      );
-      const currentItemIds = new Set(
-        items.filter((item) => item.id).map((item) => item.id),
-      );
-
-      // Delete removed items
-      for (const itemId of originalItemIds) {
-        if (!currentItemIds.has(itemId)) {
-          await deletePurchaseOrderItem(itemId);
-        }
-      }
-
-      // Update existing items and add new ones
-      for (const item of items) {
-        if (item.id && !item.isNew) {
-          // Update existing item
-          await updatePurchaseOrderItem(item.id, item.quantity);
-        } else if (item.isNew) {
-          // Add new item
-          await addPurchaseOrderItems(poId, [
-            { product_id: item.product_id, quantity: item.quantity },
-          ]);
-        }
-      }
-
-      notification.success({
-        message: "Cập nhật thành công",
-        description: "Đơn đặt hàng đã được cập nhật",
-      });
-
-      navigate("/warehouse/purchase-orders");
-    } catch (error: any) {
-      notification.error({
-        message: "Lỗi cập nhật",
-        description: error.message || "Không thể cập nhật đơn đặt hàng",
-      });
-    } finally {
-      setSaving(false);
-    }
+    await savePurchaseOrder({
+      purchaseOrderId,
+      originalItems: purchaseOrder.items || [],
+      currentItems: items,
+      formValues: values,
+      isCreatingNewSupplier,
+      newSupplierName,
+    });
   };
 
   const columns: ColumnsType<POItem> = [
@@ -378,7 +338,7 @@ const EditPurchaseOrderPageContent: React.FC = () => {
               size="large"
               icon={<SaveOutlined />}
               onClick={() => form.submit()}
-              loading={saving}
+              loading={isSaving}
             />
           </Tooltip>
         </Space>
@@ -409,17 +369,59 @@ const EditPurchaseOrderPageContent: React.FC = () => {
                   placeholder="Chọn nhà cung cấp"
                   optionFilterProp="children"
                   size="large"
+                  onChange={(value) => {
+                    if (value === "new") {
+                      setIsCreatingNewSupplier(true);
+                    } else {
+                      setIsCreatingNewSupplier(false);
+                      setNewSupplierName("");
+                    }
+                  }}
                   filterOption={(input, option) =>
                     (option?.label ?? "")
                       .toLowerCase()
                       .includes(input.toLowerCase())
                   }
-                  options={suppliers.map((supplier) => ({
-                    value: supplier.id,
-                    label: supplier.name,
-                  }))}
+                  options={[
+                    ...(suppliers || []).map((supplier) => ({
+                      value: supplier.id,
+                      label: supplier.name,
+                    })),
+                    ...(purchaseOrder?.supplier_id === null
+                      ? [
+                          {
+                            value: "new",
+                            label: "➕ Tạo nhà cung cấp mới",
+                          },
+                        ]
+                      : []),
+                  ]}
                 />
               </Form.Item>
+
+              {isCreatingNewSupplier && (
+                <Form.Item
+                  label="Tên Nhà Cung Cấp Mới"
+                  required
+                  validateStatus={newSupplierName.trim() ? "success" : "error"}
+                  help={
+                    !newSupplierName.trim()
+                      ? "Vui lòng nhập tên nhà cung cấp"
+                      : ""
+                  }
+                >
+                  <Input
+                    size="large"
+                    placeholder="Nhập tên nhà cung cấp..."
+                    value={newSupplierName}
+                    onChange={(e) => setNewSupplierName(e.target.value)}
+                    autoFocus
+                  />
+                  <Text type="secondary" style={{ fontSize: 12 }}>
+                    Nhà cung cấp mới sẽ được tạo khi lưu đơn hàng
+                  </Text>
+                </Form.Item>
+              )}
 
               <Form.Item
                 name="order_date"
@@ -534,6 +536,7 @@ const EditPurchaseOrderPageContent: React.FC = () => {
                     onBlur={() => setAddingProduct(false)}
                     autoFocus
                     filterOption={(input, option) => {
+                      if (!products) return false;
                       const product = products.find(
                         (p) => p.id === option?.value,
                       );
@@ -542,7 +545,7 @@ const EditPurchaseOrderPageContent: React.FC = () => {
                         `${product.name} ${product.sku || ""}`.toLowerCase();
                       return searchStr.includes(input.toLowerCase());
                     }}
-                    options={products.map((product) => ({
+                    options={(products || []).map((product) => ({
                       value: product.id,
                       label: `${product.name}${product.sku ? ` (${product.sku})` : ""}`,
                     }))}

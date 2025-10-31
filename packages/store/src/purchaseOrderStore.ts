@@ -275,10 +275,9 @@ export const usePurchaseOrderStore = create<PurchaseOrderState>()(
         setError(null);
 
         try {
-          const { receivePurchaseOrderItems } = await import(
-            "@nam-viet-erp/services"
-          );
-          const result = await receivePurchaseOrderItems(
+          const { receivePurchaseOrderItems: _receivePurchaseOrderItems } =
+            await import("@nam-viet-erp/services");
+          const result = await _receivePurchaseOrderItems(
             poId,
             items,
             receivedBy,

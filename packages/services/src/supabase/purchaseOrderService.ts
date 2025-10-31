@@ -248,6 +248,7 @@ export const receivePurchaseOrderItems = async (
     expirationDate?: string;
     shelfLocation?: string;
   }>,
+  receivedBy: string | null,
 ) => {
   try {
     const { data: b2bWarehouse } = await getB2BWarehouse();
@@ -364,9 +365,16 @@ export const receivePurchaseOrderItems = async (
     // Always set PO status to "received" (done) when confirming receiving
     const newStatus: IPurchaseOrder["status"] = "received";
 
-    // Update PO status if changed
+    // Update PO status and received_by
     if (newStatus !== poData.status) {
-      await updatePurchaseOrderStatus(poId, newStatus);
+      await supabase
+        .from("purchase_orders")
+        .update({
+          status: newStatus,
+          received_by: receivedBy,
+          received_at: new Date().toISOString(),
+        })
+        .eq("id", poId);
     }
 
     return { success: true, message: "Items received successfully" };

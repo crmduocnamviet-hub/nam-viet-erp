@@ -21,10 +21,16 @@ export interface ProductState {
   setError: (error: string | null) => void;
 
   // API Actions
-  fetchProducts: () => Promise<{ data: any[] | null; error: any }>;
-  fetchProductById: (productId: number) => Promise<{ data: any | null; error: any }>;
-  createProduct: (productData: any) => Promise<{ data: any | null; error: any }>;
-  updateProduct: (productId: number, productData: any) => Promise<{ data: any | null; error: any }>;
+  fetchProductById: (
+    productId: number,
+  ) => Promise<{ data: any | null; error: any }>;
+  createProduct: (
+    productData: any,
+  ) => Promise<{ data: any | null; error: any }>;
+  updateProduct: (
+    productId: number,
+    productData: any,
+  ) => Promise<{ data: any | null; error: any }>;
   deleteProduct: (productId: number) => Promise<{ error: any }>;
 
   // Utility
@@ -51,7 +57,7 @@ export const useProductStore = create<ProductState>()(
             state.products = products;
           },
           false,
-          "setProducts"
+          "setProducts",
         ),
 
       setCurrentProduct: (product) =>
@@ -60,7 +66,7 @@ export const useProductStore = create<ProductState>()(
             state.currentProduct = product;
           },
           false,
-          "setCurrentProduct"
+          "setCurrentProduct",
         ),
 
       setLoadingProducts: (isLoading) =>
@@ -69,7 +75,7 @@ export const useProductStore = create<ProductState>()(
             state.isLoadingProducts = isLoading;
           },
           false,
-          "setLoadingProducts"
+          "setLoadingProducts",
         ),
 
       setLoadingProduct: (isLoading) =>
@@ -78,7 +84,7 @@ export const useProductStore = create<ProductState>()(
             state.isLoadingProduct = isLoading;
           },
           false,
-          "setLoadingProduct"
+          "setLoadingProduct",
         ),
 
       setSaving: (isSaving) =>
@@ -87,7 +93,7 @@ export const useProductStore = create<ProductState>()(
             state.isSaving = isSaving;
           },
           false,
-          "setSaving"
+          "setSaving",
         ),
 
       setError: (error) =>
@@ -96,37 +102,8 @@ export const useProductStore = create<ProductState>()(
             state.error = error;
           },
           false,
-          "setError"
+          "setError",
         ),
-
-      // API Actions
-      fetchProducts: async () => {
-        const { setLoadingProducts, setProducts, setError } = get();
-
-        setLoadingProducts(true);
-        setError(null);
-
-        try {
-          const { getProducts } = await import("@nam-viet-erp/services");
-          const { data, error } = await getProducts();
-
-          if (error) {
-            setError(error.message || "Failed to fetch products");
-            setProducts([]);
-            return { data: null, error };
-          }
-
-          setProducts(data || []);
-          return { data, error: null };
-        } catch (error: any) {
-          const errorMsg = error?.message || "Failed to fetch products";
-          setError(errorMsg);
-          setProducts([]);
-          return { data: null, error };
-        } finally {
-          setLoadingProducts(false);
-        }
-      },
 
       fetchProductById: async (productId: number) => {
         const { setLoadingProduct, setCurrentProduct, setError } = get();
@@ -135,10 +112,13 @@ export const useProductStore = create<ProductState>()(
         setError(null);
 
         try {
-          const { getProductById, getInventoryByProductId } = await import("@nam-viet-erp/services");
+          const { getProductById, getInventoryByProductId } = await import(
+            "@nam-viet-erp/services"
+          );
 
           // Fetch product data
-          const { data: product, error: productError } = await getProductById(productId);
+          const { data: product, error: productError } =
+            await getProductById(productId);
 
           if (productError) {
             setError(productError.message || "Failed to fetch product");
@@ -154,7 +134,8 @@ export const useProductStore = create<ProductState>()(
           }
 
           // Fetch inventory data
-          const { data: inventoryData, error: inventoryError } = await getInventoryByProductId(productId);
+          const { data: inventoryData, error: inventoryError } =
+            await getInventoryByProductId(productId);
 
           if (inventoryError) {
             console.error("Error loading inventory:", inventoryError);
@@ -260,7 +241,7 @@ export const useProductStore = create<ProductState>()(
             state.currentProduct = null;
           },
           false,
-          "clearCurrentProduct"
+          "clearCurrentProduct",
         ),
 
       clearError: () =>
@@ -269,19 +250,23 @@ export const useProductStore = create<ProductState>()(
             state.error = null;
           },
           false,
-          "clearError"
+          "clearError",
         ),
     })),
     {
       name: "ProductStore",
-    }
-  )
+    },
+  ),
 );
 
 // Selectors
 export const useProducts = () => useProductStore((state) => state.products);
-export const useCurrentProduct = () => useProductStore((state) => state.currentProduct);
-export const useIsLoadingProducts = () => useProductStore((state) => state.isLoadingProducts);
-export const useIsLoadingProduct = () => useProductStore((state) => state.isLoadingProduct);
-export const useIsSavingProduct = () => useProductStore((state) => state.isSaving);
+export const useCurrentProduct = () =>
+  useProductStore((state) => state.currentProduct);
+export const useIsLoadingProducts = () =>
+  useProductStore((state) => state.isLoadingProducts);
+export const useIsLoadingProduct = () =>
+  useProductStore((state) => state.isLoadingProduct);
+export const useIsSavingProduct = () =>
+  useProductStore((state) => state.isSaving);
 export const useProductError = () => useProductStore((state) => state.error);

@@ -122,7 +122,6 @@ const PosTabContent: React.FC<PosTabContentProps> = ({
   selectedCustomer,
   setStoreSelectedCustomer,
   setIsCreateCustomerModalOpen,
-  searchResults,
   handleAddToCart,
   cart,
   cartDetails,
@@ -377,6 +376,7 @@ const PosTabContent: React.FC<PosTabContentProps> = ({
               size="large"
               onChange={(product) => handleAddToCart(product)}
               selectedCustomer={selectedCustomer}
+              employeeWarehouse={employeeWarehouse}
             />
             <div
               style={{

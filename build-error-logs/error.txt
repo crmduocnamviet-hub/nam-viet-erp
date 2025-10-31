@@ -1,0 +1,907 @@
+../../packages/shared-components/src/screens/warehouse/VATInvoiceB2BPage.tsx:49:8 - error TS2306: File '/Users/macbook/Documents/personal-work/nam-viet-erp/types/index.d.ts' is not a module.
+
+49 } from "../../../../../types";
+          ~~~~~~~~~~~~~~~~~~~~~~
+
+../../packages/shared-components/src/screens/warehouse/VATInvoiceB2BPage.tsx:50:1 - error TS6133: 'dayjs' is declared but its value is never read.
+
+50 import dayjs from "dayjs";
+   ~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+../../packages/shared-components/src/screens/warehouse/VATInvoiceB2BPage.tsx:254:48 - error TS2339: Property 'message' does not exist on type '{}'.
+
+254           `Không thể xuất hóa đơn VAT: ${error.message || JSON.stringify(error)}`,
+                                                   ~~~~~~~
+
+../../packages/shared-components/src/screens/warehouse/VATInvoiceB2BPage.tsx:280:15 - error TS6133: 'data' is declared but its value is never read.
+
+280       const { data, error } = await cancelVATInvoiceOut(selectedInvoiceId);
+                  ~~~~
+
+../../packages/shared-components/src/screens/warehouse/VATInvoiceB2BPage.tsx:284:47 - error TS2339: Property 'message' does not exist on type '{}'.
+
+284           `Không thể hủy hóa đơn VAT: ${error.message || JSON.stringify(error)}`,
+                                                  ~~~~~~~
+
+../../packages/shared-components/src/screens/warehouse/VATInvoiceB2BPage.tsx:370:28 - error TS7053: Element implicitly has an 'any' type because expression of type 'VATInvoiceStatus' can't be used to index type '{ pending: { color: string; text: string; }; done: { color: string; text: string; }; cancelled: { color: string; text: string; }; }'.
+
+370         const statusInfo = statusMap[status] || {
+                               ~~~~~~~~~~~~~~~~~
+
+../../packages/shared-components/src/screens/warehouse/VATInvoiceInputPage.tsx:9:3 - error TS6133: 'Tag' is declared but its value is never read.
+
+9   Tag,
+    ~~~
+
+../../packages/shared-components/src/screens/warehouse/VATInvoiceInputPage.tsx:22:3 - error TS6133: 'Descriptions' is declared but its value is never read.
+
+22   Descriptions,
+     ~~~~~~~~~~~~
+
+../../packages/shared-components/src/screens/warehouse/VATInvoiceInputPage.tsx:32:3 - error TS6133: 'UploadOutlined' is declared but its value is never read.
+
+32   UploadOutlined,
+     ~~~~~~~~~~~~~~
+
+../../packages/shared-components/src/screens/warehouse/VATInvoiceInputPage.tsx:52:3 - error TS6196: 'IVATInvoiceIn' is declared but never used.
+
+52   IVATInvoiceIn,
+     ~~~~~~~~~~~~~
+
+../../packages/shared-components/src/screens/warehouse/VATInvoiceInputPage.tsx:54:8 - error TS2306: File '/Users/macbook/Documents/personal-work/nam-viet-erp/types/index.d.ts' is not a module.
+
+54 } from "../../../../../types";
+          ~~~~~~~~~~~~~~~~~~~~~~
+
+../../packages/shared-components/src/screens/warehouse/VATInvoiceInputPage.tsx:199:32 - error TS7006: Parameter 'prev' implicitly has an 'any' type.
+
+199         setCurrentInvoiceInfo((prev) => ({
+                                   ~~~~
+
+../../packages/shared-components/src/screens/warehouse/VATInvoiceInputPage.tsx:342:47 - error TS2339: Property 'message' does not exist on type '{}'.
+
+342           `Không thể xóa hóa đơn VAT: ${error.message || JSON.stringify(error)}`,
+                                                  ~~~~~~~
+
+../../packages/shared-components/src/screens/warehouse/VATInvoiceInputPage.tsx:922:44 - error TS7006: Parameter 'prev' implicitly has an 'any' type.
+
+922                     setCurrentInvoiceInfo((prev) => ({
+                                               ~~~~
+
+../../packages/shared-components/src/screens/warehouse/VATInvoiceInputPage.tsx:975:44 - error TS7006: Parameter 'prev' implicitly has an 'any' type.
+
+975                     setCurrentInvoiceInfo((prev) => ({
+                                               ~~~~
+
+../../packages/shared-components/src/screens/warehouse/VATInvoiceInputPage.tsx:1037:46 - error TS2339: Property 'length' does not exist on type 'never'.
+
+1037                             if (data && data.length === 0) {
+                                                  ~~~~~~
+
+../../packages/shared-components/src/screens/warehouse/VATInvoiceInputPage.tsx:1108:23 - error TS2345: Argument of type 'number | null' is not assignable to parameter of type 'number'.
+  Type 'null' is not assignable to type 'number'.
+
+1108                       value,
+                           ~~~~~
+
+../../packages/shared-components/src/screens/warehouse/VATInvoiceInputPage.tsx:1127:23 - error TS2345: Argument of type 'number | null' is not assignable to parameter of type 'number'.
+  Type 'null' is not assignable to type 'number'.
+
+1127                       value,
+                           ~~~~~
+
+../../packages/shared-components/src/screens/warehouse/VATInvoiceInputPage.tsx:1146:23 - error TS2345: Argument of type 'number | null' is not assignable to parameter of type 'number'.
+  Type 'null' is not assignable to type 'number'.
+
+1146                       value,
+                           ~~~~~
+
+../../packages/shared-components/src/screens/warehouse/VATInvoicePOSPage.tsx:12:3 - error TS6133: 'Form' is declared but its value is never read.
+
+12   Form,
+     ~~~~
+
+../../packages/shared-components/src/screens/warehouse/VATInvoicePOSPage.tsx:13:3 - error TS6133: 'DatePicker' is declared but its value is never read.
+
+13   DatePicker,
+     ~~~~~~~~~~
+
+../../packages/shared-components/src/screens/warehouse/VATInvoicePOSPage.tsx:17:3 - error TS6133: 'Divider' is declared but its value is never read.
+
+17   Divider,
+     ~~~~~~~
+
+../../packages/shared-components/src/screens/warehouse/VATInvoicePOSPage.tsx:33:3 - error TS6133: 'createVATInvoiceOut' is declared but its value is never read.
+
+33   createVATInvoiceOut,
+     ~~~~~~~~~~~~~~~~~~~
+
+../../packages/shared-components/src/screens/warehouse/VATInvoicePOSPage.tsx:40:3 - error TS6196: 'ICreateVATInvoiceOut' is declared but never used.
+
+40   ICreateVATInvoiceOut,
+     ~~~~~~~~~~~~~~~~~~~~
+
+../../packages/shared-components/src/screens/warehouse/VATInvoicePOSPage.tsx:42:8 - error TS2306: File '/Users/macbook/Documents/personal-work/nam-viet-erp/types/index.d.ts' is not a module.
+
+42 } from "../../../../../types";
+          ~~~~~~~~~~~~~~~~~~~~~~
+
+../../packages/shared-components/src/screens/warehouse/VATInvoicePOSPage.tsx:52:9 - error TS6133: 'isTablet' is declared but its value is never read.
+
+52   const isTablet = screens.md && !screens.lg;
+           ~~~~~~~~
+
+../../packages/shared-components/src/screens/warehouse/VATInvoicePOSPage.tsx:199:28 - error TS7053: Element implicitly has an 'any' type because expression of type 'VATInvoiceStatus' can't be used to index type '{ pending: { color: string; text: string; }; done: { color: string; text: string; }; cancelled: { color: string; text: string; }; }'.
+
+199         const statusInfo = statusMap[status] || {
+                               ~~~~~~~~~~~~~~~~~
+
+../../packages/shared-components/src/screens/warehouse/VATReconciliationPage.tsx:17:3 - error TS6133: 'Descriptions' is declared but its value is never read.
+
+17   Descriptions,
+     ~~~~~~~~~~~~
+
+../../packages/shared-components/src/screens/warehouse/VATReconciliationPage.tsx:21:3 - error TS6133: 'Divider' is declared but its value is never read.
+
+21   Divider,
+     ~~~~~~~
+
+../../packages/shared-components/src/screens/warehouse/VATReconciliationPage.tsx:26:3 - error TS6133: 'SearchOutlined' is declared but its value is never read.
+
+26   SearchOutlined,
+     ~~~~~~~~~~~~~~
+
+../../packages/shared-components/src/screens/warehouse/VATReconciliationPage.tsx:27:3 - error TS6133: 'FileTextOutlined' is declared but its value is never read.
+
+27   FileTextOutlined,
+     ~~~~~~~~~~~~~~~~
+
+../../packages/shared-components/src/screens/warehouse/VATReconciliationPage.tsx:51:8 - error TS2306: File '/Users/macbook/Documents/personal-work/nam-viet-erp/types/index.d.ts' is not a module.
+
+51 } from "../../../../../types";
+          ~~~~~~~~~~~~~~~~~~~~~~
+
+../../packages/shared-components/src/screens/warehouse/VATReconciliationPage.tsx:81:10 - error TS6133: 'searchText' is declared but its value is never read.
+
+81   const [searchText, setSearchText] = useState("");
+            ~~~~~~~~~~
+
+../../packages/shared-components/src/screens/warehouse/VATReconciliationPage.tsx:81:22 - error TS6133: 'setSearchText' is declared but its value is never read.
+
+81   const [searchText, setSearchText] = useState("");
+                        ~~~~~~~~~~~~~
+
+../../packages/shared-components/src/screens/warehouse/WarehouseTransferDetailPage.tsx:13:3 - error TS6133: 'Select' is declared but its value is never read.
+
+13   Select,
+     ~~~~~~
+
+../../packages/shared-components/src/screens/warehouse/WarehouseTransferDetailPage.tsx:25:3 - error TS6133: 'PlusOutlined' is declared but its value is never read.
+
+25   PlusOutlined,
+     ~~~~~~~~~~~~
+
+../../packages/shared-components/src/screens/warehouse/WarehouseTransferDetailPage.tsx:27:3 - error TS6133: 'HomeOutlined' is declared but its value is never read.
+
+27   HomeOutlined,
+     ~~~~~~~~~~~~
+
+../../packages/shared-components/src/screens/warehouse/WarehouseTransferDetailPage.tsx:28:3 - error TS6133: 'ShoppingOutlined' is declared but its value is never read.
+
+28   ShoppingOutlined,
+     ~~~~~~~~~~~~~~~~
+
+../../packages/shared-components/src/screens/warehouse/WarehouseTransferDetailPage.tsx:46:3 - error TS6133: 'useWarehouses' is declared but its value is never read.
+
+46   useWarehouses,
+     ~~~~~~~~~~~~~
+
+../../packages/shared-components/src/screens/warehouse/WarehouseTransferDetailPage.tsx:60:10 - error TS6133: 'addProductModal' is declared but its value is never read.
+
+60   const [addProductModal, setAddProductModal] = useState(false);
+            ~~~~~~~~~~~~~~~
+
+../../packages/shared-components/src/screens/warehouse/WarehouseTransferDetailPage.tsx:62:10 - error TS6133: 'products' is declared but its value is never read.
+
+62   const [products, setProducts] = useState<IProduct[]>([]);
+            ~~~~~~~~
+
+../../packages/shared-components/src/screens/warehouse/WarehouseTransferDetailPage.tsx:63:10 - error TS6133: 'lots' is declared but its value is never read.
+
+63   const [lots, setLots] = useState<IProductLot[]>([]);
+            ~~~~
+
+../../packages/shared-components/src/screens/warehouse/WarehouseTransferDetailPage.tsx:87:9 - error TS6133: 'loadLotsForProduct' is declared but its value is never read.
+
+87   const loadLotsForProduct = async (productId: number) => {
+           ~~~~~~~~~~~~~~~~~~
+
+../../packages/shared-components/src/screens/warehouse/WarehouseTransferDetailPage.tsx:254:41 - error TS6133: 'isSending' is declared but its value is never read.
+
+254   const { submit: sendItems, isLoading: isSending } = useSendWarehouseTransfer(
+                                            ~~~~~~~~~
+
+../../packages/shared-components/src/screens/warehouse/WarehouseTransferDetailPage.tsx:341:9 - error TS6133: 'handleAddProduct' is declared but its value is never read.
+
+341   const handleAddProduct = () => {
+            ~~~~~~~~~~~~~~~~
+
+../../packages/shared-components/src/screens/warehouse/WarehouseTransferDetailPage.tsx:346:39 - error TS6133: 'isAddingItem' is declared but its value is never read.
+
+346   const { submit: addItem, isLoading: isAddingItem } =
+                                          ~~~~~~~~~~~~
+
+../../packages/shared-components/src/screens/warehouse/WarehouseTransferDetailPage.tsx:364:9 - error TS6133: 'handleAddProductSubmit' is declared but its value is never read.
+
+364   const handleAddProductSubmit = async () => {
+            ~~~~~~~~~~~~~~~~~~~~~~
+
+../../packages/shared-components/src/screens/warehouse/WarehouseTransferDetailPage.tsx:380:42 - error TS6133: 'isDeletingItem' is declared but its value is never read.
+
+380   const { submit: deleteItem, isLoading: isDeletingItem } =
+                                             ~~~~~~~~~~~~~~
+
+../../packages/shared-components/src/screens/warehouse/WarehouseTransferDetailPage.tsx:414:7 - error TS2322: Type 'number | null' is not assignable to type 'number | undefined'.
+  Type 'null' is not assignable to type 'number | undefined'.
+
+414       unit_price: selectedProductForLot.retail_price,
+          ~~~~~~~~~~
+
+../../packages/shared-components/src/screens/warehouse/WarehouseTransferDetailPage.tsx:429:42 - error TS2339: Property 'inventory' does not exist on type 'IProduct'.
+
+429     const inventoryInWarehouse = product.inventory?.find(
+                                             ~~~~~~~~~
+
+../../packages/shared-components/src/screens/warehouse/WarehouseTransferDetailPage.tsx:430:8 - error TS7006: Parameter 'inv' implicitly has an 'any' type.
+
+430       (inv) => inv.warehouse_id === fromWarehouseId,
+           ~~~
+
+../../packages/shared-components/src/screens/warehouse/WarehouseTransferDetailPage.tsx:450:9 - error TS2322: Type 'number | null' is not assignable to type 'number | undefined'.
+  Type 'null' is not assignable to type 'number | undefined'.
+
+450         unit_price: product.retail_price,
+            ~~~~~~~~~~
+
+../../packages/shared-components/src/screens/warehouse/WarehouseTransfersListPage.tsx:51:9 - error TS6133: 'user' is declared but its value is never read.
+
+51   const user = useAuthStore((state) => state.user);
+           ~~~~
+
+../../packages/shared-components/src/screens/warehouse/WarehouseTransfersListPage.tsx:269:24 - error TS2339: Property 'suggestions' does not exist on type 'never[] | { b2b_warehouse: any; suggestions: { warehouse_id: any; warehouse_name: any; products: { product_id: any; product_name: any; product_sku: any; current_quantity: any; min_stock: any; max_stock: any; ... 6 more ...; enable_lot_management: any; }[]; total_products: number; total_value: number; }[]; total_phar...'.
+  Property 'suggestions' does not exist on type 'never[]'.
+
+269       if (data && data.suggestions.length > 0) {
+                           ~~~~~~~~~~~
+
+../../packages/shared-components/src/screens/warehouse/WarehouseTransfersListPage.tsx:272:41 - error TS2339: Property 'total_products' does not exist on type 'never[] | { b2b_warehouse: any; suggestions: { warehouse_id: any; warehouse_name: any; products: { product_id: any; product_name: any; product_sku: any; current_quantity: any; min_stock: any; max_stock: any; ... 6 more ...; enable_lot_management: any; }[]; total_products: number; total_value: number; }[]; total_phar...'.
+  Property 'total_products' does not exist on type 'never[]'.
+
+272           description: `Tìm thấy ${data.total_products} sản phẩm cần chuyển cho ${data.total_pharmacies} kho`,
+                                            ~~~~~~~~~~~~~~
+
+../../packages/shared-components/src/screens/warehouse/WarehouseTransfersListPage.tsx:272:88 - error TS2339: Property 'total_pharmacies' does not exist on type 'never[] | { b2b_warehouse: any; suggestions: { warehouse_id: any; warehouse_name: any; products: { product_id: any; product_name: any; product_sku: any; current_quantity: any; min_stock: any; max_stock: any; ... 6 more ...; enable_lot_management: any; }[]; total_products: number; total_value: number; }[]; total_phar...'.
+  Property 'total_pharmacies' does not exist on type 'never[]'.
+
+272           description: `Tìm thấy ${data.total_products} sản phẩm cần chuyển cho ${data.total_pharmacies} kho`,
+                                                                                           ~~~~~~~~~~~~~~~~
+
+../../packages/shared-components/src/screens/warehouse/WarehouseTransfersListPage.tsx:464:30 - error TS2353: Object literal may only specify known properties, and 'path' does not exist in type 'BreadcrumbItem'.
+
+464         { title: "Kho hàng", path: "/warehouse" },
+                                 ~~~~
+
+../../packages/shared-components/src/screens/warehouse/WarehouseTransfersListPage.tsx:558:15 - error TS2322: Type 'Dispatch<SetStateAction<[Dayjs, Dayjs] | null>>' is not assignable to type '(dates: NoUndefinedRangeValueType<Dayjs> | null, dateStrings: [string, string]) => void'.
+  Types of parameters 'value' and 'dates' are incompatible.
+    Type 'NoUndefinedRangeValueType<Dayjs> | null' is not assignable to type 'SetStateAction<[Dayjs, Dayjs] | null>'.
+      Type 'NoUndefinedRangeValueType<Dayjs>' is not assignable to type 'SetStateAction<[Dayjs, Dayjs] | null>'.
+        Type '[start: Dayjs | null, end: Dayjs | null]' is not assignable to type '[Dayjs, Dayjs] | ((prevState: [Dayjs, Dayjs] | null) => [Dayjs, Dayjs] | null)'.
+          Type '[start: Dayjs | null, end: Dayjs | null]' is not assignable to type '[Dayjs, Dayjs]'.
+            Type at position 0 in source is not compatible with type at position 0 in target.
+              Type 'Dayjs | null' is not assignable to type 'Dayjs'.
+                Type 'null' is not assignable to type 'Dayjs'.
+
+558               onChange={setDateRange}
+                  ~~~~~~~~
+
+  ../../node_modules/rc-picker/lib/PickerInput/RangePicker.d.ts:15:5
+    15     onChange?: (dates: NoUndefinedRangeValueType<DateType> | null, dateStrings: [string, string]) => void;
+           ~~~~~~~~
+    The expected type comes from property 'onChange' which is declared here on type 'IntrinsicAttributes & Omit<RangePickerProps<Dayjs>, "classNames" | "styles" | "locale" | "generateConfig" | "hideHeader"> & { ...; } & RefAttributes<...>'
+
+../../packages/shared-components/src/screens/warehouse/WarehouseTransfersListPage.tsx:572:22 - error TS2304: Cannot find name 'ShoppingOutlined'.
+
+572               icon={<ShoppingOutlined />}
+                         ~~~~~~~~~~~~~~~~
+
+../../packages/shared-components/src/utils/b2bOrder.ts:1:10 - error TS1484: 'FormInstance' is a type and must be imported using a type-only import when 'verbatimModuleSyntax' is enabled.
+
+1 import { FormInstance } from "antd";
+           ~~~~~~~~~~~~
+
+../../packages/shared-components/src/utils/b2bOrder.ts:133:19 - error TS2345: Argument of type 'number | undefined' is not assignable to parameter of type 'number'.
+  Type 'undefined' is not assignable to type 'number'.
+
+133                   item.total_price
+                      ~~~~~~~~~~~~~~~~
+
+../../packages/shared-components/src/utils/b2bOrder.ts:234:59 - error TS18048: 'item.total_price' is possibly 'undefined'.
+
+234   const subtotal = orderItems.reduce((sum, item) => sum + item.total_price, 0);
+                                                              ~~~~~~~~~~~~~~~~
+
+../../packages/store/src/b2bOrderStore.ts:451:36 - error TS18048: 'item.total_price' is possibly 'undefined'.
+
+451               (sum, item) => sum + item.total_price,
+                                       ~~~~~~~~~~~~~~~~
+
+../../packages/store/src/b2bOrderStore.ts:457:19 - error TS6133: 'totalAmount' is declared but its value is never read.
+
+457             const totalAmount = taxableAmount + taxAmount;
+                      ~~~~~~~~~~~
+
+../../packages/store/src/b2bOrderStore.ts:663:49 - error TS18048: 'item.total_price' is possibly 'undefined'.
+
+663     (sum: number, item: IB2BQuoteItem) => sum + item.total_price,
+                                                    ~~~~~~~~~~~~~~~~
+
+../../packages/store/src/b2bOrderStore.ts:692:49 - error TS18048: 'item.total_price' is possibly 'undefined'.
+
+692     (sum: number, item: IB2BQuoteItem) => sum + item.total_price,
+                                                    ~~~~~~~~~~~~~~~~
+
+../../packages/store/src/hooks/useB2BOrder.ts:84:5 - error TS2322: Type '(values: { quoteData: any; orderItems: any[]; } | undefined) => Promise<{ quote_id: string; quote_number: string; }>' is not assignable to type '(data?: { quoteData: any; orderItems: any[]; } | undefined) => Promise<{ quote_id: number; quote_number: string; }>'.
+  Type 'Promise<{ quote_id: string; quote_number: string; }>' is not assignable to type 'Promise<{ quote_id: number; quote_number: string; }>'.
+    Type '{ quote_id: string; quote_number: string; }' is not assignable to type '{ quote_id: number; quote_number: string; }'.
+      Types of property 'quote_id' are incompatible.
+        Type 'string' is not assignable to type 'number'.
+
+84     onSubmit: async (values) => {
+       ~~~~~~~~
+
+  ../../packages/store/src/hooks/useSubmitQuery.ts:7:3
+    7   onSubmit?: (data?: TParams) => Promise<TResponse>;
+        ~~~~~~~~
+    The expected type comes from property 'onSubmit' which is declared here on type '{ key: any[]; onSuccess?: ((data?: { quote_id: number; quote_number: string; } | undefined) => any) | undefined; onSubmit?: ((data?: { quoteData: any; orderItems: any[]; } | undefined) => Promise<{ quote_id: number; quote_number: string; }>) | undefined; onError?: ((e: any) => any) | undefined; }'
+
+../../packages/store/src/hooks/useB2BOrder.ts:86:17 - error TS2339: Property 'quoteData' does not exist on type '{ quoteData: any; orderItems: any[]; } | undefined'.
+
+86         const { quoteData, orderItems } = values;
+                   ~~~~~~~~~
+
+../../packages/store/src/hooks/useB2BOrder.ts:86:28 - error TS2339: Property 'orderItems' does not exist on type '{ quoteData: any; orderItems: any[]; } | undefined'.
+
+86         const { quoteData, orderItems } = values;
+                              ~~~~~~~~~~
+
+../../packages/store/src/hooks/useB2BOrder.ts:95:51 - error TS7006: Parameter 'item' implicitly has an 'any' type.
+
+95         const quoteItemPromises = orderItems.map((item) => {
+                                                     ~~~~
+
+../../packages/store/src/hooks/useB2BOrder.ts:124:49 - error TS7006: Parameter 'result' implicitly has an 'any' type.
+
+124         const failedItems = itemResults.filter((result) => result.error);
+                                                    ~~~~~~
+
+../../packages/store/src/hooks/useInitializeEmployee.ts:48:19 - error TS2345: Argument of type 'IEmployee' is not assignable to parameter of type 'Employee'.
+  Types of property 'employee_code' are incompatible.
+    Type 'string | null' is not assignable to type 'string'.
+      Type 'null' is not assignable to type 'string'.
+
+48       setEmployee(employee);
+                     ~~~~~~~~
+
+../../packages/store/src/hooks/useInitializeInventory.ts:48:30 - error TS2345: Argument of type 'number | undefined' is not assignable to parameter of type 'number'.
+  Type 'undefined' is not assignable to type 'number'.
+
+48         await fetchInventory(employee.warehouse_id);
+                                ~~~~~~~~~~~~~~~~~~~~~
+
+../../packages/store/src/hooks/useInventory.ts:16:5 - error TS2322: Type '() => Promise<null>' is not assignable to type '() => Promise<IInventory[]>'.
+  Type 'Promise<null>' is not assignable to type 'Promise<IInventory[]>'.
+    Type 'null' is not assignable to type 'IInventory[]'.
+
+16     queryFn: async () => {
+       ~~~~~~~
+
+  ../../packages/store/src/hooks/useQuery.ts:22:3
+    22   queryFn?: () => Promise<T>;
+         ~~~~~~~
+    The expected type comes from property 'queryFn' which is declared here on type '{ key: any[]; queryFn?: (() => Promise<IInventory[]>) | undefined; disableCache?: boolean | undefined; gcTime?: number | undefined; delayTime?: number | undefined; }'
+
+../../packages/store/src/hooks/useInventory.ts:32:11 - error TS2322: Type '() => Promise<IWarehouseTransferWithDetails | null>' is not assignable to type '() => Promise<IWarehouseTransferWithDetails>'.
+  Type 'Promise<IWarehouseTransferWithDetails | null>' is not assignable to type 'Promise<IWarehouseTransferWithDetails>'.
+    Type 'IWarehouseTransferWithDetails | null' is not assignable to type 'IWarehouseTransferWithDetails'.
+      Type 'null' is not assignable to type 'IWarehouseTransferWithDetails'.
+
+32     async queryFn() {
+             ~~~~~~~
+
+  ../../packages/store/src/hooks/useQuery.ts:22:3
+    22   queryFn?: () => Promise<T>;
+         ~~~~~~~
+    The expected type comes from property 'queryFn' which is declared here on type '{ key: any[]; queryFn?: (() => Promise<IWarehouseTransferWithDetails>) | undefined; disableCache?: boolean | undefined; gcTime?: number | undefined; delayTime?: number | undefined; }'
+
+../../packages/store/src/hooks/useInventory.ts:79:5 - error TS2322: Type '(sendData: ISendWarehouseTransfer) => Promise<PostgrestResponseFailure | PostgrestResponseSuccess<IWarehouseTransferWithDetails> | { ...; }>' is not assignable to type '(data?: ISendWarehouseTransfer | undefined) => Promise<PostgrestResponseFailure | PostgrestResponseSuccess<IWarehouseTransferWithDetails> | { ...; }>'.
+  Types of parameters 'sendData' and 'data' are incompatible.
+    Type 'ISendWarehouseTransfer | undefined' is not assignable to type 'ISendWarehouseTransfer'.
+      Type 'undefined' is not assignable to type 'ISendWarehouseTransfer'.
+
+79     onSubmit: async (sendData: ISendWarehouseTransfer) => {
+       ~~~~~~~~
+
+  ../../packages/store/src/hooks/useSubmitQuery.ts:7:3
+    7   onSubmit?: (data?: TParams) => Promise<TResponse>;
+        ~~~~~~~~
+    The expected type comes from property 'onSubmit' which is declared here on type '{ key: any[]; onSuccess?: ((data?: PostgrestResponseFailure | PostgrestResponseSuccess<IWarehouseTransferWithDetails> | { ...; } | undefined) => any) | undefined; onSubmit?: ((data?: ISendWarehouseTransfer | undefined) => Promise<...>) | undefined; onError?: ((e: any) => any) | undefined; }'
+
+../../packages/store/src/hooks/useInventory.ts:93:5 - error TS2322: Type '(receiveData: IReceiveWarehouseTransfer) => Promise<PostgrestResponseFailure | PostgrestResponseSuccess<IWarehouseTransferWithDetails> | { ...; }>' is not assignable to type '(data?: IReceiveWarehouseTransfer | undefined) => Promise<PostgrestResponseFailure | PostgrestResponseSuccess<IWarehouseTransferWithDetails> | { ...; }>'.
+  Types of parameters 'receiveData' and 'data' are incompatible.
+    Type 'IReceiveWarehouseTransfer | undefined' is not assignable to type 'IReceiveWarehouseTransfer'.
+      Type 'undefined' is not assignable to type 'IReceiveWarehouseTransfer'.
+
+93     onSubmit: (receiveData: IReceiveWarehouseTransfer) =>
+       ~~~~~~~~
+
+  ../../packages/store/src/hooks/useSubmitQuery.ts:7:3
+    7   onSubmit?: (data?: TParams) => Promise<TResponse>;
+        ~~~~~~~~
+    The expected type comes from property 'onSubmit' which is declared here on type '{ key: any[]; onSuccess?: ((data?: PostgrestResponseFailure | PostgrestResponseSuccess<IWarehouseTransferWithDetails> | { ...; } | undefined) => any) | undefined; onSubmit?: ((data?: IReceiveWarehouseTransfer | undefined) => Promise<...>) | undefined; onError?: ((e: any) => any) | undefined; }'
+
+../../packages/store/src/hooks/useInventory.ts:105:5 - error TS2322: Type '(itemData: { product_id: number; lot_id?: number | null; quantity_requested: number; unit_price?: number; notes?: string; }) => Promise<...>' is not assignable to type '(data?: { product_id: number; lot_id?: number | null | undefined; quantity_requested: number; unit_price?: number | undefined; notes?: string | undefined; } | undefined) => Promise<PostgrestSingleResponse<any>>'.
+  Types of parameters 'itemData' and 'data' are incompatible.
+    Type '{ product_id: number; lot_id?: number | null | undefined; quantity_requested: number; unit_price?: number | undefined; notes?: string | undefined; } | undefined' is not assignable to type '{ product_id: number; lot_id?: number | null | undefined; quantity_requested: number; unit_price?: number | undefined; notes?: string | undefined; }'.
+      Type 'undefined' is not assignable to type '{ product_id: number; lot_id?: number | null | undefined; quantity_requested: number; unit_price?: number | undefined; notes?: string | undefined; }'.
+
+105     onSubmit: (itemData: {
+        ~~~~~~~~
+
+  ../../packages/store/src/hooks/useSubmitQuery.ts:7:3
+    7   onSubmit?: (data?: TParams) => Promise<TResponse>;
+        ~~~~~~~~
+    The expected type comes from property 'onSubmit' which is declared here on type '{ key: any[]; onSuccess?: ((data?: PostgrestSingleResponse<any> | undefined) => any) | undefined; onSubmit?: ((data?: { product_id: number; lot_id?: number | null | undefined; quantity_requested: number; unit_price?: number | undefined; notes?: string | undefined; } | undefined) => Promise<...>) | undefined; onError...'
+
+../../packages/store/src/hooks/useInventory.ts:122:5 - error TS2322: Type '(itemId: number) => Promise<PostgrestSingleResponse<null>>' is not assignable to type '(data?: number | undefined) => Promise<PostgrestSingleResponse<null>>'.
+  Types of parameters 'itemId' and 'data' are incompatible.
+    Type 'number | undefined' is not assignable to type 'number'.
+      Type 'undefined' is not assignable to type 'number'.
+
+122     onSubmit: (itemId: number) => deleteWarehouseTransferItem(itemId),
+        ~~~~~~~~
+
+  ../../packages/store/src/hooks/useSubmitQuery.ts:7:3
+    7   onSubmit?: (data?: TParams) => Promise<TResponse>;
+        ~~~~~~~~
+    The expected type comes from property 'onSubmit' which is declared here on type '{ key: any[]; onSuccess?: ((data?: PostgrestSingleResponse<null> | undefined) => any) | undefined; onSubmit?: ((data?: number | undefined) => Promise<PostgrestSingleResponse<null>>) | undefined; onError?: ((e: any) => any) | undefined; }'
+
+../../packages/store/src/hooks/useProduct.ts:9:3 - error TS6133: 'deleteProductSupplierMapping' is declared but its value is never read.
+
+9   deleteProductSupplierMapping,
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+../../packages/store/src/hooks/useProduct.ts:62:14 - error TS7006: Parameter 'e' implicitly has an 'any' type.
+
+62   onError?: (e) => any;
+                ~
+
+../../packages/store/src/hooks/useProduct.ts:74:5 - error TS2322: Type '(values: ProductFormData) => Promise<void>' is not assignable to type '(data?: ProductFormData | undefined) => Promise<void>'.
+  Types of parameters 'values' and 'data' are incompatible.
+    Type 'ProductFormData | undefined' is not assignable to type 'ProductFormData'.
+      Type 'undefined' is not assignable to type 'ProductFormData'.
+
+74     onSubmit: async (values: ProductFormData) => {
+       ~~~~~~~~
+
+  ../../packages/store/src/hooks/useSubmitQuery.ts:7:3
+    7   onSubmit?: (data?: TParams) => Promise<TResponse>;
+        ~~~~~~~~
+    The expected type comes from property 'onSubmit' which is declared here on type '{ key: any[]; onSuccess?: ((data?: void | undefined) => any) | undefined; onSubmit?: ((data?: ProductFormData | undefined) => Promise<void>) | undefined; onError?: ((e: any) => any) | undefined; }'
+
+../../packages/store/src/hooks/useProduct.ts:79:11 - error TS2339: Property 'supplier_mapping' does not exist on type '{ name: string; sku?: string | undefined; barcode?: string | undefined; image_url?: string | undefined; category?: string | undefined; tags?: string[] | undefined; manufacturer?: string | undefined; ... 15 more ...; supplier_ids?: number[] | undefined; }'.
+
+79           supplier_mapping,
+             ~~~~~~~~~~~~~~~~
+
+../../packages/store/src/hooks/useProductLot.ts:36:5 - error TS2322: Type '() => Promise<IProductLot[] | null>' is not assignable to type '() => Promise<IProductLot[]>'.
+  Type 'Promise<IProductLot[] | null>' is not assignable to type 'Promise<IProductLot[]>'.
+    Type 'IProductLot[] | null' is not assignable to type 'IProductLot[]'.
+      Type 'null' is not assignable to type 'IProductLot[]'.
+
+36     queryFn: async () => {
+       ~~~~~~~
+
+  ../../packages/store/src/hooks/useQuery.ts:22:3
+    22   queryFn?: () => Promise<T>;
+         ~~~~~~~
+    The expected type comes from property 'queryFn' which is declared here on type '{ key: any[]; queryFn?: (() => Promise<IProductLot[]>) | undefined; disableCache?: boolean | undefined; gcTime?: number | undefined; delayTime?: number | undefined; }'
+
+../../packages/store/src/hooks/useProductLot.ts:61:14 - error TS7006: Parameter 'e' implicitly has an 'any' type.
+
+61   onError?: (e) => any;
+                ~
+
+../../packages/store/src/hooks/useProductLot.ts:66:5 - error TS2322: Type '(params: { lotId: number | null; productId: number; warehouseId: number; newQuantityAvailable: number; }) => Promise<{ error: null; }>' is not assignable to type '(data?: { lotId: number | null; productId: number; warehouseId: number; newQuantityAvailable: number; } | undefined) => Promise<{ error: null; }>'.
+  Types of parameters 'params' and 'data' are incompatible.
+    Type '{ lotId: number | null; productId: number; warehouseId: number; newQuantityAvailable: number; } | undefined' is not assignable to type '{ lotId: number | null; productId: number; warehouseId: number; newQuantityAvailable: number; }'.
+      Type 'undefined' is not assignable to type '{ lotId: number | null; productId: number; warehouseId: number; newQuantityAvailable: number; }'.
+
+66     onSubmit: async (params: {
+       ~~~~~~~~
+
+  ../../packages/store/src/hooks/useSubmitQuery.ts:7:3
+    7   onSubmit?: (data?: TParams) => Promise<TResponse>;
+        ~~~~~~~~
+    The expected type comes from property 'onSubmit' which is declared here on type '{ key: any[]; onSuccess?: ((data?: { error: null; } | undefined) => any) | undefined; onSubmit?: ((data?: { lotId: number | null; productId: number; warehouseId: number; newQuantityAvailable: number; } | undefined) => Promise<...>) | undefined; onError?: ((e: any) => any) | undefined; }'
+
+../../packages/store/src/hooks/usePurchaseOrderAnalysis.ts:51:5 - error TS2322: Type '({ products, warehouseId }: { products: any[]; warehouseId: number; } | undefined) => Promise<{ message: string; purchaseOrders: never[]; productsOrdered?: undefined; } | { message: string; purchaseOrders: any[]; productsOrdered: { ...; }[]; }>' is not assignable to type '(data?: { products: any[]; warehouseId: number; } | undefined) => Promise<any[]>'.
+  Type 'Promise<{ message: string; purchaseOrders: never[]; productsOrdered?: undefined; } | { message: string; purchaseOrders: any[]; productsOrdered: { product_id: number; product_name: string; supplier_id: number; supplier_name: string; quantity_needed: number; unit_price: number; }[]; }>' is not assignable to type 'Promise<any[]>'.
+    Type '{ message: string; purchaseOrders: never[]; productsOrdered?: undefined; } | { message: string; purchaseOrders: any[]; productsOrdered: { product_id: number; product_name: string; supplier_id: number; supplier_name: string; quantity_needed: number; unit_price: number; }[]; }' is not assignable to type 'any[]'.
+      Type '{ message: string; purchaseOrders: never[]; productsOrdered?: undefined; }' is missing the following properties from type 'any[]': length, pop, push, concat, and 29 more.
+
+51     onSubmit: async ({ products, warehouseId }) => {
+       ~~~~~~~~
+
+  ../../packages/store/src/hooks/useSubmitQuery.ts:7:3
+    7   onSubmit?: (data?: TParams) => Promise<TResponse>;
+        ~~~~~~~~
+    The expected type comes from property 'onSubmit' which is declared here on type '{ key: any[]; onSuccess?: ((data?: any[] | undefined) => any) | undefined; onSubmit?: ((data?: { products: any[]; warehouseId: number; } | undefined) => Promise<any[]>) | undefined; onError?: ((e: any) => any) | undefined; }'
+
+../../packages/store/src/hooks/usePurchaseOrderAnalysis.ts:51:24 - error TS2339: Property 'products' does not exist on type '{ products: any[]; warehouseId: number; } | undefined'.
+
+51     onSubmit: async ({ products, warehouseId }) => {
+                          ~~~~~~~~
+
+../../packages/store/src/hooks/usePurchaseOrderAnalysis.ts:51:34 - error TS2339: Property 'warehouseId' does not exist on type '{ products: any[]; warehouseId: number; } | undefined'.
+
+51     onSubmit: async ({ products, warehouseId }) => {
+                                    ~~~~~~~~~~~
+
+../../packages/store/src/hooks/usePurchaseOrderAnalysis.ts:52:28 - error TS2554: Expected 3 arguments, but got 2.
+
+52       const result = await createPurchaseOrdersFromProducts(
+                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  ../../packages/services/src/supabase/purchaseOrderService.ts:499:3
+    499   createdBy: string | null,
+          ~~~~~~~~~~~~~~~~~~~~~~~~
+    An argument for 'createdBy' was not provided.
+
+../../packages/store/src/hooks/usePurchaseOrderAnalysis.ts:58:5 - error TS2322: Type '((orders: any[]) => void) | undefined' is not assignable to type '((data?: any[] | undefined) => any) | undefined'.
+  Type '(orders: any[]) => void' is not assignable to type '(data?: any[] | undefined) => any'.
+    Types of parameters 'orders' and 'data' are incompatible.
+      Type 'any[] | undefined' is not assignable to type 'any[]'.
+        Type 'undefined' is not assignable to type 'any[]'.
+
+58     onSuccess: callbacks?.onSuccess,
+       ~~~~~~~~~
+
+  ../../packages/store/src/hooks/useSubmitQuery.ts:6:3
+    6   onSuccess?: (data?: TResponse) => any;
+        ~~~~~~~~~
+    The expected type comes from property 'onSuccess' which is declared here on type '{ key: any[]; onSuccess?: ((data?: any[] | undefined) => any) | undefined; onSubmit?: ((data?: { products: any[]; warehouseId: number; } | undefined) => Promise<any[]>) | undefined; onError?: ((e: any) => any) | undefined; }'
+
+../../packages/store/src/hooks/usePurchaseOrderAnalysis.ts:116:5 - error TS2322: Type '(file: File) => Promise<{ text: string; products?: Array<{ name: string; quantity?: number; lotNumber?: string; expirationDate?: string; lots?: Array<{ lotNumber?: string; quantity?: number; expirationDate?: string; }>; }>; supplier?: string; data: any; }>' is not assignable to type '(data?: File | undefined) => Promise<{ text: string; products?: { name: string; quantity?: number | undefined; lotNumber?: string | undefined; expirationDate?: string | undefined; lots?: { ...; }[] | undefined; }[] | undefined; supplier?: string | undefined; }>'.
+  Types of parameters 'file' and 'data' are incompatible.
+    Type 'File | undefined' is not assignable to type 'File'.
+      Type 'undefined' is not assignable to type 'File'.
+
+116     onSubmit: async (file: File) => {
+        ~~~~~~~~
+
+  ../../packages/store/src/hooks/useSubmitQuery.ts:7:3
+    7   onSubmit?: (data?: TParams) => Promise<TResponse>;
+        ~~~~~~~~
+    The expected type comes from property 'onSubmit' which is declared here on type '{ key: any[]; onSuccess?: ((data?: { text: string; products?: { name: string; quantity?: number | undefined; lotNumber?: string | undefined; expirationDate?: string | undefined; lots?: { lotNumber?: string | undefined; quantity?: number | undefined; expirationDate?: string | undefined; }[] | undefined; }[] | undefin...'
+
+../../packages/store/src/hooks/usePurchaseOrderAnalysis.ts:120:5 - error TS2322: Type '((result: { text: string; products?: { name: string; quantity?: number | undefined; lotNumber?: string | undefined; expirationDate?: string | undefined; lots?: { lotNumber?: string | undefined; quantity?: number | undefined; expirationDate?: string | undefined; }[] | undefined; }[] | undefined; supplier?: string | u...' is not assignable to type '((data?: { text: string; products?: { name: string; quantity?: number | undefined; lotNumber?: string | undefined; expirationDate?: string | undefined; lots?: { lotNumber?: string | undefined; quantity?: number | undefined; expirationDate?: string | undefined; }[] | undefined; }[] | undefined; supplier?: string | un...'.
+  Type '(result: { text: string; products?: { name: string; quantity?: number | undefined; lotNumber?: string | undefined; expirationDate?: string | undefined; lots?: { lotNumber?: string | undefined; quantity?: number | undefined; expirationDate?: string | undefined; }[] | undefined; }[] | undefined; supplier?: string | un...' is not assignable to type '(data?: { text: string; products?: { name: string; quantity?: number | undefined; lotNumber?: string | undefined; expirationDate?: string | undefined; lots?: { lotNumber?: string | undefined; quantity?: number | undefined; expirationDate?: string | undefined; }[] | undefined; }[] | undefined; supplier?: string | und...'.
+    Types of parameters 'result' and 'data' are incompatible.
+      Type '{ text: string; products?: { name: string; quantity?: number | undefined; lotNumber?: string | undefined; expirationDate?: string | undefined; lots?: { lotNumber?: string | undefined; quantity?: number | undefined; expirationDate?: string | undefined; }[] | undefined; }[] | undefined; supplier?: string | undefined; ...' is not assignable to type '{ text: string; products?: { name: string; quantity?: number | undefined; lotNumber?: string | undefined; expirationDate?: string | undefined; lots?: { lotNumber?: string | undefined; quantity?: number | undefined; expirationDate?: string | undefined; }[] | undefined; }[] | undefined; supplier?: string | undefined; }'.
+        Type 'undefined' is not assignable to type '{ text: string; products?: { name: string; quantity?: number | undefined; lotNumber?: string | undefined; expirationDate?: string | undefined; lots?: { lotNumber?: string | undefined; quantity?: number | undefined; expirationDate?: string | undefined; }[] | undefined; }[] | undefined; supplier?: string | undefined; }'.
+
+120     onSuccess: callbacks?.onSuccess,
+        ~~~~~~~~~
+
+  ../../packages/store/src/hooks/useSubmitQuery.ts:6:3
+    6   onSuccess?: (data?: TResponse) => any;
+        ~~~~~~~~~
+    The expected type comes from property 'onSuccess' which is declared here on type '{ key: any[]; onSuccess?: ((data?: { text: string; products?: { name: string; quantity?: number | undefined; lotNumber?: string | undefined; expirationDate?: string | undefined; lots?: { lotNumber?: string | undefined; quantity?: number | undefined; expirationDate?: string | undefined; }[] | undefined; }[] | undefin...'
+
+../../packages/store/src/hooks/usePurchaseOrderAnalysis.ts:184:24 - error TS2339: Property 'pdfBase64' does not exist on type '{ pdfBase64: string; fileName: string; } | undefined'.
+
+184     onSubmit: async ({ pdfBase64, fileName }) => {
+                           ~~~~~~~~~
+
+../../packages/store/src/hooks/usePurchaseOrderAnalysis.ts:184:35 - error TS2339: Property 'fileName' does not exist on type '{ pdfBase64: string; fileName: string; } | undefined'.
+
+184     onSubmit: async ({ pdfBase64, fileName }) => {
+                                      ~~~~~~~~
+
+../../packages/store/src/hooks/usePurchaseOrderAnalysis.ts:185:64 - error TS2554: Expected 1 arguments, but got 2.
+
+185       const result = await analyticPurchaseOrderPdf(pdfBase64, fileName);
+                                                                   ~~~~~~~~
+
+../../packages/store/src/hooks/usePurchaseOrderAnalysis.ts:188:5 - error TS2322: Type '((result: { text: string; products?: { name: string; quantity?: number | undefined; unitPrice?: number | undefined; sku?: string | undefined; lotNumber?: string | undefined; expirationDate?: string | undefined; lots?: { ...; }[] | undefined; }[] | undefined; supplier?: string | undefined; totalPages?: number | undef...' is not assignable to type '((data?: { text: string; products?: { name: string; quantity?: number | undefined; unitPrice?: number | undefined; sku?: string | undefined; lotNumber?: string | undefined; expirationDate?: string | undefined; lots?: { ...; }[] | undefined; }[] | undefined; supplier?: string | undefined; totalPages?: number | undefi...'.
+  Type '(result: { text: string; products?: { name: string; quantity?: number | undefined; unitPrice?: number | undefined; sku?: string | undefined; lotNumber?: string | undefined; expirationDate?: string | undefined; lots?: { ...; }[] | undefined; }[] | undefined; supplier?: string | undefined; totalPages?: number | undefi...' is not assignable to type '(data?: { text: string; products?: { name: string; quantity?: number | undefined; unitPrice?: number | undefined; sku?: string | undefined; lotNumber?: string | undefined; expirationDate?: string | undefined; lots?: { ...; }[] | undefined; }[] | undefined; supplier?: string | undefined; totalPages?: number | undefin...'.
+    Types of parameters 'result' and 'data' are incompatible.
+      Type '{ text: string; products?: { name: string; quantity?: number | undefined; unitPrice?: number | undefined; sku?: string | undefined; lotNumber?: string | undefined; expirationDate?: string | undefined; lots?: { ...; }[] | undefined; }[] | undefined; supplier?: string | undefined; totalPages?: number | undefined; } | ...' is not assignable to type '{ text: string; products?: { name: string; quantity?: number | undefined; unitPrice?: number | undefined; sku?: string | undefined; lotNumber?: string | undefined; expirationDate?: string | undefined; lots?: { ...; }[] | undefined; }[] | undefined; supplier?: string | undefined; totalPages?: number | undefined; }'.
+        Type 'undefined' is not assignable to type '{ text: string; products?: { name: string; quantity?: number | undefined; unitPrice?: number | undefined; sku?: string | undefined; lotNumber?: string | undefined; expirationDate?: string | undefined; lots?: { ...; }[] | undefined; }[] | undefined; supplier?: string | undefined; totalPages?: number | undefined; }'.
+
+188     onSuccess: callbacks?.onSuccess,
+        ~~~~~~~~~
+
+  ../../packages/store/src/hooks/useSubmitQuery.ts:6:3
+    6   onSuccess?: (data?: TResponse) => any;
+        ~~~~~~~~~
+    The expected type comes from property 'onSuccess' which is declared here on type '{ key: any[]; onSuccess?: ((data?: { text: string; products?: { name: string; quantity?: number | undefined; unitPrice?: number | undefined; sku?: string | undefined; lotNumber?: string | undefined; expirationDate?: string | undefined; lots?: { ...; }[] | undefined; }[] | undefined; supplier?: string | undefined; to...'
+
+../../packages/store/src/hooks/usePurchaseOrderAnalysis.ts:219:5 - error TS2322: Type '({ warehouseId }: { warehouseId: number; } | undefined) => Promise<{ analyzed: never[]; created: never[]; } | { analyzed: { productsToOrder: any[]; totalAmount: number; supplierCount: number; }; created: { message: string; purchaseOrders: never[]; productsOrdered?: undefined; } | { ...; }; }>' is not assignable to type '(data?: { warehouseId: number; } | undefined) => Promise<{ analyzed: any[]; created: any[]; }>'.
+  Type 'Promise<{ analyzed: never[]; created: never[]; } | { analyzed: { productsToOrder: any[]; totalAmount: number; supplierCount: number; }; created: { message: string; purchaseOrders: never[]; productsOrdered?: undefined; } | { ...; }; }>' is not assignable to type 'Promise<{ analyzed: any[]; created: any[]; }>'.
+    Type '{ analyzed: never[]; created: never[]; } | { analyzed: { productsToOrder: any[]; totalAmount: number; supplierCount: number; }; created: { message: string; purchaseOrders: never[]; productsOrdered?: undefined; } | { ...; }; }' is not assignable to type '{ analyzed: any[]; created: any[]; }'.
+      Type '{ analyzed: { productsToOrder: any[]; totalAmount: number; supplierCount: number; }; created: { message: string; purchaseOrders: never[]; productsOrdered?: undefined; } | { message: string; purchaseOrders: any[]; productsOrdered: { ...; }[]; }; }' is not assignable to type '{ analyzed: any[]; created: any[]; }'.
+        Types of property 'analyzed' are incompatible.
+          Type '{ productsToOrder: any[]; totalAmount: number; supplierCount: number; }' is missing the following properties from type 'any[]': length, pop, push, concat, and 29 more.
+
+219     onSubmit: async ({ warehouseId }) => {
+        ~~~~~~~~
+
+  ../../packages/store/src/hooks/useSubmitQuery.ts:7:3
+    7   onSubmit?: (data?: TParams) => Promise<TResponse>;
+        ~~~~~~~~
+    The expected type comes from property 'onSubmit' which is declared here on type '{ key: any[]; onSuccess?: ((data?: { analyzed: any[]; created: any[]; } | undefined) => any) | undefined; onSubmit?: ((data?: { warehouseId: number; } | undefined) => Promise<{ analyzed: any[]; created: any[]; }>) | undefined; onError?: ((e: any) => any) | undefined; }'
+
+../../packages/store/src/hooks/usePurchaseOrderAnalysis.ts:219:24 - error TS2339: Property 'warehouseId' does not exist on type '{ warehouseId: number; } | undefined'.
+
+219     onSubmit: async ({ warehouseId }) => {
+                           ~~~~~~~~~~~
+
+../../packages/store/src/hooks/usePurchaseOrderAnalysis.ts:223:49 - error TS2339: Property 'length' does not exist on type '{ productsToOrder: any[]; totalAmount: number; supplierCount: number; }'.
+
+223       if (!analyzedProducts || analyzedProducts.length === 0) {
+                                                    ~~~~~~
+
+../../packages/store/src/hooks/usePurchaseOrderAnalysis.ts:228:35 - error TS2554: Expected 3 arguments, but got 2.
+
+228       const createdOrders = await createPurchaseOrdersFromProducts(
+                                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  ../../packages/services/src/supabase/purchaseOrderService.ts:499:3
+    499   createdBy: string | null,
+          ~~~~~~~~~~~~~~~~~~~~~~~~
+    An argument for 'createdBy' was not provided.
+
+../../packages/store/src/hooks/usePurchaseOrderAnalysis.ts:238:5 - error TS2322: Type '((result: { analyzed: any[]; created: any[]; }) => void) | undefined' is not assignable to type '((data?: { analyzed: any[]; created: any[]; } | undefined) => any) | undefined'.
+  Type '(result: { analyzed: any[]; created: any[]; }) => void' is not assignable to type '(data?: { analyzed: any[]; created: any[]; } | undefined) => any'.
+    Types of parameters 'result' and 'data' are incompatible.
+      Type '{ analyzed: any[]; created: any[]; } | undefined' is not assignable to type '{ analyzed: any[]; created: any[]; }'.
+        Type 'undefined' is not assignable to type '{ analyzed: any[]; created: any[]; }'.
+
+238     onSuccess: callbacks?.onSuccess,
+        ~~~~~~~~~
+
+  ../../packages/store/src/hooks/useSubmitQuery.ts:6:3
+    6   onSuccess?: (data?: TResponse) => any;
+        ~~~~~~~~~
+    The expected type comes from property 'onSuccess' which is declared here on type '{ key: any[]; onSuccess?: ((data?: { analyzed: any[]; created: any[]; } | undefined) => any) | undefined; onSubmit?: ((data?: { warehouseId: number; } | undefined) => Promise<{ analyzed: any[]; created: any[]; }>) | undefined; onError?: ((e: any) => any) | undefined; }'
+
+../../packages/store/src/hooks/usePurchaseOrderMutations.ts:100:24 - error TS2339: Property 'id' does not exist on type 'UpdatePurchaseOrderParams | undefined'.
+
+100     onSubmit: async ({ id, updates }) => {
+                           ~~
+
+../../packages/store/src/hooks/usePurchaseOrderMutations.ts:100:28 - error TS2339: Property 'updates' does not exist on type 'UpdatePurchaseOrderParams | undefined'.
+
+100     onSubmit: async ({ id, updates }) => {
+                               ~~~~~~~
+
+../../packages/store/src/hooks/usePurchaseOrderMutations.ts:122:45 - error TS2345: Argument of type 'CreateSupplierParams | undefined' is not assignable to parameter of type 'Omit<ISupplier, "created_at" | "id" | "updated_at">'.
+  Type 'undefined' is not assignable to type 'Omit<ISupplier, "created_at" | "id" | "updated_at">'.
+
+122       const response = await createSupplier(params);
+                                                ~~~~~~
+
+../../packages/store/src/hooks/usePurchaseOrderMutations.ts:142:24 - error TS2339: Property 'itemId' does not exist on type 'UpdatePurchaseOrderItemParams | undefined'.
+
+142     onSubmit: async ({ itemId, quantity }) => {
+                           ~~~~~~
+
+../../packages/store/src/hooks/usePurchaseOrderMutations.ts:142:32 - error TS2339: Property 'quantity' does not exist on type 'UpdatePurchaseOrderItemParams | undefined'.
+
+142     onSubmit: async ({ itemId, quantity }) => {
+                                   ~~~~~~~~
+
+../../packages/store/src/hooks/usePurchaseOrderMutations.ts:159:24 - error TS2339: Property 'purchaseOrderId' does not exist on type 'AddPurchaseOrderItemsParams | undefined'.
+
+159     onSubmit: async ({ purchaseOrderId, items }) => {
+                           ~~~~~~~~~~~~~~~
+
+../../packages/store/src/hooks/usePurchaseOrderMutations.ts:159:41 - error TS2339: Property 'items' does not exist on type 'AddPurchaseOrderItemsParams | undefined'.
+
+159     onSubmit: async ({ purchaseOrderId, items }) => {
+                                            ~~~~~
+
+../../packages/store/src/hooks/usePurchaseOrderMutations.ts:176:24 - error TS2339: Property 'itemId' does not exist on type 'DeletePurchaseOrderItemParams | undefined'.
+
+176     onSubmit: async ({ itemId }) => {
+                           ~~~~~~
+
+../../packages/store/src/hooks/usePurchaseOrderMutations.ts:218:7 - error TS2339: Property 'purchaseOrderId' does not exist on type 'SavePurchaseOrderParams | undefined'.
+
+218       purchaseOrderId,
+          ~~~~~~~~~~~~~~~
+
+../../packages/store/src/hooks/usePurchaseOrderMutations.ts:219:7 - error TS2339: Property 'originalItems' does not exist on type 'SavePurchaseOrderParams | undefined'.
+
+219       originalItems,
+          ~~~~~~~~~~~~~
+
+../../packages/store/src/hooks/usePurchaseOrderMutations.ts:220:7 - error TS2339: Property 'currentItems' does not exist on type 'SavePurchaseOrderParams | undefined'.
+
+220       currentItems,
+          ~~~~~~~~~~~~
+
+../../packages/store/src/hooks/usePurchaseOrderMutations.ts:221:7 - error TS2339: Property 'formValues' does not exist on type 'SavePurchaseOrderParams | undefined'.
+
+221       formValues,
+          ~~~~~~~~~~
+
+../../packages/store/src/hooks/usePurchaseOrderMutations.ts:222:7 - error TS2339: Property 'isCreatingNewSupplier' does not exist on type 'SavePurchaseOrderParams | undefined'.
+
+222       isCreatingNewSupplier,
+          ~~~~~~~~~~~~~~~~~~~~~
+
+../../packages/store/src/hooks/usePurchaseOrderMutations.ts:223:7 - error TS2339: Property 'newSupplierName' does not exist on type 'SavePurchaseOrderParams | undefined'.
+
+223       newSupplierName,
+          ~~~~~~~~~~~~~~~
+
+../../packages/store/src/hooks/usePurchaseOrderMutations.ts:236:48 - error TS7006: Parameter 'total' implicitly has an 'any' type.
+
+236       const totalAmount = currentItems.reduce((total, item) => {
+                                                   ~~~~~
+
+../../packages/store/src/hooks/usePurchaseOrderMutations.ts:236:55 - error TS7006: Parameter 'item' implicitly has an 'any' type.
+
+236       const totalAmount = currentItems.reduce((total, item) => {
+                                                          ~~~~
+
+../../packages/store/src/hooks/usePurchaseOrderMutations.ts:248:11 - error TS2322: Type 'null' is not assignable to type 'string | undefined'.
+
+248           email: null,
+              ~~~~~
+
+  ../../packages/services/src/supabase/supplierService.ts:10:3
+    10   email?: string;
+         ~~~~~
+    The expected type comes from property 'email' which is declared here on type 'Omit<ISupplier, "created_at" | "id" | "updated_at">'
+
+../../packages/store/src/hooks/usePurchaseOrderMutations.ts:249:11 - error TS2322: Type 'null' is not assignable to type 'string | undefined'.
+
+249           phone: null,
+              ~~~~~
+
+  ../../packages/services/src/supabase/supplierService.ts:9:3
+    9   phone?: string;
+        ~~~~~
+    The expected type comes from property 'phone' which is declared here on type 'Omit<ISupplier, "created_at" | "id" | "updated_at">'
+
+../../packages/store/src/hooks/usePurchaseOrderMutations.ts:250:11 - error TS2322: Type 'null' is not assignable to type 'string | undefined'.
+
+250           address: null,
+              ~~~~~~~
+
+  ../../packages/services/src/supabase/supplierService.ts:11:3
+    11   address?: string;
+         ~~~~~~~
+    The expected type comes from property 'address' which is declared here on type 'Omit<ISupplier, "created_at" | "id" | "updated_at">'
+
+../../packages/store/src/hooks/usePurchaseOrderMutations.ts:251:11 - error TS2322: Type 'null' is not assignable to type 'string | undefined'.
+
+251           tax_code: null,
+              ~~~~~~~~
+
+  ../../packages/services/src/supabase/supplierService.ts:7:3
+    7   tax_code?: string;
+        ~~~~~~~~
+    The expected type comes from property 'tax_code' which is declared here on type 'Omit<ISupplier, "created_at" | "id" | "updated_at">'
+
+../../packages/store/src/hooks/usePurchaseOrderMutations.ts:252:11 - error TS2322: Type 'null' is not assignable to type 'string | undefined'.
+
+252           contact_person: null,
+              ~~~~~~~~~~~~~~
+
+  ../../packages/services/src/supabase/supplierService.ts:8:3
+    8   contact_person?: string;
+        ~~~~~~~~~~~~~~
+    The expected type comes from property 'contact_person' which is declared here on type 'Omit<ISupplier, "created_at" | "id" | "updated_at">'
+
+../../packages/store/src/hooks/usePurchaseOrderMutations.ts:253:11 - error TS2322: Type 'null' is not assignable to type 'string | undefined'.
+
+253           payment_terms: null,
+              ~~~~~~~~~~~~~
+
+  ../../packages/services/src/supabase/supplierService.ts:12:3
+    12   payment_terms?: string;
+         ~~~~~~~~~~~~~
+    The expected type comes from property 'payment_terms' which is declared here on type 'Omit<ISupplier, "created_at" | "id" | "updated_at">'
+
+../../packages/store/src/hooks/usePurchaseOrderMutations.ts:283:28 - error TS7006: Parameter 'item' implicitly has an 'any' type.
+
+283         originalItems.map((item) => item.id).filter((id) => id !== undefined)
+                               ~~~~
+
+../../packages/store/src/hooks/usePurchaseOrderMutations.ts:283:54 - error TS7006: Parameter 'id' implicitly has an 'any' type.
+
+283         originalItems.map((item) => item.id).filter((id) => id !== undefined)
+                                                         ~~
+
+../../packages/store/src/hooks/usePurchaseOrderMutations.ts:287:20 - error TS7006: Parameter 'item' implicitly has an 'any' type.
+
+287           .filter((item) => item.id)
+                       ~~~~
+
+../../packages/store/src/hooks/usePurchaseOrderMutations.ts:288:17 - error TS7006: Parameter 'item' implicitly has an 'any' type.
+
+288           .map((item) => item.id)
+                    ~~~~
+
+../../packages/store/src/hooks/usePurchaseOrderMutations.ts:289:20 - error TS7006: Parameter 'id' implicitly has an 'any' type.
+
+289           .filter((id) => id !== undefined)
+                       ~~
+
+../../packages/store/src/hooks/usePurchaseOrderMutations.ts:315:5 - error TS2322: Type '((result: { newSupplierName?: string | undefined; }) => void) | undefined' is not assignable to type '((data?: { newSupplierName?: string | undefined; } | undefined) => any) | undefined'.
+  Type '(result: { newSupplierName?: string | undefined; }) => void' is not assignable to type '(data?: { newSupplierName?: string | undefined; } | undefined) => any'.
+    Types of parameters 'result' and 'data' are incompatible.
+      Type '{ newSupplierName?: string | undefined; } | undefined' is not assignable to type '{ newSupplierName?: string | undefined; }'.
+        Type 'undefined' is not assignable to type '{ newSupplierName?: string | undefined; }'.
+
+315     onSuccess: callbacks?.onSuccess,
+        ~~~~~~~~~
+
+  ../../packages/store/src/hooks/useSubmitQuery.ts:6:3
+    6   onSuccess?: (data?: TResponse) => any;
+        ~~~~~~~~~
+    The expected type comes from property 'onSuccess' which is declared here on type '{ key: any[]; onSuccess?: ((data?: { newSupplierName?: string | undefined; } | undefined) => any) | undefined; onSubmit?: ((data?: SavePurchaseOrderParams | undefined) => Promise<...>) | undefined; onError?: ((e: any) => any) | undefined; }'
+
+../../packages/store/src/hooks/useQuery.ts:95:10 - error TS2722: Cannot invoke an object which is possibly 'undefined'.
+
+95   return fetch();
+            ~~~~~
+
+../../packages/store/src/index.ts:19:1 - error TS2308: Module "./productStore" has already exported a member named 'useProducts'. Consider explicitly re-exporting to resolve the ambiguity.
+
+19 export * from "./purchaseOrderStore";
+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+../../packages/store/src/posStore.ts:182:19 - error TS2532: Object is possibly 'undefined'.
+
+182                   tab.cart[existingIndex].price;
+                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+../../packages/store/src/posStore.ts:205:48 - error TS18048: 'item.price' is possibly 'undefined'.
+
+205                   item.total = item.quantity * item.price;
+                                                   ~~~~~~~~~~
+
+../../packages/store/src/posStore.ts:300:19 - error TS2532: Object is possibly 'undefined'.
+
+300                   tab.cart[existingIndex].price;
+                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+../../packages/store/src/posStore.ts:323:48 - error TS18048: 'item.price' is possibly 'undefined'.
+
+323                   item.total = item.quantity * item.price;
+                                                   ~~~~~~~~~~
+
+../../packages/store/src/productStore.ts:110:19 - error TS2339: Property 'getProducts' does not exist on type 'typeof import("/Users/macbook/Documents/personal-work/nam-viet-erp/packages/services/index")'.
+
+110           const { getProducts } = await import("@nam-viet-erp/services");
+                      ~~~~~~~~~~~
+
+../../packages/store/src/purchaseOrderStore.ts:284:13 - error TS2554: Expected 2 arguments, but got 3.
+
+284             receivedBy,
+                ~~~~~~~~~~

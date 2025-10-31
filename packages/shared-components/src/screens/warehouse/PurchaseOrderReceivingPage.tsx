@@ -54,16 +54,9 @@ const PurchaseOrderReceivingPage: React.FC = () => {
   // Purchase Order Store
   const {
     purchaseOrders: pendingOrders,
-    suppliers,
-    products,
-    b2bWarehouse,
     isLoading: loading,
     fetchPurchaseOrders,
-    fetchSuppliers,
-    fetchProducts,
-    fetchB2bWarehouse,
     receivePurchaseOrderItems: receivePOItems,
-    createDirectPurchaseImport: createImport,
   } = usePurchaseOrderStore();
 
   const [selectedPO, setSelectedPO] = useState<any>(null);
