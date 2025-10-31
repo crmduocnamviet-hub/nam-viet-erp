@@ -26,7 +26,7 @@ import {
 import {
   getVATInventorySummary,
   getOverallVATStats,
-  getAllWarehouses,
+  getWarehouse,
 } from "@nam-viet-erp/services";
 import type { IVATInventorySummary, IWarehouse } from "../../../../../types";
 import dayjs from "dayjs";
@@ -57,7 +57,7 @@ const VATInventoryDashboard: React.FC = () => {
   }, []);
 
   const loadWarehouses = async () => {
-    const { data } = await getAllWarehouses();
+    const { data } = await getWarehouse();
     if (data) {
       setWarehouses(data);
     }

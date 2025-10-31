@@ -1,14 +1,4 @@
 import { supabase } from "./supabase";
-import type {
-  IVATInvoiceIn,
-  IVATInvoiceOut,
-  IVATInvoiceInWithDetails,
-  IVATInvoiceOutWithDetails,
-  ICreateVATInvoiceIn,
-  ICreateVATInvoiceOut,
-  IVATInventorySummary,
-  VATInvoiceStatus,
-} from "../../../../types";
 
 // ============================================
 // VAT INVOICES IN (INCOMING/PURCHASE)

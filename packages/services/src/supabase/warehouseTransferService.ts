@@ -1,5 +1,10 @@
 import type { PostgrestSingleResponse } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
+import { TABLES } from "./constants";
+import {
+  syncAllLotsToInventory,
+  syncMultipleProductsToInventory,
+} from "./lotManagementService";
 
 /**
  * ============================================
@@ -7,6 +12,171 @@ import { supabase } from "./supabase";
  * ============================================
  * Manages warehouse transfers between main warehouse and pharmacies
  */
+
+/**
+ * Generate transfer suggestions for pharmacies based on inventory levels
+ * Suggests products that need to be transferred from B2B warehouse to pharmacies
+ * based on min/max stock levels and excluding products already in pending/in_transit transfers
+ */
+export const generateTransferSuggestions = async () => {
+  try {
+    // Step 1: Get all warehouses
+    const { data: warehouses, error: whError } = await supabase
+      .from("warehouses")
+      .select("*")
+      .eq("is_active", true)
+      .order("name");
+
+    if (whError) throw whError;
+
+    // Find B2B warehouse and pharmacy warehouses
+    const b2bWarehouse = warehouses?.find((w) =>
+      w.name.toLowerCase().includes("b2b"),
+    );
+    const pharmacyWarehouses = warehouses?.filter(
+      (w) => !w.name.toLowerCase().includes("b2b"),
+    );
+
+    if (
+      !b2bWarehouse ||
+      !pharmacyWarehouses ||
+      pharmacyWarehouses.length === 0
+    ) {
+      return {
+        data: [],
+        error: { message: "Không tìm thấy kho B2B hoặc kho nhà thuốc" },
+      };
+    }
+
+    // Step 2: Get all pending/in_transit transfers to exclude products already being transferred
+    const { data: activeTransfers } = await supabase
+      .from("warehouse_transfers")
+      .select(
+        `
+        *,
+        warehouse_transfer_items(product_id, lot_id, quantity_requested)
+      `,
+      )
+      .in("status", ["pending", "in_transit", "approved"]);
+
+    // Create map of product IDs that are already being transferred to each warehouse
+    const productsInTransit = new Map<number, Set<number>>();
+    activeTransfers?.forEach((transfer: any) => {
+      const toWarehouseId = transfer.to_warehouse_id;
+      if (!productsInTransit.has(toWarehouseId)) {
+        productsInTransit.set(toWarehouseId, new Set());
+      }
+      transfer.warehouse_transfer_items?.forEach((item: any) => {
+        productsInTransit.get(toWarehouseId)?.add(item.product_id);
+      });
+    });
+
+    // Step 3: For each pharmacy, find products that need replenishment
+    const suggestions = [];
+
+    for (const pharmacy of pharmacyWarehouses) {
+      // Get inventory for this pharmacy with min/max settings
+      const { data: inventory } = await supabase
+        .from("inventory")
+        .select(
+          `
+          *,
+          products!inner(
+            id,
+            name,
+            sku,
+            retail_price,
+            conversion_rate,
+            wholesale_unit,
+            retail_unit,
+            enable_lot_management
+          ),
+          inventory_settings!inner(min_stock, max_stock)
+        `,
+        )
+        .eq("warehouse_id", pharmacy.id)
+        .eq("inventory_settings.warehouse_id", pharmacy.id);
+
+      const productsNeedingReplenishment = inventory
+        ?.filter((inv: any) => {
+          const minStock = inv.inventory_settings?.min_stock || 0;
+          const currentQty = inv.quantity || 0;
+          const productId = inv.product_id;
+
+          // Check if product is below min stock
+          const isBelowMin = currentQty < minStock;
+
+          // Check if product is not already in a pending transfer
+          const inTransitSet = productsInTransit.get(pharmacy.id);
+          const notInTransit = !inTransitSet || !inTransitSet.has(productId);
+
+          return isBelowMin && notInTransit && minStock > 0;
+        })
+        .map((inv: any) => {
+          const maxStock = inv.inventory_settings?.max_stock || 0;
+          const currentQty = inv.quantity || 0;
+          const product = inv.products;
+
+          // Calculate quantity needed (in pharmacy units)
+          const quantityNeeded = Math.max(0, maxStock - currentQty);
+
+          // If transferring from B2B, we need to convert to wholesale units
+          const conversionRate = product.conversion_rate || 1;
+          const quantityInWholesaleUnits = Math.ceil(
+            quantityNeeded / conversionRate,
+          );
+
+          return {
+            product_id: product.id,
+            product_name: product.name,
+            product_sku: product.sku,
+            current_quantity: currentQty,
+            min_stock: inv.inventory_settings?.min_stock || 0,
+            max_stock: maxStock,
+            quantity_needed_retail: quantityNeeded,
+            quantity_needed_wholesale: quantityInWholesaleUnits,
+            conversion_rate: conversionRate,
+            wholesale_unit: product.wholesale_unit || "Thùng",
+            retail_unit: product.retail_unit || "Hộp",
+            unit_price: product.retail_price || 0,
+            enable_lot_management: product.enable_lot_management,
+          };
+        });
+
+      if (
+        productsNeedingReplenishment &&
+        productsNeedingReplenishment.length > 0
+      ) {
+        suggestions.push({
+          warehouse_id: pharmacy.id,
+          warehouse_name: pharmacy.name,
+          products: productsNeedingReplenishment,
+          total_products: productsNeedingReplenishment.length,
+          total_value: productsNeedingReplenishment.reduce(
+            (sum, p) => sum + p.quantity_needed_retail * p.unit_price,
+            0,
+          ),
+        });
+      }
+    }
+
+    return {
+      data: {
+        b2b_warehouse: b2bWarehouse,
+        suggestions: suggestions,
+        total_pharmacies: suggestions.length,
+        total_products: suggestions.reduce(
+          (sum, s) => sum + s.total_products,
+          0,
+        ),
+      },
+      error: null,
+    };
+  } catch (error: any) {
+    console.error("Error generating transfer suggestions:", error);
+    return { data: null, error };
+  }
+};
 
 /**
  * Get all warehouse transfers with filters
@@ -307,44 +477,97 @@ export const sendWarehouseTransfer = async (
   sendData: ISendWarehouseTransfer,
 ) => {
   try {
+    // Get current user and transfer details
     const {
       data: { user },
     } = await supabase.auth.getUser();
+    const { data: transfer, error: transferError } =
+      await getWarehouseTransferById(id);
 
-    // 1. Update item quantities
-    for (const item of sendData.items) {
-      const { error } = await supabase
-        .from("warehouse_transfer_items")
-        .update({
-          quantity_sent: item.quantity_sent,
-        })
-        .eq("id", item.id);
-
-      if (error) throw error;
+    if (transferError || !transfer) {
+      throw new Error("Không tìm thấy phiếu chuyển kho.");
     }
 
-    // 2. Call database function to update inventory
-    const { error: inventoryError } = await supabase.rpc(
-      "process_warehouse_transfer_inventory",
-      {
-        p_transfer_id: id,
-        p_action: "send",
-      },
+    // --- Start Transaction-like logic ---
+
+    // 1. Update quantity_sent for each item
+    const updateItemsPromises = sendData.items.map((item) =>
+      supabase
+        .from(TABLES.WAREHOUSE_TRANSFER_ITEMS)
+        .update({ quantity_sent: item.quantity_sent })
+        .eq("id", item.id),
     );
-
-    if (inventoryError) {
-      throw inventoryError;
+    const itemResults = await Promise.all(updateItemsPromises);
+    const itemErrors = itemResults.filter((res) => res.error);
+    if (itemErrors.length > 0) {
+      throw new Error(
+        `Lỗi cập nhật số lượng gửi: ${itemErrors[0].error?.message}`,
+      );
     }
 
-    // 3. Update transfer status
-    await supabase
+    // 2. Deduct inventory from the source warehouse for each item
+    const deductInventoryPromises = sendData.items.map((sentItem) => {
+      const transferItem = (transfer.warehouse_transfer_items || []).find(
+        (i) => i.id === sentItem.id,
+      );
+      if (!transferItem) return Promise.resolve();
+
+      return supabase.rpc("deduct_inventory", {
+        p_product_id: transferItem.product_id,
+        p_warehouse_id: transfer.from_warehouse_id,
+        p_quantity_to_deduct: sentItem.quantity_sent,
+        p_lot_id: transferItem.lot_id,
+      });
+    });
+
+    const deductResults = await Promise.all(deductInventoryPromises);
+    const deductErrors = deductResults.filter((res) => !!res);
+    if (deductErrors.length > 0) {
+      // NOTE: This is where atomicity is lost. Items are updated but inventory failed.
+      // A full rollback would be complex here.
+      throw new Error(`Lỗi trừ tồn kho: ${deductErrors[0].error?.message}`);
+    }
+
+    // 3. Update the main transfer status to 'in_transit'
+    const { error: updateTransferError } = await supabase
       .from("warehouse_transfers")
       .update({
+        status: "in_transit",
         sent_by: user?.id,
+        sent_at: new Date().toISOString(),
       })
       .eq("id", id);
 
-    // 4. Return updated transfer
+    if (updateTransferError) {
+      // At this point, inventory has been deducted but the transfer status failed to update.
+      // This is a critical inconsistency.
+      console.error(
+        "CRITICAL: Inventory deducted but transfer status update failed.",
+      );
+      throw updateTransferError;
+    }
+
+    // 4. Sync inventory table from product_lots for all affected products
+    // This ensures the main inventory count is consistent after lot updates.
+    const productIdsToSync = [
+      ...new Set(
+        (transfer.warehouse_transfer_items ?? []).map(
+          (item) => item.product_id,
+        ),
+      ),
+    ];
+
+    if (productIdsToSync.length > 0) {
+      const { error: syncError } =
+        await syncMultipleProductsToInventory(productIdsToSync);
+      if (syncError) {
+        console.warn("Inventory sync after transfer send failed:", syncError);
+      }
+    }
+
+    // --- End Transaction-like logic ---
+
+    // 4. Return the fully updated transfer details
     return await getWarehouseTransferById(id);
   } catch (error) {
     console.error("Error sending warehouse transfer:", error);
@@ -360,45 +583,101 @@ export const receiveWarehouseTransfer = async (
   receiveData: IReceiveWarehouseTransfer,
 ) => {
   try {
+    // Get current user and transfer details
     const {
       data: { user },
     } = await supabase.auth.getUser();
+    const { data: transfer, error: transferError } =
+      await getWarehouseTransferById(id);
 
-    // 1. Update item quantities
-    for (const item of receiveData.items) {
-      const { error } = await supabase
-        .from("warehouse_transfer_items")
+    if (transferError || !transfer) {
+      throw new Error("Không tìm thấy phiếu chuyển kho.");
+    }
+
+    // --- Start Transaction-like logic ---
+
+    // 1. Update quantity_received and damage_notes for each item
+    const updateItemsPromises = receiveData.items.map((item) =>
+      supabase
+        .from(TABLES.WAREHOUSE_TRANSFER_ITEMS)
         .update({
           quantity_received: item.quantity_received,
           damage_notes: item.damage_notes,
         })
-        .eq("id", item.id);
-
-      if (error) throw error;
-    }
-
-    // 2. Call database function to update inventory
-    const { error: inventoryError } = await supabase.rpc(
-      "process_warehouse_transfer_inventory",
-      {
-        p_transfer_id: id,
-        p_action: "receive",
-      },
+        .eq("id", item.id),
     );
 
-    if (inventoryError) {
-      throw inventoryError;
+    const itemResults = await Promise.all(updateItemsPromises);
+    const itemErrors = itemResults.filter((res) => res.error);
+    if (itemErrors.length > 0) {
+      throw new Error(
+        `Lỗi cập nhật số lượng nhận: ${itemErrors[0].error?.message}`,
+      );
     }
 
-    // 3. Update transfer status
-    await supabase
+    // 2. Add inventory to the destination warehouse for each item
+    const receiveInventoryPromises = receiveData.items.map((receivedItem) => {
+      const transferItem = (transfer.warehouse_transfer_items ?? []).find(
+        (i) => i.id === receivedItem.id,
+      );
+      if (!transferItem) return Promise.resolve();
+
+      return supabase.rpc("receive_inventory", {
+        p_product_id: transferItem.product_id,
+        p_warehouse_id: transfer.to_warehouse_id,
+        p_quantity_to_receive: receivedItem.quantity_received,
+        p_source_lot_id: transferItem.lot_id, // Pass original lot to copy info
+      });
+    });
+
+    const receiveResults = await Promise.all(receiveInventoryPromises);
+    const receiveErrors = receiveResults.filter((res) => !!res);
+    if (receiveErrors.length > 0) {
+      // Data inconsistency risk
+      throw new Error(`Lỗi cộng tồn kho: ${receiveErrors[0].error?.message}`);
+    }
+
+    // 3. Update the main transfer status to 'completed'
+    const { error: updateTransferError } = await supabase
       .from("warehouse_transfers")
       .update({
+        status: "completed",
         received_by: user?.id,
+        received_at: new Date().toISOString(),
+        actual_delivery_date: new Date().toISOString().split("T")[0],
       })
       .eq("id", id);
 
-    // 4. Return updated transfer
+    if (updateTransferError) {
+      console.error(
+        "CRITICAL: Inventory received but transfer status update failed.",
+      );
+      throw updateTransferError;
+    }
+
+    // 4. Sync inventory table from product_lots for all affected products
+    // This ensures the main inventory count is consistent after lot updates.
+    const productIdsToSync = [
+      ...new Set(
+        (transfer.warehouse_transfer_items ?? []).map(
+          (item) => item.product_id,
+        ),
+      ),
+    ];
+
+    if (productIdsToSync.length > 0) {
+      const { error: syncError } =
+        await syncMultipleProductsToInventory(productIdsToSync);
+      if (syncError) {
+        console.warn(
+          "Inventory sync after transfer receive failed:",
+          syncError,
+        );
+      }
+    }
+    // --- End Transaction-like logic ---
+
+    // 4. Return the fully updated transfer details
     return await getWarehouseTransferById(id);
   } catch (error) {
     console.error("Error receiving warehouse transfer:", error);

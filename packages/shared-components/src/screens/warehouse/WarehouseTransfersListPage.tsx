@@ -37,7 +37,9 @@ import {
   cancelWarehouseTransfer,
   submitWarehouseTransfer,
   approveWarehouseTransfer,
+  generateTransferSuggestions,
 } from "@nam-viet-erp/services";
+import TransferSuggestionsModal from "../../components/TransferSuggestionsModal";
 import { useAuthStore } from "@nam-viet-erp/store";
 import dayjs from "dayjs";
 import type { ColumnsType } from "antd/es/table";
@@ -56,6 +58,11 @@ const WarehouseTransfersListPage: React.FC = () => {
   const [transfers, setTransfers] = useState<IWarehouseTransferWithDetails[]>(
     [],
   );
+
+  // Transfer suggestions modal state
+  const [showSuggestionsModal, setShowSuggestionsModal] = useState(false);
+  const [suggestionsData, setSuggestionsData] = useState<any>(null);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
 
   // Fetch warehouse transfers
   const fetchTransfers = async () => {
@@ -243,6 +250,35 @@ const WarehouseTransfersListPage: React.FC = () => {
         message: "Lỗi",
         description: error.message || "Không thể hủy phiếu chuyển kho",
       });
+    }
+  };
+
+  // Handle generate suggestions
+  const handleGenerateSuggestions = async () => {
+    setLoadingSuggestions(true);
+    try {
+      const { data, error } = await generateTransferSuggestions();
+
+      if (error) {
+        throw error;
+      }
+
+      setSuggestionsData(data);
+      setShowSuggestionsModal(true);
+
+      if (data && data.suggestions.length > 0) {
+        notification.success({
+          message: "Tính toán thành công",
+          description: `Tìm thấy ${data.total_products} sản phẩm cần chuyển cho ${data.total_pharmacies} kho`,
+        });
+      }
+    } catch (error: any) {
+      notification.error({
+        message: "Lỗi",
+        description: error.message || "Không thể tạo dự trù chuyển kho",
+      });
+    } finally {
+      setLoadingSuggestions(false);
     }
   };
 
@@ -533,6 +569,15 @@ const WarehouseTransfersListPage: React.FC = () => {
             </Button>
 
             <Button
+              icon={<ShoppingOutlined />}
+              onClick={handleGenerateSuggestions}
+              loading={loadingSuggestions}
+              style={{ borderColor: "#52c41a", color: "#52c41a" }}
+            >
+              Tạo dự trù chuyển kho
+            </Button>
+
+            <Button
               type="primary"
               icon={<PlusOutlined />}
               onClick={() => navigate("/warehouse/transfers/create")}
@@ -559,6 +604,14 @@ const WarehouseTransfersListPage: React.FC = () => {
             }}
           />
         </Card>
+
+        {/* Transfer Suggestions Modal */}
+        <TransferSuggestionsModal
+          open={showSuggestionsModal}
+          onClose={() => setShowSuggestionsModal(false)}
+          data={suggestionsData}
+          loading={loadingSuggestions}
+        />
       </Space>
     </PageLayout>
   );

@@ -36,9 +36,9 @@ import {
   createVATInvoiceOut,
   issueVATInvoice,
   cancelVATInvoiceOut,
-  getAllWarehouses,
+  getWarehouse,
   getProductWithInventory,
-  getAllSuppliers,
+  getSuppliers,
 } from "@nam-viet-erp/services";
 import type {
   IVATInvoiceInWithDetails,
@@ -87,9 +87,9 @@ const VATReconciliationPage: React.FC = () => {
 
   const loadMasterData = async () => {
     const [warehousesRes, productsRes, suppliersRes] = await Promise.all([
-      getAllWarehouses(),
+      getWarehouse(),
       getProductWithInventory(),
-      getAllSuppliers(),
+      getSuppliers(),
     ]);
 
     if (warehousesRes.data) setWarehouses(warehousesRes.data);

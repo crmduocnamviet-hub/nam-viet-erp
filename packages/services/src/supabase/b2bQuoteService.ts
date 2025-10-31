@@ -1,5 +1,6 @@
 import type { PostgrestSingleResponse } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
+import { TABLES } from "./constants";
 
 // Get all B2B quotes with optional filtering
 export const getB2BQuotes = async (filters?: {
@@ -11,7 +12,7 @@ export const getB2BQuotes = async (filters?: {
   limit?: number;
   offset?: number;
 }) => {
-  let query = supabase.from("b2b_quotes").select(`
+  let query = supabase.from(TABLES.B2B_QUOTES).select(`
       *,
       employees!created_by_employee_id(full_name, employee_code),
       warehouse_employee:employees!warehouse_employee_id(full_name, employee_code),
@@ -62,7 +63,7 @@ export const getB2BQuoteById = async (
   quoteId: string,
 ): Promise<PostgrestSingleResponse<IB2BQuote | null>> => {
   const response = await supabase
-    .from("b2b_quotes")
+    .from(TABLES.B2B_QUOTES)
     .select(
       `
       *,
@@ -96,7 +97,7 @@ export const createB2BQuote = async (
   };
 
   const response = await supabase
-    .from("b2b_quotes")
+    .from(TABLES.B2B_QUOTES)
     .insert(quoteData)
     .select(
       `
@@ -127,7 +128,7 @@ export const updateB2BQuote = async (
   };
 
   const response = await supabase
-    .from("b2b_quotes")
+    .from(TABLES.B2B_QUOTES)
     .update(updateData)
     .eq("quote_id", quoteId)
     .select(
@@ -156,11 +157,11 @@ export const deleteB2BQuote = async (
   quoteId: string,
 ): Promise<PostgrestSingleResponse<null>> => {
   // First delete quote items
-  await supabase.from("b2b_quote_items").delete().eq("quote_id", quoteId);
+  await supabase.from(TABLES.B2B_QUOTE_ITEMS).delete().eq("quote_id", quoteId);
 
   // Then delete the quote
   const response = await supabase
-    .from("b2b_quotes")
+    .from(TABLES.B2B_QUOTES)
     .delete()
     .eq("quote_id", quoteId);
 
@@ -174,7 +175,7 @@ const generateQuoteNumber = async (): Promise<string> => {
 
   // Get the latest quote number for this year/month
   const { data: latestQuote } = await supabase
-    .from("b2b_quotes")
+    .from(TABLES.B2B_QUOTES)
     .select("quote_number")
     .like("quote_number", `BG-${year}-${month}%`)
     .order("quote_number", { ascending: false })
@@ -201,7 +202,7 @@ export const addQuoteItem = async (
   };
 
   const response = await supabase
-    .from("b2b_quote_items")
+    .from(TABLES.B2B_QUOTE_ITEMS)
     .insert(itemData)
     .select(
       `
@@ -220,7 +221,7 @@ export const updateQuoteItem = async (
   updates: Partial<Omit<IB2BQuoteItem, "item_id" | "created_at" | "product">>,
 ): Promise<PostgrestSingleResponse<IB2BQuoteItem | null>> => {
   const response = await supabase
-    .from("b2b_quote_items")
+    .from(TABLES.B2B_QUOTE_ITEMS)
     .update(updates)
     .eq("item_id", itemId)
     .select(
@@ -239,7 +240,7 @@ export const removeQuoteItem = async (
   itemId: string,
 ): Promise<PostgrestSingleResponse<null>> => {
   const response = await supabase
-    .from("b2b_quote_items")
+    .from(TABLES.B2B_QUOTE_ITEMS)
     .delete()
     .eq("item_id", itemId);
 
@@ -249,7 +250,7 @@ export const removeQuoteItem = async (
 // Get quote items by quote ID
 export const getQuoteItems = async (quoteId: string) => {
   const response = await supabase
-    .from("b2b_quote_items")
+    .from(TABLES.B2B_QUOTE_ITEMS)
     .select(
       `
       *,
@@ -269,7 +270,7 @@ export const getB2BCustomers = async (filters?: {
   isActive?: boolean;
   limit?: number;
 }) => {
-  let query = supabase.from("b2b_customers").select("*");
+  let query = supabase.from(TABLES.B2B_CUSTOMERS).select("*");
 
   if (filters?.search) {
     query = query.or(
@@ -304,7 +305,7 @@ export const createB2BCustomer = async (
   };
 
   const response = await supabase
-    .from("b2b_customers")
+    .from(TABLES.B2B_CUSTOMERS)
     .insert(customerData)
     .select()
     .single();
@@ -319,7 +320,7 @@ export const getQuoteStatistics = async (filters?: {
   endDate?: string;
 }) => {
   let query = supabase
-    .from("b2b_quotes")
+    .from(TABLES.B2B_QUOTES)
     .select("quote_stage, total_value, quote_date");
 
   if (filters?.employeeId) {
@@ -387,7 +388,7 @@ export const getQuotesByWarehouseEmployee = async (
   },
 ) => {
   let query = supabase
-    .from("b2b_quotes")
+    .from(TABLES.B2B_QUOTES)
     .select(
       `
       *,
@@ -428,7 +429,7 @@ export const getQuotesByDeliveryEmployee = async (
   },
 ) => {
   let query = supabase
-    .from("b2b_quotes")
+    .from(TABLES.B2B_QUOTES)
     .select(
       `
       *,

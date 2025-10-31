@@ -1570,9 +1570,9 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
           }}
           scroll={{ x: 1000 }}
           onRow={(record) => ({
-            onClick: () => {
-              canViewQuotes && handleViewOrder(record);
-            },
+            // onClick: () => {
+            //   canViewQuotes && handleViewOrder(record);
+            // },
             style: { cursor: canViewQuotes ? "pointer" : "not-allowed" },
           })}
         />

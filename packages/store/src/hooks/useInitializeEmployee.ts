@@ -62,8 +62,8 @@ export function useInitializeEmployee() {
   }, [user?.id, isAuthenticated]);
 
   useEffect(() => {
-    fetchEmployee();
-  }, []);
+    !!user && fetchEmployee();
+  }, [user]);
 
   return { refetch: fetchEmployee };
 }

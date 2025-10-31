@@ -1,10 +1,11 @@
+import { TABLES } from "./constants";
 import { supabase } from "./supabase";
 
 export const getFundsAndTransactions = async () => {
-  const fundsPromise = supabase.from("funds").select("*, banks(*)");
-  const transPromise = supabase.from("transactions").select("*");
+  const fundsPromise = supabase.from(TABLES.FUNDS).select("*, banks(*)");
+  const transPromise = supabase.from(TABLES.TRANSACTIONS).select("*");
   const internalTransfersPromise = supabase
-    .from("internal_fund_transfers")
+    .from(TABLES.INTERNAL_FUND_TRANSFERS)
     .select("*");
 
   const [fundsRes, transRes, internalTransfersRes] = await Promise.all([

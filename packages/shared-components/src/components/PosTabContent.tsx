@@ -10,19 +10,16 @@ import {
   Divider,
   Avatar,
   Select,
-  Statistic,
   Space,
   InputNumber,
   Tag,
   Tooltip,
   Typography,
   Grid,
-  Tabs,
   Empty,
   FloatButton,
   Badge,
   Modal,
-  Table,
   Descriptions,
   Form,
   App,
@@ -30,18 +27,11 @@ import {
 import {
   UserOutlined,
   DeleteOutlined,
-  PlusOutlined,
-  TagOutlined,
   ShoppingCartOutlined,
-  SearchOutlined,
   CreditCardOutlined,
-  QrcodeOutlined,
   DollarOutlined,
-  WarningOutlined,
-  GiftOutlined,
   AppstoreOutlined,
   CloseCircleOutlined,
-  CloseCircleFilled,
   CloseOutlined,
   EditOutlined,
 } from "@ant-design/icons";
@@ -132,13 +122,8 @@ const PosTabContent: React.FC<PosTabContentProps> = ({
   selectedCustomer,
   setStoreSelectedCustomer,
   setIsCreateCustomerModalOpen,
-  searchTerm,
-  setSearchTerm,
   searchResults,
-  isSearching,
-  selectedWarehouse,
   handleAddToCart,
-  setIsQRScannerOpen,
   cart,
   cartDetails,
   handleRemoveFromCart,
@@ -161,7 +146,6 @@ const PosTabContent: React.FC<PosTabContentProps> = ({
   const navigate = useNavigate();
   const inventory = useInventory();
   const { notification } = App.useApp();
-  const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [isEditPatientModalOpen, setIsEditPatientModalOpen] = useState(false);
   const [editForm] = Form.useForm();
   const [isSavingPatient, setIsSavingPatient] = useState(false);
@@ -333,23 +317,8 @@ const PosTabContent: React.FC<PosTabContentProps> = ({
   }, [inventory, productGlobalQuantities]);
 
   // Extract unique categories from search results
-  const categories = useMemo(() => {
-    const cats = new Set<string>();
-    searchResults.forEach((product) => {
-      if (product.category) {
-        cats.add(product.category);
-      }
-    });
-    return Array.from(cats);
-  }, [searchResults]);
 
   // Filter products by selected category
-  const filteredProducts = useMemo(() => {
-    if (selectedCategory === "all") {
-      return searchResults;
-    }
-    return searchResults.filter((p) => p.category === selectedCategory);
-  }, [searchResults, selectedCategory]);
 
   return (
     <div

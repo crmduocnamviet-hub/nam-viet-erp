@@ -10,7 +10,7 @@ import {
   Col,
 } from "antd";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@nam-viet-erp/services";
+import { supabase, getEmployeeByUserId } from "@nam-viet-erp/services";
 
 const { Title, Text } = Typography;
 
@@ -22,14 +22,37 @@ const LoginPageContent: React.FC = () => {
   const handleLogin = async (values: any) => {
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: values.email,
-        password: values.password,
-      });
+      // Step 1: Sign in with password
+      const { data: authData, error: authError } =
+        await supabase.auth.signInWithPassword({
+          email: values.email,
+          password: values.password,
+        });
 
-      if (error) throw error;
+      if (authError) throw authError;
 
-      notification?.success({ message: "Đăng nhập thành công!" });
+      // Step 2: Fetch employee data before navigating
+      if (authData?.user) {
+        const { data: employee, error: employeeError } =
+          await getEmployeeByUserId(authData.user.id);
+
+        if (employeeError) {
+          throw new Error("Không thể tải thông tin nhân viên");
+        }
+
+        if (!employee) {
+          throw new Error("Không tìm thấy thông tin nhân viên");
+        }
+
+        notification?.success({
+          message: "Đăng nhập thành công!",
+          description: `Chào mừng trở lại, ${employee.full_name || "bạn"}!`,
+        });
+      } else {
+        notification?.success({ message: "Đăng nhập thành công!" });
+      }
+
+      // Step 3: Navigate to dashboard
       navigate("/");
     } catch (error: any) {
       notification.error({
@@ -83,7 +106,7 @@ const LoginPageContent: React.FC = () => {
 
             <Form.Item>
               <Button type="primary" htmlType="submit" loading={loading} block>
-                Đăng nhập
+                {loading ? "Đang đăng nhập..." : "Đăng nhập"}
               </Button>
             </Form.Item>
           </Form>

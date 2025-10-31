@@ -62,9 +62,6 @@ const ProductSearchInput = React.forwardRef<any, ProductSearchInputProps>(
     const [isQRScannerOpen, setIsQRScannerOpen] = useState(false);
 
     const debouncedSearchTerm = useDebounce(searchTerm, debounceDelay);
-
-    const inventory = useInventory();
-
     // Calculate age from date of birth
     const calculateAge = (dateOfBirth: string | null): number | null => {
       if (!dateOfBirth) return null;
@@ -112,64 +109,32 @@ const ProductSearchInput = React.forwardRef<any, ProductSearchInputProps>(
     };
 
     // Filter products when debounced search term changes
+    // useEffect(() => {
+    //   if (debouncedSearchTerm && debouncedSearchTerm.length >= 1) {
+    //     setLoading(true);
+    //     getB2BWarehouseProducts({ search: debouncedSearchTerm })
+    //       .then(({ data }) => {
+    //         setProducts(
+    //           (data?.map((v) => ({
+    //             ...v.products,
+    //             stock_quantity: v.quantity,
+    //           })) as any) || [],
+    //         );
+    //         setOpen(data.length > 0);
+    //       })
+    //       .finally(() => {
+    //         setLoading(false);
+    //       });
+    //   } else {
+    //     setProducts([]);
+    //     setOpen(false);
+    //   }
+    // }, [debouncedSearchTerm]);
+
     useEffect(() => {
       if (debouncedSearchTerm && debouncedSearchTerm.length >= 1) {
         setLoading(true);
-        getB2BWarehouseProducts({ search: debouncedSearchTerm })
-          .then(({ data }) => {
-            setProducts(
-              (data?.map((v) => ({
-                ...v.products,
-                stock_quantity: v.quantity,
-              })) as any) || [],
-            );
-            setOpen(data.length > 0);
-          })
-          .finally(() => {
-            setLoading(false);
-          });
-      } else {
-        setProducts([]);
-        setOpen(false);
-      }
-    }, [debouncedSearchTerm]);
-
-    useEffect(() => {
-      if (debouncedSearchTerm) {
-        setLoading(true);
-
-        // Search in inventory store instead of making API calls
-        if (inventory.length > 0) {
-          const searchLower = debouncedSearchTerm.toLowerCase();
-
-          const filteredProducts = inventory
-            .filter((item: any) => {
-              const product = item.products;
-              if (!product) return false;
-
-              // Search by name, barcode, or product code
-              const matchName = product.name
-                ?.toLowerCase()
-                .includes(searchLower);
-              const matchBarcode = product.barcode
-                ?.toLowerCase()
-                .includes(searchLower);
-              const matchCode = product.product_code
-                ?.toLowerCase()
-                .includes(searchLower);
-              return (
-                (matchName || matchBarcode || matchCode) && item.quantity > 0
-              );
-            })
-            .map((item: any) => ({
-              ...item.products,
-              stock_quantity: item.quantity,
-            }))
-            .slice(0, 10); // Limit to 10 results
-
-          setProducts(filteredProducts);
-          setLoading(false);
-        } else if (employeeWarehouse) {
+        if (employeeWarehouse) {
           // Fallback to API if inventory is not loaded
           searchProductInWarehouse({
             search: debouncedSearchTerm,
@@ -182,6 +147,7 @@ const ProductSearchInput = React.forwardRef<any, ProductSearchInputProps>(
                     ({ ...v.products, stock_quantity: v.quantity }) as IProduct,
                 ) || [],
               );
+              setOpen(!!data?.length);
             })
             .catch(() => {
               notification.error({
@@ -189,6 +155,7 @@ const ProductSearchInput = React.forwardRef<any, ProductSearchInputProps>(
                 description: "Không thể tìm kiếm sản phẩm trong kho",
               });
               setProducts([]);
+              setOpen(false);
             })
             .finally(() => setLoading(false));
         } else {
@@ -205,16 +172,19 @@ const ProductSearchInput = React.forwardRef<any, ProductSearchInputProps>(
                   description: error.message,
                 });
                 setProducts([]);
+                setOpen(false);
               } else {
                 setProducts(data || []);
+                setOpen(!!data?.length);
               }
             })
             .finally(() => setLoading(false));
         }
       } else {
         setProducts([]);
+        setOpen(false);
       }
-    }, [debouncedSearchTerm, employeeWarehouse, notification, inventory]);
+    }, [debouncedSearchTerm, employeeWarehouse, notification]);
 
     // Update search term when value changes externally
     useEffect(() => {
@@ -406,10 +376,6 @@ const ProductSearchInput = React.forwardRef<any, ProductSearchInputProps>(
                   <Text type="secondary">
                     Không tìm thấy sản phẩm nào chứa "{searchTerm}"
                   </Text>
-                </div>
-              ) : searchTerm && searchTerm.length < 2 ? (
-                <div style={{ textAlign: "center", padding: 16 }}>
-                  <Text type="secondary">Nhập ít nhất 2 ký tự để tìm kiếm</Text>
                 </div>
               ) : null
             }
