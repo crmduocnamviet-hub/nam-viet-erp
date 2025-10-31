@@ -1,4 +1,8 @@
 {
+  "buildCommand": "cd ../.. && yarn install && yarn sale:build",
+  "outputDirectory": "dist",
+  "installCommand": "yarn install",
+  "framework": "vite",
   "rewrites": [
     {
       "source": "/:path*",
