@@ -389,3 +389,125 @@ export const getPromoCodes = async () => {
 
   return { data: data || [], error };
 };
+
+/**
+ * Get applicable promotions based on order details
+ * Filters promotions by order value and items (manufacturers, categories)
+ */
+export const getApplicablePromotions = async (
+  orderValue: number,
+  items?: any[],
+): Promise<{
+  data: any[];
+  error: any;
+}> => {
+  const today = new Date().toISOString().split("T")[0];
+
+  // Get all active promotions within valid date range
+  const { data: promotions, error } = await supabase
+    .from("promotions")
+    .select("*")
+    .eq("is_active", true)
+    .lte("start_date", today)
+    .gte("end_date", today)
+    .order("value", { ascending: false }); // Order by value descending to show best deals first
+
+  if (error || !promotions) {
+    return { data: [], error };
+  }
+
+  // Fetch product details if items are provided
+  let productsMap: Record<number, any> = {};
+  if (items && items.length > 0) {
+    const productIds = items
+      .map((item: any) => item.product_id)
+      .filter(Boolean);
+
+    if (productIds.length > 0) {
+      const { data: products } = await supabase
+        .from("products")
+        .select("id, manufacturer, category")
+        .in("id", productIds);
+
+      if (products) {
+        products.forEach((p: any) => {
+          productsMap[p.id] = p;
+        });
+      }
+    }
+  }
+
+  // Filter promotions based on conditions
+  const applicablePromotions = promotions.filter((promotion: any) => {
+    // Check min_order_value condition
+    if (promotion.conditions?.min_order_value) {
+      if (orderValue < promotion.conditions.min_order_value) {
+        return false;
+      }
+    }
+
+    // Check manufacturers condition
+    if (
+      items &&
+      promotion.conditions?.manufacturers &&
+      Array.isArray(promotion.conditions.manufacturers) &&
+      promotion.conditions.manufacturers.length > 0
+    ) {
+      const allowedManufacturers = promotion.conditions.manufacturers;
+
+      const hasMatchingManufacturer = items.some((item: any) => {
+        let manufacturer = item.manufacturer || item.product?.manufacturer;
+
+        if (!manufacturer && item.product_id && productsMap[item.product_id]) {
+          manufacturer = productsMap[item.product_id].manufacturer;
+        }
+
+        if (!manufacturer) return false;
+
+        const normalizedManufacturer = manufacturer.trim().toLowerCase();
+        return allowedManufacturers.some(
+          (allowed: string) =>
+            allowed.trim().toLowerCase() === normalizedManufacturer,
+        );
+      });
+
+      if (!hasMatchingManufacturer) {
+        return false;
+      }
+    }
+
+    // Check product_categories condition
+    if (
+      items &&
+      promotion.conditions?.product_categories &&
+      Array.isArray(promotion.conditions.product_categories) &&
+      promotion.conditions.product_categories.length > 0
+    ) {
+      const allowedCategories = promotion.conditions.product_categories;
+
+      const hasMatchingCategory = items.some((item: any) => {
+        let category = item.category || item.product?.category;
+
+        if (!category && item.product_id && productsMap[item.product_id]) {
+          category = productsMap[item.product_id].category;
+        }
+
+        if (!category) return false;
+
+        const normalizedCategory = category.trim().toLowerCase();
+        return allowedCategories.some(
+          (allowed: string) =>
+            allowed.trim().toLowerCase() === normalizedCategory,
+        );
+      });
+
+      if (!hasMatchingCategory) {
+        return false;
+      }
+    }
+
+    return true;
+  });
+
+  return { data: applicablePromotions, error: null };
+};

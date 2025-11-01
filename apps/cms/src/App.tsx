@@ -6,7 +6,12 @@ import { useAuth } from "./hooks/useAuth";
 import { ScreenProvider } from "@nam-viet-erp/shared-components";
 import { Spin, Row, notification } from "antd";
 import { getEmployeeByUserId, signOut } from "@nam-viet-erp/services";
-import { useInitializeEmployee, useEmployee, useEmployeeStore, useAuthStore } from "@nam-viet-erp/store";
+import {
+  useInitializeEmployee,
+  useEmployee,
+  useEmployeeStore,
+  useAuthStore,
+} from "@nam-viet-erp/store";
 
 const App: React.FC = () => {
   const { session, loading } = useAuth();
@@ -26,7 +31,7 @@ const App: React.FC = () => {
   }, [session, setUser, setSession]);
 
   // Use store for employee data
-  useInitializeEmployee(getEmployeeByUserId);
+  useInitializeEmployee();
   const employee = useEmployee();
   const isLoading = useEmployeeStore((state) => state.isLoading);
   const error = useEmployeeStore((state) => state.error);
@@ -44,15 +49,17 @@ const App: React.FC = () => {
       if (!employee) {
         // Still loading or error
         if (error) {
-          await handleUnauthorizedAccess('Không tìm thấy thông tin nhân viên');
+          await handleUnauthorizedAccess("Không tìm thấy thông tin nhân viên");
         }
         return;
       }
 
       // Check if user has admin or super-admin role
-      const allowedRoles = ['admin', 'super-admin'];
+      const allowedRoles = ["admin", "super-admin"];
       if (!allowedRoles.includes(employee.role_name)) {
-        await handleUnauthorizedAccess(`Vai trò "${employee.role_name}" không được phép truy cập CMS`);
+        await handleUnauthorizedAccess(
+          `Vai trò "${employee.role_name}" không được phép truy cập CMS`,
+        );
         return;
       }
 
@@ -65,7 +72,7 @@ const App: React.FC = () => {
   // Handle unauthorized access
   const handleUnauthorizedAccess = async (message: string) => {
     notification.error({
-      message: 'Truy cập bị từ chối',
+      message: "Truy cập bị từ chối",
       description: `${message}. Chỉ admin và super-admin được phép truy cập CMS.`,
       duration: 5,
     });
@@ -77,7 +84,7 @@ const App: React.FC = () => {
       try {
         await signOut();
       } catch (error) {
-        console.error('Error signing out:', error);
+        console.error("Error signing out:", error);
       }
     }, 3000);
   };
@@ -86,7 +93,10 @@ const App: React.FC = () => {
   if (loading || isLoading) {
     return (
       <Row justify="center" align="middle" style={{ minHeight: "100vh" }}>
-        <Spin size="large" tip={isLoading ? "Đang kiểm tra quyền truy cập..." : "Đang tải..."}>
+        <Spin
+          size="large"
+          tip={isLoading ? "Đang kiểm tra quyền truy cập..." : "Đang tải..."}
+        >
           <div style={{ minHeight: "200px" }} />
         </Spin>
       </Row>
@@ -97,7 +107,7 @@ const App: React.FC = () => {
   if (accessDenied) {
     return (
       <Row justify="center" align="middle" style={{ minHeight: "100vh" }}>
-        <div style={{ textAlign: 'center' }}>
+        <div style={{ textAlign: "center" }}>
           <h2>❌ Truy cập bị từ chối</h2>
           <p>Chỉ admin và super-admin được phép truy cập CMS.</p>
           <p>Đang đăng xuất...</p>
@@ -113,11 +123,18 @@ const App: React.FC = () => {
       <Route path="/login" element={<Login />} />
 
       {/* Nếu đã đăng nhập, có thể truy cập các trang bên trong AppLayout */}
-      <Route path="/*" element={session && employee ? (
-        <ScreenProvider>
-          <AppLayout />
-        </ScreenProvider>
-      ) : <Login />} />
+      <Route
+        path="/*"
+        element={
+          session && employee ? (
+            <ScreenProvider>
+              <AppLayout />
+            </ScreenProvider>
+          ) : (
+            <Login />
+          )
+        }
+      />
     </Routes>
   );
 };

@@ -533,7 +533,7 @@ const SalesStaffDashboardPage: React.FC<SalesStaffDashboardPageProps> = ({
 
       // Update the payment status in the database
       const { error } = await updateB2BQuote(selectedOrder.quoteId, {
-        payment_status: newStatus,
+        payment_status: newStatus as any,
       });
 
       if (error) {

@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Row, Col, Space, Spin } from "antd";
+import { HomeOutlined, RocketOutlined } from "@ant-design/icons";
+import PageLayout from "../../components/PageLayout";
 import { getPromotions } from "@nam-viet-erp/services";
 import { getSalesStats, getTodaysSales } from "@nam-viet-erp/services";
 
@@ -180,60 +182,94 @@ const MarketingDashboard: React.FC = () => {
 
   if (loading) {
     return (
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          minHeight: "400px",
-        }}
+      <PageLayout
+        title="Marketing Dashboard"
+        breadcrumbs={[
+          {
+            title: "Trang chủ",
+            href: "/",
+            icon: <HomeOutlined />,
+          },
+          {
+            title: "Marketing Dashboard",
+            icon: <RocketOutlined />,
+          },
+        ]}
       >
-        <Spin size="large" />
-      </div>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            minHeight: "400px",
+          }}
+        >
+          <Spin size="large" />
+        </div>
+      </PageLayout>
     );
   }
 
   return (
-    <Space direction="vertical" size="large" style={{ width: "100%" }}>
-      <Row gutter={[16, 16]}>
-        <Col xs={24} sm={12} md={6}>
-          <KpiCard title="Tổng chi phí" value={stats.totalCost} suffix="đ" />
-        </Col>
-        <Col xs={24} sm={12} md={6}>
-          <KpiCard
-            title="Khách hàng mới (hôm nay)"
-            value={stats.newCustomers}
-          />
-        </Col>
-        <Col xs={24} sm={12} md={6}>
-          <KpiCard title="CPA trung bình" value={stats.averageCPA} suffix="đ" />
-        </Col>
-        <Col xs={24} sm={12} md={6}>
-          <KpiCard title="ROI Tổng" value={stats.totalROI} suffix="%" />
-        </Col>
-      </Row>
+    <PageLayout
+      title="Marketing Dashboard"
+      breadcrumbs={[
+        {
+          title: "Trang chủ",
+          href: "/",
+          icon: <HomeOutlined />,
+        },
+        {
+          title: "Marketing Dashboard",
+          icon: <RocketOutlined />,
+        },
+      ]}
+    >
+      <Space direction="vertical" size="large" style={{ width: "100%" }}>
+        <Row gutter={[16, 16]}>
+          <Col xs={24} sm={12} md={6}>
+            <KpiCard title="Tổng chi phí" value={stats.totalCost} suffix="đ" />
+          </Col>
+          <Col xs={24} sm={12} md={6}>
+            <KpiCard
+              title="Khách hàng mới (hôm nay)"
+              value={stats.newCustomers}
+            />
+          </Col>
+          <Col xs={24} sm={12} md={6}>
+            <KpiCard
+              title="CPA trung bình"
+              value={stats.averageCPA}
+              suffix="đ"
+            />
+          </Col>
+          <Col xs={24} sm={12} md={6}>
+            <KpiCard title="ROI Tổng" value={stats.totalROI} suffix="%" />
+          </Col>
+        </Row>
 
-      <Row gutter={[16, 16]}>
-        <Col xs={24} lg={16}>
-          <CampaignCalendar />
-        </Col>
-        <Col xs={24} lg={8}>
-          <AiAdvisor />
-        </Col>
-      </Row>
+        <Row gutter={[16, 16]}>
+          <Col xs={24} lg={16}>
+            <CampaignCalendar />
+          </Col>
+          <Col xs={24} lg={8}>
+            <AiAdvisor />
+          </Col>
+        </Row>
 
-      <Row>
-        <Col span={24}>
-          <ConversionFunnel />
-        </Col>
-      </Row>
+        <Row>
+          <Col span={24}>
+            <ConversionFunnel />
+          </Col>
+        </Row>
 
-      <Row>
-        <Col span={24}>
-          <ChannelPerformance />
-        </Col>
-      </Row>
-    </Space>
+        <Row>
+          <Col span={24}>
+            <ChannelPerformance />
+          </Col>
+        </Row>
+      </Space>
+    </PageLayout>
   );
 };
 

@@ -28,7 +28,6 @@ import {
   SendOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
-  ShoppingOutlined,
   CloseCircleOutlined,
   ShoppingOutlined,
 } from "@ant-design/icons";

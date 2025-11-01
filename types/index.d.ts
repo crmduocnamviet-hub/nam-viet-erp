@@ -86,6 +86,7 @@ interface IPromotion {
   end_date?: string;
   is_active?: boolean;
   conditions?: Record<string, number | string>;
+  code?: string | null;
 }
 
 interface IVoucher {

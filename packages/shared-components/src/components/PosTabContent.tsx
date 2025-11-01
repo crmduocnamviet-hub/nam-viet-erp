@@ -15,7 +15,6 @@ import {
   Tag,
   Tooltip,
   Typography,
-  Grid,
   Empty,
   FloatButton,
   Badge,
@@ -23,6 +22,7 @@ import {
   Descriptions,
   Form,
   App,
+  AutoComplete,
 } from "antd";
 import {
   UserOutlined,
@@ -39,13 +39,13 @@ import { useInventory, usePosStore } from "@nam-viet-erp/store";
 import {
   calculateProductGlobalQuantities,
   updatePatient,
+  getPromoCodes,
 } from "@nam-viet-erp/services";
 import ProductSearchInput from "./ProductSearchInput";
 import DateInput from "./DateInput";
 
 const { Text, Title } = Typography;
 const { Search } = Input;
-const { useBreakpoint } = Grid;
 
 interface PosTabContentProps {
   // Tab
@@ -149,6 +149,33 @@ const PosTabContent: React.FC<PosTabContentProps> = ({
   const [editForm] = Form.useForm();
   const [isSavingPatient, setIsSavingPatient] = useState(false);
   const productSearchRef = React.useRef<any>(null);
+
+  // Promo codes state
+  const [availablePromoCodes, setAvailablePromoCodes] = useState<any[]>([]);
+
+  // Fetch all available promo codes on mount
+  useEffect(() => {
+    const fetchPromoCodes = async () => {
+      try {
+        const { data, error } = await getPromoCodes();
+        if (!error && data) {
+          setAvailablePromoCodes(data);
+        }
+      } catch (error) {
+        console.error("Error fetching promo codes:", error);
+      }
+    };
+
+    fetchPromoCodes();
+  }, []);
+
+  // Reset promo code when cart is empty
+  useEffect(() => {
+    if (cart.length === 0 && (promoCode || appliedPromoCode)) {
+      setPromoCode?.("");
+      handleRemovePromoCode?.();
+    }
+  }, [cart.length]);
 
   // Update tab title when customer is selected
   useEffect(() => {
@@ -378,9 +405,104 @@ const PosTabContent: React.FC<PosTabContentProps> = ({
               selectedCustomer={selectedCustomer}
               employeeWarehouse={employeeWarehouse}
             />
+
+            {/* Promo Code Input */}
+            <div style={{ marginTop: 12, marginBottom: 12 }}>
+              {!appliedPromoCode ? (
+                <Space.Compact style={{ width: "100%" }}>
+                  <AutoComplete
+                    placeholder="Nhập hoặc tìm mã khuyến mãi"
+                    value={promoCode}
+                    onChange={(value) => {
+                      setPromoCode?.(value);
+                    }}
+                    onSelect={(value) => {
+                      setPromoCode?.(value);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        handleApplyPromoCode?.();
+                      }
+                    }}
+                    status={promoCodeError ? "error" : ""}
+                    disabled={cart.length === 0}
+                    options={availablePromoCodes
+                      .filter((promo) => promo.code)
+                      .map((promo) => ({
+                        value: promo.code,
+                        label: (
+                          <div
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                            }}
+                          >
+                            <span>{promo.code}</span>
+                            <span style={{ color: "#888", fontSize: 12 }}>
+                              {promo.type === "percentage"
+                                ? `${promo.value}%`
+                                : `${promo.value?.toLocaleString()}đ`}
+                            </span>
+                          </div>
+                        ),
+                      }))}
+                    filterOption={(inputValue, option) =>
+                      option?.value
+                        ?.toString()
+                        .toLowerCase()
+                        .includes(inputValue.toLowerCase())
+                    }
+                    style={{ width: "100%" }}
+                  />
+                  <Button
+                    type="primary"
+                    onClick={handleApplyPromoCode}
+                    disabled={cart.length === 0}
+                  >
+                    Áp dụng
+                  </Button>
+                </Space.Compact>
+              ) : (
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    padding: "8px 12px",
+                    backgroundColor: "#f6ffed",
+                    border: "1px solid #b7eb8f",
+                    borderRadius: "6px",
+                  }}
+                >
+                  <Space>
+                    <Tag color="success">{appliedPromoCode}</Tag>
+                    {promoDiscount && (
+                      <Text type="success" style={{ fontSize: 13 }}>
+                        Giảm: {promoDiscount.toLocaleString()}đ
+                      </Text>
+                    )}
+                  </Space>
+                  <Button
+                    type="text"
+                    size="small"
+                    danger
+                    icon={<CloseCircleOutlined />}
+                    onClick={handleRemovePromoCode}
+                  >
+                    Xóa
+                  </Button>
+                </div>
+              )}
+              {promoCodeError && (
+                <Text type="danger" style={{ fontSize: 12, marginTop: 4 }}>
+                  {promoCodeError}
+                </Text>
+              )}
+            </div>
+
             <div
               style={{
-                height: "calc(100% - 66px)",
+                height: "calc(100% - 66px - 60px)",
                 overflowY: "auto",
                 paddingRight: "10px",
                 backgroundColor: "white",
@@ -788,90 +910,37 @@ const PosTabContent: React.FC<PosTabContentProps> = ({
 
             {/* Total & Payment Buttons */}
             <Space direction="vertical" size={12} style={{ width: "100%" }}>
-              {/* Promo Code */}
-              {promoCode !== undefined && (
-                <Space
-                  direction="vertical"
-                  size="small"
-                  style={{ width: "100%" }}
-                >
-                  {!appliedPromoCode ? (
-                    <Space.Compact style={{ width: "100%" }}>
-                      <Input
-                        placeholder="Nhập mã khuyến mãi"
-                        value={promoCode}
-                        onChange={(e) => {
-                          setPromoCode?.(e.target.value);
-                        }}
-                        onPressEnter={handleApplyPromoCode}
-                        status={promoCodeError ? "error" : ""}
-                      />
-                      <Button type="primary" onClick={handleApplyPromoCode}>
-                        Áp dụng
-                      </Button>
-                    </Space.Compact>
-                  ) : (
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        background: "#e6f7ff",
-                        padding: "8px 12px",
-                        borderRadius: 4,
-                      }}
-                    >
-                      <Text>
-                        Mã:{" "}
-                        <Text strong style={{ color: "#52c41a" }}>
-                          {appliedPromoCode}
-                        </Text>
-                        <Text style={{ color: "#ff4d4f", marginLeft: 8 }}>
-                          -{promoDiscount?.toLocaleString() || 0}đ
-                        </Text>
-                      </Text>
-                      <Button
-                        size="small"
-                        type="text"
-                        onClick={handleRemovePromoCode}
-                        danger
-                      >
-                        Xóa
-                      </Button>
-                    </div>
-                  )}
-                  {promoCodeError && (
-                    <Text type="danger" style={{ fontSize: 12 }}>
-                      {promoCodeError}
-                    </Text>
-                  )}
-                </Space>
-              )}
-
               {/* Total */}
               <div style={{ textAlign: "center" }}>
-                {cartDetails.totalDiscount > 0 && (
+                {!!promoCode && (
                   <>
-                    <Text delete style={{ color: "#999", fontSize: 14 }}>
-                      {cartDetails.originalTotal.toLocaleString()}đ
-                    </Text>
-                    <br />
-                    <Text type="success" style={{ fontSize: 13 }}>
-                      Tiết kiệm: {cartDetails.totalDiscount.toLocaleString()}đ
-                    </Text>
-                    <br />
-                  </>
-                )}
-                {cartDetails.promoDiscount && cartDetails.promoDiscount > 0 && (
-                  <>
-                    <Text delete style={{ color: "#999", fontSize: 14 }}>
-                      {cartDetails.itemTotal.toLocaleString()}đ
-                    </Text>
-                    <br />
-                    <Text type="success" style={{ fontSize: 13 }}>
-                      Giảm mã KM: -{cartDetails.promoDiscount.toLocaleString()}đ
-                    </Text>
-                    <br />
+                    {cartDetails.totalDiscount > 0 && (
+                      <>
+                        <Text delete style={{ color: "#999", fontSize: 14 }}>
+                          {cartDetails.originalTotal.toLocaleString()}đ
+                        </Text>
+                        <br />
+                        <Text type="success" style={{ fontSize: 13 }}>
+                          Tiết kiệm:{" "}
+                          {cartDetails.totalDiscount.toLocaleString()}đ
+                        </Text>
+                        <br />
+                      </>
+                    )}
+                    {cartDetails.promoDiscount &&
+                      cartDetails.promoDiscount > 0 && (
+                        <>
+                          <Text delete style={{ color: "#999", fontSize: 14 }}>
+                            {cartDetails.itemTotal.toLocaleString()}đ
+                          </Text>
+                          <br />
+                          <Text type="success" style={{ fontSize: 13 }}>
+                            Giảm mã KM: -
+                            {cartDetails.promoDiscount.toLocaleString()}đ
+                          </Text>
+                          <br />
+                        </>
+                      )}
                   </>
                 )}
                 <Title level={3} style={{ margin: "4px 0", color: "#1890ff" }}>
@@ -967,6 +1036,100 @@ const PosTabContent: React.FC<PosTabContentProps> = ({
           body: { maxHeight: "70vh", overflow: "auto", padding: 16 },
         }}
       >
+        {/* Promo Code Input */}
+        <div style={{ marginBottom: 12 }}>
+          {!appliedPromoCode ? (
+            <Space.Compact style={{ width: "100%" }}>
+              <AutoComplete
+                placeholder="Nhập hoặc tìm mã khuyến mãi"
+                value={promoCode}
+                onChange={(value) => {
+                  setPromoCode?.(value);
+                }}
+                onSelect={(value) => {
+                  setPromoCode?.(value);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleApplyPromoCode?.();
+                  }
+                }}
+                status={promoCodeError ? "error" : ""}
+                disabled={cart.length === 0}
+                options={availablePromoCodes
+                  .filter((promo) => promo.code)
+                  .map((promo) => ({
+                    value: promo.code,
+                    label: (
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                        }}
+                      >
+                        <span>{promo.code}</span>
+                        <span style={{ color: "#888", fontSize: 12 }}>
+                          {promo.type === "percentage"
+                            ? `${promo.value}%`
+                            : `${promo.value?.toLocaleString()}đ`}
+                        </span>
+                      </div>
+                    ),
+                  }))}
+                filterOption={(inputValue, option) =>
+                  option?.value
+                    ?.toString()
+                    .toLowerCase()
+                    .includes(inputValue.toLowerCase())
+                }
+                style={{ width: "100%" }}
+              />
+              <Button
+                type="primary"
+                onClick={handleApplyPromoCode}
+                disabled={cart.length === 0}
+              >
+                Áp dụng
+              </Button>
+            </Space.Compact>
+          ) : (
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                padding: "8px 12px",
+                backgroundColor: "#f6ffed",
+                border: "1px solid #b7eb8f",
+                borderRadius: "6px",
+              }}
+            >
+              <Space>
+                <Tag color="success">{appliedPromoCode}</Tag>
+                {promoDiscount && (
+                  <Text type="success" style={{ fontSize: 13 }}>
+                    Giảm: {promoDiscount.toLocaleString()}đ
+                  </Text>
+                )}
+              </Space>
+              <Button
+                type="text"
+                size="small"
+                danger
+                icon={<CloseCircleOutlined />}
+                onClick={handleRemovePromoCode}
+              >
+                Xóa
+              </Button>
+            </div>
+          )}
+          {promoCodeError && (
+            <Text type="danger" style={{ fontSize: 12, marginTop: 4 }}>
+              {promoCodeError}
+            </Text>
+          )}
+        </div>
+
         {/* Combo Suggestions */}
         {detectedCombos.length > 0 && (
           <Card
@@ -1150,66 +1313,6 @@ const PosTabContent: React.FC<PosTabContentProps> = ({
 
             {/* Payment Section */}
             <Space direction="vertical" size={12} style={{ width: "100%" }}>
-              {/* Promo Code */}
-              {promoCode !== undefined && (
-                <Space
-                  direction="vertical"
-                  size="small"
-                  style={{ width: "100%" }}
-                >
-                  {!appliedPromoCode ? (
-                    <Space.Compact style={{ width: "100%" }}>
-                      <Input
-                        placeholder="Nhập mã khuyến mãi"
-                        value={promoCode}
-                        onChange={(e) => {
-                          setPromoCode?.(e.target.value);
-                        }}
-                        onPressEnter={handleApplyPromoCode}
-                        status={promoCodeError ? "error" : ""}
-                      />
-                      <Button type="primary" onClick={handleApplyPromoCode}>
-                        Áp dụng
-                      </Button>
-                    </Space.Compact>
-                  ) : (
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        background: "#e6f7ff",
-                        padding: "8px 12px",
-                        borderRadius: 4,
-                      }}
-                    >
-                      <Text>
-                        Mã:{" "}
-                        <Text strong style={{ color: "#52c41a" }}>
-                          {appliedPromoCode}
-                        </Text>
-                        <Text style={{ color: "#ff4d4f", marginLeft: 8 }}>
-                          -{promoDiscount?.toLocaleString() || 0}đ
-                        </Text>
-                      </Text>
-                      <Button
-                        size="small"
-                        type="text"
-                        onClick={handleRemovePromoCode}
-                        danger
-                      >
-                        Xóa
-                      </Button>
-                    </div>
-                  )}
-                  {promoCodeError && (
-                    <Text type="danger" style={{ fontSize: 12 }}>
-                      {promoCodeError}
-                    </Text>
-                  )}
-                </Space>
-              )}
-
               {/* Total */}
               <div style={{ textAlign: "center" }}>
                 {cartDetails.totalDiscount > 0 && (

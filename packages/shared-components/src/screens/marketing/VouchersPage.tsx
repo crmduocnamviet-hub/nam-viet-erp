@@ -1,23 +1,31 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Button,
   Table,
   Space,
   Row,
   Col,
-  Typography,
   App,
   Modal,
   Form,
-  Input,
+  Input as AntInput,
   Select,
   InputNumber,
   Switch,
   Tag,
-  Grid,
+  Card,
+  Statistic,
 } from "antd";
-import { getResponsivePadding } from "../../constants/spacing";
-import { PlusOutlined, DeleteOutlined } from "@ant-design/icons";
+import {
+  PlusOutlined,
+  DeleteOutlined,
+  HomeOutlined,
+  GiftOutlined,
+  SearchOutlined,
+  CheckCircleOutlined,
+  ClockCircleOutlined,
+} from "@ant-design/icons";
+import PageLayout from "../../components/PageLayout";
 import {
   createVoucher,
   deleteVoucher,
@@ -26,14 +34,9 @@ import {
   updateVoucher,
 } from "@nam-viet-erp/services";
 
-const { Title } = Typography;
-const { useBreakpoint } = Grid;
-
 const Vouchers: React.FC = () => {
   const { notification, modal } = App.useApp();
   const [form] = Form.useForm();
-  const screens = useBreakpoint();
-  const isMobile = !screens.lg;
   const [vouchers, setVouchers] = useState<any[]>([]);
   const [promotions, setPromotions] = useState<
     { value: number; label: string }[]
@@ -41,6 +44,8 @@ const Vouchers: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingVoucher, setEditingVoucher] = useState<any | null>(null);
+  const [searchText, setSearchText] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
 
   const fetchVouchers = async () => {
     setLoading(true);
@@ -142,6 +147,42 @@ const Vouchers: React.FC = () => {
     }
   };
 
+  // Filter data
+  const filteredData = useMemo(() => {
+    let filtered = vouchers;
+
+    // Filter by search text
+    if (searchText) {
+      const lowerSearch = searchText.toLowerCase();
+      filtered = filtered.filter(
+        (voucher) =>
+          voucher.code?.toLowerCase().includes(lowerSearch) ||
+          voucher.promotions?.name?.toLowerCase().includes(lowerSearch),
+      );
+    }
+
+    // Filter by status
+    if (statusFilter !== "all") {
+      const isActive = statusFilter === "active";
+      filtered = filtered.filter((voucher) => voucher.is_active === isActive);
+    }
+
+    return filtered;
+  }, [vouchers, searchText, statusFilter]);
+
+  // Calculate statistics
+  const statistics = useMemo(() => {
+    const total = vouchers.length;
+    const active = vouchers.filter((v) => v.is_active).length;
+    const used = vouchers.filter((v) => v.times_used > 0).length;
+    const totalUsage = vouchers.reduce(
+      (sum, v) => sum + (v.times_used || 0),
+      0,
+    );
+
+    return { total, active, used, totalUsage };
+  }, [vouchers]);
+
   const columns = [
     { title: "Mã Code", dataIndex: "code", key: "code" },
     {
@@ -186,27 +227,115 @@ const Vouchers: React.FC = () => {
   ];
 
   return (
-    <div style={{ padding: getResponsivePadding(screens) }}>
-      <Row justify="space-between" align="middle" style={{ marginBottom: 24 }}>
-        <Col>
-          <Title level={2}>Quản lý Mã Giảm Giá</Title>
+    <PageLayout
+      title="Quản lý Mã Giảm Giá"
+      breadcrumbs={[
+        {
+          title: "Trang chủ",
+          href: "/",
+          icon: <HomeOutlined />,
+        },
+        {
+          title: "Mã Giảm Giá",
+          icon: <GiftOutlined />,
+        },
+      ]}
+      extra={
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={handleAdd}
+          size="large"
+        >
+          Tạo Mã mới
+        </Button>
+      }
+    >
+      {/* Statistics Cards */}
+      <Row gutter={16} style={{ marginBottom: 16 }}>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="Tổng Mã Giảm Giá"
+              value={statistics.total}
+              prefix={<GiftOutlined />}
+            />
+          </Card>
         </Col>
-        <Col>
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
-            {!isMobile && "Tạo Mã mới"}
-          </Button>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="Đang Hoạt Động"
+              value={statistics.active}
+              valueStyle={{ color: "#52c41a" }}
+              prefix={<CheckCircleOutlined />}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="Đã Sử Dụng"
+              value={statistics.used}
+              valueStyle={{ color: "#1890ff" }}
+              prefix={<ClockCircleOutlined />}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="Tổng Lượt Dùng"
+              value={statistics.totalUsage}
+              valueStyle={{ color: "#faad14" }}
+            />
+          </Card>
         </Col>
       </Row>
-      <Table
-        columns={columns}
-        dataSource={vouchers}
-        loading={loading}
-        rowKey="id"
-        onRow={(record) => ({
-          onClick: () => handleEdit(record),
-          style: { cursor: "pointer" },
-        })}
-      />
+
+      {/* Filters */}
+      <Card style={{ marginBottom: 16 }}>
+        <Space size="middle" wrap>
+          <AntInput
+            placeholder="Tìm kiếm theo mã, chương trình..."
+            prefix={<SearchOutlined />}
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            style={{ width: 300 }}
+            allowClear
+            size="large"
+          />
+          <Select
+            value={statusFilter}
+            onChange={setStatusFilter}
+            style={{ width: 200 }}
+            size="large"
+            options={[
+              { label: "Tất cả trạng thái", value: "all" },
+              { label: "Đang hoạt động", value: "active" },
+              { label: "Ngưng hoạt động", value: "inactive" },
+            ]}
+          />
+        </Space>
+      </Card>
+
+      {/* Table */}
+      <Card>
+        <Table
+          columns={columns}
+          dataSource={filteredData}
+          loading={loading}
+          rowKey="id"
+          onRow={(record) => ({
+            onClick: () => handleEdit(record),
+            style: { cursor: "pointer" },
+          })}
+          pagination={{
+            showSizeChanger: true,
+            showTotal: (total) => `Tổng ${total} mã giảm giá`,
+          }}
+        />
+      </Card>
 
       <Modal
         title={editingVoucher ? "Cập nhật Mã Giảm Giá" : "Tạo Mã Giảm Giá mới"}
@@ -250,7 +379,7 @@ const Vouchers: React.FC = () => {
           </Form.Item>
         </Form>
       </Modal>
-    </div>
+    </PageLayout>
   );
 };
 
