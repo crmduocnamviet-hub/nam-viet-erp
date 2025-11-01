@@ -191,6 +191,33 @@ export const CMS_APP_MENU: MenuItemConfig[] = [
     screenKey: "management.dashboard",
   },
   {
+    key: "b2b",
+    label: "🏢 Bán Buôn (B2B)",
+    icon: <ShopOutlined />,
+    children: [
+      {
+        key: "b2b-dashboard",
+        label: "B2B Dashboard",
+        screenKey: "b2b.dashboard",
+      },
+      {
+        key: "b2b-orders",
+        label: "Danh sách Đơn hàng",
+        screenKey: "b2b.orders",
+      },
+      {
+        key: "create-quote",
+        label: "Tạo Báo Giá / Đơn Hàng",
+        screenKey: "b2b.create-quote",
+      },
+      {
+        key: "quick-quote",
+        label: "Báo giá nhanh",
+        screenKey: "b2b.quick-quote",
+      },
+    ],
+  },
+  {
     key: "inventory",
     label: "📦 Kho hàng",
     icon: <MedicineBoxOutlined />,
@@ -213,10 +240,89 @@ export const CMS_APP_MENU: MenuItemConfig[] = [
     ],
   },
   {
-    key: "b2b",
-    label: "📋 Đơn hàng B2B",
-    icon: <ShopOutlined />,
-    screenKey: "b2b.orders",
+    key: "warehouse",
+    label: "🏭 Quản Lý Kho Vận",
+    icon: <InboxOutlined />,
+    children: [
+      {
+        key: "warehouse-purchase-orders",
+        label: "Đơn Đặt Hàng",
+        screenKey: "warehouse.purchase-orders",
+      },
+      {
+        key: "warehouse-receiving",
+        label: "Nhận Hàng",
+        screenKey: "warehouse.receiving",
+      },
+      {
+        key: "warehouse-picking",
+        label: "Xuất Hàng",
+        screenKey: "warehouse.picking",
+      },
+      {
+        key: "warehouse-suppliers",
+        label: "Nhà Cung Cấp",
+        screenKey: "warehouse.suppliers",
+      },
+      {
+        key: "warehouse-transfers",
+        label: "Chuyển kho",
+        screenKey: "warehouse.transfers",
+      },
+      {
+        key: "warehouse-vat",
+        label: "Quản lý VAT",
+        children: [
+          {
+            key: "vat-inventory",
+            label: "Kho VAT",
+            screenKey: "warehouse.vat-inventory",
+          },
+          {
+            key: "vat-reconciliation",
+            label: "Đối Chiếu VAT",
+            screenKey: "warehouse.vat-reconciliation",
+          },
+          {
+            key: "vat-invoice-input",
+            label: "Nhập Hóa Đơn VAT",
+            screenKey: "warehouse.vat-invoice-input",
+          },
+          {
+            key: "vat-invoice-pos",
+            label: "Xuất HĐ VAT (POS)",
+            screenKey: "warehouse.vat-invoice-pos",
+          },
+          {
+            key: "vat-invoice-b2b",
+            label: "Xuất HĐ VAT (B2B)",
+            screenKey: "warehouse.vat-invoice-b2b",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    key: "medical",
+    label: "🏥 Y tế",
+    icon: <CalendarOutlined />,
+    children: [
+      {
+        key: "scheduling",
+        label: "Lịch hẹn",
+        screenKey: "medical.scheduling",
+      },
+      {
+        key: "patients",
+        label: "Quản lý Bệnh nhân",
+        screenKey: "medical.patients",
+      },
+      {
+        key: "medical-records",
+        label: "Hồ sơ Y tế",
+        screenKey: "medical.records",
+      },
+    ],
   },
   {
     key: "financial",
@@ -246,14 +352,39 @@ export const CMS_APP_MENU: MenuItemConfig[] = [
     icon: <RocketOutlined />,
     children: [
       {
+        key: "marketing-dashboard",
+        label: "Marketing Dashboard",
+        screenKey: "marketing.dashboard",
+      },
+      {
         key: "campaigns",
         label: "Chiến dịch",
         screenKey: "marketing.campaigns",
       },
       {
+        key: "promotions",
+        label: "Khuyến mãi",
+        screenKey: "marketing.promotions",
+      },
+      {
+        key: "vouchers",
+        label: "Phiếu giảm giá",
+        screenKey: "marketing.vouchers",
+      },
+      {
         key: "segments",
         label: "Phân khúc khách hàng",
-        screenKey: "marketing.segments",
+        screenKey: "marketing.customer-segments",
+      },
+      {
+        key: "content-library",
+        label: "Thư viện Nội dung",
+        screenKey: "marketing.content-library",
+      },
+      {
+        key: "chatbot",
+        label: "Quản lý Chatbot",
+        screenKey: "marketing.chatbot",
       },
     ],
   },
@@ -266,6 +397,11 @@ export const CMS_APP_MENU: MenuItemConfig[] = [
         key: "employees",
         label: "Nhân viên",
         screenKey: "management.employees",
+      },
+      {
+        key: "users",
+        label: "Tài khoản",
+        screenKey: "management.users",
       },
       {
         key: "rooms",
