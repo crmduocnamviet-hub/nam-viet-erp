@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Card,
   Row,
@@ -20,7 +20,9 @@ import {
   Breadcrumb,
   Space,
   Divider,
-} from 'antd';
+  Grid,
+} from "antd";
+import { getResponsivePadding } from "../../constants/spacing";
 import {
   UserOutlined,
   SaveOutlined,
@@ -29,46 +31,48 @@ import {
   EditOutlined,
   ArrowLeftOutlined,
   HomeOutlined,
-} from '@ant-design/icons';
+} from "@ant-design/icons";
 import {
   getProfileById,
   updateProfileNotes,
   getAppointmentsByPatientId,
   getPatientMedicalHistory,
   updatePatient,
-} from '@nam-viet-erp/services';
-import dayjs from 'dayjs';
-import { useDebounce } from '@nam-viet-erp/shared-components';
+} from "@nam-viet-erp/services";
+import dayjs from "dayjs";
+import { useDebounce } from "@nam-viet-erp/shared-components";
 const getErrorMessage = (error: any): string => {
-  return error?.message || 'Đã xảy ra lỗi không xác định';
+  return error?.message || "Đã xảy ra lỗi không xác định";
 };
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from "react-router-dom";
 
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
+const { useBreakpoint } = Grid;
 
 const getStatusColor = (status: string) => {
   const colorMap: Record<string, string> = {
-    'Chưa xác nhận': 'default',
-    'Đã xác nhận': 'blue',
-    'Đã check-in': 'green',
-    'Đang khám': 'gold',
-    'Đã hoàn tất/Chờ thanh toán': 'purple',
-    'Hủy/Không đến': 'red',
+    "Chưa xác nhận": "default",
+    "Đã xác nhận": "blue",
+    "Đã check-in": "green",
+    "Đang khám": "gold",
+    "Đã hoàn tất/Chờ thanh toán": "purple",
+    "Hủy/Không đến": "red",
   };
-  return colorMap[status] || 'default';
+  return colorMap[status] || "default";
 };
 
 const PatientDetailPage: React.FC = () => {
   const { patientId } = useParams<{ patientId: string }>();
   const navigate = useNavigate();
   const { notification } = App.useApp();
+  const screens = useBreakpoint();
   const [form] = Form.useForm();
 
   const [profile, setProfile] = useState<any | null>(null);
   const [appointments, setAppointments] = useState<any[]>([]);
   const [serviceHistory, setServiceHistory] = useState<any[]>([]);
-  const [notes, setNotes] = useState('');
+  const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -82,11 +86,12 @@ const PatientDetailPage: React.FC = () => {
       const fetchData = async () => {
         setLoading(true);
         try {
-          const [profileRes, appointmentsRes, serviceHistoryRes] = await Promise.all([
-            getProfileById(patientId),
-            getAppointmentsByPatientId(patientId),
-            getPatientMedicalHistory(patientId),
-          ]);
+          const [profileRes, appointmentsRes, serviceHistoryRes] =
+            await Promise.all([
+              getProfileById(patientId),
+              getAppointmentsByPatientId(patientId),
+              getPatientMedicalHistory(patientId),
+            ]);
 
           if (profileRes.error) throw profileRes.error;
           if (appointmentsRes.error) throw appointmentsRes.error;
@@ -95,22 +100,24 @@ const PatientDetailPage: React.FC = () => {
           setProfile(profileRes.data);
           setAppointments(appointmentsRes.data || []);
           setServiceHistory(serviceHistoryRes.data || []);
-          setNotes(profileRes.data?.receptionist_notes || '');
+          setNotes(profileRes.data?.receptionist_notes || "");
 
           // Populate form with patient data
           form.setFieldsValue({
-            full_name: profileRes.data?.full_name || '',
-            phone_number: profileRes.data?.phone_number || '',
-            date_of_birth: profileRes.data?.date_of_birth ? dayjs(profileRes.data.date_of_birth) : null,
-            gender: profileRes.data?.gender || '',
-            address: profileRes.data?.address || '',
-            allergy_notes: profileRes.data?.allergy_notes || '',
-            chronic_diseases: profileRes.data?.chronic_diseases || '',
+            full_name: profileRes.data?.full_name || "",
+            phone_number: profileRes.data?.phone_number || "",
+            date_of_birth: profileRes.data?.date_of_birth
+              ? dayjs(profileRes.data.date_of_birth)
+              : null,
+            gender: profileRes.data?.gender || "",
+            address: profileRes.data?.address || "",
+            allergy_notes: profileRes.data?.allergy_notes || "",
+            chronic_diseases: profileRes.data?.chronic_diseases || "",
             is_b2b_customer: profileRes.data?.is_b2b_customer || false,
           });
         } catch (error: unknown) {
           notification.error({
-            message: 'Lỗi tải dữ liệu bệnh nhân',
+            message: "Lỗi tải dữ liệu bệnh nhân",
             description: getErrorMessage(error),
           });
         } finally {
@@ -127,10 +134,10 @@ const PatientDetailPage: React.FC = () => {
     try {
       const { error } = await updateProfileNotes(patientId, debouncedNotes);
       if (error) throw error;
-      notification?.success({ message: 'Đã lưu ghi chú!' });
+      notification?.success({ message: "Đã lưu ghi chú!" });
     } catch (error: unknown) {
       notification.error({
-        message: 'Lỗi lưu ghi chú',
+        message: "Lỗi lưu ghi chú",
         description: getErrorMessage(error),
       });
     } finally {
@@ -144,7 +151,9 @@ const PatientDetailPage: React.FC = () => {
     try {
       const updateData = {
         ...values,
-        date_of_birth: values.date_of_birth ? values.date_of_birth.format('YYYY-MM-DD') : null,
+        date_of_birth: values.date_of_birth
+          ? values.date_of_birth.format("YYYY-MM-DD")
+          : null,
       };
 
       const { error } = await updatePatient(patientId, updateData);
@@ -155,10 +164,10 @@ const PatientDetailPage: React.FC = () => {
       setIsEditing(false);
       setHasUnsavedChanges(false);
 
-      notification?.success({ message: 'Đã cập nhật thông tin bệnh nhân!' });
+      notification?.success({ message: "Đã cập nhật thông tin bệnh nhân!" });
     } catch (error: unknown) {
       notification.error({
-        message: 'Lỗi cập nhật thông tin',
+        message: "Lỗi cập nhật thông tin",
         description: getErrorMessage(error),
       });
     } finally {
@@ -169,25 +178,28 @@ const PatientDetailPage: React.FC = () => {
   const handleCancelEdit = () => {
     if (hasUnsavedChanges) {
       Modal.confirm({
-        title: 'Bỏ các thay đổi?',
-        content: 'Bạn có thay đổi chưa lưu. Bạn có chắc muốn bỏ các thay đổi này?',
-        okText: 'Bỏ thay đổi',
-        cancelText: 'Tiếp tục chỉnh sửa',
+        title: "Bỏ các thay đổi?",
+        content:
+          "Bạn có thay đổi chưa lưu. Bạn có chắc muốn bỏ các thay đổi này?",
+        okText: "Bỏ thay đổi",
+        cancelText: "Tiếp tục chỉnh sửa",
         onOk: () => {
           setIsEditing(false);
           setHasUnsavedChanges(false);
           // Reset form to original values
           form.setFieldsValue({
-            full_name: profile?.full_name || '',
-            phone_number: profile?.phone_number || '',
-            date_of_birth: profile?.date_of_birth ? dayjs(profile.date_of_birth) : null,
-            gender: profile?.gender || '',
-            address: profile?.address || '',
-            allergy_notes: profile?.allergy_notes || '',
-            chronic_diseases: profile?.chronic_diseases || '',
+            full_name: profile?.full_name || "",
+            phone_number: profile?.phone_number || "",
+            date_of_birth: profile?.date_of_birth
+              ? dayjs(profile.date_of_birth)
+              : null,
+            gender: profile?.gender || "",
+            address: profile?.address || "",
+            allergy_notes: profile?.allergy_notes || "",
+            chronic_diseases: profile?.chronic_diseases || "",
             is_b2b_customer: profile?.is_b2b_customer || false,
           });
-        }
+        },
       });
     } else {
       setIsEditing(false);
@@ -197,12 +209,14 @@ const PatientDetailPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '400px'
-      }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "400px",
+        }}
+      >
         <Spin size="large" tip="Đang tải thông tin bệnh nhân...">
           <div style={{ minHeight: "200px" }} />
         </Spin>
@@ -213,9 +227,13 @@ const PatientDetailPage: React.FC = () => {
   if (!profile) {
     return (
       <Card>
-        <div style={{ textAlign: 'center', padding: '40px 0' }}>
+        <div style={{ textAlign: "center", padding: "40px 0" }}>
           <Title level={3}>Không tìm thấy thông tin bệnh nhân</Title>
-          <Button type="primary" onClick={() => navigate(-1)} icon={<ArrowLeftOutlined />}>
+          <Button
+            type="primary"
+            onClick={() => navigate(-1)}
+            icon={<ArrowLeftOutlined />}
+          >
             Quay lại
           </Button>
         </div>
@@ -224,32 +242,42 @@ const PatientDetailPage: React.FC = () => {
   }
 
   return (
-    <div>
+    <div style={{ padding: getResponsivePadding(screens) }}>
       {/* Breadcrumb Navigation */}
       <Card style={{ marginBottom: 16 }}>
         <Breadcrumb>
           <Breadcrumb.Item>
             <HomeOutlined />
-            <span onClick={() => navigate('/')} style={{ cursor: 'pointer', marginLeft: 8 }}>
+            <span
+              onClick={() => navigate("/")}
+              style={{ cursor: "pointer", marginLeft: 8 }}
+            >
               Trang chủ
             </span>
           </Breadcrumb.Item>
           <Breadcrumb.Item>
-            <span onClick={() => navigate('/patients')} style={{ cursor: 'pointer' }}>
+            <span
+              onClick={() => navigate("/patients")}
+              style={{ cursor: "pointer" }}
+            >
               Quản lý bệnh nhân
             </span>
           </Breadcrumb.Item>
           <Breadcrumb.Item>{profile.full_name}</Breadcrumb.Item>
         </Breadcrumb>
 
-        <div style={{ marginTop: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div
+          style={{
+            marginTop: 16,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
           <Title level={2} style={{ margin: 0 }}>
             📋 Hồ sơ bệnh nhân: {profile.full_name}
           </Title>
-          <Button
-            icon={<ArrowLeftOutlined />}
-            onClick={() => navigate(-1)}
-          >
+          <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)}>
             Quay lại
           </Button>
         </div>
@@ -259,19 +287,22 @@ const PatientDetailPage: React.FC = () => {
       <Row gutter={[24, 24]}>
         {/* Left Column - Patient Info */}
         <Col xs={24} lg={8}>
-          <Card title="Thông tin cá nhân" extra={
-            <Button
-              type={isEditing ? "default" : "primary"}
-              icon={<EditOutlined />}
-              onClick={() => {
-                setIsEditing(!isEditing);
-                setHasUnsavedChanges(false);
-              }}
-            >
-              {isEditing ? 'Hủy chỉnh sửa' : 'Chỉnh sửa'}
-            </Button>
-          }>
-            <div style={{ textAlign: 'center', marginBottom: 24 }}>
+          <Card
+            title="Thông tin cá nhân"
+            extra={
+              <Button
+                type={isEditing ? "default" : "primary"}
+                icon={<EditOutlined />}
+                onClick={() => {
+                  setIsEditing(!isEditing);
+                  setHasUnsavedChanges(false);
+                }}
+              >
+                {isEditing ? "Hủy chỉnh sửa" : "Chỉnh sửa"}
+              </Button>
+            }
+          >
+            <div style={{ textAlign: "center", marginBottom: 24 }}>
               <Avatar
                 size={128}
                 src={profile.avatar_url}
@@ -294,8 +325,8 @@ const PatientDetailPage: React.FC = () => {
                   name="full_name"
                   label="Họ và tên"
                   rules={[
-                    { required: true, message: 'Vui lòng nhập họ tên' },
-                    { min: 2, message: 'Họ tên phải có ít nhất 2 ký tự' }
+                    { required: true, message: "Vui lòng nhập họ tên" },
+                    { min: 2, message: "Họ tên phải có ít nhất 2 ký tự" },
                   ]}
                 >
                   <Input placeholder="Nhập họ và tên đầy đủ" />
@@ -305,8 +336,11 @@ const PatientDetailPage: React.FC = () => {
                   name="phone_number"
                   label="Số điện thoại"
                   rules={[
-                    { required: true, message: 'Vui lòng nhập số điện thoại' },
-                    { pattern: /^[0-9]{10,11}$/, message: 'Số điện thoại phải có 10-11 chữ số' }
+                    { required: true, message: "Vui lòng nhập số điện thoại" },
+                    {
+                      pattern: /^[0-9]{10,11}$/,
+                      message: "Số điện thoại phải có 10-11 chữ số",
+                    },
                   ]}
                 >
                   <Input placeholder="Nhập số điện thoại (10-11 chữ số)" />
@@ -314,10 +348,12 @@ const PatientDetailPage: React.FC = () => {
 
                 <Form.Item name="date_of_birth" label="Ngày sinh">
                   <DatePicker
-                    style={{ width: '100%' }}
+                    style={{ width: "100%" }}
                     format="DD/MM/YYYY"
                     placeholder="Chọn ngày sinh"
-                    disabledDate={(current) => current && current.isAfter(dayjs(), 'day')}
+                    disabledDate={(current) =>
+                      current && current.isAfter(dayjs(), "day")
+                    }
                   />
                 </Form.Item>
 
@@ -358,10 +394,8 @@ const PatientDetailPage: React.FC = () => {
 
                 <Divider />
 
-                <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
-                  <Button onClick={handleCancelEdit}>
-                    Hủy
-                  </Button>
+                <Space style={{ width: "100%", justifyContent: "flex-end" }}>
+                  <Button onClick={handleCancelEdit}>Hủy</Button>
                   <Button
                     type="primary"
                     htmlType="submit"
@@ -378,35 +412,48 @@ const PatientDetailPage: React.FC = () => {
                 column={1}
                 size="small"
                 style={{
-                  backgroundColor: '#fafafa',
-                  border: '1px solid #f0f0f0',
-                  borderRadius: 8
+                  backgroundColor: "#fafafa",
+                  border: "1px solid #f0f0f0",
+                  borderRadius: 8,
                 }}
               >
                 <Descriptions.Item label="📅 Ngày sinh">
                   <Text strong>
-                    {profile.date_of_birth
-                      ? dayjs(profile.date_of_birth).format('DD/MM/YYYY')
-                      : <Text type="secondary">Chưa cập nhật</Text>}
+                    {profile.date_of_birth ? (
+                      dayjs(profile.date_of_birth).format("DD/MM/YYYY")
+                    ) : (
+                      <Text type="secondary">Chưa cập nhật</Text>
+                    )}
                   </Text>
                 </Descriptions.Item>
                 <Descriptions.Item label="👤 Giới tính">
                   <Text strong>
                     {profile.gender ? (
-                      profile.gender === 'Nam' ? '👨 Nam' :
-                      profile.gender === 'Nữ' ? '👩 Nữ' : '🤷 Khác'
-                    ) : <Text type="secondary">Chưa cập nhật</Text>}
+                      profile.gender === "Nam" ? (
+                        "👨 Nam"
+                      ) : profile.gender === "Nữ" ? (
+                        "👩 Nữ"
+                      ) : (
+                        "🤷 Khác"
+                      )
+                    ) : (
+                      <Text type="secondary">Chưa cập nhật</Text>
+                    )}
                   </Text>
                 </Descriptions.Item>
                 <Descriptions.Item label="🏠 Địa chỉ">
                   <Text>
-                    {profile.address || <Text type="secondary">Chưa cập nhật</Text>}
+                    {profile.address || (
+                      <Text type="secondary">Chưa cập nhật</Text>
+                    )}
                   </Text>
                 </Descriptions.Item>
                 <Descriptions.Item label="⚠️ Dị ứng">
                   <Text>
                     {profile.allergy_notes ? (
-                      <Text style={{ color: '#ff4d4f' }}>{profile.allergy_notes}</Text>
+                      <Text style={{ color: "#ff4d4f" }}>
+                        {profile.allergy_notes}
+                      </Text>
                     ) : (
                       <Text type="secondary">Không có</Text>
                     )}
@@ -415,7 +462,9 @@ const PatientDetailPage: React.FC = () => {
                 <Descriptions.Item label="🏥 Bệnh mãn tính">
                   <Text>
                     {profile.chronic_diseases ? (
-                      <Text style={{ color: '#faad14' }}>{profile.chronic_diseases}</Text>
+                      <Text style={{ color: "#faad14" }}>
+                        {profile.chronic_diseases}
+                      </Text>
                     ) : (
                       <Text type="secondary">Không có</Text>
                     )}
@@ -434,32 +483,62 @@ const PatientDetailPage: React.FC = () => {
               items={[
                 {
                   key: "1",
-                  label: <><CalendarOutlined /> Lịch sử Hẹn ({appointments.length})</>,
+                  label: (
+                    <>
+                      <CalendarOutlined /> Lịch sử Hẹn ({appointments.length})
+                    </>
+                  ),
                   children: (
                     <List
                       dataSource={appointments}
                       renderItem={(item) => (
                         <List.Item
                           style={{
-                            border: '1px solid #f0f0f0',
+                            border: "1px solid #f0f0f0",
                             borderRadius: 8,
                             marginBottom: 8,
-                            padding: 16
+                            padding: 16,
                           }}
                         >
                           <List.Item.Meta
-                            avatar={<CalendarOutlined style={{ fontSize: 16, color: '#1890ff' }} />}
+                            avatar={
+                              <CalendarOutlined
+                                style={{ fontSize: 16, color: "#1890ff" }}
+                              />
+                            }
                             title={
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <span>{dayjs(item.appointment_time).format('DD/MM/YYYY HH:mm')}</span>
-                                <Tag color={getStatusColor(item.status)}>{item.status}</Tag>
+                              <div
+                                style={{
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                  alignItems: "center",
+                                }}
+                              >
+                                <span>
+                                  {dayjs(item.appointment_time).format(
+                                    "DD/MM/YYYY HH:mm",
+                                  )}
+                                </span>
+                                <Tag color={getStatusColor(item.status)}>
+                                  {item.status}
+                                </Tag>
                               </div>
                             }
                             description={
                               <div>
-                                <div><strong>Dịch vụ:</strong> {item.service || 'N/A'}</div>
+                                <div>
+                                  <strong>Dịch vụ:</strong>{" "}
+                                  {item.service || "N/A"}
+                                </div>
                                 {item.note && (
-                                  <div style={{ marginTop: 8, padding: 8, backgroundColor: '#f6f6f6', borderRadius: 4 }}>
+                                  <div
+                                    style={{
+                                      marginTop: 8,
+                                      padding: 8,
+                                      backgroundColor: "#f6f6f6",
+                                      borderRadius: 4,
+                                    }}
+                                  >
                                     <strong>Ghi chú:</strong> {item.note}
                                   </div>
                                 )}
@@ -469,33 +548,51 @@ const PatientDetailPage: React.FC = () => {
                         </List.Item>
                       )}
                     />
-                  )
+                  ),
                 },
                 {
                   key: "2",
-                  label: <><HistoryOutlined /> Lịch sử Sử dụng Dịch vụ ({serviceHistory.length})</>,
+                  label: (
+                    <>
+                      <HistoryOutlined /> Lịch sử Sử dụng Dịch vụ (
+                      {serviceHistory.length})
+                    </>
+                  ),
                   children: (
                     <List
                       dataSource={serviceHistory}
                       renderItem={(item) => (
                         <List.Item
                           style={{
-                            border: '1px solid #f0f0f0',
+                            border: "1px solid #f0f0f0",
                             borderRadius: 8,
                             marginBottom: 8,
-                            padding: 16
+                            padding: 16,
                           }}
                         >
                           <List.Item.Meta
-                            avatar={<HistoryOutlined style={{ fontSize: 16, color: '#52c41a' }} />}
+                            avatar={
+                              <HistoryOutlined
+                                style={{ fontSize: 16, color: "#52c41a" }}
+                              />
+                            }
                             title={
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <span>{item.services?.name || 'Dịch vụ không xác định'}</span>
+                              <div
+                                style={{
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                  alignItems: "center",
+                                }}
+                              >
+                                <span>
+                                  {item.services?.name ||
+                                    "Dịch vụ không xác định"}
+                                </span>
                                 {item.services?.price && (
-                                  <Text strong style={{ color: '#52c41a' }}>
-                                    {new Intl.NumberFormat('vi-VN', {
-                                      style: 'currency',
-                                      currency: 'VND'
+                                  <Text strong style={{ color: "#52c41a" }}>
+                                    {new Intl.NumberFormat("vi-VN", {
+                                      style: "currency",
+                                      currency: "VND",
                                     }).format(item.services.price)}
                                   </Text>
                                 )}
@@ -504,15 +601,29 @@ const PatientDetailPage: React.FC = () => {
                             description={
                               <div>
                                 <div>
-                                  <strong>Ngày sử dụng:</strong> {
-                                    item.appointments?.appointment_time
-                                      ? dayjs(item.appointments.appointment_time).format('DD/MM/YYYY HH:mm')
-                                      : dayjs(item.created_at).format('DD/MM/YYYY HH:mm')
-                                  }
+                                  <strong>Ngày sử dụng:</strong>{" "}
+                                  {item.appointments?.appointment_time
+                                    ? dayjs(
+                                        item.appointments.appointment_time,
+                                      ).format("DD/MM/YYYY HH:mm")
+                                    : dayjs(item.created_at).format(
+                                        "DD/MM/YYYY HH:mm",
+                                      )}
                                 </div>
-                                {item.quantity && <div><strong>Số lượng:</strong> {item.quantity}</div>}
+                                {item.quantity && (
+                                  <div>
+                                    <strong>Số lượng:</strong> {item.quantity}
+                                  </div>
+                                )}
                                 {item.notes && (
-                                  <div style={{ marginTop: 8, padding: 8, backgroundColor: '#f6f6f6', borderRadius: 4 }}>
+                                  <div
+                                    style={{
+                                      marginTop: 8,
+                                      padding: 8,
+                                      backgroundColor: "#f6f6f6",
+                                      borderRadius: 4,
+                                    }}
+                                  >
                                     <strong>Ghi chú:</strong> {item.notes}
                                   </div>
                                 )}
@@ -522,17 +633,29 @@ const PatientDetailPage: React.FC = () => {
                         </List.Item>
                       )}
                     />
-                  )
+                  ),
                 },
                 {
                   key: "3",
-                  label: <><EditOutlined /> Ghi chú Lễ tân</>,
+                  label: (
+                    <>
+                      <EditOutlined /> Ghi chú Lễ tân
+                    </>
+                  ),
                   children: (
                     <>
-                      <div style={{ background: '#f9f9f9', padding: 16, borderRadius: 8, marginBottom: 16 }}>
-                        <Paragraph style={{ margin: 0, color: '#666' }}>
-                          📝 Ghi lại các thông tin phi y tế quan trọng (ví dụ: sở thích,
-                          lưu ý khi giao tiếp, người nhà cần liên hệ...).
+                      <div
+                        style={{
+                          background: "#f9f9f9",
+                          padding: 16,
+                          borderRadius: 8,
+                          marginBottom: 16,
+                        }}
+                      >
+                        <Paragraph style={{ margin: 0, color: "#666" }}>
+                          📝 Ghi lại các thông tin phi y tế quan trọng (ví dụ:
+                          sở thích, lưu ý khi giao tiếp, người nhà cần liên
+                          hệ...).
                         </Paragraph>
                       </div>
                       <TextArea
@@ -542,7 +665,14 @@ const PatientDetailPage: React.FC = () => {
                         placeholder="Nhập ghi chú về bệnh nhân..."
                         style={{ borderRadius: 8 }}
                       />
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 16 }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          marginTop: 16,
+                        }}
+                      >
                         <Text type="secondary" style={{ fontSize: 12 }}>
                           Ghi chú sẽ được tự động lưu sau 500ms
                         </Text>
@@ -551,14 +681,16 @@ const PatientDetailPage: React.FC = () => {
                           icon={<SaveOutlined />}
                           loading={isSaving}
                           onClick={handleSaveNotes}
-                          disabled={notes === (profile?.receptionist_notes || '')}
+                          disabled={
+                            notes === (profile?.receptionist_notes || "")
+                          }
                         >
                           Lưu ghi chú
                         </Button>
                       </div>
                     </>
-                  )
-                }
+                  ),
+                },
               ]}
             />
           </Card>

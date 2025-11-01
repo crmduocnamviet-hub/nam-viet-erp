@@ -16,11 +16,13 @@ import {
   Popconfirm,
   Avatar,
   Tooltip,
+  Grid,
 } from "antd";
 import {
   UserOutlined,
   PlusOutlined,
   SearchOutlined,
+  EditOutlined,
   DeleteOutlined,
   MedicineBoxOutlined,
   CustomerServiceOutlined,
@@ -31,13 +33,16 @@ import {
   updateEmployee,
   getUsers,
 } from "@nam-viet-erp/services";
+import { COMMON_SPACING, getResponsivePadding } from "../../constants/spacing";
 
 const { Title, Text } = Typography;
 const { Search } = Input;
+const { useBreakpoint } = Grid;
 
 const EmployeesPage: React.FC = () => {
   const navigate = useNavigate();
   const { notification } = App.useApp();
+  const screens = useBreakpoint();
   const [employees, setEmployees] = useState<IEmployee[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -378,35 +383,52 @@ const EmployeesPage: React.FC = () => {
     {
       title: "Thao tác",
       key: "actions",
-      width: 80,
+      width: 100,
       fixed: "right" as const,
       render: (record: IEmployee) => (
-        <Popconfirm
-          title="Xóa nhân viên"
-          description={`Bạn có chắc chắn muốn xóa nhân viên ${record.full_name}?`}
-          onConfirm={(e) => {
-            e?.stopPropagation();
-            handleDeleteEmployee(record.employee_id, record.full_name);
-          }}
-          okText="Xóa"
-          cancelText="Hủy"
-          okType="danger"
-        >
-          <Tooltip title="Xóa">
+        <Space size="small">
+          <Tooltip title="Sửa">
             <Button
-              type="text"
-              danger
-              icon={<DeleteOutlined />}
-              onClick={(e) => e.stopPropagation()}
+              type="link"
+              size="small"
+              icon={<EditOutlined />}
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate(`/employees/${record.employee_id}`);
+              }}
             />
           </Tooltip>
-        </Popconfirm>
+          <Popconfirm
+            title="Xóa nhân viên"
+            description={`Bạn có chắc chắn muốn xóa nhân viên ${record.full_name}?`}
+            onConfirm={(e) => {
+              e?.stopPropagation();
+              handleDeleteEmployee(record.employee_id, record.full_name);
+            }}
+            onCancel={(e) => {
+              e?.stopPropagation();
+            }}
+            okText="Xóa"
+            cancelText="Hủy"
+            okButtonProps={{ danger: true }}
+          >
+            <Tooltip title="Xóa">
+              <Button
+                type="link"
+                size="small"
+                danger
+                icon={<DeleteOutlined />}
+                onClick={(e) => e.stopPropagation()}
+              />
+            </Tooltip>
+          </Popconfirm>
+        </Space>
       ),
     },
   ];
 
   return (
-    <div>
+    <div style={{ padding: getResponsivePadding(screens) }}>
       <Row style={{ marginBottom: 24 }}>
         <Col span={12}>
           <Title level={2} style={{ margin: 0 }}>

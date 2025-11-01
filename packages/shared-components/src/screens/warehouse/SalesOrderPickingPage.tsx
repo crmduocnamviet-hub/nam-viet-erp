@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Card,
   Table,
@@ -29,9 +29,60 @@ const SalesOrderPickingPage: React.FC = () => {
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [pickedItems, setPickedItems] = useState<Record<number, boolean>>({});
   const [scannedProducts, setScannedProducts] = useState<string[]>([]);
+  const [pendingOrders, setPendingOrders] = useState<any[]>([]);
+  const [loadingOrders, setLoadingOrders] = useState(false);
 
-  // Mock data - will be replaced with real API calls
-  const mockPendingOrders: any[] = [];
+  // Load pending sales orders that need picking
+  useEffect(() => {
+    loadPendingOrders();
+  }, []);
+
+  const loadPendingOrders = async () => {
+    try {
+      setLoadingOrders(true);
+      const { getSalesOrders } = await import("@nam-viet-erp/services");
+
+      // Fetch orders that are completed but may need picking/packaging
+      // Orders with operational_status = "Hoàn tất" or "Đang xử lý"
+      const { data, error } = await getSalesOrders({
+        operationalStatus: undefined, // Get all orders
+        limit: 100,
+        // Filter for orders that might need picking
+      });
+
+      if (error) {
+        console.error("Error loading pending orders:", error);
+        return;
+      }
+
+      // Filter orders that need picking (you can adjust this logic based on your business rules)
+      // For now, we'll show orders that are not yet shipped
+      const ordersNeedingPicking = (data || [])
+        .filter((order: any) => {
+          // Add your business logic here - e.g., orders that are ready for picking
+          return (
+            order.operational_status !== "Đã giao" &&
+            order.operational_status !== "Đã hủy"
+          );
+        })
+        .map((order: any) => ({
+          order_id: order.order_id,
+          customer_name: order.patients?.full_name || "Khách lẻ",
+          order_type: order.order_type || "pos",
+          total_items: order.sales_order_items?.length || 0,
+          total_value: order.total_value || 0,
+          created_at: order.order_datetime || order.created_at,
+          items: order.sales_order_items || [],
+          ...order,
+        }));
+
+      setPendingOrders(ordersNeedingPicking);
+    } catch (error) {
+      console.error("Error in loadPendingOrders:", error);
+    } finally {
+      setLoadingOrders(false);
+    }
+  };
 
   const orderColumns = [
     {
@@ -211,8 +262,9 @@ const SalesOrderPickingPage: React.FC = () => {
         <Card title="Đơn Hàng Chờ Lấy">
           <Table
             columns={orderColumns}
-            dataSource={mockPendingOrders}
+            dataSource={pendingOrders}
             rowKey="order_id"
+            loading={loadingOrders}
             pagination={{
               showTotal: (total) => `Tổng ${total} đơn hàng`,
             }}

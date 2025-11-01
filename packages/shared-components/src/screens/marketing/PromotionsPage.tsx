@@ -1,8 +1,23 @@
 import React, { useState, useEffect } from "react";
-import { Button, Table, Space, Row, Col, Typography, App, Tag } from "antd";
+import {
+  Button,
+  Table,
+  Space,
+  Row,
+  Col,
+  Typography,
+  App,
+  Tag,
+  Popconfirm,
+  Tooltip,
+  Grid,
+} from "antd";
 import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { deletePromotion, getPromotions } from "@nam-viet-erp/services";
+import { getResponsivePadding } from "../../constants/spacing";
+
+const { useBreakpoint } = Grid;
 // Helper function to safely get error message
 const getErrorMessage = (error: unknown): string => {
   if (error instanceof Error) {
@@ -24,7 +39,8 @@ const { Title } = Typography;
 
 const Promotions: React.FC = () => {
   const { notification, modal } = App.useApp();
-  const navigate = useNavigate(); // Khởi tạo công cụ điều hướng
+  const navigate = useNavigate();
+  const screens = useBreakpoint();
   const [promotions, setPromotions] = useState<IPromotion[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -95,23 +111,39 @@ const Promotions: React.FC = () => {
       key: "action",
       // Nút Sửa giờ đây sẽ điều hướng đến trang chi tiết
       render: (_: unknown, record: IPromotion) => (
-        <Space>
-          <Button
-            icon={<EditOutlined />}
-            onClick={() => navigate(`/promotions/${record.id}`)}
-          />
-          <Button
-            icon={<DeleteOutlined />}
-            danger
-            onClick={() => handleDelete(record.id, record.name)}
-          />
+        <Space size="small">
+          <Tooltip title="Sửa">
+            <Button
+              type="link"
+              size="small"
+              icon={<EditOutlined />}
+              onClick={() => navigate(`/promotions/${record.id}`)}
+            />
+          </Tooltip>
+          <Popconfirm
+            title="Xóa khuyến mại?"
+            description={`Bạn có chắc chắn muốn xóa "${record.name}"?`}
+            onConfirm={() => handleDelete(record.id, record.name)}
+            okText="Xóa"
+            cancelText="Hủy"
+            okButtonProps={{ danger: true }}
+          >
+            <Tooltip title="Xóa">
+              <Button
+                type="link"
+                size="small"
+                danger
+                icon={<DeleteOutlined />}
+              />
+            </Tooltip>
+          </Popconfirm>
         </Space>
       ),
     },
   ];
 
   return (
-    <>
+    <div style={{ padding: getResponsivePadding(screens) }}>
       <Row justify="space-between" align="middle" style={{ marginBottom: 24 }}>
         <Col>
           <Title level={2}>Quản lý Khuyến mại</Title>
@@ -133,7 +165,7 @@ const Promotions: React.FC = () => {
         loading={loading}
         rowKey="id"
       />
-    </>
+    </div>
   );
 };
 

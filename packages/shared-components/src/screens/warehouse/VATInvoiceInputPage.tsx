@@ -12,7 +12,7 @@ import {
   Form,
   DatePicker,
   InputNumber,
-  message,
+  App,
   Row,
   Col,
   Divider,
@@ -20,6 +20,7 @@ import {
   Grid,
   Upload,
   Descriptions,
+  Tooltip,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import {
@@ -52,6 +53,7 @@ import type {
   IVATInvoiceIn,
   IProductLot,
 } from "../../../../../types";
+import { COMMON_SPACING, getResponsivePadding } from "../../constants/spacing";
 import dayjs from "dayjs";
 
 const { Title, Text } = Typography;
@@ -60,6 +62,7 @@ const { TextArea } = Input;
 const { useBreakpoint } = Grid;
 
 const VATInvoiceInputPage: React.FC = () => {
+  const { notification } = App.useApp();
   const screens = useBreakpoint();
   const [loading, setLoading] = useState(false);
   const [invoices, setInvoices] = useState<IVATInvoiceInWithDetails[]>([]);
@@ -127,7 +130,10 @@ const VATInvoiceInputPage: React.FC = () => {
       if (data) setInvoices(data);
     } catch (error) {
       console.error("Error loading VAT invoices:", error);
-      message.error("Không thể tải danh sách hóa đơn VAT");
+      notification.error({
+        message: "Lỗi tải dữ liệu",
+        description: "Không thể tải danh sách hóa đơn VAT",
+      });
     } finally {
       setLoading(false);
     }
@@ -176,7 +182,10 @@ const VATInvoiceInputPage: React.FC = () => {
         if (matchedSupplier) {
           form.setFieldValue("supplier_id", matchedSupplier.id);
         } else {
-          message.warning(`Không tìm thấy nhà cung cấp: ${result.supplier}`);
+          notification.warning({
+            message: "Thông báo",
+            description: `Không tìm thấy nhà cung cấp: ${result.supplier}`,
+          });
         }
       }
 
@@ -281,17 +290,23 @@ const VATInvoiceInputPage: React.FC = () => {
           }
         }
 
-        message.success(
-          `Đã thêm ${productsMatched} sản phẩm từ PDF vào danh sách hóa đơn. ${productsNotFound > 0 ? `${productsNotFound} sản phẩm không tìm thấy trong hệ thống.` : ""}`,
-        );
+        notification.success({
+          message: "Đọc PDF thành công",
+          description: `Đã thêm ${productsMatched} sản phẩm từ PDF vào danh sách hóa đơn. ${productsNotFound > 0 ? `${productsNotFound} sản phẩm không tìm thấy trong hệ thống.` : ""}`,
+        });
       } else {
-        message.success(
-          "Đã đọc hóa đơn PDF thành công. Vui lòng điền thông tin thủ công.",
-        );
+        notification.success({
+          message: "Đọc PDF thành công",
+          description:
+            "Đã đọc hóa đơn PDF thành công. Vui lòng điền thông tin thủ công.",
+        });
       }
     } catch (error) {
       console.error("Error analyzing PDF:", error);
-      message.error("Không thể đọc hóa đơn PDF. Vui lòng kiểm tra lại file.");
+      notification.error({
+        message: "Lỗi đọc PDF",
+        description: "Không thể đọc hóa đơn PDF. Vui lòng kiểm tra lại file.",
+      });
     } finally {
       setUploading(false);
     }
@@ -338,18 +353,23 @@ const VATInvoiceInputPage: React.FC = () => {
       const { error } = await deleteVATInvoiceIn(id);
       if (error) {
         console.error("Error deleting VAT invoice:", error);
-        message.error(
-          `Không thể xóa hóa đơn VAT: ${error.message || JSON.stringify(error)}`,
-        );
+        notification.error({
+          message: "Lỗi xóa hóa đơn",
+          description: error.message || "Không thể xóa hóa đơn VAT",
+        });
         return;
       }
-      message.success("Đã xóa hóa đơn VAT");
+      notification.success({
+        message: "Xóa thành công",
+        description: "Đã xóa hóa đơn VAT",
+      });
       loadData();
     } catch (error: any) {
       console.error("Error deleting VAT invoice:", error);
-      message.error(
-        `Không thể xóa hóa đơn VAT: ${error?.message || JSON.stringify(error)}`,
-      );
+      notification.error({
+        message: "Lỗi xóa hóa đơn",
+        description: error?.message || "Không thể xóa hóa đơn VAT",
+      });
     }
   };
 
@@ -384,13 +404,19 @@ const VATInvoiceInputPage: React.FC = () => {
       : [selectedProducts];
 
     if (productsToAdd.length === 0) {
-      message.error("Vui lòng chọn ít nhất 1 sản phẩm");
+      notification.error({
+        message: "Lỗi",
+        description: "Vui lòng chọn ít nhất 1 sản phẩm",
+      });
       return;
     }
 
     // Check if quantity and unit_price are provided
     if (!values.quantity || !values.unit_price) {
-      message.error("Vui lòng nhập Số lượng và Đơn giá");
+      notification.error({
+        message: "Lỗi",
+        description: "Vui lòng nhập Số lượng và Đơn giá",
+      });
       return;
     }
 
@@ -431,17 +457,26 @@ const VATInvoiceInputPage: React.FC = () => {
     setProductLots([]);
     setSelectedProductId(undefined);
 
-    message.success(`Đã thêm ${newItems.length} sản phẩm vào hóa đơn`);
+    notification.success({
+      message: "Thêm sản phẩm thành công",
+      description: `Đã thêm ${newItems.length} sản phẩm vào hóa đơn`,
+    });
   };
 
   const handleRemoveProductFromInvoice = (id: number) => {
     setInvoiceItems(invoiceItems.filter((item) => item.id !== id));
-    message.success("Đã xóa sản phẩm khỏi hóa đơn");
+    notification.success({
+      message: "Xóa sản phẩm thành công",
+      description: "Đã xóa sản phẩm khỏi hóa đơn",
+    });
   };
 
   const handleSubmitInvoice = async () => {
     if (invoiceItems.length === 0) {
-      message.error("Vui lòng thêm ít nhất 1 sản phẩm vào hóa đơn");
+      notification.error({
+        message: "Lỗi",
+        description: "Vui lòng thêm ít nhất 1 sản phẩm vào hóa đơn",
+      });
       return;
     }
 
@@ -451,9 +486,11 @@ const VATInvoiceInputPage: React.FC = () => {
     const warehouseId = form.getFieldValue("warehouse_id");
 
     if (!invoiceNo || !invoiceDate || !warehouseId) {
-      message.error(
-        "Vui lòng điền đầy đủ thông tin hóa đơn (Số HĐ, Ngày HĐ, Kho)",
-      );
+      notification.error({
+        message: "Lỗi",
+        description:
+          "Vui lòng điền đầy đủ thông tin hóa đơn (Số HĐ, Ngày HĐ, Kho)",
+      });
       return;
     }
 
@@ -497,7 +534,10 @@ const VATInvoiceInputPage: React.FC = () => {
         throw errors[0].error;
       }
 
-      message.success(`Đã tạo hóa đơn VAT với ${invoiceItems.length} sản phẩm`);
+      notification.success({
+        message: "Tạo hóa đơn thành công",
+        description: `Đã tạo hóa đơn VAT với ${invoiceItems.length} sản phẩm`,
+      });
       setShowCreateModal(false);
       form.resetFields();
       setInvoiceItems([]);
@@ -510,7 +550,10 @@ const VATInvoiceInputPage: React.FC = () => {
       loadData();
     } catch (error) {
       console.error("Error saving VAT invoice:", error);
-      message.error("Không thể lưu hóa đơn VAT");
+      notification.error({
+        message: "Lỗi tạo hóa đơn",
+        description: "Không thể lưu hóa đơn VAT",
+      });
     }
   };
 
@@ -545,7 +588,10 @@ const VATInvoiceInputPage: React.FC = () => {
           invoiceData,
         );
         if (error) throw error;
-        message.success("Đã cập nhật hóa đơn VAT");
+        notification.success({
+          message: "Cập nhật thành công",
+          description: "Đã cập nhật hóa đơn VAT",
+        });
         setShowEditModal(false);
         setSelectedInvoice(null);
       }
@@ -554,7 +600,10 @@ const VATInvoiceInputPage: React.FC = () => {
       form.resetFields();
     } catch (error) {
       console.error("Error saving VAT invoice:", error);
-      message.error("Không thể lưu hóa đơn VAT");
+      notification.error({
+        message: "Lỗi cập nhật",
+        description: "Không thể lưu hóa đơn VAT",
+      });
     }
   };
 
@@ -641,25 +690,30 @@ const VATInvoiceInputPage: React.FC = () => {
       width: 100,
       render: (_, record) => (
         <Space size="small">
-          <Button
-            type="link"
-            size="small"
-            icon={<EditOutlined />}
-            onClick={() => handleEdit(record)}
-          >
-            Sửa
-          </Button>
+          <Tooltip title="Sửa">
+            <Button
+              type="link"
+              size="small"
+              icon={<EditOutlined />}
+              onClick={() => handleEdit(record)}
+            />
+          </Tooltip>
           <Popconfirm
-            title="Xác nhận xóa"
+            title="Xóa hóa đơn VAT?"
             description="Bạn có chắc chắn muốn xóa hóa đơn VAT này?"
             onConfirm={() => handleDeleteConfirm(record.id)}
             okText="Xóa"
-            okType="danger"
             cancelText="Hủy"
+            okButtonProps={{ danger: true }}
           >
-            <Button type="link" size="small" danger icon={<DeleteOutlined />}>
-              Xóa
-            </Button>
+            <Tooltip title="Xóa">
+              <Button
+                type="link"
+                size="small"
+                danger
+                icon={<DeleteOutlined />}
+              />
+            </Tooltip>
           </Popconfirm>
         </Space>
       ),
@@ -670,7 +724,7 @@ const VATInvoiceInputPage: React.FC = () => {
   const isTablet = screens.md && !screens.lg;
 
   return (
-    <div style={{ padding: isMobile ? "12px" : "24px" }}>
+    <div style={{ padding: getResponsivePadding(screens) }}>
       <Card>
         <Space direction="vertical" size="large" style={{ width: "100%" }}>
           {/* Header */}
@@ -792,7 +846,10 @@ const VATInvoiceInputPage: React.FC = () => {
                 <Upload
                   beforeUpload={(file) => {
                     if (file.type !== "application/pdf") {
-                      message.error("Chỉ chấp nhận file PDF");
+                      notification.error({
+                        message: "Lỗi",
+                        description: "Chỉ chấp nhận file PDF",
+                      });
                       return false;
                     }
                     handleUploadPDF(file);
@@ -947,9 +1004,11 @@ const VATInvoiceInputPage: React.FC = () => {
                         if (data && !error) {
                           setProductLots(data);
                           if (data.length === 0) {
-                            message.warning(
-                              "Không có số lô nào cho sản phẩm này trong kho này.",
-                            );
+                            notification.warning({
+                              message: "Thông báo",
+                              description:
+                                "Không có số lô nào cho sản phẩm này trong kho này.",
+                            });
                           }
                         }
                       } catch (err) {
@@ -1029,25 +1088,33 @@ const VATInvoiceInputPage: React.FC = () => {
                           });
                           if (data && !error) {
                             setProductLots(data);
-                            message.info(
-                              `Đã load ${data.length} số lô cho sản phẩm này`,
-                            );
+                            notification.info({
+                              message: "Thông tin",
+                              description: `Đã load ${data.length} số lô cho sản phẩm này`,
+                            });
                           } else {
                             setProductLots([]);
                             if (data && data.length === 0) {
-                              message.warning(
-                                "Không có số lô nào cho sản phẩm này trong kho. Vui lòng nhập kho trước.",
-                              );
+                              notification.warning({
+                                message: "Thông báo",
+                                description:
+                                  "Không có số lô nào cho sản phẩm này trong kho. Vui lòng nhập kho trước.",
+                              });
                             } else if (error) {
-                              message.error(
-                                "Lỗi khi load số lô: " + error.message,
-                              );
+                              notification.error({
+                                message: "Lỗi",
+                                description:
+                                  "Lỗi khi load số lô: " + error.message,
+                              });
                             }
                           }
                         } catch (err) {
                           console.error("Error loading product lots:", err);
                           setProductLots([]);
-                          message.error("Lỗi khi load số lô");
+                          notification.error({
+                            message: "Lỗi",
+                            description: "Lỗi khi load số lô",
+                          });
                         }
                       }
                     }

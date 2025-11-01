@@ -2,6 +2,7 @@ import React from "react";
 import { Button, Typography, Space, Breadcrumb } from "antd";
 import { ArrowLeftOutlined, HomeOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
+import { COMMON_SPACING } from "../constants/spacing";
 
 const { Title } = Typography;
 
@@ -39,9 +40,9 @@ const PageLayout: React.FC<PageLayoutProps> = ({
   };
 
   return (
-    <div style={{ padding: "24px" }}>
+    <div style={{ padding: COMMON_SPACING.pagePadding }}>
       {/* Header Section */}
-      <div style={{ marginBottom: 24 }}>
+      <div style={{ marginBottom: 18 }}>
         {/* Breadcrumb */}
         {breadcrumbs && breadcrumbs.length > 0 && (
           <Breadcrumb
