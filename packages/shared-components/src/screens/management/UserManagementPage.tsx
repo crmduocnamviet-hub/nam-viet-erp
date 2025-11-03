@@ -31,6 +31,8 @@ import {
   EyeOutlined,
   KeyOutlined,
   LinkOutlined,
+  SearchOutlined,
+  ReloadOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import {
@@ -72,6 +74,7 @@ interface UserFormData {
 const UserManagementPageContent: React.FC = () => {
   const { notification } = App.useApp();
   const screens = useBreakpoint();
+  const isMobile = !screens.md;
   const [users, setUsers] = useState<IUserAccount[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
@@ -301,25 +304,54 @@ const UserManagementPageContent: React.FC = () => {
 
   return (
     <div style={{ padding: getResponsivePadding(screens) }}>
-      <div style={{ marginBottom: 24 }}>
-        <Title level={2}>Quản lý Tài khoản Người dùng</Title>
-        <Text type="secondary">
-          Quản lý tài khoản đăng nhập và phân quyền cho nhân viên
-        </Text>
-      </div>
+      <Row style={{ marginBottom: 24 }} gutter={[16, 16]}>
+        <Col xs={24} md={16}>
+          <Title level={isMobile ? 3 : 2} style={{ margin: 0 }}>
+            <UserOutlined style={{ marginRight: 8 }} />
+            {isMobile ? "Tài khoản" : "Quản lý Tài khoản Người dùng"}
+          </Title>
+          {!isMobile && (
+            <Text
+              type="secondary"
+              style={{ fontSize: 14, display: "block", marginTop: 4 }}
+            >
+              Quản lý tài khoản đăng nhập và phân quyền cho nhân viên
+            </Text>
+          )}
+        </Col>
+        <Col
+          xs={24}
+          md={8}
+          style={{
+            textAlign: isMobile ? "left" : "right",
+            paddingRight: isMobile ? 56 : undefined,
+          }}
+        >
+          <Button
+            type="primary"
+            size={isMobile ? "middle" : "large"}
+            icon={<PlusOutlined />}
+            onClick={() => openModal()}
+            block={isMobile}
+          >
+            Thêm tài khoản
+          </Button>
+        </Col>
+      </Row>
 
       {/* Statistics Cards */}
-      <Row gutter={16} style={{ marginBottom: 24 }}>
-        <Col span={8}>
+      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+        <Col xs={24} sm={12} md={12}>
           <Card>
             <Statistic
               title="Tổng số tài khoản"
               value={totalUsers}
               prefix={<UserOutlined />}
+              valueStyle={{ color: "#1890ff" }}
             />
           </Card>
         </Col>
-        <Col span={8}>
+        <Col xs={24} sm={12} md={12}>
           <Card>
             <Statistic
               title="Tài khoản hoạt động"
@@ -331,29 +363,43 @@ const UserManagementPageContent: React.FC = () => {
         </Col>
       </Row>
 
-      {/* Search and Actions */}
+      {/* Search and Filters */}
       <Card style={{ marginBottom: 16 }}>
-        <Row justify="space-between" align="middle">
-          <Col>
-            <Search
+        <Row gutter={[12, 12]}>
+          <Col xs={24} sm={12} md={10}>
+            <Input
               placeholder="Tìm kiếm theo email, tên hoặc số điện thoại..."
-              allowClear
-              style={{ width: 400 }}
+              prefix={<SearchOutlined />}
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
-              onSearch={loadUsers}
+              onPressEnter={loadUsers}
+              allowClear
+              size="large"
             />
           </Col>
-          <Col>
-            <Space>
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={() => openModal()}
-              >
-                Thêm tài khoản
-              </Button>
-            </Space>
+          <Col xs={12} sm={12} md={2}>
+            <Button
+              type="primary"
+              icon={<SearchOutlined />}
+              onClick={loadUsers}
+              block
+              size="large"
+            >
+              Tìm
+            </Button>
+          </Col>
+          <Col xs={12} sm={12} md={2}>
+            <Button
+              icon={<ReloadOutlined />}
+              onClick={() => {
+                setSearchText("");
+                loadUsers();
+              }}
+              block
+              size="large"
+            >
+              Mới
+            </Button>
           </Col>
         </Row>
       </Card>
@@ -369,11 +415,12 @@ const UserManagementPageContent: React.FC = () => {
             onClick: () => openModal(record),
             style: { cursor: "pointer" },
           })}
-          scroll={{ x: 1200 }}
+          scroll={{ x: isMobile ? 800 : 1200 }}
+          size={isMobile ? "small" : "middle"}
           pagination={{
-            pageSize: 10,
-            showSizeChanger: true,
-            showQuickJumper: true,
+            pageSize: isMobile ? 10 : 20,
+            showSizeChanger: !isMobile,
+            showQuickJumper: !isMobile,
             showTotal: (total, range) =>
               `${range[0]}-${range[1]} của ${total} tài khoản`,
           }}

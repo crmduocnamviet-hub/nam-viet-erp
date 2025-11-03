@@ -152,22 +152,34 @@ const PosTabContent: React.FC<PosTabContentProps> = ({
 
   // Promo codes state
   const [availablePromoCodes, setAvailablePromoCodes] = useState<any[]>([]);
+  const [promoOptions, setPromoOptions] = useState<
+    { value: string; label: string; description?: string }[]
+  >([]);
+  const [promoLoading, setPromoLoading] = useState(false);
 
-  // Fetch all available promo codes on mount
-  useEffect(() => {
-    const fetchPromoCodes = async () => {
-      try {
-        const { data, error } = await getPromoCodes();
-        if (!error && data) {
-          setAvailablePromoCodes(data);
-        }
-      } catch (error) {
-        console.error("Error fetching promo codes:", error);
+  // Load promo codes (applicable first) for search/select - giống B2B
+  const loadPromoOptions = React.useCallback(async () => {
+    if (promoOptions.length > 0) return; // đã tải rồi thì không gọi lại
+    try {
+      setPromoLoading(true);
+      // Luôn hiển thị toàn bộ mã đang hoạt động
+      const { data } = await getPromoCodes();
+      if (data) {
+        setAvailablePromoCodes(data);
+        setPromoOptions(
+          (data || []).map((p: any) => ({
+            value: p.code,
+            label: `${p.code} — ${p.name}`,
+            description: p.description,
+          })),
+        );
       }
-    };
-
-    fetchPromoCodes();
-  }, []);
+    } catch (e) {
+      // silent fail
+    } finally {
+      setPromoLoading(false);
+    }
+  }, [promoOptions.length]);
 
   // Reset promo code when cart is empty
   useEffect(() => {
@@ -411,49 +423,32 @@ const PosTabContent: React.FC<PosTabContentProps> = ({
               {!appliedPromoCode ? (
                 <Space.Compact style={{ width: "100%" }}>
                   <AutoComplete
-                    placeholder="Nhập hoặc tìm mã khuyến mãi"
+                    style={{ flex: 1 }}
+                    placeholder="Nhập hoặc chọn mã khuyến mãi"
                     value={promoCode}
-                    onChange={(value) => {
-                      setPromoCode?.(value);
-                    }}
-                    onSelect={(value) => {
-                      setPromoCode?.(value);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        handleApplyPromoCode?.();
-                      }
-                    }}
-                    status={promoCodeError ? "error" : ""}
-                    disabled={cart.length === 0}
-                    options={availablePromoCodes
-                      .filter((promo) => promo.code)
-                      .map((promo) => ({
-                        value: promo.code,
-                        label: (
-                          <div
-                            style={{
-                              display: "flex",
-                              justifyContent: "space-between",
-                            }}
-                          >
-                            <span>{promo.code}</span>
-                            <span style={{ color: "#888", fontSize: 12 }}>
-                              {promo.type === "percentage"
-                                ? `${promo.value}%`
-                                : `${promo.value?.toLocaleString()}đ`}
-                            </span>
-                          </div>
-                        ),
-                      }))}
+                    options={promoOptions}
+                    onFocus={loadPromoOptions}
                     filterOption={(inputValue, option) =>
-                      option?.value
-                        ?.toString()
+                      (option?.label as string)
                         .toLowerCase()
                         .includes(inputValue.toLowerCase())
                     }
-                    style={{ width: "100%" }}
-                  />
+                    onSearch={(val) => setPromoCode?.(val)}
+                    onSelect={(value) => {
+                      setPromoCode?.(value);
+                    }}
+                  >
+                    <Input
+                      placeholder="Nhập hoặc chọn mã khuyến mãi"
+                      value={promoCode}
+                      onChange={(e) => {
+                        setPromoCode?.(e.target.value);
+                      }}
+                      onPressEnter={() => handleApplyPromoCode?.()}
+                      status={promoCodeError ? "error" : ""}
+                      disabled={cart.length === 0}
+                    />
+                  </AutoComplete>
                   <Button
                     type="primary"
                     onClick={handleApplyPromoCode}
@@ -1041,49 +1036,32 @@ const PosTabContent: React.FC<PosTabContentProps> = ({
           {!appliedPromoCode ? (
             <Space.Compact style={{ width: "100%" }}>
               <AutoComplete
-                placeholder="Nhập hoặc tìm mã khuyến mãi"
+                style={{ flex: 1 }}
+                placeholder="Nhập hoặc chọn mã khuyến mãi"
                 value={promoCode}
-                onChange={(value) => {
-                  setPromoCode?.(value);
-                }}
-                onSelect={(value) => {
-                  setPromoCode?.(value);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    handleApplyPromoCode?.();
-                  }
-                }}
-                status={promoCodeError ? "error" : ""}
-                disabled={cart.length === 0}
-                options={availablePromoCodes
-                  .filter((promo) => promo.code)
-                  .map((promo) => ({
-                    value: promo.code,
-                    label: (
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                        }}
-                      >
-                        <span>{promo.code}</span>
-                        <span style={{ color: "#888", fontSize: 12 }}>
-                          {promo.type === "percentage"
-                            ? `${promo.value}%`
-                            : `${promo.value?.toLocaleString()}đ`}
-                        </span>
-                      </div>
-                    ),
-                  }))}
+                options={promoOptions}
+                onFocus={loadPromoOptions}
                 filterOption={(inputValue, option) =>
-                  option?.value
-                    ?.toString()
+                  (option?.label as string)
                     .toLowerCase()
                     .includes(inputValue.toLowerCase())
                 }
-                style={{ width: "100%" }}
-              />
+                onSearch={(val) => setPromoCode?.(val)}
+                onSelect={(value) => {
+                  setPromoCode?.(value);
+                }}
+              >
+                <Input
+                  placeholder="Nhập hoặc chọn mã khuyến mãi"
+                  value={promoCode}
+                  onChange={(e) => {
+                    setPromoCode?.(e.target.value);
+                  }}
+                  onPressEnter={() => handleApplyPromoCode?.()}
+                  status={promoCodeError ? "error" : ""}
+                  disabled={cart.length === 0}
+                />
+              </AutoComplete>
               <Button
                 type="primary"
                 onClick={handleApplyPromoCode}

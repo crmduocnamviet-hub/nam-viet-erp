@@ -26,6 +26,7 @@ import {
   DeleteOutlined,
   MedicineBoxOutlined,
   CustomerServiceOutlined,
+  ReloadOutlined,
 } from "@ant-design/icons";
 import {
   getEmployees,
@@ -43,6 +44,7 @@ const EmployeesPage: React.FC = () => {
   const navigate = useNavigate();
   const { notification } = App.useApp();
   const screens = useBreakpoint();
+  const isMobile = !screens.md;
   const [employees, setEmployees] = useState<IEmployee[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -300,13 +302,32 @@ const EmployeesPage: React.FC = () => {
     {
       title: "Nhân viên",
       key: "employee",
+      width: isMobile ? 180 : 240,
       render: (record: IEmployee) => (
         <Space>
-          <Avatar size={40} icon={getRoleIcon(record.role_name)} />
+          <Avatar
+            size={isMobile ? 32 : 40}
+            icon={getRoleIcon(record.role_name)}
+          />
           <div>
-            <Text strong>{record.full_name}</Text>
+            <Text
+              strong
+              ellipsis
+              style={{
+                maxWidth: isMobile ? 120 : 180,
+                display: "inline-block",
+              }}
+            >
+              {record.full_name}
+            </Text>
             <br />
-            <Text type="secondary">{record.employee_code}</Text>
+            <Text
+              type="secondary"
+              style={{ fontSize: isMobile ? 11 : 12 }}
+              ellipsis
+            >
+              {record.employee_code}
+            </Text>
           </div>
         </Space>
       ),
@@ -315,6 +336,7 @@ const EmployeesPage: React.FC = () => {
       title: "Vai trò",
       dataIndex: "role_name",
       key: "role_name",
+      width: isMobile ? 140 : 160,
       render: (role: string) => (
         <Tag color={getRoleColor(role)} icon={getRoleIcon(role)}>
           {getRoleName(role)}
@@ -335,7 +357,7 @@ const EmployeesPage: React.FC = () => {
       title: "Tài khoản đăng nhập",
       dataIndex: "user_id",
       key: "user_id",
-      width: 200,
+      width: isMobile ? 180 : 220,
       render: (userId: string, record: IEmployee) => {
         if (!userId) {
           return <Tag color="default">Chưa liên kết</Tag>;
@@ -346,7 +368,9 @@ const EmployeesPage: React.FC = () => {
         if (linkedUser) {
           return (
             <Tooltip title={`Email: ${linkedUser.email}`}>
-              <Tag color="blue">{linkedUser.email}</Tag>
+              <Tag color="blue" style={{ fontSize: isMobile ? 11 : 12 }}>
+                {isMobile ? linkedUser.email.split("@")[0] : linkedUser.email}
+              </Tag>
             </Tooltip>
           );
         }
@@ -369,6 +393,7 @@ const EmployeesPage: React.FC = () => {
       title: "Trạng thái",
       dataIndex: "is_active",
       key: "is_active",
+      width: isMobile ? 120 : 140,
       render: (isActive: boolean) => (
         <Tag color={isActive ? "success" : "error"}>
           {isActive ? "Hoạt động" : "Không hoạt động"}
@@ -383,7 +408,7 @@ const EmployeesPage: React.FC = () => {
     {
       title: "Thao tác",
       key: "actions",
-      width: 100,
+      width: isMobile ? 90 : 100,
       fixed: "right" as const,
       render: (record: IEmployee) => (
         <Space size="small">
@@ -429,21 +454,31 @@ const EmployeesPage: React.FC = () => {
 
   return (
     <div style={{ padding: getResponsivePadding(screens) }}>
-      <Row style={{ marginBottom: 24 }}>
-        <Col span={12}>
-          <Title level={2} style={{ margin: 0 }}>
+      <Row style={{ marginBottom: 24 }} gutter={[16, 16]}>
+        <Col xs={24} md={12}>
+          <Title
+            level={isMobile ? 3 : 2}
+            style={{ margin: 0, display: "flex", alignItems: "center", gap: 8 }}
+          >
             <UserOutlined style={{ marginRight: 8 }} />
-            Quản lý Nhân viên
+            {isMobile ? "Nhân viên" : "Quản lý Nhân viên"}
           </Title>
         </Col>
-        <Col span={12} style={{ textAlign: "right" }}>
+        <Col
+          xs={24}
+          md={12}
+          style={{
+            textAlign: isMobile ? "left" : "right",
+            paddingRight: isMobile ? 56 : undefined,
+          }}
+        >
           <Button
             type="primary"
-            size="large"
+            size={isMobile ? "middle" : "large"}
             icon={<PlusOutlined />}
             onClick={() => navigate("/employees/create")}
+            block={isMobile}
             style={{
-              background: "linear-gradient(45deg, #1890ff, #40a9ff)",
               border: "none",
             }}
           >
@@ -521,17 +556,19 @@ const EmployeesPage: React.FC = () => {
 
       {/* Filters */}
       <Card style={{ marginBottom: 16 }}>
-        <Row gutter={16}>
-          <Col xs={24} md={12}>
-            <Search
+        <Row gutter={[12, 12]}>
+          <Col xs={24} sm={12} md={10}>
+            <Input
               placeholder="Tìm theo tên hoặc mã nhân viên..."
+              prefix={<SearchOutlined />}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onPressEnter={() => loadEmployees()}
               allowClear
-              enterButton={<SearchOutlined />}
               size="large"
-              onSearch={setSearchTerm}
             />
           </Col>
-          <Col xs={24} md={12}>
+          <Col xs={24} sm={12} md={10}>
             <Select
               placeholder="Lọc theo vai trò"
               size="large"
@@ -557,6 +594,31 @@ const EmployeesPage: React.FC = () => {
               </Select.Option>
             </Select>
           </Col>
+          <Col xs={12} sm={12} md={2}>
+            <Button
+              type="primary"
+              icon={<SearchOutlined />}
+              onClick={() => loadEmployees()}
+              block
+              size="large"
+            >
+              Tìm
+            </Button>
+          </Col>
+          <Col xs={12} sm={12} md={2}>
+            <Button
+              icon={<ReloadOutlined />}
+              onClick={() => {
+                setSearchTerm("");
+                setSelectedRole("all");
+                loadEmployees();
+              }}
+              block
+              size="large"
+            >
+              Mới
+            </Button>
+          </Col>
         </Row>
       </Card>
 
@@ -567,14 +629,17 @@ const EmployeesPage: React.FC = () => {
           dataSource={employees}
           rowKey="employee_id"
           loading={loading}
+          size={isMobile ? "small" : "middle"}
+          tableLayout={isMobile ? "fixed" : "auto"}
           onRow={(record) => ({
             onClick: () => navigate(`/employees/${record.employee_id}`),
             style: { cursor: "pointer" },
           })}
+          scroll={{ x: isMobile ? 900 : 1200 }}
           pagination={{
-            pageSize: 20,
-            showSizeChanger: true,
-            showQuickJumper: true,
+            pageSize: isMobile ? 10 : 20,
+            showSizeChanger: !isMobile,
+            showQuickJumper: !isMobile,
             showTotal: (total) => `Tổng ${total} nhân viên`,
           }}
         />

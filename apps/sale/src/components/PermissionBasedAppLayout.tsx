@@ -56,7 +56,23 @@ const namVietTheme = {
   },
 };
 
-// Inner component that uses screen context
+// Main component with providers
+const PermissionBasedAppLayout: React.FC = () => {
+  // Additional context to pass to screens
+  const screenContext = {
+    appType: "sale",
+  };
+
+  return (
+    <ConfigProvider theme={namVietTheme} locale={viVN}>
+      <ScreenProvider context={screenContext}>
+        <AppLayoutContent />
+      </ScreenProvider>
+    </ConfigProvider>
+  );
+};
+
+// Inner component that uses screen context - MUST be inside ScreenProvider
 const AppLayoutContent: React.FC = () => {
   const [collapsed, setCollapsed] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -473,22 +489,6 @@ const AppLayoutContent: React.FC = () => {
         </Layout>
       </Layout>
     </>
-  );
-};
-
-// Main component with providers
-const PermissionBasedAppLayout: React.FC = () => {
-  // Additional context to pass to screens
-  const screenContext = {
-    appType: "sale",
-  };
-
-  return (
-    <ConfigProvider theme={namVietTheme} locale={viVN}>
-      <ScreenProvider context={screenContext}>
-        <AppLayoutContent />
-      </ScreenProvider>
-    </ConfigProvider>
   );
 };
 

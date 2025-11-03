@@ -342,7 +342,14 @@ const ProductSearchInput = React.forwardRef<any, ProductSearchInputProps>(
 
     return (
       <>
-        <Space.Compact style={{ width: "100%" }}>
+        <Space.Compact
+          style={{
+            width: "100%",
+            maxWidth: "100%",
+            boxSizing: "border-box",
+            overflow: "hidden",
+          }}
+        >
           <AutoComplete
             ref={ref}
             value={searchTerm}
@@ -352,7 +359,7 @@ const ProductSearchInput = React.forwardRef<any, ProductSearchInputProps>(
             placeholder={placeholder}
             allowClear={allowClear}
             disabled={disabled}
-            style={{ flex: 1, ...style }}
+            style={{ flex: 1, minWidth: 0, ...style }}
             size={size}
             open={open}
             styles={{
@@ -387,6 +394,7 @@ const ProductSearchInput = React.forwardRef<any, ProductSearchInputProps>(
                 onClick={() => setIsQRScannerOpen(true)}
                 disabled={disabled}
                 size={size}
+                style={{ flex: "0 0 40px" }}
               />
             </Tooltip>
           )}

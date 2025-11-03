@@ -16,17 +16,45 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
+// Singleton pattern to ensure only one client instance
+let supabaseInstance: ReturnType<typeof createClient> | null = null;
+let supabaseAdminInstance: ReturnType<typeof createClient> | null = null;
+
 // Regular client for normal operations
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = (() => {
+  if (!supabaseInstance) {
+    supabaseInstance = createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        storageKey: "nam-viet-supabase-auth",
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: true,
+        flowType: "pkce",
+      },
+      global: {
+        headers: {
+          "x-client-info": "nam-viet-erm",
+        },
+      },
+    });
+  }
+  return supabaseInstance;
+})();
 
 // Admin client for admin operations (user management)
-export const supabaseAdmin = createClient(
-  supabaseUrl,
-  supabaseServiceKey || supabaseAnonKey,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  },
-);
+export const supabaseAdmin = (() => {
+  if (!supabaseAdminInstance) {
+    supabaseAdminInstance = createClient(
+      supabaseUrl,
+      supabaseServiceKey || supabaseAnonKey,
+      {
+        auth: {
+          storageKey: "nam-viet-supabase-admin-auth",
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      },
+    );
+  }
+  return supabaseAdminInstance;
+})();

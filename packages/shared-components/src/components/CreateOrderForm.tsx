@@ -16,6 +16,7 @@ import {
   Descriptions,
   notification,
   Select,
+  AutoComplete,
 } from "antd";
 import {
   UserOutlined,
@@ -43,7 +44,11 @@ import {
 import { exportB2BOrderToPdf, formatCurrency } from "../utils";
 import ProductSearchInput from "./ProductSearchInput";
 import { ColumnsType } from "antd/es/table";
-import { applyPromoCode } from "@nam-viet-erp/services";
+import {
+  applyPromoCode,
+  getPromoCodes,
+  getApplicablePromotions,
+} from "@nam-viet-erp/services";
 
 const { Text, Title } = Typography;
 const { TextArea } = Input;
@@ -148,6 +153,10 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
   );
   const [promoDiscount, setPromoDiscount] = React.useState(0);
   const [promoCodeError, setPromoCodeError] = React.useState("");
+  const [promoOptions, setPromoOptions] = React.useState<
+    { value: string; label: string; description?: string }[]
+  >([]);
+  const [promoLoading, setPromoLoading] = React.useState(false);
 
   // Sync form values with state when tab data is loaded
   React.useEffect(() => {
@@ -253,8 +262,17 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
   }, [orderItems, discountPercent, taxPercent, promoDiscount]);
 
   // Handle promo code application
-  const handleApplyPromoCode = async () => {
-    if (!promoCode.trim()) {
+  const handleApplyPromoCode = async (overrideCode?: string) => {
+    // Kiểm tra xem có sản phẩm trong đơn hàng không
+    if (orderItems.length === 0) {
+      setPromoCodeError(
+        "Vui lòng thêm sản phẩm vào đơn hàng trước khi áp dụng mã khuyến mãi",
+      );
+      return;
+    }
+
+    const codeToApply = (overrideCode ?? promoCode).trim();
+    if (!codeToApply) {
       setPromoCodeError("Vui lòng nhập mã khuyến mãi");
       return;
     }
@@ -283,7 +301,7 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
         promoName,
         error,
       } = await applyPromoCode(
-        promoCode.trim(),
+        codeToApply,
         baseSubtotal, // Use base subtotal without promo discount
         orderItems, // Pass items to check manufacturers and categories
       );
@@ -303,6 +321,7 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
         setPromoCodeError("");
         setPromoDiscount(discountAmount);
         setAppliedPromoCode(promoName || appliedCode);
+        setPromoCode(codeToApply);
         notification.success({
           message: "Áp dụng mã khuyến mãi thành công!",
           description: `Giảm ${discountAmount.toLocaleString()}đ`,
@@ -321,6 +340,27 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
     setPromoDiscount(0);
     setPromoCodeError("");
   };
+
+  // Load promo codes (applicable first) for search/select
+  const loadPromoOptions = React.useCallback(async () => {
+    if (promoOptions.length > 0) return; // đã tải rồi thì không gọi lại
+    try {
+      setPromoLoading(true);
+      // Luôn hiển thị toàn bộ mã đang hoạt động
+      const { data } = await getPromoCodes();
+      setPromoOptions(
+        (data || []).map((p: any) => ({
+          value: p.code,
+          label: `${p.code} — ${p.name}`,
+          description: p.description,
+        })),
+      );
+    } catch (e) {
+      // silent fail
+    } finally {
+      setPromoLoading(false);
+    }
+  }, [promoOptions.length]);
 
   // Handle client selection
   const handleSelectClient = (client: IB2BCustomer) => {
@@ -714,12 +754,20 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
         <Col xs={24} md={12}>
           <Card
             title={
-              <Space>
+              <Space align="center">
                 <ShoppingCartOutlined />
-                Danh sách Sản phẩm ({orderItems.length} sản phẩm)
+                <span style={{ fontWeight: 600 }}>
+                  {isMd
+                    ? `Danh sách Sản phẩm (${orderItems.length} sản phẩm)`
+                    : `Sản phẩm (${orderItems.length})`}
+                </span>
               </Space>
             }
             style={{ marginBottom: 16 }}
+            headStyle={{
+              paddingRight: screens.xs ? 64 : undefined,
+              overflow: "visible",
+            }}
           >
             {/* Product Search Input */}
             <div style={{ marginBottom: 16 }}>
@@ -1038,17 +1086,43 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
             >
               {!appliedPromoCode ? (
                 <Space.Compact style={{ width: "100%" }}>
-                  <Input
-                    placeholder="Nhập mã khuyến mãi"
-                    value={promoCode}
-                    onChange={(e) => {
-                      setPromoCode(e.target.value);
+                  <AutoComplete
+                    style={{ width: "100%" }}
+                    options={promoOptions}
+                    onFocus={loadPromoOptions}
+                    filterOption={(inputValue, option) =>
+                      (option?.label as string)
+                        .toLowerCase()
+                        .includes(inputValue.toLowerCase())
+                    }
+                    onSearch={(val) => setPromoCode(val)}
+                    onSelect={(value) => {
                       setPromoCodeError("");
+                      setPromoCode(value);
                     }}
-                    onPressEnter={handleApplyPromoCode}
-                    status={promoCodeError ? "error" : ""}
-                  />
-                  <Button type="primary" onClick={handleApplyPromoCode}>
+                    value={promoCode}
+                    disabled={orderItems.length === 0}
+                  >
+                    <Input
+                      placeholder={
+                        orderItems.length === 0
+                          ? "Vui lòng thêm sản phẩm trước"
+                          : "Nhập hoặc chọn mã khuyến mãi"
+                      }
+                      onChange={(e) => {
+                        setPromoCode(e.target.value);
+                        setPromoCodeError("");
+                      }}
+                      onPressEnter={() => handleApplyPromoCode()}
+                      status={promoCodeError ? "error" : ""}
+                      disabled={orderItems.length === 0}
+                    />
+                  </AutoComplete>
+                  <Button
+                    type="primary"
+                    onClick={() => handleApplyPromoCode()}
+                    disabled={orderItems.length === 0}
+                  >
                     Áp dụng
                   </Button>
                 </Space.Compact>
