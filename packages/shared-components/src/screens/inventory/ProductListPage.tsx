@@ -34,9 +34,7 @@ interface ProductListPageContentProps {
   hasPermission?: (permission: string) => boolean;
 }
 
-const ProductListPageContent: React.FC<ProductListPageContentProps> = ({
-  hasPermission = () => true,
-}) => {
+const ProductListPageContent: React.FC<ProductListPageContentProps> = () => {
   const navigate = useNavigate();
   const { notification } = AntApp.useApp();
   const screens = useBreakpoint();

@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useRef } from "react";
 import { useEmployeeStore } from "../employeeStore";
 import { useAuthStore } from "../authStore";
 import { getEmployeeByUserId } from "@nam-viet-erp/services";
@@ -22,48 +22,90 @@ import { ROLE_PERMISSIONS } from "@nam-viet-erp/shared-components";
 export function useInitializeEmployee() {
   const user = useAuthStore((state) => state.user);
   const isAuthenticated = !!user?.id;
+  const employee = useEmployeeStore((state) => state.employee);
   const setEmployee = useEmployeeStore((state) => state.setEmployee);
   const setPermissions = useEmployeeStore((state) => state.setPermissions);
   const setLoading = useEmployeeStore((state) => state.setLoading);
   const setError = useEmployeeStore((state) => state.setError);
 
+  // Track if fetch is in progress to prevent duplicate calls
+  const isFetchingRef = useRef(false);
+  const fetchedUserIdRef = useRef<string | null>(null);
+
   const fetchEmployee = useCallback(async () => {
-    if (!isAuthenticated) {
+    // Skip if not authenticated
+    if (!isAuthenticated || !user?.id) {
+      return;
+    }
+
+    // Skip if already fetching
+    if (isFetchingRef.current) {
+      console.log(
+        "[useInitializeEmployee] Fetch already in progress, skipping",
+      );
+      return;
+    }
+
+    // Skip if already fetched for this user
+    if (fetchedUserIdRef.current === user.id && employee?.user_id === user.id) {
+      console.log(
+        "[useInitializeEmployee] Employee already loaded for this user, skipping",
+      );
       return;
     }
 
     try {
+      isFetchingRef.current = true;
       setLoading(true);
       setError(null);
 
-      const { data: employee, error: employeeError } =
+      console.log(
+        "[useInitializeEmployee] Fetching employee for user:",
+        user.id,
+      );
+
+      const { data: employeeData, error: employeeError } =
         await getEmployeeByUserId(user.id);
 
-      if (employeeError || !employee) {
+      if (employeeError || !employeeData) {
         throw new Error(
           employeeError?.message || "Failed to fetch employee data",
         );
       }
 
-      setEmployee(employee);
+      setEmployee(employeeData);
 
       // Calculate permissions based on role
       const rolePermissions =
-        ROLE_PERMISSIONS[employee.role_name as keyof typeof ROLE_PERMISSIONS] ||
-        [];
-      setPermissions(employee.permissions || rolePermissions);
+        ROLE_PERMISSIONS[
+          employeeData.role_name as keyof typeof ROLE_PERMISSIONS
+        ] || [];
+      setPermissions(employeeData.permissions || rolePermissions);
 
+      fetchedUserIdRef.current = user.id;
       setLoading(false);
     } catch (error: any) {
       console.error("[useInitializeEmployee] Error fetching employee:", error);
       setError(error.message || "Failed to fetch employee data");
       setLoading(false);
+    } finally {
+      isFetchingRef.current = false;
     }
-  }, [user?.id, isAuthenticated]);
+  }, [
+    user?.id,
+    isAuthenticated,
+    employee?.user_id,
+    setLoading,
+    setError,
+    setEmployee,
+    setPermissions,
+  ]);
 
   useEffect(() => {
-    !!user && fetchEmployee();
-  }, [user]);
+    if (isAuthenticated && user?.id) {
+      fetchEmployee();
+    }
+  }, [isAuthenticated, user?.id, fetchEmployee]);
 
   return { refetch: fetchEmployee };
 }

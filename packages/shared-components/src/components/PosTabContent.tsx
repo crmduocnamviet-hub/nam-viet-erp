@@ -41,6 +41,10 @@ import {
   updatePatient,
   getPromoCodes,
 } from "@nam-viet-erp/services";
+import {
+  isPromotionApplicable,
+  getPromotionNotApplicableReason,
+} from "../utils/promotionUtils";
 import ProductSearchInput from "./ProductSearchInput";
 import DateInput from "./DateInput";
 
@@ -96,7 +100,7 @@ interface PosTabContentProps {
   appliedPromoCode?: string | null;
   promoDiscount?: number;
   promoCodeError?: string;
-  handleApplyPromoCode?: () => void;
+  handleApplyPromoCode?: (codeToApply?: string) => void;
   handleRemovePromoCode?: () => void;
 
   // Combos
@@ -417,83 +421,6 @@ const PosTabContent: React.FC<PosTabContentProps> = ({
               selectedCustomer={selectedCustomer}
               employeeWarehouse={employeeWarehouse}
             />
-
-            {/* Promo Code Input */}
-            <div style={{ marginTop: 12, marginBottom: 12 }}>
-              {!appliedPromoCode ? (
-                <Space.Compact style={{ width: "100%" }}>
-                  <AutoComplete
-                    style={{ flex: 1 }}
-                    placeholder="Nhập hoặc chọn mã khuyến mãi"
-                    value={promoCode}
-                    options={promoOptions}
-                    onFocus={loadPromoOptions}
-                    filterOption={(inputValue, option) =>
-                      (option?.label as string)
-                        .toLowerCase()
-                        .includes(inputValue.toLowerCase())
-                    }
-                    onSearch={(val) => setPromoCode?.(val)}
-                    onSelect={(value) => {
-                      setPromoCode?.(value);
-                    }}
-                  >
-                    <Input
-                      placeholder="Nhập hoặc chọn mã khuyến mãi"
-                      value={promoCode}
-                      onChange={(e) => {
-                        setPromoCode?.(e.target.value);
-                      }}
-                      onPressEnter={() => handleApplyPromoCode?.()}
-                      status={promoCodeError ? "error" : ""}
-                      disabled={cart.length === 0}
-                    />
-                  </AutoComplete>
-                  <Button
-                    type="primary"
-                    onClick={handleApplyPromoCode}
-                    disabled={cart.length === 0}
-                  >
-                    Áp dụng
-                  </Button>
-                </Space.Compact>
-              ) : (
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    padding: "8px 12px",
-                    backgroundColor: "#f6ffed",
-                    border: "1px solid #b7eb8f",
-                    borderRadius: "6px",
-                  }}
-                >
-                  <Space>
-                    <Tag color="success">{appliedPromoCode}</Tag>
-                    {promoDiscount && (
-                      <Text type="success" style={{ fontSize: 13 }}>
-                        Giảm: {promoDiscount.toLocaleString()}đ
-                      </Text>
-                    )}
-                  </Space>
-                  <Button
-                    type="text"
-                    size="small"
-                    danger
-                    icon={<CloseCircleOutlined />}
-                    onClick={handleRemovePromoCode}
-                  >
-                    Xóa
-                  </Button>
-                </div>
-              )}
-              {promoCodeError && (
-                <Text type="danger" style={{ fontSize: 12, marginTop: 4 }}>
-                  {promoCodeError}
-                </Text>
-              )}
-            </div>
 
             <div
               style={{
@@ -900,6 +827,119 @@ const PosTabContent: React.FC<PosTabContentProps> = ({
               },
             }}
           >
+            {/* Promo Code Input */}
+            <div style={{ marginTop: 12, marginBottom: 12 }}>
+              {!appliedPromoCode ? (
+                <AutoComplete
+                  placeholder="Nhập hoặc tìm mã khuyến mãi (Enter để áp dụng)"
+                  value={promoCode}
+                  onChange={(value) => {
+                    setPromoCode?.(value);
+                  }}
+                  onSelect={(value) => {
+                    // Apply directly with the selected value
+                    handleApplyPromoCode?.(value);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && promoCode) {
+                      handleApplyPromoCode?.(promoCode);
+                    }
+                  }}
+                  status={promoCodeError ? "error" : ""}
+                  disabled={cart.length === 0}
+                  options={availablePromoCodes
+                    .filter((promo) => promo.code)
+                    .map((promo) => {
+                      const orderValue = cartDetails.itemTotal || 0;
+                      const items = cartDetails.items || [];
+                      const applicable = isPromotionApplicable(
+                        promo,
+                        orderValue,
+                        items,
+                      );
+                      const reason = !applicable
+                        ? getPromotionNotApplicableReason(promo, orderValue)
+                        : "";
+
+                      return {
+                        value: promo.code,
+                        disabled: !applicable,
+                        label: (
+                          <div
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              opacity: applicable ? 1 : 0.5,
+                            }}
+                          >
+                            <span>
+                              {promo.code}
+                              {!applicable && reason && (
+                                <span
+                                  style={{
+                                    marginLeft: 8,
+                                    fontSize: 11,
+                                    color: "#ff4d4f",
+                                  }}
+                                >
+                                  ({reason})
+                                </span>
+                              )}
+                            </span>
+                            <span style={{ color: "#888", fontSize: 12 }}>
+                              {promo.type === "percentage"
+                                ? `${promo.value}%`
+                                : `${promo.value?.toLocaleString()}đ`}
+                            </span>
+                          </div>
+                        ),
+                      };
+                    })}
+                  filterOption={(inputValue, option) =>
+                    option?.value
+                      ?.toString()
+                      .toLowerCase()
+                      .includes(inputValue.toLowerCase())
+                  }
+                  style={{ width: "100%" }}
+                />
+              ) : (
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    padding: "8px 12px",
+                    backgroundColor: "#f6ffed",
+                    border: "1px solid #b7eb8f",
+                    borderRadius: "6px",
+                  }}
+                >
+                  <Space>
+                    <Tag color="success">{appliedPromoCode}</Tag>
+                    {promoDiscount && (
+                      <Text type="success" style={{ fontSize: 13 }}>
+                        Giảm: {promoDiscount.toLocaleString()}đ
+                      </Text>
+                    )}
+                  </Space>
+                  <Button
+                    type="text"
+                    size="small"
+                    danger
+                    icon={<CloseCircleOutlined />}
+                    onClick={handleRemovePromoCode}
+                  >
+                    Xóa
+                  </Button>
+                </div>
+              )}
+              {promoCodeError && (
+                <Text type="danger" style={{ fontSize: 12, marginTop: 4 }}>
+                  {promoCodeError}
+                </Text>
+              )}
+            </div>
             {/* Spacer to push content to bottom */}
             <div style={{ flex: 1 }} />
 
@@ -907,7 +947,7 @@ const PosTabContent: React.FC<PosTabContentProps> = ({
             <Space direction="vertical" size={12} style={{ width: "100%" }}>
               {/* Total */}
               <div style={{ textAlign: "center" }}>
-                {!!promoCode && (
+                {!!appliedPromoCode && (
                   <>
                     {cartDetails.totalDiscount > 0 && (
                       <>
@@ -1034,42 +1074,79 @@ const PosTabContent: React.FC<PosTabContentProps> = ({
         {/* Promo Code Input */}
         <div style={{ marginBottom: 12 }}>
           {!appliedPromoCode ? (
-            <Space.Compact style={{ width: "100%" }}>
-              <AutoComplete
-                style={{ flex: 1 }}
-                placeholder="Nhập hoặc chọn mã khuyến mãi"
-                value={promoCode}
-                options={promoOptions}
-                onFocus={loadPromoOptions}
-                filterOption={(inputValue, option) =>
-                  (option?.label as string)
-                    .toLowerCase()
-                    .includes(inputValue.toLowerCase())
+            <AutoComplete
+              placeholder="Nhập hoặc tìm mã khuyến mãi (Enter để áp dụng)"
+              value={promoCode}
+              onChange={(value) => {
+                setPromoCode?.(value);
+              }}
+              onSelect={(value) => {
+                // Apply directly with the selected value
+                handleApplyPromoCode?.(value);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && promoCode) {
+                  handleApplyPromoCode?.(promoCode);
                 }
-                onSearch={(val) => setPromoCode?.(val)}
-                onSelect={(value) => {
-                  setPromoCode?.(value);
-                }}
-              >
-                <Input
-                  placeholder="Nhập hoặc chọn mã khuyến mãi"
-                  value={promoCode}
-                  onChange={(e) => {
-                    setPromoCode?.(e.target.value);
-                  }}
-                  onPressEnter={() => handleApplyPromoCode?.()}
-                  status={promoCodeError ? "error" : ""}
-                  disabled={cart.length === 0}
-                />
-              </AutoComplete>
-              <Button
-                type="primary"
-                onClick={handleApplyPromoCode}
-                disabled={cart.length === 0}
-              >
-                Áp dụng
-              </Button>
-            </Space.Compact>
+              }}
+              status={promoCodeError ? "error" : ""}
+              disabled={cart.length === 0}
+              options={availablePromoCodes
+                .filter((promo) => promo.code)
+                .map((promo) => {
+                  const orderValue = cartDetails.itemTotal || 0;
+                  const items = cartDetails.items || [];
+                  const applicable = isPromotionApplicable(
+                    promo,
+                    orderValue,
+                    items,
+                  );
+                  const reason = !applicable
+                    ? getPromotionNotApplicableReason(promo, orderValue)
+                    : "";
+
+                  return {
+                    value: promo.code,
+                    disabled: !applicable,
+                    label: (
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          opacity: applicable ? 1 : 0.5,
+                        }}
+                      >
+                        <span>
+                          {promo.code}
+                          {!applicable && reason && (
+                            <span
+                              style={{
+                                marginLeft: 8,
+                                fontSize: 11,
+                                color: "#ff4d4f",
+                              }}
+                            >
+                              ({reason})
+                            </span>
+                          )}
+                        </span>
+                        <span style={{ color: "#888", fontSize: 12 }}>
+                          {promo.type === "percentage"
+                            ? `${promo.value}%`
+                            : `${promo.value?.toLocaleString()}đ`}
+                        </span>
+                      </div>
+                    ),
+                  };
+                })}
+              filterOption={(inputValue, option) =>
+                option?.value
+                  ?.toString()
+                  .toLowerCase()
+                  .includes(inputValue.toLowerCase())
+              }
+              style={{ width: "100%" }}
+            />
           ) : (
             <div
               style={{

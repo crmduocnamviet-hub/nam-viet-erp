@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
 let supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 let supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -16,45 +16,46 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
-// Singleton pattern to ensure only one client instance
-let supabaseInstance: ReturnType<typeof createClient> | null = null;
-let supabaseAdminInstance: ReturnType<typeof createClient> | null = null;
+// Singleton instances to prevent multiple GoTrueClient instances
+let supabaseInstance: SupabaseClient | null = null;
+let supabaseAdminInstance: SupabaseClient | null = null;
 
-// Regular client for normal operations
-export const supabase = (() => {
+/**
+ * Get the singleton Supabase client instance
+ * Prevents multiple GoTrueClient instances in the same browser context
+ */
+const getSupabaseClient = (): SupabaseClient => {
   if (!supabaseInstance) {
     supabaseInstance = createClient(supabaseUrl, supabaseAnonKey, {
       auth: {
-        storageKey: "nam-viet-supabase-auth",
-        autoRefreshToken: true,
-        persistSession: true,
-        detectSessionInUrl: true,
-        flowType: "pkce",
-      },
-      global: {
-        headers: {
-          "x-client-info": "nam-viet-erm",
-        },
+        storageKey: "nam-viet-erp-auth", // Custom storage key to avoid conflicts
       },
     });
   }
   return supabaseInstance;
-})();
+};
 
-// Admin client for admin operations (user management)
-export const supabaseAdmin = (() => {
+/**
+ * Get the singleton Supabase admin client instance
+ * For admin operations (user management)
+ */
+const getSupabaseAdminClient = (): SupabaseClient => {
   if (!supabaseAdminInstance) {
     supabaseAdminInstance = createClient(
       supabaseUrl,
       supabaseServiceKey || supabaseAnonKey,
       {
         auth: {
-          storageKey: "nam-viet-supabase-admin-auth",
           autoRefreshToken: false,
           persistSession: false,
+          storageKey: "nam-viet-erp-admin-auth", // Separate storage key for admin
         },
       },
     );
   }
   return supabaseAdminInstance;
-})();
+};
+
+// Export singleton instances
+export const supabase = getSupabaseClient();
+export const supabaseAdmin = getSupabaseAdminClient();

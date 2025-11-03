@@ -16,4 +16,7 @@ export const getErrorMessage = (error: unknown): string => {
 };
 
 // B2B Order PDF Export utilities
-export * from './b2bOrder';
+export * from "./b2bOrder";
+
+// Promotion utilities
+export * from "./promotionUtils";

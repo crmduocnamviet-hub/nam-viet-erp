@@ -2,9 +2,8 @@ import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 import {
-  addSaleOrderProductLotItem,
   calculateProductGlobalQuantities,
-  processSaleTransaction,
+  processSaleTransactionViaEdgeFunction,
 } from "@nam-viet-erp/services";
 
 // State interface
@@ -454,25 +453,19 @@ export const usePosStore = create<PosState>()(
               }
             });
 
-            // Call payment processing API
-            const result = await processSaleTransaction(paymentData, inventory);
+            // Call payment processing via Edge Function (Server-side)
+            // This ensures atomic transactions and better security
+            const result = await processSaleTransactionViaEdgeFunction(
+              paymentData,
+              inventory,
+            );
 
             const { useInventoryStore } = await import("./inventoryStore");
 
             const cart = paymentData.cart || [];
 
-            // NEW: Record lot items used in the sale
-            const lotItemsToRecord = cart.filter(
-              (item: CartItem) => !!item.lot_id,
-            );
-
-            for (const lotItem of lotItemsToRecord) {
-              await addSaleOrderProductLotItem({
-                order_id: result.orderData.order_id, // Assuming the result contains the new order ID
-                lot_id: lotItem.lot_id,
-                quantity: lotItem.quantity,
-              });
-            }
+            // Note: Lot items tracking is now handled by edge function
+            // No need to record lot items here anymore
 
             const quantities = calculateProductGlobalQuantities(cart);
 

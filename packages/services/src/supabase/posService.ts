@@ -1,9 +1,4 @@
 import { supabase } from "./supabase";
-import { upsetInventory } from "./warehouse";
-import { createSalesOrder } from "./salesOrderService";
-import { createMultipleSalesOrderItems } from "./salesOrderItemService";
-import { createMultipleSalesComboItems } from "./salesComboItemService";
-import { batchDeductLotQuantities } from "./lotManagementService";
 
 interface IProcessSale {
   cart: CartItem[];
@@ -20,337 +15,57 @@ interface IProcessSale {
 }
 
 /**
- * Processes a Point of Sale transaction.
- * 1. Creates a sales order and sales order items.
- * 2. Creates a new financial transaction record.
- * 3. Updates the inventory for each item sold.
- * NOTE: This function is not atomic. A database RPC function would be a better approach
- * to ensure data consistency, but this is a good starting point for the prototype.
+ * Process sale transaction using Edge Function (Server-side)
+ * This is the RECOMMENDED approach for production as it ensures:
+ * - Atomic transactions
+ * - Better security (service role key on server)
+ * - Centralized business logic
+ * - Better error handling and rollback
  */
-export const processSaleTransaction = async (
-  {
-    cart,
-    total,
-    paymentMethod,
-    warehouseId,
-    createdBy,
-    fundId,
-    customerId,
-  }: IProcessSale,
-  inventory: IInventoryWithProduct[],
+export const processSaleTransactionViaEdgeFunction = async (
+  paymentData: IProcessSale,
+  _inventory?: IInventoryWithProduct[], // Not used in edge function approach
 ) => {
-  // Step 0: Pre-flight check for lot quantities to fail fast
-  const lotQuantitiesRequired: Record<number, number> = {};
+  try {
+    // Get the auth session to pass to edge function
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
 
-  (cart || []).forEach((item) => {
-    if (item.isCombo && item.comboData) {
-      // Handle lot-managed products within combos using lotSelections
-      if (item.lotSelections && item.lotSelections.length > 0) {
-        const comboData = item.comboData; // Type narrowing
-        item.lotSelections.forEach((lotSelection: any) => {
-          const comboItem = comboData.combo_items?.find(
-            (ci: any) => ci.product_id === lotSelection.product_id,
-          );
-          if (comboItem) {
-            const required = comboItem.quantity * item.quantity;
-            lotQuantitiesRequired[lotSelection.lot_id] =
-              (lotQuantitiesRequired[lotSelection.lot_id] || 0) + required;
-          }
-        });
-      }
-    } else {
-      // Handle regular lot-managed products
-      if (item.lot_id) {
-        lotQuantitiesRequired[item.lot_id] =
-          (lotQuantitiesRequired[item.lot_id] || 0) + item.quantity;
-      }
+    if (!session) {
+      throw new Error("No active session found");
     }
-  });
 
-  if (Object.keys(lotQuantitiesRequired).length > 0) {
-    const lotIds = Object.keys(lotQuantitiesRequired).map(Number);
-    const { data: lotsData, error: lotsError } = await supabase
-      .from("product_lots")
-      .select("id, quantity, lot_number")
-      .in("id", lotIds);
-
-    if (lotsError) throw new Error("Could not verify lot quantities.");
-
-    for (const lot of lotsData) {
-      const required = lotQuantitiesRequired[lot.id];
-      if ((lot.quantity || 0) < required) {
-        throw new Error(
-          `Không đủ số lượng cho lô "${lot.lot_number}". Cần: ${required}, Tồn kho: ${
-            lot.quantity || 0
-          }`,
-        );
-      }
+    // Get Supabase URL from environment
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    if (!supabaseUrl) {
+      throw new Error("VITE_SUPABASE_URL is not configured");
     }
-  }
 
-  // Step 1: Create the sales order record.
-  const salesOrder = {
-    patient_id: customerId || null, // Default patient ID for walk-in customers
-    order_type: "pos",
-    total_value: total,
-    payment_method: paymentMethod,
-    payment_status: "paid",
-    operational_status: "completed",
-    is_ai_checked: false,
-    created_by_employee_id: createdBy || null, // Allow null when no employee context available
-  };
-
-  const { data: orderData, error: orderError } =
-    await createSalesOrder(salesOrder);
-
-  if (orderError || !orderData) {
-    console.error("Sales Order Creation Error:", orderError);
-    throw new Error(
-      `Failed to create sales order: ${orderError?.message || "Unknown error"}`,
+    // Call edge function
+    const response = await fetch(
+      `${supabaseUrl}/functions/v1/process-sale-order`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify(paymentData),
+      },
     );
-  }
 
-  // Step 2: Create sales order items and track combo items separately
-  const orderItems: any[] = [];
-  const comboItems: any[] = [];
-  const productLotItems: any[] = []; // Track lot items for sales_order_product_lot_items table
+    const result = await response.json();
 
-  (cart || []).forEach((item) => {
-    if (item.isCombo && item.comboData) {
-      // Track individual products in sales_combo_items table
-      const comboData = item.comboData; // Type narrowing
-      comboData.combo_items?.forEach((comboItem) => {
-        const itemQuantity = comboItem.quantity * item.quantity;
-        const itemPrice =
-          item.finalPrice /
-          (comboData.combo_items?.reduce((sum, ci) => sum + ci.quantity, 0) ||
-            1);
-
-        // Find lot selection for this specific product in combo
-        const lotSelection = item.lotSelections?.find(
-          (ls: any) => ls.product_id === comboItem.product_id,
-        );
-
-        comboItems.push({
-          order_id: orderData.order_id,
-          combo_id: item.id,
-          product_id: comboItem.product_id,
-          quantity: itemQuantity,
-          unit_price: itemPrice,
-          lot_id: lotSelection?.lot_id || null, // Use lot_id from lotSelections
-        });
-
-        // Add to product lot items tracking if lot is selected
-        if (lotSelection?.lot_id) {
-          productLotItems.push({
-            order_id: orderData.order_id,
-            lot_id: lotSelection.lot_id,
-            quantity: itemQuantity,
-          });
-        }
-      });
-    } else {
-      // Regular product - unchanged
-      orderItems.push({
-        product_id: item.id,
-        quantity: item.quantity,
-        unit_price: item.finalPrice || 0,
-        is_service: false,
-        lot_id: item.lot_id || null, // Include lot_id if available
-      });
-
-      // Add to product lot items tracking if lot is selected
-      if (item.lot_id) {
-        productLotItems.push({
-          order_id: orderData.order_id,
-          lot_id: item.lot_id,
-          quantity: item.quantity,
-        });
-      }
+    if (!response.ok || !result.success) {
+      throw new Error(result.error || "Failed to process sale transaction");
     }
-  });
 
-  const { error: itemsError } = await createMultipleSalesOrderItems(
-    orderData.order_id,
-    orderItems,
-  );
-
-  if (itemsError) {
-    console.error("Sales Order Items Creation Error:", itemsError);
-    // Try to rollback the sales order
-    await supabase
-      .from("sales_orders")
-      .delete()
-      .eq("order_id", orderData.order_id);
-    throw new Error(
-      `Failed to create sales order items: ${itemsError.message}`,
-    );
+    return result.data;
+  } catch (error: any) {
+    console.error("[Edge Function Error]:", error);
+    throw error;
   }
-
-  // Step 2.5: Create sales combo items records for tracking
-  if (comboItems.length > 0) {
-    const { error: comboItemsError } =
-      await createMultipleSalesComboItems(comboItems);
-
-    if (comboItemsError) {
-      console.error("Sales Combo Items Creation Error:", comboItemsError);
-      // Continue with transaction - combo items tracking is supplementary
-      // We log the error but don't rollback the entire transaction
-    }
-  }
-
-  // Step 2.6: Store product lot items to sales_order_product_lot_items table
-  if (productLotItems.length > 0) {
-    const { error: productLotItemsError } = await supabase
-      .from("sales_order_product_lot_items")
-      .insert(productLotItems);
-
-    if (productLotItemsError) {
-      console.error("Product Lot Items Creation Error:", productLotItemsError);
-      // Continue with transaction - lot tracking is supplementary
-      // We log the error but don't rollback the entire transaction
-    }
-  }
-
-  // Step 3: Create the financial transaction record.
-  const transactionRecord = {
-    type: "income",
-    amount: total,
-    description: `POS Sale - Order ${orderData.order_id} - Warehouse ID ${warehouseId}`,
-    payment_method: paymentMethod,
-    status: "đã thu", // POS transactions are considered completed immediately.
-    transaction_date: new Date().toISOString(),
-    created_by: createdBy,
-    fund_id: fundId,
-  };
-
-  const { data: transactionData, error: transactionError } = await supabase
-    .from("transactions")
-    .insert(transactionRecord)
-    .select()
-    .single();
-
-  if (transactionError) {
-    console.error("Transaction Creation Error:", transactionError);
-    // Rollback sales order and items
-    await supabase
-      .from("sales_orders")
-      .delete()
-      .eq("order_id", orderData.order_id);
-    throw new Error(
-      `Failed to create transaction: ${transactionError.message}`,
-    );
-  }
-
-  // Step 4: Prepare and execute inventory updates.
-  const quantities = calculateProductGlobalQuantities(cart);
-
-  const filterProducts = inventory.filter(
-    (i) => !!i.products?.id && !!quantities[i.products.id],
-  );
-
-  const inventoryUpdates: any[] = [];
-
-  filterProducts.forEach((inventory) => {
-    if (!inventory.products?.id) return;
-    const quantity = quantities[inventory.products.id].quantity;
-    const currentQuantity = inventory.quantity || 0;
-    const quantityToDeduct = currentQuantity - quantity;
-    inventoryUpdates.push({
-      product_id: inventory.products.id,
-      warehouse_id: warehouseId,
-      quantity: quantityToDeduct, // Negative to deduct
-    });
-  });
-
-  if (inventoryUpdates.length > 0) {
-    const { error: inventoryError } = await upsetInventory(inventoryUpdates);
-
-    if (inventoryError) {
-      // If inventory update fails, we should try to roll back the financial transaction and sales order
-      // to avoid data inconsistency.
-      await supabase.from("transactions").delete().eq("id", transactionData.id);
-      await supabase
-        .from("sales_orders")
-        .delete()
-        .eq("order_id", orderData.order_id);
-      throw new Error(`Failed to update inventory: ${inventoryError.message}`);
-    }
-  }
-
-  // Step 5: Deduct quantities from product lots for lot-managed products
-  const lotDeductions: Array<{ lotId: number; quantityToDeduct: number }> = [];
-
-  // Collect lot deductions from product lot items (includes both regular items and combo items)
-  productLotItems.forEach((item) => {
-    lotDeductions.push({
-      lotId: item.lot_id,
-      quantityToDeduct: item.quantity,
-    });
-  });
-
-  // Execute lot quantity deductions if any
-  if (lotDeductions.length > 0) {
-    const { errors, success } = await batchDeductLotQuantities(lotDeductions);
-
-    if (!success) {
-      console.error("Lot Quantity Deduction Errors:", errors);
-      // Log the errors but don't rollback - inventory was already updated
-      // The lot quantities will be synced during next inventory sync
-      // This is a soft failure to prevent order loss
-    }
-  }
-
-  // Step 6: Create VAT invoice records (auto-create pending VAT invoices for POS)
-  // Map ALL items from orderItems and comboItems, not just productLotItems
-  const vatInvoiceItems: any[] = [];
-
-  // Regular order items - VAT mặc định 10%
-  orderItems.forEach((item) => {
-    vatInvoiceItems.push({
-      warehouse_id: warehouseId,
-      product_id: item.product_id,
-      product_lot_id: item.lot_id,
-      quantity: item.quantity,
-      unit_price: item.unit_price,
-      total_amount: item.unit_price * item.quantity,
-      vat_amount: (item.unit_price * item.quantity * 10) / 100,
-      vat_percent: 10,
-      b2b_quote_id: null,
-      sale_order_id: orderData.order_id,
-      status: "pending" as const,
-    });
-  });
-
-  // Combo items - VAT mặc định 10%
-  comboItems.forEach((item) => {
-    vatInvoiceItems.push({
-      warehouse_id: warehouseId,
-      product_id: item.product_id,
-      product_lot_id: item.lot_id,
-      quantity: item.quantity,
-      unit_price: item.unit_price,
-      total_amount: item.unit_price * item.quantity,
-      vat_amount: (item.unit_price * item.quantity * 10) / 100,
-      vat_percent: 10,
-      b2b_quote_id: null,
-      sale_order_id: orderData.order_id,
-      status: "pending" as const,
-    });
-  });
-
-  if (vatInvoiceItems.length > 0) {
-    // Import VAT service
-    const { createBulkVATInvoicesOut } = await import("./vatInvoiceService");
-    const { error: vatError } = await createBulkVATInvoicesOut(vatInvoiceItems);
-
-    if (vatError) {
-      console.warn("Failed to create VAT invoices:", vatError);
-      // Don't throw error - VAT invoice can be created manually later
-    }
-  }
-
-  return { transactionData, orderData };
 };
 
 /**

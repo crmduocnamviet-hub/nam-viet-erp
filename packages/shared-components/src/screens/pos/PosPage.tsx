@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Typography,
   Row,
@@ -1102,51 +1102,102 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
   }, [cartItemsWithPricing, promoDiscount]);
 
   // Handle promo code application
-  const handleApplyPromoCode = async () => {
-    if (!promoCode.trim()) {
-      setPromoCodeError("Vui lòng nhập mã khuyến mãi");
-      return;
-    }
+  const handleApplyPromoCode = useCallback(
+    async (codeToApply?: string) => {
+      // Use parameter if provided, otherwise use state
+      const trimmedCode = (codeToApply || promoCode).trim();
 
-    try {
-      // Pass cart items for condition checking
-      const {
-        discountAmount,
-        promoCode: appliedCode,
-        promoName,
-        error,
-      } = await applyPromoCode(
-        promoCode.trim(),
-        cartItemsWithPricing.itemTotal, // Apply to total after product discounts
-        cart, // Pass cart items to check manufacturers and categories
-      );
+      // Validate input
+      if (!trimmedCode) {
+        setPromoCodeError("Vui lòng nhập mã khuyến mãi");
+        return;
+      }
 
-      if (error) {
-        setPromoCodeError(error.message);
-        setPromoDiscount(0);
-        setAppliedPromoCode(null);
-      } else {
+      // Check if cart is empty
+      if (cart.length === 0) {
+        setPromoCodeError("Giỏ hàng đang trống");
+        return;
+      }
+
+      try {
+        // Apply promo code
+        const {
+          discountAmount,
+          promoCode: appliedCode,
+          promoName,
+          error,
+        } = await applyPromoCode(
+          trimmedCode,
+          cartItemsWithPricing.itemTotal,
+          cart,
+        );
+
+        if (error) {
+          // Handle error
+          setPromoCodeError(error.message);
+          setPromoDiscount(0);
+          setAppliedPromoCode(null);
+          return;
+        }
+
+        // Success - apply discount
         setPromoCodeError("");
         setPromoDiscount(discountAmount);
         setAppliedPromoCode(promoName || appliedCode);
+        setPromoCode(""); // Clear input after successful application
+
         notification.success({
           message: "Áp dụng mã khuyến mãi thành công!",
           description: `Giảm ${discountAmount.toLocaleString()}đ`,
         });
+      } catch (error) {
+        console.error("Error applying promo code:", error);
+        setPromoCodeError("Không thể áp dụng mã khuyến mãi");
+        setPromoDiscount(0);
+        setAppliedPromoCode(null);
       }
-    } catch (error) {
-      setPromoCodeError("Không thể áp dụng mã khuyến mãi");
-      setPromoDiscount(0);
-      setAppliedPromoCode(null);
-    }
-  };
+    },
+    [promoCode, cart, cartItemsWithPricing.itemTotal, notification],
+  );
 
-  const handleRemovePromoCode = () => {
+  const handleRemovePromoCode = useCallback(() => {
     setPromoCode("");
     setAppliedPromoCode(null);
     setPromoDiscount(0);
     setPromoCodeError("");
-  };
+  }, []);
+
+  // Re-validate promo code when cart changes
+  useEffect(() => {
+    // Only re-validate if promo code is already applied
+    if (appliedPromoCode && cart.length > 0) {
+      const revalidatePromo = async () => {
+        try {
+          const { discountAmount, error } = await applyPromoCode(
+            promoCode.trim(),
+            cartItemsWithPricing.itemTotal,
+            cart,
+          );
+
+          if (error) {
+            // Promo code is no longer valid, remove it
+            handleRemovePromoCode();
+            notification.warning({
+              message: "Mã khuyến mãi không còn hợp lệ",
+              description: error.message,
+            });
+          } else if (discountAmount !== promoDiscount) {
+            // Discount amount changed, update it
+            setPromoDiscount(discountAmount);
+          }
+        } catch (error) {
+          console.error("Error revalidating promo code:", error);
+        }
+      };
+
+      revalidatePromo();
+    }
+  }, [cart, cartItemsWithPricing.itemTotal]);
 
   // Payment Handlers
   const handleOpenPaymentModal = (method: "cash" | "card") => {
