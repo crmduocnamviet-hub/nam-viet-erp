@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Form,
   Input,
@@ -10,7 +10,10 @@ import {
   Col,
 } from "antd";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@nam-viet-erp/services";
+import { supabase, getEmployeeByUserId } from "@nam-viet-erp/services";
+import { useAuth } from "../hooks/useAuth";
+import { useEmployeeStore, useAuthStore } from "@nam-viet-erp/store";
+import { ROLE_PERMISSIONS } from "@nam-viet-erp/shared-components";
 
 const { Title, Text } = Typography;
 
@@ -18,19 +21,70 @@ const LoginPageContent: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { notification } = AntApp.useApp();
+  const { session } = useAuth();
+  const setEmployee = useEmployeeStore((state) => state.setEmployee);
+  const setPermissions = useEmployeeStore((state) => state.setPermissions);
+  const setUser = useAuthStore((state) => state.setUser);
+  const setSession = useAuthStore((state) => state.setSession);
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (session?.user) {
+      navigate("/", { replace: true });
+    }
+  }, [session, navigate]);
 
   const handleLogin = async (values: any) => {
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: values.email,
-        password: values.password,
-      });
+      // Step 1: Sign in with password
+      const { data: authData, error: authError } =
+        await supabase.auth.signInWithPassword({
+          email: values.email,
+          password: values.password,
+        });
 
-      if (error) throw error;
+      if (authError) throw authError;
 
-      notification?.success({ message: "Đăng nhập thành công!" });
-      navigate("/");
+      // Step 2: Sync session to auth store
+      if (authData?.user && authData?.session) {
+        setUser(authData.user as any);
+        setSession(authData.session as any);
+      }
+
+      // Step 3: Fetch employee data before navigating
+      if (authData?.user) {
+        const { data: employee, error: employeeError } =
+          await getEmployeeByUserId(authData.user.id);
+
+        if (employeeError) {
+          throw new Error("Không thể tải thông tin nhân viên");
+        }
+
+        if (!employee) {
+          throw new Error("Không tìm thấy thông tin nhân viên");
+        }
+
+        // Set employee to store
+        setEmployee(employee);
+
+        // Set permissions based on role
+        const rolePermissions =
+          ROLE_PERMISSIONS[
+            employee.role_name as keyof typeof ROLE_PERMISSIONS
+          ] || [];
+        setPermissions(employee.permissions || rolePermissions);
+
+        notification?.success({
+          message: "Đăng nhập thành công!",
+          description: `Chào mừng trở lại, ${employee.full_name || "bạn"}!`,
+        });
+      } else {
+        notification?.success({ message: "Đăng nhập thành công!" });
+      }
+
+      // Step 4: Navigate to dashboard
+      navigate("/", { replace: true });
     } catch (error: any) {
       notification.error({
         message: "Đăng nhập thất bại",

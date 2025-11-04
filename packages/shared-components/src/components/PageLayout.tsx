@@ -40,16 +40,17 @@ const PageLayout: React.FC<PageLayoutProps> = ({
   };
 
   return (
-    <div style={{ padding: COMMON_SPACING.pagePadding }}>
+    <div style={{ padding: "8px" }}>
       {/* Header Section */}
-      <div style={{ marginBottom: 18 }}>
+      <div style={{ marginBottom: 24 }}>
         {/* Breadcrumb */}
         {breadcrumbs && breadcrumbs.length > 0 && (
           <Breadcrumb
             style={{ marginBottom: 16 }}
             items={breadcrumbs.map((item) => ({
               title: item.title,
-              href: item.href,
+              ...(item.href &&
+                !item.href.startsWith("javascript:") && { href: item.href }),
               ...(item.icon && { icon: item.icon }),
             }))}
           />

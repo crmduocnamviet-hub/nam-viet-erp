@@ -11,6 +11,18 @@ import {
   SettingOutlined,
   UserOutlined,
   InboxOutlined,
+  CarOutlined,
+  ContainerOutlined,
+  ProfileOutlined,
+  DollarOutlined,
+  FileTextOutlined,
+  SwapOutlined,
+  GiftOutlined,
+  TeamOutlined,
+  ApartmentOutlined,
+  AuditOutlined,
+  OrderedListOutlined,
+  FileAddOutlined,
 } from "@ant-design/icons";
 import { hasScreenPermission } from "../screens";
 
@@ -30,28 +42,41 @@ export const SALE_APP_MENU: MenuItemConfig[] = [
     key: "/",
     screenKey: "staff.sales-dashboard",
     permissions: ["sales.dashboard"],
-    icon: <UserOutlined />,
+    icon: <DashboardOutlined />,
   },
   {
     label: "📋 Công việc hôm nay",
     key: "/",
     screenKey: "staff.inventory-dashboard",
     permissions: ["inventory.dashboard"],
-    icon: <UserOutlined />,
+    icon: <ContainerOutlined />,
   },
   {
     label: "📋 Công việc hôm nay",
     key: "/",
     screenKey: "staff.delivery-dashboard",
     permissions: ["delivery.dashboard"],
-    icon: <UserOutlined />,
+    icon: <CarOutlined />,
   },
   {
     label: "💰 Bán hàng (POS)",
-    key: "/pos",
+    key: "pos",
     icon: <ShoppingCartOutlined />,
-    screenKey: "pos.main",
     permissions: ["pos.access"],
+    children: [
+      {
+        label: "Bán hàng (POS)",
+        key: "/pos",
+        screenKey: "pos.main",
+        permissions: ["pos.access"],
+      },
+      {
+        label: "Danh sách Đơn hàng POS",
+        key: "/pos/orders",
+        screenKey: "pos.orders",
+        permissions: ["pos.access", "sales.view"],
+      },
+    ],
   },
   {
     label: "🏢 Bán Buôn",
@@ -77,12 +102,19 @@ export const SALE_APP_MENU: MenuItemConfig[] = [
         screenKey: "b2b.orders",
         permissions: ["b2b.view"],
       },
+      {
+        label: "Quản Lý Tài Chính",
+        key: "/b2b/financial",
+        screenKey: "b2b.financial",
+        permissions: ["b2b.access", "financial.access"],
+        icon: <DollarOutlined />,
+      },
     ],
   },
   {
     label: "📦 Sản phẩm",
     key: "products",
-    icon: <MedicineBoxOutlined />,
+    icon: <GiftOutlined />,
     children: [
       {
         label: "Danh sách sản phẩm",
@@ -151,7 +183,7 @@ export const SALE_APP_MENU: MenuItemConfig[] = [
   {
     label: "🏢 Nhà Cung Cấp",
     key: "/warehouse/suppliers",
-    icon: <ShopOutlined />,
+    icon: <TeamOutlined />,
     screenKey: "warehouse.suppliers",
     permissions: ["warehouse.suppliers.view"],
   },
@@ -178,6 +210,19 @@ export const SALE_APP_MENU: MenuItemConfig[] = [
         key: "/medical-records",
         screenKey: "medical.records",
         permissions: ["medical.access"],
+      },
+    ],
+  },
+  {
+    label: "👤 Tài Khoản",
+    key: "user",
+    icon: <ProfileOutlined />,
+    children: [
+      {
+        label: "Thông Tin Cá Nhân",
+        key: "/profile",
+        screenKey: "user.profile",
+        permissions: [],
       },
     ],
   },

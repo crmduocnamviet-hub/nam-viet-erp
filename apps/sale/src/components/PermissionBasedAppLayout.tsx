@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import {
   Layout,
@@ -10,6 +10,10 @@ import {
   Grid,
   Drawer,
   Modal,
+  Spin,
+  Row,
+  Alert,
+  App,
 } from "antd";
 import {
   MenuOutlined,
@@ -24,6 +28,7 @@ import {
   generateMenu,
   SALE_APP_MENU,
 } from "@nam-viet-erp/shared-components";
+import { useEmployee, useEmployeeStore } from "@nam-viet-erp/store";
 
 import logo from "../assets/logo.png";
 
@@ -58,16 +63,64 @@ const namVietTheme = {
 
 // Main component with providers
 const PermissionBasedAppLayout: React.FC = () => {
+  const employee = useEmployee();
+  const isLoading = useEmployeeStore((state) => state.isLoading);
+
   // Additional context to pass to screens
   const screenContext = {
     appType: "sale",
   };
 
+  // Show loading state
+  if (isLoading) {
+    return (
+      <ConfigProvider theme={namVietTheme} locale={viVN}>
+        <Row justify="center" align="middle" style={{ minHeight: "100vh" }}>
+          <Spin size="large" />
+        </Row>
+      </ConfigProvider>
+    );
+  }
+
+  // Show error if no employee
+  if (!employee) {
+    return (
+      <ConfigProvider theme={namVietTheme} locale={viVN}>
+        <Row justify="center" align="middle" style={{ minHeight: "100vh" }}>
+          <Alert
+            message="Không thể tải thông tin nhân viên"
+            description="Vui lòng đăng xuất và đăng nhập lại"
+            type="error"
+            showIcon
+          />
+        </Row>
+      </ConfigProvider>
+    );
+  }
+
+  // Show warning if employee is inactive
+  if (!employee.is_active) {
+    return (
+      <ConfigProvider theme={namVietTheme} locale={viVN}>
+        <Row justify="center" align="middle" style={{ minHeight: "100vh" }}>
+          <Alert
+            message="Tài khoản đã bị vô hiệu hóa"
+            description="Vui lòng liên hệ quản trị viên để được hỗ trợ"
+            type="warning"
+            showIcon
+          />
+        </Row>
+      </ConfigProvider>
+    );
+  }
+
   return (
     <ConfigProvider theme={namVietTheme} locale={viVN}>
-      <ScreenProvider context={screenContext}>
-        <AppLayoutContent />
-      </ScreenProvider>
+      <App>
+        <ScreenProvider context={screenContext}>
+          <AppLayoutContent />
+        </ScreenProvider>
+      </App>
     </ConfigProvider>
   );
 };
@@ -115,24 +168,101 @@ const AppLayoutContent: React.FC = () => {
     });
   };
 
-  const ComingSoon = () => (
-    <div style={{ padding: "24px", textAlign: "center" }}>
-      <h1>Tính năng này sắp ra mắt!</h1>
-    </div>
-  );
+  const ComingSoon = () => {
+    const navigate = useNavigate();
+    useEffect(() => {
+      // Redirect to home after 2 seconds if on unknown route
+      const timer = setTimeout(() => {
+        navigate("/", { replace: true });
+      }, 2000);
+      return () => clearTimeout(timer);
+    }, [navigate]);
 
-  // Fullscreen mode for POS
+    return (
+      <div style={{ padding: "24px", textAlign: "center" }}>
+        <h1>Trang không tồn tại</h1>
+        <p>Đang chuyển về trang chủ...</p>
+      </div>
+    );
+  };
+
+  // Fullscreen mode for POS - but still show sidebar for navigation
   if (isFullscreenRoute) {
     return (
-      <div style={{ width: "100vw", height: "100vh", overflow: "hidden" }}>
-        <Routes>
-          <Route path="/pos" element={renderScreen("pos.main")} />
-          <Route
-            path="/create-quote"
-            element={renderScreen("b2b.create-quote")}
-          />
-        </Routes>
-      </div>
+      <Layout style={{ minHeight: "100vh" }}>
+        {!isMobile && (
+          <Sider
+            collapsible
+            collapsed={collapsed}
+            onCollapse={(value) => setCollapsed(value)}
+            width={230}
+            collapsedWidth={50}
+            style={{
+              overflow: "auto",
+              height: "100vh",
+              position: "fixed",
+              left: 0,
+              top: 0,
+              bottom: 0,
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            <div
+              style={{
+                height: "48px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "10px",
+              }}
+            >
+              <Avatar
+                src={logo}
+                shape="square"
+                size="large"
+                style={{ backgroundColor: "transparent" }}
+              />
+              {!collapsed && (
+                <Title level={5} style={{ color: "white", margin: 0 }}>
+                  Nam Việt Sale
+                </Title>
+              )}
+            </div>
+            <Menu
+              theme="dark"
+              mode="inline"
+              selectedKeys={[location.pathname]}
+              items={menuItems}
+              onClick={handleMenuClick}
+              style={{ flex: 1, borderRight: 0 }}
+            />
+          </Sider>
+        )}
+        <Layout
+          style={{
+            marginLeft:
+              !isMobile && !collapsed ? 230 : !isMobile && collapsed ? 50 : 0,
+          }}
+        >
+          <Content
+            style={{
+              margin: "0",
+              padding: "0",
+              overflow: "hidden",
+              height: "100vh",
+            }}
+          >
+            <Routes>
+              <Route path="/pos" element={renderScreen("pos.main")} />
+              <Route
+                path="/create-quote"
+                element={renderScreen("b2b.create-quote")}
+              />
+            </Routes>
+          </Content>
+        </Layout>
+      </Layout>
     );
   }
 
@@ -319,13 +449,13 @@ const AppLayoutContent: React.FC = () => {
               />
             </div>
           )}
-          <Content style={{ margin: "16px", overflow: "initial" }}>
+          <Content style={{ margin: "0", padding: "8px", overflow: "initial" }}>
             <div
               style={{
-                padding: 16,
-                background: "#ffffff",
+                padding: 0,
+                background: "transparent",
                 borderRadius: namVietTheme.token.borderRadius,
-                minHeight: "calc(100vh - 70px)",
+                minHeight: "calc(100vh - 16px)",
               }}
             >
               <Routes>
@@ -355,6 +485,15 @@ const AppLayoutContent: React.FC = () => {
                   path="/create-quote"
                   element={renderScreen("b2b.create-quote")}
                 />
+                <Route
+                  path="/b2b/financial"
+                  element={renderScreen("b2b.financial")}
+                />
+                <Route
+                  path="/pos/orders"
+                  element={renderScreen("pos.orders")}
+                />
+                <Route path="/profile" element={renderScreen("user.profile")} />
                 <Route
                   path="/scheduling"
                   element={renderScreen("medical.scheduling")}

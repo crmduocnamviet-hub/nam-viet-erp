@@ -98,16 +98,35 @@ const PurchaseOrdersPage: React.FC = () => {
     setDateRange(null);
   };
 
-  // Filter by search text (client-side)
+  // Filter by search text (client-side) - includes product name search
   const filteredData = useMemo(() => {
     if (!searchText) return purchaseOrders;
 
     const lowerSearch = searchText.toLowerCase();
-    return purchaseOrders.filter(
-      (po) =>
-        po.po_number?.toLowerCase().includes(lowerSearch) ||
-        po.supplier?.name?.toLowerCase().includes(lowerSearch),
-    );
+    return purchaseOrders.filter((po) => {
+      // Search by PO number
+      if (po.po_number?.toLowerCase().includes(lowerSearch)) return true;
+
+      // Search by supplier name
+      if (po.supplier?.name?.toLowerCase().includes(lowerSearch)) return true;
+
+      // Search by product name in order items
+      if (po.items && Array.isArray(po.items)) {
+        const hasMatchingProduct = po.items.some((item: any) => {
+          const productName = item.product?.name?.toLowerCase() || "";
+          const productSku = item.product?.sku?.toLowerCase() || "";
+          const productBarcode = item.product?.barcode?.toLowerCase() || "";
+          return (
+            productName.includes(lowerSearch) ||
+            productSku.includes(lowerSearch) ||
+            productBarcode.includes(lowerSearch)
+          );
+        });
+        if (hasMatchingProduct) return true;
+      }
+
+      return false;
+    });
   }, [purchaseOrders, searchText]);
 
   // Calculate statistics

@@ -347,9 +347,18 @@ const AppLayout: React.FC = () => {
                   element={renderScreen("b2b.dashboard", { employee })}
                 />
                 <Route
+                  path="/b2b/financial"
+                  element={renderScreen("b2b.financial", { employee })}
+                />
+                <Route
                   path="/create-quote"
                   element={renderScreen("b2b.create-quote", { employee })}
                 />
+                <Route
+                  path="/pos/orders"
+                  element={renderScreen("pos.orders", { employee })}
+                />
+                <Route path="/profile" element={renderScreen("user.profile")} />
                 <Route
                   path="/scheduling"
                   element={renderScreen("medical.scheduling")}

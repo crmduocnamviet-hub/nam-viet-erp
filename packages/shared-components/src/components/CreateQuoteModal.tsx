@@ -20,7 +20,10 @@ interface CreateQuoteModalProps {
   onSaveDraft: (values: any) => Promise<void>;
   onSendQuote: (values: any) => Promise<void>;
   onCreateNewCustomer: () => void;
-  onCustomerChange: (field: "customer_name" | "customer_code", value: string) => void;
+  onCustomerChange: (
+    field: "customer_name" | "customer_code",
+    value: string,
+  ) => void;
 }
 
 const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({
@@ -34,7 +37,17 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({
 }) => {
   return (
     <Modal
-      title="Tạo báo giá B2B mới"
+      title={
+        <div>
+          <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 4 }}>
+            Tạo báo giá B2B mới
+          </div>
+          <Text type="secondary" style={{ fontSize: 13 }}>
+            Nhập thông tin khách hàng và báo giá. Sau khi tạo, bạn sẽ được
+            chuyển đến trang chỉnh sửa để thêm sản phẩm.
+          </Text>
+        </div>
+      }
       open={open}
       onCancel={onCancel}
       footer={[
@@ -67,12 +80,29 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({
             }
           }}
         >
-          Gửi báo giá
+          Tạo báo giá
         </Button>,
       ]}
       width={800}
     >
       <Form layout="vertical" form={form}>
+        <div
+          style={{
+            marginBottom: 16,
+            padding: 12,
+            background: "#f0f7ff",
+            borderRadius: 6,
+          }}
+        >
+          <Text strong style={{ display: "block", marginBottom: 4 }}>
+            📋 Bước 1: Thông tin khách hàng
+          </Text>
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            Nhập thông tin khách hàng cho báo giá mới. Nếu chưa có, bạn có thể
+            tạo khách hàng mới.
+          </Text>
+        </div>
+
         <Row gutter={16} align="middle">
           <Col span={24}>
             <div
@@ -90,7 +120,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({
                 onClick={onCreateNewCustomer}
                 size="small"
               >
-                Tạo khách hàng mới
+                + Tạo khách hàng mới
               </Button>
             </div>
           </Col>
@@ -125,7 +155,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({
         </Row>
 
         <Row gutter={16}>
-          <Col span={8}>
+          <Col span={12}>
             <Form.Item
               name="valid_until"
               label="Ngày hết hạn báo giá"
@@ -136,10 +166,11 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({
               <DatePicker
                 style={{ width: "100%" }}
                 placeholder="Chọn ngày hết hạn"
+                format="DD/MM/YYYY"
               />
             </Form.Item>
           </Col>
-          <Col span={8}>
+          <Col span={6}>
             <Form.Item name="discount_percent" label="Chiết khấu (%)">
               <Input
                 placeholder="0"
@@ -150,7 +181,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({
               />
             </Form.Item>
           </Col>
-          <Col span={8}>
+          <Col span={6}>
             <Form.Item name="tax_percent" label="Thuế (%)">
               <Input
                 placeholder="0"
@@ -162,6 +193,23 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({
             </Form.Item>
           </Col>
         </Row>
+
+        <div
+          style={{
+            marginTop: 16,
+            marginBottom: 16,
+            padding: 12,
+            background: "#fff7e6",
+            borderRadius: 6,
+          }}
+        >
+          <Text strong style={{ display: "block", marginBottom: 4 }}>
+            📞 Thông tin liên hệ (tùy chọn)
+          </Text>
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            Các thông tin này sẽ được lưu và tự động điền cho các báo giá sau.
+          </Text>
+        </div>
 
         <Row gutter={16}>
           <Col span={12}>
@@ -184,7 +232,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({
         <Form.Item name="notes" label="Ghi chú">
           <Input.TextArea
             rows={3}
-            placeholder="Thêm ghi chú cho báo giá..."
+            placeholder="Thêm ghi chú cho báo giá (ví dụ: điều kiện thanh toán, yêu cầu đặc biệt...)"
           />
         </Form.Item>
       </Form>

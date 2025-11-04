@@ -59,7 +59,7 @@ const B2BOrderManagementPage: React.FC<B2BOrderManagementPageProps> = ({
   const [createQuoteForm] = Form.useForm();
   const [createQuoteModalOpen, setCreateQuoteModalOpen] = useState(false);
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(
-    null
+    null,
   );
   const [loading, setLoading] = useState(false);
   const screens = useBreakpoint();
@@ -68,7 +68,7 @@ const B2BOrderManagementPage: React.FC<B2BOrderManagementPageProps> = ({
   // Customer search state
   const [customerSearchModalOpen, setCustomerSearchModalOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<IB2BCustomer | null>(
-    null
+    null,
   );
 
   // Role detection
@@ -122,15 +122,15 @@ const B2BOrderManagementPage: React.FC<B2BOrderManagementPageProps> = ({
         byStage: statsResponse.data?.byStage || {},
         dateRangeText: dateRange
           ? `${dateRange[0].format("DD/MM/YYYY")} - ${dateRange[1].format(
-              "DD/MM/YYYY"
+              "DD/MM/YYYY",
             )}`
           : "Tất cả thời gian",
         roleContext:
           isInventoryStaff && !isSalesStaff
             ? "inventory"
             : isDeliveryStaff && !isSalesStaff && !isInventoryStaff
-            ? "delivery"
-            : "sales",
+              ? "delivery"
+              : "sales",
       };
       setStatistics(stats);
     } catch (error: any) {
@@ -282,15 +282,15 @@ const B2BOrderManagementPage: React.FC<B2BOrderManagementPageProps> = ({
             {statistics?.roleContext === "inventory"
               ? "Đơn hàng chờ xử lý - Kho"
               : statistics?.roleContext === "delivery"
-              ? "Đơn hàng chờ giao - Vận chuyển"
-              : "Quản lý Đơn hàng B2B"}
+                ? "Đơn hàng chờ giao - Vận chuyển"
+                : "Quản lý Đơn hàng B2B"}
           </Title>
           <Text type="secondary">
             {statistics?.roleContext === "inventory"
               ? "Xử lý đơn hàng đã được chấp nhận - Đóng gói và chuẩn bị giao hàng"
               : statistics?.roleContext === "delivery"
-              ? "Giao hàng và hoàn tất đơn hàng"
-              : "Tạo báo giá và quản lý đơn hàng bán buôn"}
+                ? "Giao hàng và hoàn tất đơn hàng"
+                : "Tạo báo giá và quản lý đơn hàng bán buôn"}
           </Text>
         </Col>
         <Col>
@@ -350,8 +350,8 @@ const B2BOrderManagementPage: React.FC<B2BOrderManagementPageProps> = ({
                 statistics?.roleContext === "inventory"
                   ? "Đơn hàng chờ xử lý"
                   : statistics?.roleContext === "delivery"
-                  ? "Đơn hàng chờ giao"
-                  : "Tổng báo giá"
+                    ? "Đơn hàng chờ giao"
+                    : "Tổng báo giá"
               }
               value={statistics?.total || 0}
               prefix={<ShopOutlined />}
@@ -806,7 +806,13 @@ const B2BOrderManagementPage: React.FC<B2BOrderManagementPageProps> = ({
               style={{ textAlign: "center", padding: "40px 0", color: "#999" }}
             >
               <UserOutlined style={{ fontSize: 48, marginBottom: 16 }} />
-              <div>Vui lòng chọn khách hàng để tạo báo giá</div>
+              <div style={{ marginBottom: 8 }}>
+                <Text strong>Chưa chọn khách hàng</Text>
+              </div>
+              <div style={{ fontSize: 12, color: "#999" }}>
+                Nhấn nút "Chọn khách hàng" ở góc trên để tìm kiếm hoặc tạo khách
+                hàng B2B mới
+              </div>
             </div>
           )}
         </Card>

@@ -236,6 +236,17 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
             : undefined; // If no filter or invalid filter, don't restrict further, service will handle
       }
 
+      // First, get total count with same filters (but without pagination)
+      const countResponse = await getB2BQuotes({
+        customerName: searchKeyword || filters.customerName || undefined,
+        employeeId: filters.employeeId || undefined,
+        stage: stageFilter || undefined,
+        startDate: filters.startDate || undefined,
+        endDate: filters.endDate || undefined,
+        // No pagination for count
+      });
+
+      // Then get paginated data
       const response = await getB2BQuotes({
         // Search keyword (general search)
         customerName: searchKeyword || filters.customerName || undefined,
@@ -258,6 +269,7 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
       if (response.error) throw response.error;
 
       let quotesData = (response.data || []) as B2BQuoteWithStatus[];
+      let allQuotesData = (countResponse.data || []) as B2BQuoteWithStatus[];
 
       // Client-side filtering for inventory staff - only show accepted and inventory-relevant orders
       if (
@@ -273,10 +285,14 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
         quotesData = quotesData.filter((quote) =>
           inventoryRelevantStages.includes(quote.quote_stage),
         );
+        allQuotesData = allQuotesData.filter((quote) =>
+          inventoryRelevantStages.includes(quote.quote_stage),
+        );
       }
 
       setQuotes(quotesData);
-      setTotal(quotesData.length); // For now, since we don't have total count from service
+      // Use actual total count from all matching quotes (not just current page)
+      setTotal(allQuotesData.length);
 
       // Clear selected orders if they no longer exist in the current data
       const currentOrderIds = quotesData.map((quote) => quote.quote_id);
@@ -972,11 +988,15 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
       if (newQuote) {
         notification?.success({
           message: "Thành công",
-          description: `${isDraft ? "Lưu nháp" : "Gửi"} báo giá thành công`,
+          description: `${isDraft ? "Lưu nháp" : "Tạo"} báo giá thành công. Đang chuyển đến trang chỉnh sửa để thêm sản phẩm...`,
+          duration: 3,
         });
         setCreateQuoteModalOpen(false);
         createQuoteForm.resetFields();
-        loadOrders(); // Reload data
+        // Navigate to edit page to add products
+        setTimeout(() => {
+          navigate(`/b2b/orders/edit/${newQuote.quote_id}`);
+        }, 500);
       }
     } catch (error) {
       console.error("Error creating quote:", error);

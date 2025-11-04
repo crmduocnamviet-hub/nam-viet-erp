@@ -13,6 +13,9 @@ import {
   Alert,
   List,
   Modal,
+  Empty,
+  notification,
+  Spin,
 } from "antd";
 import {
   ScanOutlined,
@@ -42,28 +45,37 @@ const SalesOrderPickingPage: React.FC = () => {
       setLoadingOrders(true);
       const { getSalesOrders } = await import("@nam-viet-erp/services");
 
-      // Fetch orders that are completed but may need picking/packaging
-      // Orders with operational_status = "Hoàn tất" or "Đang xử lý"
+      // Fetch orders that need picking - orders that are completed but not yet shipped
+      // Get orders with various statuses that might need picking
       const { data, error } = await getSalesOrders({
-        operationalStatus: undefined, // Get all orders
+        // Remove strict filter - get all orders and filter client-side
         limit: 100,
-        // Filter for orders that might need picking
       });
 
       if (error) {
         console.error("Error loading pending orders:", error);
+        notification.error({
+          message: "Lỗi tải dữ liệu",
+          description: error.message || "Không thể tải danh sách đơn hàng",
+        });
         return;
       }
 
-      // Filter orders that need picking (you can adjust this logic based on your business rules)
-      // For now, we'll show orders that are not yet shipped
+      // Map orders to display format
       const ordersNeedingPicking = (data || [])
         .filter((order: any) => {
-          // Add your business logic here - e.g., orders that are ready for picking
-          return (
-            order.operational_status !== "Đã giao" &&
-            order.operational_status !== "Đã hủy"
-          );
+          // Show orders that:
+          // 1. Have items
+          // 2. Are completed/ready for picking (not yet shipped or cancelled)
+          // 3. Include POS and B2B orders
+          const hasItems =
+            order.sales_order_items && order.sales_order_items.length > 0;
+          const isReadyForPicking =
+            order.operational_status === "Hoàn tất" ||
+            order.operational_status === "Đang xử lý" ||
+            (order.operational_status !== "Đã giao" &&
+              order.operational_status !== "Đã hủy");
+          return hasItems && isReadyForPicking;
         })
         .map((order: any) => ({
           order_id: order.order_id,
@@ -72,13 +84,27 @@ const SalesOrderPickingPage: React.FC = () => {
           total_items: order.sales_order_items?.length || 0,
           total_value: order.total_value || 0,
           created_at: order.order_datetime || order.created_at,
-          items: order.sales_order_items || [],
+          items: (order.sales_order_items || []).map((item: any) => ({
+            id: item.id,
+            product_name:
+              item.products?.name ||
+              item.product_name ||
+              "Sản phẩm không xác định",
+            quantity: item.quantity || 0,
+            barcode: item.products?.barcode || item.barcode,
+            lot_number: item.lot_number,
+            location: item.location || "Chưa xác định",
+          })),
           ...order,
         }));
 
       setPendingOrders(ordersNeedingPicking);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error in loadPendingOrders:", error);
+      notification.error({
+        message: "Lỗi",
+        description: error.message || "Không thể tải danh sách đơn hàng",
+      });
     } finally {
       setLoadingOrders(false);
     }
@@ -260,15 +286,27 @@ const SalesOrderPickingPage: React.FC = () => {
       {!selectedOrder ? (
         // List of pending sales orders
         <Card title="Đơn Hàng Chờ Lấy">
-          <Table
-            columns={orderColumns}
-            dataSource={pendingOrders}
-            rowKey="order_id"
-            loading={loadingOrders}
-            pagination={{
-              showTotal: (total) => `Tổng ${total} đơn hàng`,
-            }}
-          />
+          {loadingOrders ? (
+            <div style={{ textAlign: "center", padding: "40px" }}>
+              <Spin size="large" tip="Đang tải danh sách đơn hàng..." />
+            </div>
+          ) : pendingOrders.length === 0 ? (
+            <Empty
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+              description="Không có đơn hàng nào cần lấy hàng"
+            />
+          ) : (
+            <Table
+              columns={orderColumns}
+              dataSource={pendingOrders}
+              rowKey="order_id"
+              loading={loadingOrders}
+              pagination={{
+                showTotal: (total) => `Tổng ${total} đơn hàng`,
+                showSizeChanger: true,
+              }}
+            />
+          )}
         </Card>
       ) : (
         // Picking interface for selected order

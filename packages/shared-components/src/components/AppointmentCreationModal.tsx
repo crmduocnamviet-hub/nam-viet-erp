@@ -542,9 +542,16 @@ const AppointmentCreationModal: React.FC<AppointmentCreationModalProps> = ({
     form
       .validateFields()
       .then(() => {
+        const formValues = form.getFieldsValue(true);
+        // Ensure patient_id is set correctly
+        const patientId =
+          selectedPatient?.patient_id ||
+          selectedPatient?.id ||
+          formValues.patient_id;
         const allValues = {
-          ...form.getFieldsValue(true),
-          patientId: selectedPatient?.patient_id || selectedPatient?.id,
+          ...formValues,
+          patient_id: patientId,
+          patientId: patientId, // Keep both for compatibility
         };
         onFinish(allValues);
         handleReset();

@@ -76,7 +76,6 @@ const EditPurchaseOrderPageContent: React.FC = () => {
     useProductsQuery(1000);
 
   const [items, setItems] = useState<POItem[]>([]);
-  const [addingProduct, setAddingProduct] = useState(false);
   const [isCreatingNewSupplier, setIsCreatingNewSupplier] = useState(false);
   const [newSupplierName, setNewSupplierName] = useState("");
 
@@ -151,10 +150,6 @@ const EditPurchaseOrderPageContent: React.FC = () => {
     }, 0);
   };
 
-  const handleAddProduct = () => {
-    setAddingProduct(true);
-  };
-
   const handleProductSelect = (productId: number) => {
     if (!products) return;
 
@@ -165,9 +160,9 @@ const EditPurchaseOrderPageContent: React.FC = () => {
     if (items.some((item) => item.product_id === productId)) {
       notification.warning({
         message: "Sản phẩm đã tồn tại",
-        description: "Sản phẩm này đã có trong đơn hàng",
+        description:
+          "Sản phẩm này đã có trong đơn hàng. Vui lòng tăng số lượng thay vì thêm mới.",
       });
-      setAddingProduct(false);
       return;
     }
 
@@ -185,7 +180,11 @@ const EditPurchaseOrderPageContent: React.FC = () => {
     };
 
     setItems([...items, newItem]);
-    setAddingProduct(false);
+    notification.success({
+      message: "Đã thêm sản phẩm",
+      description: `${product.name} đã được thêm vào giỏ hàng`,
+      duration: 2,
+    });
   };
 
   const handleQuantityChange = (index: number, quantity: number) => {
@@ -455,16 +454,43 @@ const EditPurchaseOrderPageContent: React.FC = () => {
                   { required: true, message: "Vui lòng chọn trạng thái" },
                 ]}
               >
-                <Select placeholder="Chọn trạng thái" size="large">
-                  <Select.Option value="draft">Nháp</Select.Option>
-                  <Select.Option value="sent">Đã gửi</Select.Option>
-                  <Select.Option value="ordered">Đã đặt hàng</Select.Option>
-                  <Select.Option value="partially_received">
-                    Nhận một phần
-                  </Select.Option>
-                  <Select.Option value="received">Hoàn thành</Select.Option>
-                  <Select.Option value="cancelled">Đã hủy</Select.Option>
-                </Select>
+                <Space wrap>
+                  {[
+                    { value: "draft", label: "Nháp", color: "default" },
+                    { value: "sent", label: "Đã gửi", color: "processing" },
+                    {
+                      value: "ordered",
+                      label: "Đã đặt hàng",
+                      color: "processing",
+                    },
+                    {
+                      value: "partially_received",
+                      label: "Nhận một phần",
+                      color: "warning",
+                    },
+                    {
+                      value: "received",
+                      label: "Hoàn thành",
+                      color: "success",
+                    },
+                    { value: "cancelled", label: "Đã hủy", color: "error" },
+                  ].map((status) => (
+                    <Button
+                      key={status.value}
+                      type={
+                        form.getFieldValue("status") === status.value
+                          ? "primary"
+                          : "default"
+                      }
+                      onClick={() =>
+                        form.setFieldsValue({ status: status.value })
+                      }
+                      style={{ marginBottom: 8 }}
+                    >
+                      {status.label}
+                    </Button>
+                  ))}
+                </Space>
               </Form.Item>
 
               <Form.Item name="notes" label="Ghi Chú">
@@ -513,45 +539,53 @@ const EditPurchaseOrderPageContent: React.FC = () => {
           {/* Right Column - Products */}
           <Col xs={24} lg={14} xl={16}>
             <Card
-              title="Sản phẩm trong đơn hàng"
-              extra={
-                <Tooltip title="Thêm sản phẩm">
-                  <Button
-                    type="primary"
-                    icon={<PlusOutlined />}
-                    onClick={handleAddProduct}
-                  />
-                </Tooltip>
+              title={
+                <Space>
+                  <ShoppingOutlined />
+                  <span>Sản phẩm trong đơn hàng ({items.length})</span>
+                </Space>
               }
             >
-              {addingProduct && (
-                <div style={{ marginBottom: 16 }}>
-                  <Select
-                    showSearch
-                    placeholder="Tìm và chọn sản phẩm..."
-                    optionFilterProp="children"
-                    size="large"
-                    style={{ width: "100%" }}
-                    onSelect={handleProductSelect}
-                    onBlur={() => setAddingProduct(false)}
-                    autoFocus
-                    filterOption={(input, option) => {
-                      if (!products) return false;
-                      const product = products.find(
-                        (p) => p.id === option?.value,
-                      );
-                      if (!product) return false;
-                      const searchStr =
-                        `${product.name} ${product.sku || ""}`.toLowerCase();
-                      return searchStr.includes(input.toLowerCase());
-                    }}
-                    options={(products || []).map((product) => ({
-                      value: product.id,
-                      label: `${product.name}${product.sku ? ` (${product.sku})` : ""}`,
-                    }))}
-                  />
-                </div>
-              )}
+              {/* Search box - Always visible, like a shopping cart */}
+              <div
+                style={{
+                  marginBottom: 16,
+                  padding: 12,
+                  background: "#f5f5f5",
+                  borderRadius: 8,
+                }}
+              >
+                <Select
+                  showSearch
+                  placeholder="🔍 Tìm kiếm và thêm sản phẩm vào giỏ hàng..."
+                  optionFilterProp="children"
+                  size="large"
+                  style={{ width: "100%" }}
+                  onSelect={handleProductSelect}
+                  allowClear
+                  filterOption={(input, option) => {
+                    if (!products) return false;
+                    const product = products.find(
+                      (p) => p.id === option?.value,
+                    );
+                    if (!product) return false;
+                    const searchStr =
+                      `${product.name} ${product.sku || ""} ${product.barcode || ""}`.toLowerCase();
+                    return searchStr.includes(input.toLowerCase());
+                  }}
+                  options={(products || []).map((product) => ({
+                    value: product.id,
+                    label: `${product.name}${product.sku ? ` (SKU: ${product.sku})` : ""}${product.wholesale_price ? ` - ${product.wholesale_price.toLocaleString("vi-VN")}đ` : ""}`,
+                  }))}
+                />
+                <Text
+                  type="secondary"
+                  style={{ fontSize: 12, display: "block", marginTop: 8 }}
+                >
+                  Gõ tên, SKU hoặc mã vạch để tìm sản phẩm. Chọn sản phẩm sẽ tự
+                  động thêm vào giỏ hàng.
+                </Text>
+              </div>
 
               <Table
                 columns={columns}

@@ -3,6 +3,10 @@ import LoginPage from "./auth/LoginPage";
 
 // Screen Imports - POS
 import PosPage from "./pos/PosPage";
+import POSOrderListPage from "./pos/POSOrderListPage";
+
+// Screen Imports - User
+import UserProfilePage from "./user/UserProfilePage";
 
 // Screen Imports - B2B
 import B2BOrderManagementPage from "./b2b/B2BOrderManagementPage";
@@ -10,6 +14,7 @@ import B2BOrderListPage from "./b2b/B2BOrderListPage";
 import QuickQuotePage from "./b2b/QuickQuotePage";
 import CreateOrderPage from "./b2b/CreateOrderPage";
 import EditB2BOrderPage from "./b2b/EditB2BOrderPage";
+import B2BFinancialManagementPage from "./b2b/B2BFinancialManagementPage";
 
 // Screen Imports - Medical
 import PatientsPage from "./medical/PatientsPage";
@@ -107,6 +112,13 @@ export const SCREEN_REGISTRY: ScreenRegistry = {
     title: "Bán hàng (POS)",
     description: "Giao diện bán hàng trực tiếp",
   },
+  "pos.orders": {
+    component: POSOrderListPage,
+    permissions: ["pos.access", "sales.view"],
+    category: "pos",
+    title: "Danh sách Đơn hàng POS",
+    description: "Xem và quản lý danh sách đơn hàng bán lẻ",
+  },
 
   // ==================== B2B SCREENS ====================
   "b2b.orders": {
@@ -136,6 +148,22 @@ export const SCREEN_REGISTRY: ScreenRegistry = {
     category: "b2b",
     title: "Tạo Báo Giá / Đơn Hàng",
     description: "Tạo báo giá và đơn hàng chi tiết với thông tin khách hàng",
+  },
+  "b2b.financial": {
+    component: B2BFinancialManagementPage,
+    permissions: ["b2b.access", "b2b.view"],
+    category: "b2b",
+    title: "Quản Lý Tài Chính B2B",
+    description: "Theo dõi và quản lý thanh toán đơn hàng B2B",
+  },
+
+  // ==================== USER SCREENS ====================
+  "user.profile": {
+    component: UserProfilePage,
+    permissions: [], // All authenticated users can access their profile
+    category: "user",
+    title: "Thông Tin Cá Nhân",
+    description: "Quản lý thông tin cá nhân và đổi mật khẩu",
   },
 
   // ==================== MEDICAL SCREENS ====================

@@ -1,5 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { Button, Row, Col, Typography, App as AntApp, Spin, DatePicker } from "antd";
+import {
+  Button,
+  Row,
+  Col,
+  Typography,
+  App as AntApp,
+  Spin,
+  DatePicker,
+} from "antd";
 import { PlusOutlined, CalendarOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import {
@@ -15,54 +23,66 @@ const SchedulingDashboard: React.FC<{
   onAppointmentClick?: (appointment: any) => void;
   selectedDate: dayjs.Dayjs;
   onDateChange: (date: dayjs.Dayjs) => void;
-}> = ({ onAppointmentClick, selectedDate, onDateChange }) => {
+  refreshTrigger?: number;
+}> = ({ onAppointmentClick, selectedDate, onDateChange, refreshTrigger }) => {
   const [appointments, setAppointments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentEmployee, setCurrentEmployee] = useState<IEmployee | null>(
-    null
+    null,
   );
 
-  useEffect(() => {
-    const loadAppointments = async () => {
-      try {
-        setLoading(true);
+  const loadAppointments = async () => {
+    try {
+      setLoading(true);
 
-        // Get current logged-in employee
-        const { data: employee, error: employeeError } =
-          await getCurrentEmployee();
-        if (employee) {
-          setCurrentEmployee(employee);
-        }
-
-        // Get appointments for selected date
-        // If employee is a doctor, filter by their ID
-        const doctorFilter =
-          employee?.role_name === "BacSi" ? employee.employee_id : undefined;
-
-        const startOfDay = selectedDate.startOf('day').toISOString();
-        const endOfDay = selectedDate.endOf('day').toISOString();
-
-        const { data, error } = await getAppointments({
-          doctorId: doctorFilter,
-          startDate: startOfDay,
-          endDate: endOfDay,
-        });
-
-        if (error) {
-          console.error("Error loading appointments:", error);
-          setAppointments([]);
-        } else {
-          setAppointments(data || []);
-        }
-      } catch (error) {
-        console.error("Error:", error);
-        setAppointments([]);
-      } finally {
-        setLoading(false);
+      // Get current logged-in employee
+      const { data: employee, error: employeeError } =
+        await getCurrentEmployee();
+      if (employee) {
+        setCurrentEmployee(employee);
       }
-    };
 
+      // Get appointments for selected date
+      // If employee is a doctor, filter by their ID
+      const doctorFilter =
+        employee?.role_name === "BacSi" ? employee.employee_id : undefined;
+
+      const startOfDay = selectedDate.startOf("day").toISOString();
+      const endOfDay = selectedDate.endOf("day").toISOString();
+
+      const { data, error } = await getAppointments({
+        doctorId: doctorFilter,
+        startDate: startOfDay,
+        endDate: endOfDay,
+      });
+
+      if (error) {
+        console.error("Error loading appointments:", error);
+        setAppointments([]);
+      } else {
+        setAppointments(data || []);
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      setAppointments([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     loadAppointments();
+  }, [selectedDate, refreshTrigger]);
+
+  // Listen for refresh events
+  useEffect(() => {
+    const handleRefresh = () => {
+      loadAppointments();
+    };
+    window.addEventListener("appointments:refresh", handleRefresh);
+    return () => {
+      window.removeEventListener("appointments:refresh", handleRefresh);
+    };
   }, [selectedDate]);
 
   if (loading) {
@@ -133,7 +153,14 @@ const SchedulingDashboard: React.FC<{
             )}
           </h3>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "12px",
+            flexWrap: "wrap",
+          }}
+        >
           <DatePicker
             value={selectedDate}
             onChange={(date) => date && onDateChange(date)}
@@ -145,7 +172,7 @@ const SchedulingDashboard: React.FC<{
           <Button
             size="small"
             onClick={() => onDateChange(dayjs())}
-            disabled={selectedDate.isSame(dayjs(), 'day')}
+            disabled={selectedDate.isSame(dayjs(), "day")}
           >
             Hôm nay
           </Button>
@@ -189,151 +216,158 @@ const SchedulingDashboard: React.FC<{
             .sort(
               (a: any, b: any) =>
                 new Date(a.scheduled_datetime).getTime() -
-                new Date(b.scheduled_datetime).getTime()
+                new Date(b.scheduled_datetime).getTime(),
             )
             .map((appointment: any) => {
               const appointmentTime = dayjs(appointment.scheduled_datetime);
-              const hour = appointmentTime.format('HH:mm');
+              const hour = appointmentTime.format("HH:mm");
 
               return (
-              <div key={appointment.appointment_id} style={{ position: "relative" }}>
-                {/* Hour marker on the left */}
                 <div
-                  style={{
-                    position: "absolute",
-                    left: "-80px",
-                    top: "20px",
-                    width: "70px",
-                    textAlign: "right",
-                    fontSize: "14px",
-                    fontWeight: "600",
-                    color: "#1890ff",
-                    paddingRight: "12px",
-                  }}
+                  key={appointment.appointment_id}
+                  style={{ position: "relative" }}
                 >
-                  {hour}
-                </div>
-
-                <div
-                  onClick={() => onAppointmentClick?.(appointment.appointment_id)}
-                  style={{
-                    backgroundColor: "white",
-                    padding: "16px",
-                    borderRadius: "8px",
-                    border: "1px solid #e8e8e8",
-                    cursor: "pointer",
-                    transition: "all 0.2s",
-                    position: "relative",
-                    boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.boxShadow =
-                      "0 4px 12px rgba(0,0,0,0.1)";
-                    e.currentTarget.style.transform = "translateY(-2px)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.boxShadow =
-                      "0 1px 4px rgba(0,0,0,0.05)";
-                    e.currentTarget.style.transform = "translateY(0)";
-                  }}
-                >
-                  {/* Timeline dot */}
+                  {/* Hour marker on the left */}
                   <div
                     style={{
                       position: "absolute",
-                      left: "-72px",
+                      left: "-80px",
                       top: "20px",
-                      width: "12px",
-                      height: "12px",
-                      borderRadius: "50%",
-                      backgroundColor: getStatusColor(appointment.current_status),
-                      border: "3px solid white",
-                      boxShadow: "0 0 0 1px #e8e8e8",
+                      width: "70px",
+                      textAlign: "right",
+                      fontSize: "14px",
+                      fontWeight: "600",
+                      color: "#1890ff",
+                      paddingRight: "12px",
                     }}
-                  />
+                  >
+                    {hour}
+                  </div>
 
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "flex-start",
-                  }}
-                >
-                  <div style={{ flex: 1 }}>
+                  <div
+                    onClick={() =>
+                      onAppointmentClick?.(appointment.appointment_id)
+                    }
+                    style={{
+                      backgroundColor: "white",
+                      padding: "16px",
+                      borderRadius: "8px",
+                      border: "1px solid #e8e8e8",
+                      cursor: "pointer",
+                      transition: "all 0.2s",
+                      position: "relative",
+                      boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.boxShadow =
+                        "0 4px 12px rgba(0,0,0,0.1)";
+                      e.currentTarget.style.transform = "translateY(-2px)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.boxShadow =
+                        "0 1px 4px rgba(0,0,0,0.05)";
+                      e.currentTarget.style.transform = "translateY(0)";
+                    }}
+                  >
+                    {/* Timeline dot */}
+                    <div
+                      style={{
+                        position: "absolute",
+                        left: "-72px",
+                        top: "20px",
+                        width: "12px",
+                        height: "12px",
+                        borderRadius: "50%",
+                        backgroundColor: getStatusColor(
+                          appointment.current_status,
+                        ),
+                        border: "3px solid white",
+                        boxShadow: "0 0 0 1px #e8e8e8",
+                      }}
+                    />
+
                     <div
                       style={{
                         display: "flex",
-                        alignItems: "center",
-                        gap: "12px",
-                        marginBottom: "8px",
+                        justifyContent: "space-between",
+                        alignItems: "flex-start",
                       }}
                     >
-                      <h4
-                        style={{
-                          margin: 0,
-                          color: "#262626",
-                          fontSize: "16px",
-                        }}
-                      >
-                        {appointment.patients?.full_name || "N/A"}
-                      </h4>
-                    </div>
-
-                    <div>
-                      <p
-                        style={{
-                          margin: "0 0 4px 0",
-                          fontSize: "14px",
-                          color: "#666",
-                        }}
-                      >
-                        👨‍⚕️ {appointment.doctor?.full_name || "Chưa phân bổ"}
-                      </p>
-                      <p
-                        style={{
-                          margin: "0 0 4px 0",
-                          fontSize: "14px",
-                          color: "#666",
-                        }}
-                      >
-                        📋 {appointment.service_type || "Chưa xác định"}
-                      </p>
-                      {appointment.notes && (
-                        <p
+                      <div style={{ flex: 1 }}>
+                        <div
                           style={{
-                            margin: "4px 0 0 0",
-                            fontSize: "13px",
-                            color: "#8c8c8c",
-                            fontStyle: "italic",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "12px",
+                            marginBottom: "8px",
                           }}
                         >
-                          💬 {appointment.notes}
-                        </p>
-                      )}
+                          <h4
+                            style={{
+                              margin: 0,
+                              color: "#262626",
+                              fontSize: "16px",
+                            }}
+                          >
+                            {appointment.patients?.full_name || "N/A"}
+                          </h4>
+                        </div>
+
+                        <div>
+                          <p
+                            style={{
+                              margin: "0 0 4px 0",
+                              fontSize: "14px",
+                              color: "#666",
+                            }}
+                          >
+                            👨‍⚕️ {appointment.doctor?.full_name || "Chưa phân bổ"}
+                          </p>
+                          <p
+                            style={{
+                              margin: "0 0 4px 0",
+                              fontSize: "14px",
+                              color: "#666",
+                            }}
+                          >
+                            📋 {appointment.service_type || "Chưa xác định"}
+                          </p>
+                          {appointment.notes && (
+                            <p
+                              style={{
+                                margin: "4px 0 0 0",
+                                fontSize: "13px",
+                                color: "#8c8c8c",
+                                fontStyle: "italic",
+                              }}
+                            >
+                              💬 {appointment.notes}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div>
+                        <span
+                          style={{
+                            padding: "6px 12px",
+                            borderRadius: "12px",
+                            fontSize: "12px",
+                            backgroundColor: getStatusColor(
+                              appointment.current_status,
+                            ),
+                            color: "white",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {appointment.appointment_statuses?.status_name_vn ||
+                            appointment.current_status}
+                        </span>
+                      </div>
                     </div>
                   </div>
-
-                  <div>
-                    <span
-                      style={{
-                        padding: "6px 12px",
-                        borderRadius: "12px",
-                        fontSize: "12px",
-                        backgroundColor: getStatusColor(
-                          appointment.current_status
-                        ),
-                        color: "white",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {appointment.appointment_statuses?.status_name_vn ||
-                        appointment.current_status}
-                    </span>
-                  </div>
                 </div>
-                </div>
-              </div>
-            );
+              );
             })}
         </div>
       )}
@@ -428,11 +462,12 @@ const SchedulingPageContent: React.FC = () => {
   const [isCreationModalOpen, setIsCreationModalOpen] = useState(false);
   const [isCrmModalOpen, setIsCrmModalOpen] = useState(false);
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(
-    null
+    null,
   );
   const [resources, setResources] = useState<IEmployee[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<dayjs.Dayjs>(dayjs());
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     const initializeData = async () => {
@@ -475,7 +510,7 @@ const SchedulingPageContent: React.FC = () => {
         patient_id: values.patient_id,
         service_type: (values.service || values.service_type) as any,
         scheduled_datetime: `${values.appointmentDate.format(
-          "YYYY-MM-DD"
+          "YYYY-MM-DD",
         )}T${values.appointmentTime.format("HH:mm:ss")}`,
         doctor_id: values.resourceId as any, // Use resourceId directly as it's now a real employee_id
         receptionist_id: null, // Would be filled with current logged in user
@@ -497,12 +532,17 @@ const SchedulingPageContent: React.FC = () => {
         notification?.success({
           message: "Tạo lịch hẹn thành công!",
           description: `Đã tạo lịch hẹn vào lúc ${values.appointmentTime.format(
-            "HH:mm"
+            "HH:mm",
           )} ngày ${values.appointmentDate.format("DD/MM/YYYY")}.`,
         });
         setIsCreationModalOpen(false);
-        // Refresh the dashboard
-        window.location.reload(); // Simple refresh - could be optimized
+        // Refresh the dashboard by reloading appointments instead of full page reload
+        // This prevents 404 errors on refresh
+        setRefreshKey((prev) => prev + 1);
+        // Also dispatch event for event listener
+        setTimeout(() => {
+          window.dispatchEvent(new Event("appointments:refresh"));
+        }, 500);
       }
     } catch (error) {
       notification.error({
@@ -555,6 +595,7 @@ const SchedulingPageContent: React.FC = () => {
         onAppointmentClick={handleAppointmentClick}
         selectedDate={selectedDate}
         onDateChange={setSelectedDate}
+        refreshTrigger={refreshKey}
       />
       <AppointmentCreationModal
         open={isCreationModalOpen}

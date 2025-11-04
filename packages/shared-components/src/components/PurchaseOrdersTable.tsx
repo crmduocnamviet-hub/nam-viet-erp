@@ -1,20 +1,10 @@
 import React from "react";
-import {
-  Table,
-  Button,
-  Space,
-  Tag,
-  Tooltip,
-  Popconfirm,
-  Dropdown,
-  Menu,
-} from "antd";
+import { Table, Button, Space, Tag, Tooltip, Popconfirm } from "antd";
 import {
   EyeOutlined,
   EditOutlined,
   StopOutlined,
   DeleteOutlined,
-  MoreOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 
@@ -59,21 +49,67 @@ const PurchaseOrdersTable: React.FC<PurchaseOrdersTableProps> = ({
       title: "Trạng Thái",
       dataIndex: "status",
       key: "status",
-      width: 150,
-      render: (status: string) => {
-        const statusConfig: Record<string, { color: string; text: string }> = {
-          draft: { color: "default", text: "Nháp" },
-          sent: { color: "processing", text: "Đã gửi" },
-          ordered: { color: "processing", text: "Đã đặt hàng" },
-          partially_received: { color: "warning", text: "Nhận một phần" },
-          received: { color: "success", text: "Hoàn thành" },
-          cancelled: { color: "error", text: "Đã hủy" },
+      width: 200,
+      render: (status: string, record: any) => {
+        const statusConfig: Record<
+          string,
+          { color: string; text: string; nextStatuses: string[] }
+        > = {
+          draft: {
+            color: "default",
+            text: "Nháp",
+            nextStatuses: ["sent", "ordered"],
+          },
+          sent: {
+            color: "processing",
+            text: "Đã gửi",
+            nextStatuses: ["ordered"],
+          },
+          ordered: {
+            color: "processing",
+            text: "Đã đặt hàng",
+            nextStatuses: ["partially_received", "received"],
+          },
+          partially_received: {
+            color: "warning",
+            text: "Nhận một phần",
+            nextStatuses: ["received"],
+          },
+          received: { color: "success", text: "Hoàn thành", nextStatuses: [] },
+          cancelled: { color: "error", text: "Đã hủy", nextStatuses: [] },
         };
         const config = statusConfig[status] || {
           color: "default",
           text: status,
+          nextStatuses: [],
         };
-        return <Tag color={config.color}>{config.text}</Tag>;
+
+        const isCompleted = status === "received" || status === "cancelled";
+        const canChangeStatus =
+          onStatusChange && !isCompleted && config.nextStatuses.length > 0;
+
+        return (
+          <Space direction="vertical" size={4}>
+            <Tag color={config.color}>{config.text}</Tag>
+            {canChangeStatus && (
+              <Space size={4}>
+                {config.nextStatuses.map((nextStatus) => {
+                  const nextConfig = statusConfig[nextStatus];
+                  return (
+                    <Button
+                      key={nextStatus}
+                      size="small"
+                      type="link"
+                      onClick={() => onStatusChange?.(record, nextStatus)}
+                    >
+                      → {nextConfig.text}
+                    </Button>
+                  );
+                })}
+              </Space>
+            )}
+          </Space>
+        );
       },
     },
     {
@@ -118,18 +154,6 @@ const PurchaseOrdersTable: React.FC<PurchaseOrdersTableProps> = ({
         const isCompleted = record.status === "received";
         const isCancelled = record.status === "cancelled";
         const canModify = !isCompleted && !isCancelled;
-
-        const statusMenu = (
-          <Menu
-            onClick={({ key }) => onStatusChange?.(record, key)}
-            items={[
-              { key: "draft", label: "Nháp" },
-              { key: "sent", label: "Đã gửi" },
-              { key: "ordered", label: "Đã đặt hàng" },
-              { key: "received", label: "Hoàn thành" },
-            ].filter((item) => item.key !== record.status)}
-          />
-        );
 
         return (
           <Space size="middle">
@@ -180,11 +204,6 @@ const PurchaseOrdersTable: React.FC<PurchaseOrdersTableProps> = ({
                   />
                 </Tooltip>
               </Popconfirm>
-            )}
-            {canEdit && canModify && (
-              <Dropdown overlay={statusMenu} trigger={["click"]}>
-                <Button size="middle" icon={<MoreOutlined />} />
-              </Dropdown>
             )}
           </Space>
         );
