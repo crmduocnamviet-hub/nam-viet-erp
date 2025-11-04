@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Card,
   Table,
@@ -38,12 +39,12 @@ import {
   getQuoteItems,
   getB2BWarehouseProductByBarCode,
   notificationService,
-  getEmployees,
+  // getEmployees, // REMOVED: Only used for EditQuoteModal which moved to separate page
 } from "@nam-viet-erp/services";
 import {
   OrderDetailModal,
   CreateQuoteModal,
-  EditQuoteModal,
+  // EditQuoteModal, // REMOVED: Moved to separate page
   CreateCustomerModal,
   BulkUpdateModal,
   QRScannerVerificationModal,
@@ -79,6 +80,8 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
   employee,
   user,
 }) => {
+  const navigate = useNavigate();
+
   const [quotes, setQuotes] = useState<B2BQuoteWithStatus[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchKeyword, setSearchKeyword] = useState("");
@@ -89,7 +92,7 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
   const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
   const [orderDetailModalOpen, setOrderDetailModalOpen] = useState(false);
   const [createQuoteModalOpen, setCreateQuoteModalOpen] = useState(false);
-  const [editQuoteModalOpen, setEditQuoteModalOpen] = useState(false);
+  // const [editQuoteModalOpen, setEditQuoteModalOpen] = useState(false); // COMMENTED: Moved to separate page
   const [createCustomerModalOpen, setCreateCustomerModalOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<B2BQuoteWithStatus | null>(
     null,
@@ -101,13 +104,13 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
   const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
   const [bulkUpdateModalOpen, setBulkUpdateModalOpen] = useState(false);
   const [bulkUpdateLoading, setBulkUpdateLoading] = useState(false);
-  const [employees, setEmployees] = useState<IEmployee[]>([]);
+  // const [employees, setEmployees] = useState<IEmployee[]>([]); // REMOVED: Only used in EditQuoteModal which moved to separate page
   const screens = useBreakpoint();
   const isMobile = !screens.lg;
 
   const [form] = Form.useForm();
   const [createQuoteForm] = Form.useForm();
-  const [editQuoteForm] = Form.useForm();
+  // const [editQuoteForm] = Form.useForm(); // REMOVED: Edit modal moved to separate page
   const [createCustomerForm] = Form.useForm();
   const [bulkUpdateForm] = Form.useForm();
 
@@ -294,22 +297,22 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
     loadOrders();
   }, [current, searchKeyword, filters]);
 
-  // Load employees for assignment
-  useEffect(() => {
-    const loadEmployees = async () => {
-      try {
-        const { data, error } = await getEmployees({ isActive: true });
-        if (error) {
-          console.error("Error loading employees:", error);
-        } else {
-          setEmployees(data || []);
-        }
-      } catch (error) {
-        console.error("Error loading employees:", error);
-      }
-    };
-    loadEmployees();
-  }, []);
+  // COMMENTED: Load employees for assignment - Only needed for EditQuoteModal which moved to separate page
+  // useEffect(() => {
+  //   const loadEmployees = async () => {
+  //     try {
+  //       const { data, error } = await getEmployees({ isActive: true });
+  //       if (error) {
+  //         console.error("Error loading employees:", error);
+  //       } else {
+  //         setEmployees(data || []);
+  //       }
+  //     } catch (error) {
+  //       console.error("Error loading employees:", error);
+  //     }
+  //   };
+  //   loadEmployees();
+  // }, []);
 
   // Realtime subscription for B2B quotes with permission check
   useEffect(() => {
@@ -665,12 +668,12 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
     setQrScannerOpen(true);
   };
 
-  // Handle edit quote modal close
-  const handleEditQuoteModalClose = () => {
-    setEditQuoteModalOpen(false);
-    editQuoteForm.resetFields();
-    setSelectedOrder(null);
-  };
+  // COMMENTED: Edit quote modal moved to separate page
+  // const handleEditQuoteModalClose = () => {
+  //   setEditQuoteModalOpen(false);
+  //   editQuoteForm.resetFields();
+  //   setSelectedOrder(null);
+  // };
 
   // Handle create customer modal close
   const handleCreateCustomerModalClose = () => {
@@ -855,28 +858,10 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
     }
   };
 
-  // Handle edit quote
+  // Handle edit quote - Navigate to edit page instead of modal
   const handleEditOrder = (quote: B2BQuoteWithStatus) => {
-    setSelectedOrder(quote);
-    // Pre-populate the form with existing data
-    editQuoteForm.setFieldsValue({
-      customer_name: quote.customer_name,
-      customer_code: quote.customer_code,
-      contact_person: quote.customer_contact_person,
-      customer_phone: quote.customer_phone,
-      customer_email: quote.customer_email,
-      customer_address: quote.customer_address,
-      quote_stage: quote.quote_stage,
-      payment_status: quote.payment_status || "unpaid",
-      discount_percent: quote.discount_percent,
-      tax_percent: quote.tax_percent,
-      valid_until: quote.valid_until ? dayjs(quote.valid_until) : null,
-      notes: quote.notes,
-      terms_conditions: quote.terms_conditions,
-      warehouse_employee_id: quote.warehouse_employee_id,
-      delivery_employee_id: quote.delivery_employee_id,
-    });
-    setEditQuoteModalOpen(true);
+    // Navigate to edit page with quote_id
+    navigate(`/b2b/orders/edit/${quote.quote_id}`);
   };
 
   // Handle save quote
@@ -1074,67 +1059,64 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
     }
   };
 
-  // Handle update quote
-  const handleUpdateQuote = async (values: any) => {
-    try {
-      if (!selectedOrder?.quote_id) {
-        notification.error({
-          message: "Lỗi",
-          description: "Không tìm thấy thông tin báo giá",
-        });
-        return;
-      }
+  // COMMENTED: Edit modal moved to separate page - handleUpdateQuote no longer needed
+  // const handleUpdateQuote = async (values: any) => {
+  //   try {
+  //     if (!selectedOrder?.quote_id) {
+  //       notification.error({
+  //         message: "Lỗi",
+  //         description: "Không tìm thấy thông tin báo giá",
+  //       });
+  //       return;
+  //     }
 
-      const updateData = {
-        customer_name: values.customer_name,
-        customer_code: values.customer_code,
-        customer_contact_person: values.contact_person,
-        customer_phone: values.customer_phone,
-        customer_email: values.customer_email,
-        customer_address: values.customer_address,
-        quote_stage: values.quote_stage,
-        payment_status: values.payment_status,
-        discount_percent: values.discount_percent || 0,
-        tax_percent: values.tax_percent || 0,
-        valid_until: values.valid_until
-          ? dayjs(values.valid_until).format("YYYY-MM-DD")
-          : null,
-        notes: values.notes,
-        terms_conditions: values.terms_conditions,
-        warehouse_employee_id: values.warehouse_employee_id || null,
-        delivery_employee_id: values.delivery_employee_id || null,
-      };
+  //     const updateData = {
+  //       customer_name: values.customer_name,
+  //       customer_code: values.customer_code,
+  //       customer_contact_person: values.contact_person,
+  //       customer_phone: values.customer_phone,
+  //       customer_email: values.customer_email,
+  //       customer_address: values.customer_address,
+  //       quote_stage: values.quote_stage,
+  //       payment_status: values.payment_status,
+  //       discount_percent: values.discount_percent || 0,
+  //       tax_percent: values.tax_percent || 0,
+  //       valid_until: values.valid_until
+  //         ? dayjs(values.valid_until).format("YYYY-MM-DD")
+  //         : null,
+  //       notes: values.notes,
+  //       terms_conditions: values.terms_conditions,
+  //       warehouse_employee_id: values.warehouse_employee_id || null,
+  //       delivery_employee_id: values.delivery_employee_id || null,
+  //     };
 
-      console.log("Updating quote with data:", updateData);
-      console.log("Quote stage being sent:", values.quote_stage);
+  //     console.log("Updating quote with data:", updateData);
+  //     console.log("Quote stage being sent:", values.quote_stage);
 
-      const { data: updatedQuote, error } = await updateB2BQuote(
-        selectedOrder.quote_id,
-        updateData,
-      );
+  //     const { data: updatedQuote, error } = await updateB2BQuote(
+  //       selectedOrder.quote_id,
+  //       updateData,
+  //     );
 
-      if (error) {
-        throw new Error(error.message);
-      }
+  //     if (error) {
+  //       throw new Error(error.message);
+  //     }
 
-      if (updatedQuote) {
-        setEditQuoteModalOpen(false);
-        editQuoteForm.resetFields();
-        setSelectedOrder(null);
-        loadOrders(); // Reload data
-        notification?.success({
-          message: "Thành công",
-          description: "Cập nhật báo giá thành công",
-        });
-      }
-    } catch (error) {
-      console.error("Error updating quote:", error);
-      notification.error({
-        message: "Lỗi cập nhật báo giá",
-        description: "Không thể cập nhật báo giá",
-      });
-    }
-  };
+  //     if (updatedQuote) {
+  //       loadOrders(); // Reload data
+  //       notification?.success({
+  //         message: "Thành công",
+  //         description: "Cập nhật báo giá thành công",
+  //       });
+  //     }
+  //   } catch (error) {
+  //     console.error("Error updating quote:", error);
+  //     notification.error({
+  //       message: "Lỗi cập nhật báo giá",
+  //       description: "Không thể cập nhật báo giá",
+  //     });
+  //   }
+  // };
 
   // Format currency
   const formatCurrency = (amount: number) => {
@@ -1305,12 +1287,25 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
       width: 150,
       render: (_, record) => (
         <Space>
+          {/* View button - available for everyone with view permission */}
+          {canViewQuotes && (
+            <Button
+              type="link"
+              icon={<EyeOutlined />}
+              onClick={() => handleViewOrder(record)}
+              size="small"
+              title="Xem chi tiết đơn hàng"
+            ></Button>
+          )}
+
+          {/* Edit button - only for those with edit permission and proper status */}
           {canEditQuotes && canEditOrderStatus(record.quote_stage) && (
             <Button
               type="link"
               icon={<EditOutlined />}
               onClick={() => handleEditOrder(record)}
               size="small"
+              title="Chỉnh sửa đơn hàng"
             ></Button>
           )}
           {canEditQuotes && !canEditOrderStatus(record.quote_stage) && (
@@ -1569,9 +1564,9 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
               `${range[0]}-${range[1]} của ${total} đơn hàng`,
           }}
           scroll={{ x: 1000 }}
-          onRow={(record) => ({
+          onRow={(_record) => ({
             // onClick: () => {
-            //   canViewQuotes && handleViewOrder(record);
+            //   canViewQuotes && handleViewOrder(_record);
             // },
             style: { cursor: canViewQuotes ? "pointer" : "not-allowed" },
           })}
@@ -1774,8 +1769,8 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
         onCustomerChange={handleCustomerChange}
       />
 
-      {/* Edit Quote Modal */}
-      <EditQuoteModal
+      {/* COMMENTED: Edit Quote Modal - Moved to separate page */}
+      {/* <EditQuoteModal
         open={editQuoteModalOpen}
         onCancel={handleEditQuoteModalClose}
         form={editQuoteForm}
@@ -1788,7 +1783,7 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
         isInventoryStaff={isInventoryStaff}
         isDeliveryStaff={isDeliveryStaff}
         employees={employees}
-      />
+      /> */}
 
       {/* Create Customer Modal */}
       <CreateCustomerModal

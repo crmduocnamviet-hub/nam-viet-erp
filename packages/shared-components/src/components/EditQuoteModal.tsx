@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Modal,
   Button,
@@ -10,7 +10,13 @@ import {
   Select,
   Tag,
   Typography,
+  Divider,
+  Card,
+  Alert,
+  Space,
+  App,
 } from "antd";
+import { CheckCircleOutlined, DollarOutlined } from "@ant-design/icons";
 
 const { Text } = Typography;
 
@@ -43,6 +49,102 @@ const EditQuoteModal: React.FC<EditQuoteModalProps> = ({
   isDeliveryStaff,
   employees = [],
 }) => {
+  const { notification, modal: antModal } = App.useApp();
+  const [submittingMoney, setSubmittingMoney] = useState(false);
+
+  // Check if order is in delivery stage (shipping or completed)
+  const isDeliveryStage =
+    selectedOrder?.quote_stage === "shipping" ||
+    selectedOrder?.quote_stage === "completed";
+
+  // Check if money already submitted
+  const isMoneySubmitted =
+    selectedOrder?.money_submitted_to_accountant === true;
+
+  const handleSubmitMoney = async () => {
+    // Import the service function
+    const { submitMoneyToAccountant } = await import("@nam-viet-erp/services");
+
+    antModal.confirm({
+      title: "Xác nhận đã nộp tiền cho kế toán",
+      content: (
+        <div>
+          <p>Bạn xác nhận đã nộp tiền thu được từ đơn hàng này cho kế toán?</p>
+          <p>
+            <strong>Đơn hàng:</strong> {selectedOrder?.quote_number}
+          </p>
+          <p>
+            <strong>Tổng tiền:</strong>{" "}
+            {selectedOrder?.total_amount?.toLocaleString()} VND
+          </p>
+        </div>
+      ),
+      okText: "Xác nhận",
+      cancelText: "Hủy",
+      onOk: async () => {
+        setSubmittingMoney(true);
+        try {
+          // Get current user/employee ID - you might need to get this from props or context
+          const currentEmployeeId = selectedOrder?.delivery_employee_id; // or from current user
+
+          await submitMoneyToAccountant(selectedOrder?.quote_id, {
+            submitted_by: currentEmployeeId,
+            note: `Đã nộp tiền từ đơn hàng ${selectedOrder?.quote_number}`,
+          });
+
+          notification.success({
+            message: "Đã xác nhận nộp tiền",
+            description: "Đã ghi nhận việc nộp tiền cho kế toán thành công.",
+          });
+
+          // Refresh the order data
+          onCancel(); // Close modal to trigger refresh
+        } catch (error: any) {
+          notification.error({
+            message: "Lỗi",
+            description: error.message || "Không thể xác nhận nộp tiền.",
+          });
+        } finally {
+          setSubmittingMoney(false);
+        }
+      },
+    });
+  };
+
+  const handleUnsubmitMoney = async () => {
+    const { unsubmitMoneyToAccountant } = await import(
+      "@nam-viet-erp/services"
+    );
+
+    antModal.confirm({
+      title: "Hủy xác nhận nộp tiền",
+      content: "Bạn có chắc muốn hủy xác nhận nộp tiền cho kế toán?",
+      okText: "Xác nhận hủy",
+      cancelText: "Hủy",
+      okType: "danger",
+      onOk: async () => {
+        setSubmittingMoney(true);
+        try {
+          await unsubmitMoneyToAccountant(selectedOrder?.quote_id);
+
+          notification.success({
+            message: "Đã hủy xác nhận",
+            description: "Đã hủy xác nhận nộp tiền.",
+          });
+
+          onCancel();
+        } catch (error: any) {
+          notification.error({
+            message: "Lỗi",
+            description: error.message || "Không thể hủy xác nhận.",
+          });
+        } finally {
+          setSubmittingMoney(false);
+        }
+      },
+    });
+  };
+
   return (
     <Modal
       title={`Chỉnh sửa báo giá ${selectedOrder?.quote_number}`}
@@ -289,6 +391,76 @@ const EditQuoteModal: React.FC<EditQuoteModalProps> = ({
             </Form.Item>
           </Col>
         </Row>
+
+        {/* Money Submission Section - Only for Delivery Staff */}
+        {isDeliveryStaff && isDeliveryStage && (
+          <>
+            <Divider orientation="left">
+              <Space>
+                <DollarOutlined />
+                <Text strong>Nộp tiền cho Kế toán</Text>
+              </Space>
+            </Divider>
+
+            {isMoneySubmitted ? (
+              <Alert
+                message="Đã nộp tiền cho kế toán"
+                description={
+                  <div>
+                    <p>
+                      <strong>Thời gian nộp:</strong>{" "}
+                      {selectedOrder?.money_submitted_at
+                        ? new Date(
+                            selectedOrder.money_submitted_at,
+                          ).toLocaleString("vi-VN")
+                        : "N/A"}
+                    </p>
+                    {selectedOrder?.money_submitted_note && (
+                      <p>
+                        <strong>Ghi chú:</strong>{" "}
+                        {selectedOrder.money_submitted_note}
+                      </p>
+                    )}
+                    <Button
+                      danger
+                      size="small"
+                      onClick={handleUnsubmitMoney}
+                      loading={submittingMoney}
+                      style={{ marginTop: 8 }}
+                    >
+                      Hủy xác nhận
+                    </Button>
+                  </div>
+                }
+                type="success"
+                showIcon
+                icon={<CheckCircleOutlined />}
+                style={{ marginBottom: 16 }}
+              />
+            ) : (
+              <Card
+                size="small"
+                style={{ marginBottom: 16, backgroundColor: "#f0f5ff" }}
+              >
+                <Space direction="vertical" style={{ width: "100%" }}>
+                  <Text>
+                    Nhân viên giao hàng chưa xác nhận đã nộp tiền cho kế toán.
+                  </Text>
+                  <Button
+                    type="primary"
+                    icon={<CheckCircleOutlined />}
+                    onClick={handleSubmitMoney}
+                    loading={submittingMoney}
+                    block
+                  >
+                    Xác nhận đã nộp tiền
+                  </Button>
+                </Space>
+              </Card>
+            )}
+          </>
+        )}
+
         <Form.Item name="customer_email" label="Email">
           <Input
             placeholder="Email khách hàng"

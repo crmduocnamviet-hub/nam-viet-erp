@@ -459,3 +459,70 @@ export const getQuotesByDeliveryEmployee = async (
   const response = await query.order("quote_date", { ascending: false });
   return response;
 };
+
+// Submit money to accountant
+export const submitMoneyToAccountant = async (
+  quoteId: string,
+  data: {
+    submitted_by: string; // delivery employee id
+    accountant_received_by?: string; // accountant employee id
+    note?: string;
+  },
+): Promise<PostgrestSingleResponse<IB2BQuote | null>> => {
+  const updateData = {
+    money_submitted_to_accountant: true,
+    money_submitted_at: new Date().toISOString(),
+    money_submitted_by: data.submitted_by,
+    accountant_received_by: data.accountant_received_by || null,
+    money_submitted_note: data.note || null,
+    updated_at: new Date().toISOString(),
+  };
+
+  const response = await supabase
+    .from(TABLES.B2B_QUOTES)
+    .update(updateData)
+    .eq("quote_id", quoteId)
+    .select(
+      `
+      *,
+      employees!created_by_employee_id(full_name, employee_code),
+      warehouse_employee:employees!warehouse_employee_id(full_name, employee_code),
+      delivery_employee:employees!delivery_employee_id(full_name, employee_code),
+      money_submitted_by_employee:employees!money_submitted_by(full_name, employee_code),
+      accountant_employee:employees!accountant_received_by(full_name, employee_code)
+    `,
+    )
+    .single();
+
+  return response;
+};
+
+// Unsubmit money (rollback submission)
+export const unsubmitMoneyToAccountant = async (
+  quoteId: string,
+): Promise<PostgrestSingleResponse<IB2BQuote | null>> => {
+  const updateData = {
+    money_submitted_to_accountant: false,
+    money_submitted_at: null,
+    money_submitted_by: null,
+    accountant_received_by: null,
+    money_submitted_note: null,
+    updated_at: new Date().toISOString(),
+  };
+
+  const response = await supabase
+    .from(TABLES.B2B_QUOTES)
+    .update(updateData)
+    .eq("quote_id", quoteId)
+    .select(
+      `
+      *,
+      employees!created_by_employee_id(full_name, employee_code),
+      warehouse_employee:employees!warehouse_employee_id(full_name, employee_code),
+      delivery_employee:employees!delivery_employee_id(full_name, employee_code)
+    `,
+    )
+    .single();
+
+  return response;
+};

@@ -31,6 +31,7 @@ import {
   Screen,
   CreateProductPage,
   EditProductPage,
+  EditB2BOrderPage,
 } from "@nam-viet-erp/shared-components";
 import logo from "../assets/logo.png";
 import MissingDocumentationWarning from "./MissingDocumentationWarning";
@@ -402,6 +403,10 @@ const AppLayout: React.FC = () => {
                 <Route
                   path="/b2b-orders"
                   element={<Screen screenKey="b2b.orders" />}
+                />
+                <Route
+                  path="/b2b/orders/edit/:id"
+                  element={<EditB2BOrderPage />}
                 />
                 <Route
                   path="/quick-quote"

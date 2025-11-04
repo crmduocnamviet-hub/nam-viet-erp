@@ -21,6 +21,7 @@ export { default as WarehouseQuantityModal } from "./components/WarehouseQuantit
 export { default as TransferSuggestionsModal } from "./components/TransferSuggestionsModal";
 export { default as DateInput } from "./components/DateInput";
 export { default as QuickQuoteTabContent } from "./components/QuickQuoteTabContent";
+export { default as PrintableReceipt } from "./components/PrintableReceipt";
 export * from "./hooks/useDebounce";
 
 // Screens and Permission System
@@ -30,3 +31,4 @@ export * from "./providers/ScreenProvider";
 // Utils
 export * from "./utils/menuGenerator";
 export * from "./utils/b2bOrder";
+export * from "./utils";

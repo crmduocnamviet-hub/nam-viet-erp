@@ -20,3 +20,9 @@ export * from "./b2bOrder";
 
 // Promotion utilities
 export * from "./promotionUtils";
+
+// Print utilities
+export * from "./printUtils";
+
+// Excel export utilities
+export * from "./exportTransactionsToExcel";

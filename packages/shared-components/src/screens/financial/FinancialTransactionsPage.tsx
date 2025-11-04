@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Button,
   Table,
@@ -13,6 +13,9 @@ import {
   Tag,
   Grid,
   Modal,
+  DatePicker,
+  Select,
+  Badge,
   type TableProps,
 } from "antd";
 import {
@@ -21,6 +24,8 @@ import {
   EditOutlined,
   DeleteOutlined,
   EllipsisOutlined,
+  DownloadOutlined,
+  FileExcelOutlined,
 } from "@ant-design/icons";
 
 import {
@@ -32,9 +37,19 @@ import {
   uploadAttachment,
 } from "@nam-viet-erp/services";
 import dayjs from "dayjs";
-import { useDebounce } from '@nam-viet-erp/shared-components';
+import { useDebounce } from "@nam-viet-erp/shared-components";
+import {
+  exportTransactionsToExcel,
+  exportTransactionsTemplate,
+  exportTransactionsSummary,
+} from "@nam-viet-erp/shared-components";
 // Temporary stub components to replace missing modal imports
-const TransactionCreationModal: React.FC<any> = ({ open, onCancel, onOk, ...props }) => (
+const TransactionCreationModal: React.FC<any> = ({
+  open,
+  onCancel,
+  onOk,
+  ...props
+}) =>
   open ? (
     <Modal
       title="Transaction Creation"
@@ -45,21 +60,14 @@ const TransactionCreationModal: React.FC<any> = ({ open, onCancel, onOk, ...prop
     >
       <p>Transaction creation functionality will be implemented here.</p>
     </Modal>
-  ) : null
-);
+  ) : null;
 
-const TransactionViewModal: React.FC<any> = ({ open, onCancel, ...props }) => (
+const TransactionViewModal: React.FC<any> = ({ open, onCancel, ...props }) =>
   open ? (
-    <Modal
-      title="Transaction View"
-      open={open}
-      onCancel={onCancel}
-      {...props}
-    >
+    <Modal title="Transaction View" open={open} onCancel={onCancel} {...props}>
       <p>Transaction view functionality will be implemented here.</p>
     </Modal>
-  ) : null
-);
+  ) : null;
 import { getFunds } from "@nam-viet-erp/services";
 
 const { Search } = Input;
@@ -70,7 +78,9 @@ interface FinancialTransactionsPageProps {
   [key: string]: any;
 }
 
-const TransactionPageContent: React.FC<FinancialTransactionsPageProps> = ({ user }) => {
+const TransactionPageContent: React.FC<FinancialTransactionsPageProps> = ({
+  user,
+}) => {
   const screens = useBreakpoint(); // Lấy thông tin màn hình
   const { notification, modal } = AntApp.useApp();
   const [creationForm] = Form.useForm();
@@ -85,23 +95,38 @@ const TransactionPageContent: React.FC<FinancialTransactionsPageProps> = ({ user
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
 
   const [transactionType, setTransactionType] = useState<"income" | "expense">(
-    "income"
+    "income",
   );
   const [fileList, setFileList] = useState<any[]>([]);
   const [selectedTransaction, setSelectedTransaction] = useState<any | null>(
-    null
+    null,
   );
 
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearchTerm = useDebounce(searchTerm, 500);
   const [pagination, setPagination] = useState({
     current: 1,
-    pageSize: 10,
+    pageSize: 50,
     total: 0,
+    showSizeChanger: true,
+    pageSizeOptions: [10, 20, 50, 100, 200, 500, 1000],
   });
 
+  // Filter states
+  const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(
+    null,
+  );
+  const [typeFilter, setTypeFilter] = useState<"all" | "income" | "expense">(
+    "all",
+  );
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [creatorFilter, setCreatorFilter] = useState<string>("all");
+
+  // Row selection state
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+
   const fetchData = useCallback(
-    async (page = 1, pageSize = 10, search = debouncedSearchTerm) => {
+    async (page = 1, pageSize = 50, search = debouncedSearchTerm) => {
       setLoading(true);
       try {
         if (funds.length === 0 || banks.length === 0) {
@@ -117,7 +142,7 @@ const TransactionPageContent: React.FC<FinancialTransactionsPageProps> = ({ user
           const { data, error, count } = await searchTransactions(
             search,
             page,
-            pageSize
+            pageSize,
           );
           if (error) throw error;
           setTransactions(data || []);
@@ -145,7 +170,7 @@ const TransactionPageContent: React.FC<FinancialTransactionsPageProps> = ({ user
         setLoading(false);
       }
     },
-    [debouncedSearchTerm, notification, funds.length, banks.length]
+    [debouncedSearchTerm, notification, funds.length, banks.length],
   );
 
   useEffect(() => {
@@ -153,10 +178,13 @@ const TransactionPageContent: React.FC<FinancialTransactionsPageProps> = ({ user
   }, [fetchData, pagination.current, pagination.pageSize]);
 
   const handleTableChange: TableProps<any>["onChange"] = (newPagination) => {
+    const pageSize = Math.min(newPagination.pageSize || 50, 1000); // Maximum 1000 rows/page
     setPagination((prev) => ({
       ...prev,
       current: newPagination.current || 1,
-      pageSize: newPagination.pageSize || 10,
+      pageSize,
+      showSizeChanger: true,
+      pageSizeOptions: [10, 20, 50, 100, 200, 500, 1000],
     }));
   };
 
@@ -185,14 +213,14 @@ const TransactionPageContent: React.FC<FinancialTransactionsPageProps> = ({ user
       let qrUrl = null;
       if (values.payment_method === "bank" && transactionType === "expense") {
         const selectedBank = banks.find(
-          (b) => b.value === values.recipient_bank
+          (b) => b.value === values.recipient_bank,
         );
         if (selectedBank) {
           const info = values.description || `Thanh toan`;
           qrUrl = `https://img.vietqr.io/image/${selectedBank.bin}-${
             values.recipient_account
           }-compact2.png?amount=${values.amount}&addInfo=${encodeURIComponent(
-            info
+            info,
           )}&accountName=${encodeURIComponent(values.recipient_name || "")}`;
         }
       }
@@ -263,7 +291,7 @@ const TransactionPageContent: React.FC<FinancialTransactionsPageProps> = ({ user
           };
           const { error } = await updateTransaction(
             selectedTransaction.id,
-            record
+            record,
           );
           if (error) throw error;
           notification?.success({ message: `Duyệt chi thành công!` });
@@ -300,6 +328,76 @@ const TransactionPageContent: React.FC<FinancialTransactionsPageProps> = ({ user
       },
     });
   };
+
+  const handleBulkDelete = () => {
+    if (selectedRowKeys.length === 0) {
+      notification.warning({
+        message: "Chưa chọn phiếu nào",
+        description: "Vui lòng chọn ít nhất một phiếu để xoá.",
+      });
+      return;
+    }
+
+    modal.confirm({
+      title: `Xác nhận xóa ${selectedRowKeys.length} phiếu thu chi?`,
+      content:
+        "Hành động này không thể hoàn tác. Tất cả các phiếu đã chọn sẽ bị xóa vĩnh viễn.",
+      okText: "Xóa tất cả",
+      okType: "danger",
+      cancelText: "Hủy",
+      onOk: async () => {
+        setLoading(true);
+        let successCount = 0;
+        let failCount = 0;
+        const errors: string[] = [];
+
+        try {
+          // Xóa từng transaction
+          for (const id of selectedRowKeys) {
+            try {
+              await deleteTransaction(id as number);
+              successCount++;
+            } catch (error: any) {
+              failCount++;
+              errors.push(
+                `Phiếu ${id}: ${error.message || "Lỗi không xác định"}`,
+              );
+            }
+          }
+
+          // Hiển thị kết quả
+          if (successCount > 0 && failCount === 0) {
+            notification.success({
+              message: "Xóa hàng loạt thành công!",
+              description: `Đã xóa ${successCount} phiếu thu chi.`,
+            });
+          } else if (successCount > 0 && failCount > 0) {
+            notification.warning({
+              message: "Xóa một phần thành công",
+              description: `Đã xóa ${successCount} phiếu. ${failCount} phiếu xóa thất bại.`,
+            });
+          } else {
+            notification.error({
+              message: "Xóa thất bại",
+              description: `Không thể xóa ${failCount} phiếu. ${errors[0] || ""}`,
+            });
+          }
+
+          // Clear selection và reload data
+          setSelectedRowKeys([]);
+          fetchData();
+        } catch (error: any) {
+          notification.error({
+            message: "Lỗi hệ thống",
+            description: error.message || "Đã xảy ra lỗi khi xóa phiếu.",
+          });
+        } finally {
+          setLoading(false);
+        }
+      },
+    });
+  };
+
   const handleEdit = (record: any) => {
     // Đặt lại selectedTransaction để đảm bảo chúng ta đang sửa bản ghi đúng
     setSelectedTransaction(record);
@@ -326,6 +424,148 @@ const TransactionPageContent: React.FC<FinancialTransactionsPageProps> = ({ user
 
     // Mở modal tạo/sửa phiếu
     setIsCreationModalOpen(true);
+  };
+
+  // Get unique creators from transactions
+  const uniqueCreators = useMemo(() => {
+    const creators = transactions
+      .map((t) => t.created_by)
+      .filter((creator) => creator && creator.trim() !== "");
+
+    return Array.from(new Set(creators)).sort();
+  }, [transactions]);
+
+  // Filtered transactions based on filters
+  const filteredTransactions = useMemo(() => {
+    let filtered = [...transactions];
+
+    // Filter by date range
+    if (dateRange) {
+      const [start, end] = dateRange;
+      const startDate = start.startOf("day");
+      const endDate = end.endOf("day");
+
+      filtered = filtered.filter((t) => {
+        const transDate = dayjs(t.transaction_date);
+        return !transDate.isBefore(startDate) && !transDate.isAfter(endDate);
+      });
+    }
+
+    // Filter by type
+    if (typeFilter !== "all") {
+      filtered = filtered.filter((t) => t.type === typeFilter);
+    }
+
+    // Filter by status
+    if (statusFilter !== "all") {
+      filtered = filtered.filter((t) => t.status === statusFilter);
+    }
+
+    // Filter by creator
+    if (creatorFilter !== "all") {
+      filtered = filtered.filter((t) => t.created_by === creatorFilter);
+    }
+
+    return filtered;
+  }, [transactions, dateRange, typeFilter, statusFilter, creatorFilter]);
+
+  // Get selected transactions (either selected rows or all filtered if none selected)
+  const transactionsToExport = useMemo(() => {
+    if (selectedRowKeys.length > 0) {
+      return filteredTransactions.filter((t) => selectedRowKeys.includes(t.id));
+    }
+    return filteredTransactions;
+  }, [filteredTransactions, selectedRowKeys]);
+
+  // Excel Export Handlers
+  const handleExportExcel = () => {
+    try {
+      const dataToExport = transactionsToExport;
+      if (dataToExport.length === 0) {
+        notification.warning({
+          message: "Không có dữ liệu để xuất",
+          description:
+            "Vui lòng chọn ít nhất một giao dịch hoặc điều chỉnh bộ lọc.",
+        });
+        return;
+      }
+
+      const filename = dateRange
+        ? `bao-cao-thu-chi-${dateRange[0].format("DDMMYYYY")}-${dateRange[1].format("DDMMYYYY")}.xlsx`
+        : "bao-cao-thu-chi.xlsx";
+
+      exportTransactionsToExcel(dataToExport, filename);
+      notification.success({
+        message: "Xuất Excel thành công!",
+        description: `Đã xuất ${dataToExport.length} giao dịch ra file Excel.`,
+      });
+
+      // Clear selection after export
+      setSelectedRowKeys([]);
+    } catch (error: any) {
+      notification.error({
+        message: "Xuất Excel thất bại",
+        description: error.message,
+      });
+    }
+  };
+
+  const handleExportTemplate = () => {
+    try {
+      exportTransactionsTemplate();
+      notification.success({
+        message: "Tải template thành công!",
+        description: "Đã tải file mẫu import thu chi.",
+      });
+    } catch (error: any) {
+      notification.error({
+        message: "Tải template thất bại",
+        description: error.message,
+      });
+    }
+  };
+
+  const handleExportSummary = () => {
+    try {
+      const dataToExport = transactionsToExport;
+      if (dataToExport.length === 0) {
+        notification.warning({
+          message: "Không có dữ liệu để xuất",
+          description:
+            "Vui lòng chọn ít nhất một giao dịch hoặc điều chỉnh bộ lọc.",
+        });
+        return;
+      }
+
+      const startDate = dateRange?.[0].format("YYYY-MM-DD");
+      const endDate = dateRange?.[1].format("YYYY-MM-DD");
+      const filename = dateRange
+        ? `bao-cao-tong-hop-${dateRange[0].format("DDMMYYYY")}-${dateRange[1].format("DDMMYYYY")}.xlsx`
+        : "bao-cao-tong-hop-thu-chi.xlsx";
+
+      exportTransactionsSummary(dataToExport, startDate, endDate, filename);
+      notification.success({
+        message: "Xuất báo cáo tổng hợp thành công!",
+        description: `Đã xuất báo cáo cho ${dataToExport.length} giao dịch.`,
+      });
+
+      // Clear selection after export
+      setSelectedRowKeys([]);
+    } catch (error: any) {
+      notification.error({
+        message: "Xuất báo cáo thất bại",
+        description: error.message,
+      });
+    }
+  };
+
+  // Clear all filters
+  const handleClearFilters = () => {
+    setDateRange(null);
+    setTypeFilter("all");
+    setStatusFilter("all");
+    setCreatorFilter("all");
+    setSelectedRowKeys([]);
   };
 
   const getStatusTag = (status: string) => {
@@ -482,11 +722,42 @@ const TransactionPageContent: React.FC<FinancialTransactionsPageProps> = ({ user
             >
               Tạo Phiếu Chi
             </Button>
+            <Dropdown
+              menu={{
+                items: [
+                  {
+                    key: "export",
+                    icon: <FileExcelOutlined />,
+                    label: "Xuất Excel (Tất cả)",
+                    onClick: handleExportExcel,
+                  },
+                  {
+                    key: "summary",
+                    icon: <FileExcelOutlined />,
+                    label: "Báo cáo tổng hợp",
+                    onClick: handleExportSummary,
+                  },
+                  {
+                    type: "divider",
+                  },
+                  {
+                    key: "template",
+                    icon: <DownloadOutlined />,
+                    label: "Tải file mẫu",
+                    onClick: handleExportTemplate,
+                  },
+                ],
+              }}
+              trigger={["click"]}
+            >
+              <Button icon={<DownloadOutlined />}>Xuất Excel</Button>
+            </Dropdown>
           </Space>
         </Col>
       </Row>
-      <Row style={{ marginBottom: 16 }} gutter={16}>
-        <Col span={12}>
+      {/* Filters Row */}
+      <Row style={{ marginBottom: 16 }} gutter={[16, 16]}>
+        <Col xs={24} sm={12} md={6} lg={5}>
           <Search
             placeholder="Tìm theo người tạo, diễn giải..."
             value={searchTerm}
@@ -494,15 +765,134 @@ const TransactionPageContent: React.FC<FinancialTransactionsPageProps> = ({ user
             allowClear
           />
         </Col>
+        <Col xs={24} sm={12} md={6} lg={5}>
+          <DatePicker.RangePicker
+            style={{ width: "100%" }}
+            value={dateRange}
+            onChange={(dates) =>
+              setDateRange(dates as [dayjs.Dayjs, dayjs.Dayjs] | null)
+            }
+            format="DD/MM/YYYY"
+            placeholder={["Từ ngày", "Đến ngày"]}
+          />
+        </Col>
+        <Col xs={12} sm={6} md={4} lg={3}>
+          <Select
+            style={{ width: "100%" }}
+            value={typeFilter}
+            onChange={setTypeFilter}
+            placeholder="Loại"
+          >
+            <Select.Option value="all">Tất cả loại</Select.Option>
+            <Select.Option value="income">Thu</Select.Option>
+            <Select.Option value="expense">Chi</Select.Option>
+          </Select>
+        </Col>
+        <Col xs={12} sm={6} md={4} lg={3}>
+          <Select
+            style={{ width: "100%" }}
+            value={statusFilter}
+            onChange={setStatusFilter}
+            placeholder="Trạng thái"
+          >
+            <Select.Option value="all">Tất cả</Select.Option>
+            <Select.Option value="chờ duyệt">Chờ duyệt</Select.Option>
+            <Select.Option value="đã duyệt - chờ chi">
+              Đã duyệt - Chờ chi
+            </Select.Option>
+            <Select.Option value="đã chi">Đã chi</Select.Option>
+            <Select.Option value="đã thu">Đã thu</Select.Option>
+            <Select.Option value="chờ thực thu">Chờ thực thu</Select.Option>
+            <Select.Option value="từ chối">Từ chối</Select.Option>
+          </Select>
+        </Col>
+        <Col xs={12} sm={6} md={4} lg={4}>
+          <Select
+            style={{ width: "100%" }}
+            value={creatorFilter}
+            onChange={setCreatorFilter}
+            placeholder="Người tạo"
+            showSearch
+            optionFilterProp="children"
+            filterOption={(input, option) =>
+              String(option?.children || "")
+                .toLowerCase()
+                .includes(input.toLowerCase())
+            }
+          >
+            <Select.Option value="all">Tất cả người tạo</Select.Option>
+            {uniqueCreators.map((creator) => (
+              <Select.Option key={creator} value={creator}>
+                {creator}
+              </Select.Option>
+            ))}
+          </Select>
+        </Col>
+        <Col xs={12} sm={6} md={4} lg={4}>
+          <Button onClick={handleClearFilters} block>
+            Xóa bộ lọc
+          </Button>
+        </Col>
       </Row>
+
+      {/* Summary Info */}
+      {(dateRange ||
+        typeFilter !== "all" ||
+        statusFilter !== "all" ||
+        creatorFilter !== "all" ||
+        selectedRowKeys.length > 0) && (
+        <Row style={{ marginBottom: 16 }} gutter={[16, 16]}>
+          <Col xs={24} sm={24} md={16} lg={18}>
+            <Space wrap>
+              {selectedRowKeys.length > 0 && (
+                <Badge count={selectedRowKeys.length} showZero>
+                  <Tag color="blue">Đã chọn {selectedRowKeys.length} dòng</Tag>
+                </Badge>
+              )}
+              {filteredTransactions.length !== transactions.length && (
+                <Tag color="green">
+                  Đang hiển thị {filteredTransactions.length}/
+                  {transactions.length} giao dịch
+                </Tag>
+              )}
+              {transactionsToExport.length > 0 && (
+                <Tag color="orange">
+                  Sẽ xuất {transactionsToExport.length} giao dịch
+                </Tag>
+              )}
+            </Space>
+          </Col>
+          {selectedRowKeys.length > 0 && (
+            <Col xs={24} sm={24} md={8} lg={6}>
+              <Button
+                danger
+                icon={<DeleteOutlined />}
+                onClick={handleBulkDelete}
+                block
+              >
+                Xoá {selectedRowKeys.length} phiếu đã chọn
+              </Button>
+            </Col>
+          )}
+        </Row>
+      )}
 
       <Table
         columns={columns}
-        dataSource={transactions}
+        dataSource={filteredTransactions}
         loading={loading}
         rowKey="id"
         pagination={pagination}
         onChange={handleTableChange}
+        rowSelection={{
+          selectedRowKeys,
+          onChange: (keys) => setSelectedRowKeys(keys),
+          selections: [
+            Table.SELECTION_ALL,
+            Table.SELECTION_INVERT,
+            Table.SELECTION_NONE,
+          ],
+        }}
       />
 
       <TransactionCreationModal
@@ -533,7 +923,9 @@ const TransactionPageContent: React.FC<FinancialTransactionsPageProps> = ({ user
   );
 };
 
-const FinancialTransactions: React.FC<FinancialTransactionsPageProps> = (props) => (
+const FinancialTransactions: React.FC<FinancialTransactionsPageProps> = (
+  props,
+) => (
   <AntApp>
     <TransactionPageContent {...props} />
   </AntApp>

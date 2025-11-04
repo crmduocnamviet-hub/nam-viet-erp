@@ -40,6 +40,12 @@ export interface PosState {
   setSelectedLocation: (location: string) => void;
   setPaymentMethod: (method: "cash" | "card") => void;
 
+  // Promotion actions (operate on active tab)
+  setPromoCode: (code: string) => void;
+  setAppliedPromoCode: (code: string | null) => void;
+  setPromoDiscount: (discount: number) => void;
+  setPromoCodeError: (error: string) => void;
+
   // Customer actions by index
   setSelectedCustomerByIndex: (index: number, customer: any | null) => void;
   setSelectedWarehouseByIndex: (index: number, warehouse: any | null) => void;
@@ -78,6 +84,11 @@ export const usePosStore = create<PosState>()(
         paymentMethod: "cash",
         isProcessingPayment: false,
         error: null,
+        // Promotion state per tab
+        promoCode: "",
+        appliedPromoCode: null,
+        promoDiscount: 0,
+        promoCodeError: "",
       });
 
       // Create initial tab
@@ -280,6 +291,55 @@ export const usePosStore = create<PosState>()(
             },
             false,
             "setPaymentMethod",
+          ),
+
+        // Promotion actions (operate on active tab)
+        setPromoCode: (code) =>
+          set(
+            (state) => {
+              const tab = state.tabs.find((t) => t.id === state.activeTabId);
+              if (!tab) return;
+
+              tab.promoCode = code;
+            },
+            false,
+            "setPromoCode",
+          ),
+
+        setAppliedPromoCode: (code) =>
+          set(
+            (state) => {
+              const tab = state.tabs.find((t) => t.id === state.activeTabId);
+              if (!tab) return;
+
+              tab.appliedPromoCode = code;
+            },
+            false,
+            "setAppliedPromoCode",
+          ),
+
+        setPromoDiscount: (discount) =>
+          set(
+            (state) => {
+              const tab = state.tabs.find((t) => t.id === state.activeTabId);
+              if (!tab) return;
+
+              tab.promoDiscount = discount;
+            },
+            false,
+            "setPromoDiscount",
+          ),
+
+        setPromoCodeError: (error) =>
+          set(
+            (state) => {
+              const tab = state.tabs.find((t) => t.id === state.activeTabId);
+              if (!tab) return;
+
+              tab.promoCodeError = error;
+            },
+            false,
+            "setPromoCodeError",
           ),
 
         // Cart actions by index
@@ -548,6 +608,11 @@ export const usePosStore = create<PosState>()(
               tab.selectedCustomer = null;
               tab.isProcessingPayment = false;
               tab.error = null;
+              // Reset promotion state
+              tab.promoCode = "";
+              tab.appliedPromoCode = null;
+              tab.promoDiscount = 0;
+              tab.promoCodeError = "";
             },
             false,
             "resetTab",
@@ -613,6 +678,31 @@ export const usePosIsProcessingPayment = () =>
   usePosStore((state) => {
     const tab = state.tabs.find((t) => t.id === state.activeTabId);
     return tab?.isProcessingPayment || false;
+  });
+
+// Promotion selectors
+export const usePosPromoCode = () =>
+  usePosStore((state) => {
+    const tab = state.tabs.find((t) => t.id === state.activeTabId);
+    return tab?.promoCode || "";
+  });
+
+export const usePosAppliedPromoCode = () =>
+  usePosStore((state) => {
+    const tab = state.tabs.find((t) => t.id === state.activeTabId);
+    return tab?.appliedPromoCode || null;
+  });
+
+export const usePosPromoDiscount = () =>
+  usePosStore((state) => {
+    const tab = state.tabs.find((t) => t.id === state.activeTabId);
+    return tab?.promoDiscount || 0;
+  });
+
+export const usePosPromoCodeError = () =>
+  usePosStore((state) => {
+    const tab = state.tabs.find((t) => t.id === state.activeTabId);
+    return tab?.promoCodeError || "";
   });
 
 // Selectors by index

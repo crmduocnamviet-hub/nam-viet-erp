@@ -183,7 +183,12 @@ const PosTabContent: React.FC<PosTabContentProps> = ({
     } finally {
       setPromoLoading(false);
     }
-  }, [promoOptions.length]);
+  }, []);
+
+  // Fetch all available promo codes on mount
+  useEffect(() => {
+    loadPromoOptions();
+  }, []);
 
   // Reset promo code when cart is empty
   useEffect(() => {

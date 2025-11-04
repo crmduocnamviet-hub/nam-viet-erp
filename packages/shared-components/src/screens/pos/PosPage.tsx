@@ -43,6 +43,10 @@ import {
   useComboStore,
   useCombos,
   useInventory,
+  usePosPromoCode,
+  usePosAppliedPromoCode,
+  usePosPromoDiscount,
+  usePosPromoCodeError,
 } from "@nam-viet-erp/store";
 import PaymentModal from "../../components/PaymentModal";
 import PosTabContent from "../../components/PosTabContent";
@@ -104,6 +108,10 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
     setSelectedCustomer: setStoreSelectedCustomer,
     setSelectedWarehouse: setStoreSelectedWarehouse,
     processPayment,
+    setPromoCode: setStorePromoCode,
+    setAppliedPromoCode: setStoreAppliedPromoCode,
+    setPromoDiscount: setStorePromoDiscount,
+    setPromoCodeError: setStorePromoCodeError,
   } = usePosStore();
 
   // Combo Store
@@ -125,11 +133,11 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "card">("cash");
   const [promotions, setPromotions] = useState<IPromotion[]>([]);
 
-  // Promo code state
-  const [promoCode, setPromoCode] = useState("");
-  const [appliedPromoCode, setAppliedPromoCode] = useState<string | null>(null);
-  const [promoDiscount, setPromoDiscount] = useState(0);
-  const [promoCodeError, setPromoCodeError] = useState("");
+  // Promo code state - from store (per-tab)
+  const promoCode = usePosPromoCode();
+  const appliedPromoCode = usePosAppliedPromoCode();
+  const promoDiscount = usePosPromoDiscount();
+  const promoCodeError = usePosPromoCodeError();
 
   // Customer management
   const [customerSearchTerm, setCustomerSearchTerm] = useState("");
@@ -1109,13 +1117,13 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
 
       // Validate input
       if (!trimmedCode) {
-        setPromoCodeError("Vui lòng nhập mã khuyến mãi");
+        setStorePromoCodeError("Vui lòng nhập mã khuyến mãi");
         return;
       }
 
       // Check if cart is empty
       if (cart.length === 0) {
-        setPromoCodeError("Giỏ hàng đang trống");
+        setStorePromoCodeError("Giỏ hàng đang trống");
         return;
       }
 
@@ -1134,17 +1142,17 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
 
         if (error) {
           // Handle error
-          setPromoCodeError(error.message);
-          setPromoDiscount(0);
-          setAppliedPromoCode(null);
+          setStorePromoCodeError(error.message);
+          setStorePromoDiscount(0);
+          setStoreAppliedPromoCode(null);
           return;
         }
 
         // Success - apply discount
-        setPromoCodeError("");
-        setPromoDiscount(discountAmount);
-        setAppliedPromoCode(promoName || appliedCode);
-        setPromoCode(""); // Clear input after successful application
+        setStorePromoCodeError("");
+        setStorePromoDiscount(discountAmount);
+        setStoreAppliedPromoCode(promoName || appliedCode);
+        setStorePromoCode(""); // Clear input after successful application
 
         notification.success({
           message: "Áp dụng mã khuyến mãi thành công!",
@@ -1152,20 +1160,34 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
         });
       } catch (error) {
         console.error("Error applying promo code:", error);
-        setPromoCodeError("Không thể áp dụng mã khuyến mãi");
-        setPromoDiscount(0);
-        setAppliedPromoCode(null);
+        setStorePromoCodeError("Không thể áp dụng mã khuyến mãi");
+        setStorePromoDiscount(0);
+        setStoreAppliedPromoCode(null);
       }
     },
-    [promoCode, cart, cartItemsWithPricing.itemTotal, notification],
+    [
+      promoCode,
+      cart,
+      cartItemsWithPricing.itemTotal,
+      notification,
+      setStorePromoCode,
+      setStoreAppliedPromoCode,
+      setStorePromoDiscount,
+      setStorePromoCodeError,
+    ],
   );
 
   const handleRemovePromoCode = useCallback(() => {
-    setPromoCode("");
-    setAppliedPromoCode(null);
-    setPromoDiscount(0);
-    setPromoCodeError("");
-  }, []);
+    setStorePromoCode("");
+    setStoreAppliedPromoCode(null);
+    setStorePromoDiscount(0);
+    setStorePromoCodeError("");
+  }, [
+    setStorePromoCode,
+    setStoreAppliedPromoCode,
+    setStorePromoDiscount,
+    setStorePromoCodeError,
+  ]);
 
   // Re-validate promo code when cart changes
   useEffect(() => {
@@ -1188,7 +1210,7 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
             });
           } else if (discountAmount !== promoDiscount) {
             // Discount amount changed, update it
-            setPromoDiscount(discountAmount);
+            setStorePromoDiscount(discountAmount);
           }
         } catch (error) {
           console.error("Error revalidating promo code:", error);
@@ -1416,7 +1438,7 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
               isCartModalOpen={isCartModalOpen}
               setIsCartModalOpen={setIsCartModalOpen}
               promoCode={promoCode}
-              setPromoCode={setPromoCode}
+              setPromoCode={setStorePromoCode}
               appliedPromoCode={appliedPromoCode}
               promoDiscount={cartDetails.promoDiscount}
               promoCodeError={promoCodeError}

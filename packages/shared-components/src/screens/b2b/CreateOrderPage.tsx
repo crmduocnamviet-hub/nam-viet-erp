@@ -39,6 +39,8 @@ interface Product {
   unit?: string;
   sku?: string;
   stock_quantity?: number;
+  wholesale_unit?: string;
+  retail_unit?: string;
 }
 
 interface Employee {
@@ -202,7 +204,7 @@ const CreateOrderPage: React.FC<CreateOrderPageProps> = ({
         quantity: 1,
         total_price: product.wholesale_price || 0,
         packaging: product.packaging,
-        unit: product.unit || "Hộp",
+        unit: product.wholesale_unit || product.retail_unit || "Hộp",
       } as never);
     });
 

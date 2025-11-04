@@ -23,7 +23,7 @@ import {
 } from "antd";
 import viVN from "antd/locale/vi_VN";
 import { signOut } from "@nam-viet-erp/services";
-import { useScreens } from "@nam-viet-erp/shared-components";
+import { useScreens, EditB2BOrderPage } from "@nam-viet-erp/shared-components";
 import { useEmployee } from "../context/EmployeeContext";
 import logo from "../assets/logo.png";
 
@@ -337,6 +337,10 @@ const AppLayout: React.FC = () => {
                 <Route
                   path="/store-channel"
                   element={renderScreen("b2b.orders", { employee })}
+                />
+                <Route
+                  path="/b2b/orders/edit/:id"
+                  element={<EditB2BOrderPage employee={employee} />}
                 />
                 <Route
                   path="/b2b-dashboard"

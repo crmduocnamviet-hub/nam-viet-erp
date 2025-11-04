@@ -9,6 +9,7 @@ import B2BOrderManagementPage from "./b2b/B2BOrderManagementPage";
 import B2BOrderListPage from "./b2b/B2BOrderListPage";
 import QuickQuotePage from "./b2b/QuickQuotePage";
 import CreateOrderPage from "./b2b/CreateOrderPage";
+import EditB2BOrderPage from "./b2b/EditB2BOrderPage";
 
 // Screen Imports - Medical
 import PatientsPage from "./medical/PatientsPage";
@@ -873,6 +874,7 @@ export {
   B2BOrderListPage,
   QuickQuotePage,
   CreateOrderPage,
+  EditB2BOrderPage,
   // Medical
   PatientsPage,
   PatientDetailPage,

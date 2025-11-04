@@ -10,4 +10,9 @@ interface PosTab {
   paymentMethod: "cash" | "card";
   isProcessingPayment: boolean;
   error: string | null;
+  // Promotion state per tab
+  promoCode: string;
+  appliedPromoCode: string | null;
+  promoDiscount: number;
+  promoCodeError: string;
 }
