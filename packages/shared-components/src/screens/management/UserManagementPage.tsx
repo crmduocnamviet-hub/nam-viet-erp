@@ -1,40 +1,25 @@
 import React, { useState, useEffect } from "react";
 import {
-  Table,
   Button,
   Space,
   Modal,
   Form,
   Input,
   Select,
-  Switch,
-  message,
-  Popconfirm,
-  Tag,
   Card,
   Row,
   Col,
   Statistic,
   Typography,
-  Tooltip,
-  Badge,
   App,
   Grid,
 } from "antd";
 import {
   PlusOutlined,
-  EditOutlined,
-  DeleteOutlined,
   UserOutlined,
-  MailOutlined,
-  PhoneOutlined,
-  EyeOutlined,
-  KeyOutlined,
-  LinkOutlined,
   SearchOutlined,
   ReloadOutlined,
 } from "@ant-design/icons";
-import type { ColumnsType } from "antd/es/table";
 import {
   getUsers,
   createUserAccount,
@@ -42,24 +27,11 @@ import {
   deleteUserAccount,
 } from "@nam-viet-erp/services";
 import { COMMON_SPACING, getResponsivePadding } from "../../constants/spacing";
+import { UserManagementTable } from "../../components/tables";
 
 const { Title, Text } = Typography;
 const { Search } = Input;
 const { useBreakpoint } = Grid;
-
-interface IUserAccount {
-  id: string;
-  email: string;
-  full_name?: string;
-  phone?: string;
-  avatar_url?: string;
-  created_at: string;
-  updated_at?: string;
-  last_sign_in_at?: string;
-  is_active: boolean;
-  role?: string;
-  employee_id?: string;
-}
 
 interface UserFormData {
   email: string;
@@ -99,10 +71,10 @@ const UserManagementPageContent: React.FC = () => {
       }
 
       setUsers(data || []);
-    } catch (error) {
+    } catch (error: any) {
       notification.error({
         message: "Lỗi khi tải danh sách tài khoản",
-        description: error.message || "Không thể tải danh sách tài khoản",
+        description: error?.message || "Không thể tải danh sách tài khoản",
       });
     } finally {
       setLoading(false);
@@ -180,10 +152,10 @@ const UserManagementPageContent: React.FC = () => {
         description: "Tài khoản đã được xóa",
       });
       loadUsers();
-    } catch (error) {
+    } catch (error: any) {
       notification.error({
         message: "Lỗi khi xóa tài khoản",
-        description: error.message || "Không thể xóa tài khoản",
+        description: error?.message || "Không thể xóa tài khoản",
       });
     }
   };
@@ -201,102 +173,6 @@ const UserManagementPageContent: React.FC = () => {
     }
     setModalVisible(true);
   };
-
-  // Table columns
-  const columns: ColumnsType<IUserAccount> = [
-    {
-      title: "Email",
-      dataIndex: "email",
-      key: "email",
-      width: 200,
-      render: (email: string) => (
-        <Space>
-          <MailOutlined />
-          <Text copyable={{ text: email }}>{email}</Text>
-        </Space>
-      ),
-    },
-    {
-      title: "Họ tên",
-      dataIndex: "full_name",
-      key: "full_name",
-      width: 150,
-      render: (name: string) => (
-        <Space>
-          <UserOutlined />
-          {name || "Chưa cập nhật"}
-        </Space>
-      ),
-    },
-    {
-      title: "Số điện thoại",
-      dataIndex: "phone",
-      key: "phone",
-      width: 120,
-      render: (phone: string) =>
-        phone ? (
-          <Space>
-            <PhoneOutlined />
-            {phone}
-          </Space>
-        ) : (
-          "Chưa cập nhật"
-        ),
-    },
-    {
-      title: "Lần đăng nhập cuối",
-      dataIndex: "last_sign_in_at",
-      key: "last_sign_in_at",
-      width: 150,
-      render: (date: string) =>
-        date ? new Date(date).toLocaleString("vi-VN") : "Chưa đăng nhập",
-    },
-    {
-      title: "Hành động",
-      key: "actions",
-      width: 100,
-      fixed: "right" as const,
-      render: (_, record: IUserAccount) => (
-        <Space size="small">
-          <Tooltip title="Sửa">
-            <Button
-              type="link"
-              size="small"
-              icon={<EditOutlined />}
-              onClick={(e) => {
-                e.stopPropagation();
-                openModal(record);
-              }}
-            />
-          </Tooltip>
-          <Popconfirm
-            title="Xóa tài khoản?"
-            description={`Bạn có chắc chắn muốn xóa tài khoản "${record.email}"?`}
-            onConfirm={(e) => {
-              e?.stopPropagation();
-              handleDelete(record.id);
-            }}
-            onCancel={(e) => {
-              e?.stopPropagation();
-            }}
-            okText="Xóa"
-            cancelText="Hủy"
-            okButtonProps={{ danger: true }}
-          >
-            <Tooltip title="Xóa">
-              <Button
-                type="link"
-                size="small"
-                danger
-                icon={<DeleteOutlined />}
-                onClick={(e) => e.stopPropagation()}
-              />
-            </Tooltip>
-          </Popconfirm>
-        </Space>
-      ),
-    },
-  ];
 
   // Statistics
   const totalUsers = users.length;
@@ -406,63 +282,11 @@ const UserManagementPageContent: React.FC = () => {
 
       {/* Users Table */}
       <Card>
-        <Table
-          columns={columns}
-          dataSource={users}
-          rowKey="id"
+        <UserManagementTable
+          users={users}
           loading={loading}
-          onRow={(record) => ({
-            onClick: () => openModal(record),
-            style: { cursor: "pointer" },
-          })}
-          scroll={{ x: isMobile ? 800 : 1200 }}
-          size={isMobile ? "small" : "middle"}
-          pagination={{
-            pageSize: isMobile ? 10 : 20,
-            showSizeChanger: !isMobile,
-            showQuickJumper: !isMobile,
-            showTotal: (total, range) =>
-              `${range[0]}-${range[1]} của ${total} tài khoản`,
-          }}
-          locale={{
-            emptyText: (
-              <div style={{ padding: "40px 0", textAlign: "center" }}>
-                <UserOutlined
-                  style={{
-                    fontSize: "48px",
-                    color: "#d9d9d9",
-                    marginBottom: "16px",
-                  }}
-                />
-                <div
-                  style={{
-                    fontSize: "16px",
-                    color: "#666",
-                    marginBottom: "8px",
-                  }}
-                >
-                  Chưa có tài khoản nào
-                </div>
-                <div
-                  style={{
-                    fontSize: "14px",
-                    color: "#999",
-                    marginBottom: "24px",
-                  }}
-                >
-                  Tạo tài khoản đầu tiên để bắt đầu quản lý
-                </div>
-                <Button
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  onClick={() => openModal()}
-                  size="large"
-                >
-                  Tạo tài khoản đầu tiên
-                </Button>
-              </div>
-            ),
-          }}
+          onEdit={(user) => openModal(user)}
+          onDelete={handleDelete}
         />
       </Card>
 

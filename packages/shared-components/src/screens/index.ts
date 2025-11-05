@@ -15,6 +15,7 @@ import QuickQuotePage from "./b2b/QuickQuotePage";
 import CreateOrderPage from "./b2b/CreateOrderPage";
 import EditB2BOrderPage from "./b2b/EditB2BOrderPage";
 import B2BFinancialManagementPage from "./b2b/B2BFinancialManagementPage";
+import InventoryB2BOrdersPage from "./b2b/InventoryB2BOrdersPage";
 
 // Screen Imports - Medical
 import PatientsPage from "./medical/PatientsPage";
@@ -164,6 +165,15 @@ export const SCREEN_REGISTRY: ScreenRegistry = {
     category: "user",
     title: "Thông Tin Cá Nhân",
     description: "Quản lý thông tin cá nhân và đổi mật khẩu",
+  },
+
+  // ==================== B2B SCREENS ====================
+  "b2b.inventory-orders": {
+    component: InventoryB2BOrdersPage,
+    permissions: ["b2b.access", "b2b.view", "inventory.dashboard"],
+    category: "b2b",
+    title: "Quản lý Đơn hàng - Kho",
+    description: "Kiểm hàng và đóng gói đơn hàng bán buôn cho nhân viên kho",
   },
 
   // ==================== MEDICAL SCREENS ====================
@@ -903,6 +913,7 @@ export {
   QuickQuotePage,
   CreateOrderPage,
   EditB2BOrderPage,
+  InventoryB2BOrdersPage,
   // Medical
   PatientsPage,
   PatientDetailPage,

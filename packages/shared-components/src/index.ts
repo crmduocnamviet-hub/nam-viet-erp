@@ -24,6 +24,9 @@ export { default as QuickQuoteTabContent } from "./components/QuickQuoteTabConte
 export { default as PrintableReceipt } from "./components/PrintableReceipt";
 export * from "./hooks/useDebounce";
 
+// Table Components
+export * from "./components/tables";
+
 // Screens and Permission System
 export * from "./screens";
 export * from "./providers/ScreenProvider";

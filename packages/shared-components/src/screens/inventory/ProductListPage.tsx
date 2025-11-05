@@ -2,12 +2,9 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Card,
-  Table,
   Input,
   Space,
   Typography,
-  Avatar,
-  Tag,
   Grid,
   App as AntApp,
   type TableProps,
@@ -15,20 +12,11 @@ import {
 import { SearchOutlined } from "@ant-design/icons";
 import { useDebounce } from "@nam-viet-erp/shared-components";
 import { searchProducts } from "@nam-viet-erp/services";
+import { ProductListTable } from "../../components/tables";
 
 const { Title, Text } = Typography;
 const { Search } = Input;
 const { useBreakpoint } = Grid;
-
-// Helper function to validate URLs
-const isValidUrl = (string: string): boolean => {
-  try {
-    const url = new URL(string);
-    return url.protocol === "http:" || url.protocol === "https:";
-  } catch {
-    return false;
-  }
-};
 
 interface ProductListPageContentProps {
   hasPermission?: (permission: string) => boolean;
@@ -84,88 +72,9 @@ const ProductListPageContent: React.FC<ProductListPageContentProps> = () => {
     }));
   };
 
-  const columns: TableProps<IProduct>["columns"] = [
-    {
-      title: "Sản phẩm",
-      dataIndex: "name",
-      key: "name",
-      render: (text: string, record: IProduct) => (
-        <Space>
-          <Avatar
-            shape="square"
-            size={isMobile ? 48 : 64}
-            src={
-              record.image_url && isValidUrl(record.image_url)
-                ? record.image_url
-                : null
-            }
-          />
-          <div>
-            <Typography.Text strong>{text}</Typography.Text>
-            <div style={{ color: "gray", fontSize: "12px" }}>
-              SKU: {record.sku || "N/A"}
-            </div>
-          </div>
-        </Space>
-      ),
-    },
-    {
-      title: "Phân loại",
-      dataIndex: "category",
-      key: "category",
-      responsive: ["md"],
-      render: (category: string) => category || "-",
-    },
-    {
-      title: "Đơn vị",
-      key: "unit",
-      responsive: ["lg"],
-      render: (_: any, record: IProduct) => (
-        <div>
-          <div>Bán lẻ: {record.retail_unit || "-"}</div>
-          <div style={{ fontSize: "12px", color: "gray" }}>
-            Bán buôn: {record.wholesale_unit || "-"}
-          </div>
-        </div>
-      ),
-    },
-    {
-      title: "Giá bán",
-      key: "price",
-      render: (_: any, record: IProduct) => (
-        <div>
-          <div>
-            {record.retail_price
-              ? `${record.retail_price.toLocaleString("vi-VN")}đ`
-              : "-"}
-          </div>
-          {record.wholesale_price && (
-            <div style={{ fontSize: "12px", color: "gray" }}>
-              Sỉ: {record.wholesale_price.toLocaleString("vi-VN")}đ
-            </div>
-          )}
-        </div>
-      ),
-    },
-    {
-      title: "Nhà sản xuất",
-      dataIndex: "manufacturer",
-      key: "manufacturer",
-      responsive: ["lg"],
-      render: (manufacturer: string) => manufacturer || "-",
-    },
-    {
-      title: "Trạng thái",
-      dataIndex: "is_active",
-      key: "is_active",
-      responsive: ["md"],
-      render: (isActive: boolean) => (
-        <Tag color={isActive ? "green" : "red"}>
-          {isActive ? "Đang kinh doanh" : "Ngừng kinh doanh"}
-        </Tag>
-      ),
-    },
-  ];
+  const handleRowClick = (record: IProduct) => {
+    navigate(`/products/edit/${record.id}`);
+  };
 
   return (
     <div style={{ padding: "24px", minHeight: "100vh" }}>
@@ -193,18 +102,13 @@ const ProductListPageContent: React.FC<ProductListPageContentProps> = () => {
               size={isMobile ? "middle" : "large"}
             />
 
-            <Table
-              columns={columns}
-              dataSource={products}
+            <ProductListTable
+              products={products}
               loading={loading}
-              rowKey="id"
               pagination={pagination}
-              onChange={handleTableChange}
-              onRow={(record) => ({
-                onClick: () => navigate(`/products/edit/${record.id}`),
-                style: { cursor: "pointer" },
-              })}
-              scroll={{ x: 800 }}
+              isMobile={isMobile}
+              onTableChange={handleTableChange}
+              onRowClick={handleRowClick}
             />
           </Space>
         </Card>

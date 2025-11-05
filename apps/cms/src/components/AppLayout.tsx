@@ -32,6 +32,7 @@ import {
   CreateProductPage,
   EditProductPage,
   EditB2BOrderPage,
+  InventoryB2BOrdersPage,
 } from "@nam-viet-erp/shared-components";
 import logo from "../assets/logo.png";
 import MissingDocumentationWarning from "./MissingDocumentationWarning";
@@ -67,6 +68,7 @@ const menuItems: MenuProps["items"] = [
     icon: <ShopOutlined />,
     children: [
       { label: "Quản lý Đơn hàng B2B", key: "/b2b-orders" },
+      { label: "📦 Đơn hàng - Kho", key: "/b2b/inventory" },
       { label: "Xem Nhanh Báo Giá", key: "/quick-quote" },
       { label: "Tạo Báo Giá / Đơn Hàng", key: "/create-quote" },
     ],
@@ -407,6 +409,10 @@ const AppLayout: React.FC = () => {
                 <Route
                   path="/b2b/orders/edit/:id"
                   element={<EditB2BOrderPage />}
+                />
+                <Route
+                  path="/b2b/inventory"
+                  element={<InventoryB2BOrdersPage />}
                 />
                 <Route
                   path="/quick-quote"

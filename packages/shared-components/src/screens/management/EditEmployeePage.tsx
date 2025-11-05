@@ -28,17 +28,6 @@ import {
   searchUsersForLinking,
 } from "@nam-viet-erp/services";
 
-const { Text } = Typography;
-
-interface EmployeeFormData {
-  full_name: string;
-  employee_code: string;
-  role_name: string;
-  is_active: boolean;
-  user_id?: string;
-  permissions?: string[];
-}
-
 const EditEmployeePage: React.FC = () => {
   const navigate = useNavigate();
   const { employeeId } = useParams<{ employeeId: string }>();
@@ -144,7 +133,7 @@ const EditEmployeePage: React.FC = () => {
     searchUsers("");
   }, []);
 
-  const handleUpdateEmployee = async (values: EmployeeFormData) => {
+  const handleUpdateEmployee = async (values: IEmployee) => {
     if (!employee || !employeeId) return;
 
     setUpdating(true);

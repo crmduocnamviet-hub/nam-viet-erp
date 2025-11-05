@@ -37,6 +37,11 @@ import {
   INVENTORY_STATUSES,
   SALE_STATUSES,
 } from "../../constants/b2b";
+import {
+  isSuperAdmin,
+  canEditB2BOrderStatus,
+  getAllowedB2BStatuses,
+} from "../../utils/permissions";
 
 const { Title, Text } = Typography;
 
@@ -59,17 +64,11 @@ const EditB2BOrderPage: React.FC<EditB2BOrderPageProps> = ({
   const [selectedOrder, setSelectedOrder] = useState<IB2BQuote | null>(null);
   const [employees, setEmployees] = useState<IEmployee[]>([]);
 
-  // Permission checks
-  const userPermissions = user?.permissions || [];
-  const isSalesStaff =
-    userPermissions.includes("sales.create") ||
-    userPermissions.includes("sales.manage");
-  const isInventoryStaff =
-    userPermissions.includes("inventory.access") ||
-    userPermissions.includes("inventory.manage");
-  const isDeliveryStaff =
-    userPermissions.includes("delivery.access") ||
-    userPermissions.includes("shipping.manage");
+  // Permission checks using employee role
+  const userPermissions = user?.permissions || employee?.permissions || [];
+  const isSalesStaff = employee?.role_name === "sales-staff";
+  const isInventoryStaff = employee?.role_name === "inventory-staff";
+  const isDeliveryStaff = employee?.role_name === "delivery-staff";
 
   // Payment Status
   const B2B_PAYMENT_STATUS = [
@@ -95,80 +94,19 @@ const EditB2BOrderPage: React.FC<EditB2BOrderPageProps> = ({
     },
   ];
 
-  // Get allowed statuses based on user role and current order status
+  // Get allowed statuses based on employee role and current order status
   const getAllowedStatuses = (currentStatus?: string) => {
-    const salesStatuses = [
-      "draft",
-      "sent",
-      "negotiating",
-      "accepted",
-      "cancelled",
-      "rejected",
-      "expired",
-    ];
-    const inventoryStatuses = ["accepted", "pending_packaging", "packaged"];
-    const deliveryStatuses = ["packaged", "shipping", "completed"];
+    const allowedStatusKeys = getAllowedB2BStatuses(employee, currentStatus);
 
-    // If user has admin permissions, allow all statuses
-    if (
-      userPermissions.includes("admin") ||
-      userPermissions.includes("super-admin")
-    ) {
-      return B2B_ORDER_STAGES;
-    }
-
-    let allowedStatuses: string[] = [];
-
-    if (isSalesStaff) {
-      allowedStatuses = [...allowedStatuses, ...salesStatuses];
-    }
-    if (isInventoryStaff) {
-      allowedStatuses = [...allowedStatuses, ...inventoryStatuses];
-    }
-    if (isDeliveryStaff) {
-      allowedStatuses = [...allowedStatuses, ...deliveryStatuses];
-    }
-
-    // If editing an existing order, check if current status is in user's range
-    if (currentStatus) {
-      const isCurrentStatusInUserRange =
-        allowedStatuses.includes(currentStatus);
-
-      // If current status is NOT in user's range, they cannot change it
-      if (!isCurrentStatusInUserRange) {
-        // Return only the current status (read-only)
-        return B2B_ORDER_STAGES.filter((stage) => stage.key === currentStatus);
-      }
-    }
-
-    // Filter stages based on allowed statuses
+    // Filter B2B_ORDER_STAGES to only include allowed statuses
     return B2B_ORDER_STAGES.filter((stage) =>
-      allowedStatuses.includes(stage.key),
+      allowedStatusKeys.includes(stage.key),
     );
   };
 
-  // Check if user can edit the current order status
+  // Check if employee can edit the current order status
   const canEditOrderStatus = (currentStatus: string) => {
-    const salesStatuses = SALE_STATUSES;
-    const inventoryStatuses = INVENTORY_STATUSES;
-    const deliveryStatuses = DELIVERY_STATUSES;
-
-    // Admin can edit any status
-    if (
-      userPermissions.includes("admin") ||
-      userPermissions.includes("super-admin")
-    ) {
-      return true;
-    }
-
-    // Check if current status is in user's authorized range
-    if (isSalesStaff && salesStatuses.includes(currentStatus)) return true;
-    if (isInventoryStaff && inventoryStatuses.includes(currentStatus))
-      return true;
-    if (isDeliveryStaff && deliveryStatuses.includes(currentStatus))
-      return true;
-
-    return false;
+    return canEditB2BOrderStatus(employee, currentStatus);
   };
 
   // Check if order is in delivery stage (shipping or completed)
@@ -502,22 +440,28 @@ const EditB2BOrderPage: React.FC<EditB2BOrderPageProps> = ({
                 label={
                   <span>
                     Trạng thái đơn hàng
-                    {isSalesStaff && (
+                    {isSuperAdmin(employee) && (
+                      <Tag color="gold" style={{ marginLeft: 8 }}>
+                        Super Admin - Full Access
+                      </Tag>
+                    )}
+                    {!isSuperAdmin(employee) && isSalesStaff && (
                       <Tag color="blue" style={{ marginLeft: 8 }}>
                         Sales
                       </Tag>
                     )}
-                    {isInventoryStaff && (
+                    {!isSuperAdmin(employee) && isInventoryStaff && (
                       <Tag color="orange" style={{ marginLeft: 8 }}>
                         Kho
                       </Tag>
                     )}
-                    {isDeliveryStaff && (
+                    {!isSuperAdmin(employee) && isDeliveryStaff && (
                       <Tag color="green" style={{ marginLeft: 8 }}>
                         Giao hàng
                       </Tag>
                     )}
                     {selectedOrder &&
+                      !isSuperAdmin(employee) &&
                       !canEditOrderStatus(selectedOrder.quote_stage) && (
                         <Tag color="red" style={{ marginLeft: 8 }}>
                           Chỉ đọc
