@@ -126,6 +126,7 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
   // Role-based checks
   const isInventoryStaff = employee?.role_name === "inventory-staff";
   const isDeliveryStaff = employee?.role_name === "delivery-staff";
+  const isSalesStaff = employee?.role_name === "sales-staff";
 
   // Get allowed statuses based on employee role and current order status
   const getAllowedStatuses = (currentStatus?: string) => {
@@ -771,6 +772,159 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
       setLoading(false);
     }
   };
+
+  // ========== Sales Staff Handlers ==========
+
+  // Handle mark as sent (for sales staff: draft → sent)
+  const handleMarkAsSent = async () => {
+    if (!selectedOrder) return;
+
+    try {
+      setLoading(true);
+      const { error } = await updateQuoteStage(selectedOrder.quote_id, "sent");
+
+      if (error) {
+        notification.error({
+          message: "Lỗi cập nhật trạng thái",
+          description: "Không thể gửi báo giá",
+        });
+        return;
+      }
+
+      notification.success({
+        message: "Đã gửi báo giá",
+        description: `Báo giá ${selectedOrder.quote_number} đã được gửi cho khách hàng`,
+      });
+
+      setSelectedOrder({ ...selectedOrder, quote_stage: "sent" });
+      setOrderDetailModalOpen(false);
+      await loadOrders();
+    } catch (error) {
+      console.error("Error updating order status:", error);
+      notification.error({
+        message: "Lỗi hệ thống",
+        description: "Có lỗi xảy ra khi cập nhật trạng thái",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle mark as negotiating (for sales staff: sent → negotiating)
+  const handleMarkAsNegotiating = async () => {
+    if (!selectedOrder) return;
+
+    try {
+      setLoading(true);
+      const { error } = await updateQuoteStage(
+        selectedOrder.quote_id,
+        "negotiating",
+      );
+
+      if (error) {
+        notification.error({
+          message: "Lỗi cập nhật trạng thái",
+          description: "Không thể cập nhật trạng thái",
+        });
+        return;
+      }
+
+      notification.success({
+        message: "Chuyển sang đàm phán",
+        description: `Đơn hàng ${selectedOrder.quote_number} đang trong quá trình đàm phán`,
+      });
+
+      setSelectedOrder({ ...selectedOrder, quote_stage: "negotiating" });
+      setOrderDetailModalOpen(false);
+      await loadOrders();
+    } catch (error) {
+      console.error("Error updating order status:", error);
+      notification.error({
+        message: "Lỗi hệ thống",
+        description: "Có lỗi xảy ra khi cập nhật trạng thái",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle mark as accepted (for sales staff: negotiating → accepted)
+  const handleMarkAsAccepted = async () => {
+    if (!selectedOrder) return;
+
+    try {
+      setLoading(true);
+      const { error } = await updateQuoteStage(
+        selectedOrder.quote_id,
+        "accepted",
+      );
+
+      if (error) {
+        notification.error({
+          message: "Lỗi cập nhật trạng thái",
+          description: "Không thể chấp nhận đơn hàng",
+        });
+        return;
+      }
+
+      notification.success({
+        message: "Đã chấp nhận đơn hàng",
+        description: `Đơn hàng ${selectedOrder.quote_number} đã được chấp nhận và chuyển sang kho xử lý`,
+      });
+
+      setSelectedOrder({ ...selectedOrder, quote_stage: "accepted" });
+      setOrderDetailModalOpen(false);
+      await loadOrders();
+    } catch (error) {
+      console.error("Error updating order status:", error);
+      notification.error({
+        message: "Lỗi hệ thống",
+        description: "Có lỗi xảy ra khi cập nhật trạng thái",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle mark as cancelled (for sales staff)
+  const handleMarkAsCancelled = async () => {
+    if (!selectedOrder) return;
+
+    try {
+      setLoading(true);
+      const { error } = await updateQuoteStage(
+        selectedOrder.quote_id,
+        "cancelled",
+      );
+
+      if (error) {
+        notification.error({
+          message: "Lỗi hủy đơn",
+          description: "Không thể hủy đơn hàng",
+        });
+        return;
+      }
+
+      notification.success({
+        message: "Đã hủy đơn hàng",
+        description: `Đơn hàng ${selectedOrder.quote_number} đã được hủy`,
+      });
+
+      setSelectedOrder({ ...selectedOrder, quote_stage: "cancelled" });
+      setOrderDetailModalOpen(false);
+      await loadOrders();
+    } catch (error) {
+      console.error("Error updating order status:", error);
+      notification.error({
+        message: "Lỗi hệ thống",
+        description: "Có lỗi xảy ra khi hủy đơn hàng",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ========== End Sales Staff Handlers ==========
 
   // Handle manual verification (for items without QR)
   const handleManualVerify = (item: any) => {
@@ -1784,13 +1938,24 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
         orderItems={orderItems}
         loadingItems={loadingItems}
         verifiedItems={verifiedItems}
+        // Role flags
         isInventoryStaff={isInventoryStaff}
         isDeliveryStaff={isDeliveryStaff}
+        isSalesStaff={isSalesStaff}
+        // Inventory staff handlers
         onMarkAsPackaged={handleMarkAsPackaged}
+        // Delivery staff handlers
         onMarkAsShipping={handleMarkAsShipping}
         onMarkAsCompleted={handleMarkAsCompleted}
+        // Sales staff handlers
+        onMarkAsSent={handleMarkAsSent}
+        onMarkAsNegotiating={handleMarkAsNegotiating}
+        onMarkAsAccepted={handleMarkAsAccepted}
+        onMarkAsCancelled={handleMarkAsCancelled}
+        // Common handlers
         onOpenContinuousScanner={handleOpenContinuousScanner}
         onManualVerify={handleManualVerify}
+        onEdit={() => selectedOrder && handleEditOrder(selectedOrder)}
         formatCurrency={formatCurrency}
         getStageInfo={getStageInfo}
         loading={loading}

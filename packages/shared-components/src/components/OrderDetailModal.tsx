@@ -20,13 +20,23 @@ interface OrderDetailModalProps {
   orderItems: any[];
   loadingItems: boolean;
   verifiedItems: Set<string>;
-  isInventoryStaff: boolean;
+  isInventoryStaff?: boolean;
   isDeliveryStaff?: boolean;
-  onMarkAsPackaged: () => Promise<void>;
+  isSalesStaff?: boolean;
+  // Inventory staff callbacks
+  onMarkAsPackaged?: () => Promise<void>;
+  // Delivery staff callbacks
   onMarkAsShipping?: () => Promise<void>;
   onMarkAsCompleted?: () => Promise<void>;
-  onOpenContinuousScanner: () => void;
-  onManualVerify: (item: any) => void;
+  // Sales staff callbacks
+  onMarkAsSent?: () => Promise<void>;
+  onMarkAsNegotiating?: () => Promise<void>;
+  onMarkAsAccepted?: () => Promise<void>;
+  onMarkAsCancelled?: () => Promise<void>;
+  // Common callbacks
+  onOpenContinuousScanner?: () => void;
+  onManualVerify?: (item: any) => void;
+  onEdit?: () => void;
   formatCurrency: (amount: number) => string;
   getStageInfo: (stage: string) => any;
   loading: boolean;
@@ -39,13 +49,19 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
   orderItems,
   loadingItems,
   verifiedItems,
-  isInventoryStaff,
+  isInventoryStaff = false,
   isDeliveryStaff = false,
+  isSalesStaff = false,
   onMarkAsPackaged,
   onMarkAsShipping,
   onMarkAsCompleted,
+  onMarkAsSent,
+  onMarkAsNegotiating,
+  onMarkAsAccepted,
+  onMarkAsCancelled,
   onOpenContinuousScanner,
   onManualVerify,
+  onEdit,
   formatCurrency,
   getStageInfo,
   loading,
@@ -58,10 +74,82 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
       </Button>,
     ];
 
+    // Sales staff buttons
+    if (isSalesStaff) {
+      const stage = selectedOrder?.quote_stage;
+
+      // draft → sent
+      if (stage === "draft" && onMarkAsSent) {
+        buttons.push(
+          <Button
+            key="send"
+            type="primary"
+            onClick={async () => await onMarkAsSent()}
+            loading={loading}
+          >
+            📤 Gửi báo giá
+          </Button>,
+        );
+      }
+      // sent → negotiating
+      else if (stage === "sent" && onMarkAsNegotiating) {
+        buttons.push(
+          <Button
+            key="negotiate"
+            type="primary"
+            onClick={async () => await onMarkAsNegotiating()}
+            loading={loading}
+          >
+            💬 Đang đàm phán
+          </Button>,
+        );
+      }
+      // negotiating → accepted
+      else if (stage === "negotiating" && onMarkAsAccepted) {
+        buttons.push(
+          <Button
+            key="accept"
+            type="primary"
+            onClick={async () => await onMarkAsAccepted()}
+            loading={loading}
+            style={{ background: "#52c41a", borderColor: "#52c41a" }}
+          >
+            ✅ Chấp nhận đơn hàng
+          </Button>,
+        );
+      }
+
+      // Cancel button (available in draft, sent, negotiating stages)
+      if (
+        ["draft", "sent", "negotiating"].includes(stage) &&
+        onMarkAsCancelled
+      ) {
+        buttons.push(
+          <Button
+            key="cancel"
+            danger
+            onClick={async () => await onMarkAsCancelled()}
+            loading={loading}
+          >
+            ❌ Hủy đơn
+          </Button>,
+        );
+      }
+
+      // Edit button for sales staff (in draft, sent, negotiating stages)
+      if (["draft", "sent", "negotiating"].includes(stage) && onEdit) {
+        buttons.push(
+          <Button key="edit" type="default" onClick={onEdit}>
+            ✏️ Chỉnh sửa
+          </Button>,
+        );
+      }
+    }
+
     // Inventory staff buttons
     if (isInventoryStaff) {
       // accepted → packaged
-      if (selectedOrder?.quote_stage === "accepted") {
+      if (selectedOrder?.quote_stage === "accepted" && onMarkAsPackaged) {
         buttons.push(
           <Button
             key="packaged"
@@ -118,10 +206,10 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
       }
     }
 
-    // Show Edit button for non-inventory and non-delivery staff
-    if (!isInventoryStaff && !isDeliveryStaff) {
+    // Show Edit button for general staff (non-specialized roles)
+    if (!isInventoryStaff && !isDeliveryStaff && !isSalesStaff && onEdit) {
       buttons.push(
-        <Button key="edit" type="default">
+        <Button key="edit" type="default" onClick={onEdit}>
           Chỉnh sửa
         </Button>,
       );
@@ -280,7 +368,7 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                                 type="default"
                                 size="small"
                                 icon={<CheckCircleOutlined />}
-                                onClick={() => onManualVerify(record)}
+                                onClick={() => onManualVerify?.(record)}
                               >
                                 Xác thực thủ công
                               </Button>

@@ -209,12 +209,36 @@ Còn **28 screens** cần extract table components. Đề xuất thực hiện t
 
 **Integration Rate: 6/34 screens (17.6%) - All working perfectly!**
 
+**⚠️ PHÁT HIỆN MỚI - VAT Tables**
+
+Sau khi kiểm tra kỹ hơn, phát hiện **5 màn hình VAT & Warehouse** vẫn có table inline chưa được extract:
+
+1. **VATInvoiceInputTable** (VATInvoiceInputPage.tsx:610) - 10 columns
+2. **VATInvoicePOSTable** (VATInvoicePOSPage.tsx:138) - 8 columns
+3. **VATInvoiceB2BTable** (VATInvoiceB2BPage.tsx:309) - 9 columns
+4. **VATInventoryTable** (VATInventoryDashboard.tsx:116) - Complex with filters
+5. **PurchaseOrderReceivingDetailTable** (PurchaseOrderReceivingDetailPage.tsx:1115) - ⚠️ **VERY COMPLEX** (nested interactive components)
+
+📄 **Chi tiết**: Xem `VAT_TABLES_ANALYSIS.md` để biết thêm thông tin
+
 **Next Steps:**
 
-1. Bắt đầu với Batch 2: Priority 1 - Critical tables (5 tables)
+1. **Batch 2A - VAT Tables (Priority High):**
+   - VATInvoicePOSTable (Medium)
+   - VATInvoiceB2BTable (Medium-High)
+   - VATInvoiceInputTable (Medium)
+   - VATInventoryTable (High - has filters)
+   - _Est. time: 4-6 hours_
+
+2. **Batch 2B - Complex Warehouse Table:**
+   - PurchaseOrderReceivingDetailTable (Very High - needs redesign)
+   - _Est. time: 3-4 hours_
+
+3. **Batch 3 - Remaining Priority 1:**
    - FinancialTransactionsTable
    - EmployeesTable
    - PatientsTable
    - WarehouseTransfersTable
-2. Test thoroughly trước khi chuyển sang batch tiếp theo
-3. Update documentation sau mỗi batch
+
+4. Test thoroughly trước khi chuyển sang batch tiếp theo
+5. Update documentation sau mỗi batch
