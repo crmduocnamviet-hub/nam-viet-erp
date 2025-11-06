@@ -89,17 +89,26 @@ const B2BOrderManagementPage: React.FC<B2BOrderManagementPageProps> = ({
     try {
       const filters: any = {};
 
-      // Role-based filtering
-      if (isInventoryStaff && !isSalesStaff) {
-        // Inventory staff only sees accepted orders they can process
-        filters.stage = "accepted";
-      } else if (isDeliveryStaff && !isSalesStaff && !isInventoryStaff) {
-        // Delivery staff only sees orders ready for shipping
-        filters.stage = "packaged";
-      } else if (isSalesStaff) {
-        // Sales staff sees their own orders
-        filters.employeeId = employee?.employee_id;
+      // Role-based filtering - must match B2BOrderListPage logic EXACTLY
+      // Admin/super-admin should see all (no filter)
+      const isAdmin =
+        userPermissions.includes("admin") ||
+        userPermissions.includes("super-admin");
+
+      if (!isAdmin) {
+        // Only apply role-based filters for non-admin users
+        if (isInventoryStaff && !isSalesStaff) {
+          // Inventory staff sees accepted and inventory-related stages (same as List)
+          filters.stage = ["accepted", "pending_packaging", "packaged"];
+        } else if (isDeliveryStaff && !isSalesStaff && !isInventoryStaff) {
+          // Delivery staff only sees orders ready for shipping
+          filters.stage = "packaged";
+        } else if (isSalesStaff) {
+          // Sales staff sees their own orders
+          filters.employeeId = employee?.employee_id;
+        }
       }
+      // Admin/super-admin sees all (no filter applied)
 
       // Add date range filter if selected
       if (dateRange) {

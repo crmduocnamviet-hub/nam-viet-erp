@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Button,
   Table,
@@ -11,11 +11,17 @@ import {
   type TableProps,
   Input,
   Grid,
+  Tooltip,
+  Popover,
 } from "antd";
-import { PlusOutlined, RobotOutlined } from "@ant-design/icons";
+import {
+  PlusOutlined,
+  RobotOutlined,
+  ShoppingOutlined,
+} from "@ant-design/icons";
 import dayjs from "dayjs";
 import {
-  getPurchaseOrder,
+  getPurchaseOrders,
   autoGeneratePurchaseOrders,
 } from "@nam-viet-erp/services";
 
@@ -33,15 +39,38 @@ const PurchaseOrdersContent: React.FC<PurchaseOrdersPageProps> = ({
   const { notification, modal } = AntApp.useApp();
   const [purchaseOrders, setPurchaseOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchText, setSearchText] = useState("");
   const screens = useBreakpoint();
   const isMobile = !screens.lg;
 
   const fetchPOs = async () => {
     setLoading(true);
     try {
-      // Chúng ta cần join với bảng suppliers để lấy tên Nhà Cung Cấp
-      const { data, error } = await getPurchaseOrder();
+      // Use getPurchaseOrders to get orders with items and products
+      const { data, error } = await getPurchaseOrders();
       if (error) throw error;
+
+      // Debug: Log order structure to verify items are loaded
+      if (data && data.length > 0) {
+        console.log("[PurchaseOrdersPage] Orders loaded:", data.length);
+        console.log("[PurchaseOrdersPage] First order structure:", {
+          id: data[0].id,
+          po_number: data[0].po_number,
+          hasItems: !!data[0].items,
+          itemsCount: data[0].items?.length || 0,
+          items: data[0].items,
+          firstItem: data[0].items?.[0]
+            ? {
+                hasProduct: !!data[0].items[0].product,
+                product: data[0].items[0].product,
+                productName: data[0].items[0].product?.name,
+                productSku: data[0].items[0].product?.sku,
+                productBarcode: data[0].items[0].product?.barcode,
+              }
+            : null,
+        });
+      }
+
       setPurchaseOrders(data || []);
     } catch (error: any) {
       notification.error({
@@ -56,6 +85,67 @@ const PurchaseOrdersContent: React.FC<PurchaseOrdersPageProps> = ({
   useEffect(() => {
     fetchPOs();
   }, [notification]);
+
+  // Filter by search text (client-side) - includes product name, SKU, barcode search
+  const filteredData = useMemo(() => {
+    if (!searchText) return purchaseOrders;
+
+    const lowerSearch = searchText.toLowerCase().trim();
+    if (!lowerSearch) return purchaseOrders;
+
+    return purchaseOrders.filter((po) => {
+      // Search by PO number
+      if (po.po_number?.toLowerCase().includes(lowerSearch)) return true;
+      if (po.id?.toString().includes(lowerSearch)) return true;
+
+      // Search by supplier name
+      if (po.supplier?.name?.toLowerCase().includes(lowerSearch)) return true;
+      if (po.suppliers?.name?.toLowerCase().includes(lowerSearch)) return true;
+
+      // Search by product names, SKU, barcode in order items
+      if (po.items && Array.isArray(po.items) && po.items.length > 0) {
+        const hasMatchingProduct = po.items.some((item: any) => {
+          // Try multiple paths for product data
+          const product = item.product || item.product_id || {};
+          const productName = (
+            product?.name ||
+            item.product_name ||
+            product?.product_name ||
+            ""
+          ).toLowerCase();
+          const productSku = (
+            product?.sku ||
+            item.sku ||
+            product?.product_sku ||
+            ""
+          ).toLowerCase();
+          const productBarcode = (
+            product?.barcode ||
+            item.barcode ||
+            product?.product_barcode ||
+            ""
+          ).toLowerCase();
+
+          // Also check product code if exists
+          const productCode = (
+            product?.code ||
+            item.product_code ||
+            ""
+          ).toLowerCase();
+
+          return (
+            productName.includes(lowerSearch) ||
+            productSku.includes(lowerSearch) ||
+            productBarcode.includes(lowerSearch) ||
+            productCode.includes(lowerSearch)
+          );
+        });
+        if (hasMatchingProduct) return true;
+      }
+
+      return false;
+    });
+  }, [purchaseOrders, searchText]);
 
   const handleAutoGenerate = async () => {
     if (!employee?.warehouse_id) {
@@ -78,7 +168,7 @@ const PurchaseOrdersContent: React.FC<PurchaseOrdersPageProps> = ({
         try {
           const result = await autoGeneratePurchaseOrders(
             employee.warehouse_id,
-            employee.employee_id || null
+            employee.employee_id || null,
           );
 
           notification.success({
@@ -109,9 +199,113 @@ const PurchaseOrdersContent: React.FC<PurchaseOrdersPageProps> = ({
     },
     {
       title: "Nhà Cung Cấp",
-      dataIndex: "suppliers",
+      dataIndex: ["supplier", "suppliers"],
       key: "supplier_name",
-      render: (supplier) => supplier?.name || "N/A",
+      render: (_, record) =>
+        record.supplier?.name || record.suppliers?.name || "N/A",
+    },
+    {
+      title: "Sản phẩm",
+      key: "products",
+      width: 300,
+      render: (_, record) => {
+        const items = record.items || [];
+        if (items.length === 0) {
+          return (
+            <Tag color="default" style={{ margin: 0 }}>
+              Chưa có sản phẩm
+            </Tag>
+          );
+        }
+
+        // Single product - show full name
+        if (items.length === 1) {
+          const product = items[0].product;
+          const productName =
+            product?.name || `Sản phẩm #${items[0].product_id}`;
+          return (
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <ShoppingOutlined style={{ color: "#1890ff" }} />
+              <span style={{ fontWeight: 500 }}>{productName}</span>
+              {items[0].quantity && (
+                <Tag color="blue" style={{ margin: 0 }}>
+                  x{items[0].quantity}
+                </Tag>
+              )}
+            </div>
+          );
+        }
+
+        // Multiple products - show count with popover
+        const firstTwoProducts = items.slice(0, 2);
+        const remainingCount = items.length - 2;
+
+        const productListContent = (
+          <div style={{ maxWidth: 400, maxHeight: 300, overflowY: "auto" }}>
+            <div style={{ marginBottom: 8, fontWeight: 600, color: "#1890ff" }}>
+              {items.length} sản phẩm trong đơn hàng:
+            </div>
+            {items.map((item: any, index: number) => {
+              const product = item.product;
+              const productName =
+                product?.name || `Sản phẩm #${item.product_id}`;
+              return (
+                <div
+                  key={index}
+                  style={{
+                    padding: "6px 0",
+                    borderBottom:
+                      index < items.length - 1 ? "1px solid #f0f0f0" : "none",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                  }}
+                >
+                  <span style={{ color: "#666", minWidth: 20 }}>
+                    {index + 1}.
+                  </span>
+                  <span style={{ flex: 1, fontWeight: 500 }}>
+                    {productName}
+                  </span>
+                  {item.quantity && (
+                    <Tag color="blue" style={{ margin: 0 }}>
+                      SL: {item.quantity}
+                    </Tag>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        );
+
+        return (
+          <Popover
+            content={productListContent}
+            title={null}
+            trigger="click"
+            placement="left"
+            overlayStyle={{ maxWidth: 450 }}
+          >
+            <div
+              style={{
+                cursor: "pointer",
+                padding: "4px 8px",
+                borderRadius: 4,
+                background: "#f0f7ff",
+                border: "1px solid #d6e4ff",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+              }}
+            >
+              <ShoppingOutlined style={{ color: "#1890ff" }} />
+              <span style={{ fontWeight: 600, color: "#1890ff" }}>
+                {items.length} sản phẩm
+              </span>
+            </div>
+          </Popover>
+        );
+      },
     },
     {
       title: "Ngày tạo",
@@ -156,12 +350,18 @@ const PurchaseOrdersContent: React.FC<PurchaseOrdersPageProps> = ({
       </Row>
       <Row style={{ marginBottom: 16 }} gutter={16}>
         <Col span={12}>
-          <Search placeholder="Tìm theo Mã ĐH, Tên NCC..." allowClear />
+          <Search
+            placeholder="Tìm theo Mã ĐH, NCC, tên sản phẩm, SKU, mã vạch..."
+            allowClear
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            onSearch={(value) => setSearchText(value)}
+          />
         </Col>
       </Row>
       <Table
         columns={columns}
-        dataSource={purchaseOrders}
+        dataSource={filteredData}
         loading={loading}
         rowKey="id"
       />

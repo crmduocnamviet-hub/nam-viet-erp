@@ -9,9 +9,25 @@ import {
   UsergroupAddOutlined,
   MenuOutlined,
   RocketOutlined,
-  UserOutlined, // <-- IMPORT ICON MỚI
+  UserOutlined,
   LogoutOutlined,
   SwapOutlined,
+  HomeOutlined,
+  MedicineBoxOutlined,
+  GiftOutlined,
+  ContainerOutlined,
+  ThunderboltOutlined,
+  TeamOutlined,
+  CustomerServiceOutlined,
+  ToolOutlined,
+  BarcodeOutlined,
+  CalculatorOutlined,
+  BarChartOutlined,
+  LineChartOutlined,
+  FileSyncOutlined,
+  AuditOutlined,
+  BankOutlined,
+  GlobalOutlined,
 } from "@ant-design/icons";
 import type { MenuProps } from "antd";
 import { Routes, Route, useNavigate } from "react-router-dom";
@@ -32,103 +48,16 @@ import {
   CreateProductPage,
   EditProductPage,
   EditB2BOrderPage,
+  generateMenu,
+  CMS_APP_MENU,
+  useScreens,
 } from "@nam-viet-erp/shared-components";
 import logo from "../assets/logo.png";
 import MissingDocumentationWarning from "./MissingDocumentationWarning";
 
 const { Content, Sider } = Layout;
 const { Title } = Typography;
-const { useBreakpoint } = Grid; // <-- "Mắt thần" theo dõi kích thước màn hình
-
-const menuItems: MenuProps["items"] = [
-  { label: "Tổng quan", key: "/", icon: <PieChartOutlined /> },
-  {
-    label: "Kho - Sản Phẩm",
-    key: "inventory",
-    icon: <AppstoreOutlined />,
-    children: [
-      { label: "Danh sách Sản phẩm", key: "/products" },
-      { label: "Thêm sản phẩm mới", key: "/products/create" },
-      { label: "Quản lý Đặt hàng", key: "/purchase-orders" },
-      {
-        label: "Chuyển kho",
-        key: "/warehouse/transfers",
-        icon: <SwapOutlined />,
-      },
-      { type: "divider" },
-      { label: "Nhập HĐ VAT", key: "/warehouse/vat-invoice-input" },
-      { label: "Xuất HĐ VAT cho POS", key: "/warehouse/vat-invoice-pos" },
-      { label: "Xuất HĐ VAT cho B2B", key: "/warehouse/vat-invoice-b2b" },
-    ],
-  },
-  {
-    label: "Bán Buôn (B2B)",
-    key: "b2b",
-    icon: <ShopOutlined />,
-    children: [
-      { label: "Quản lý Đơn hàng B2B", key: "/b2b-orders" },
-      { label: "Xem Nhanh Báo Giá", key: "/quick-quote" },
-      { label: "Tạo Báo Giá / Đơn Hàng", key: "/create-quote" },
-    ],
-  },
-  // --- MENU MARKETING ĐƯỢC NÂNG CẤP ---
-  {
-    label: "Marketing",
-    key: "marketing",
-    icon: <RocketOutlined />,
-    children: [
-      { label: "Trung tâm chỉ huy", key: "/marketing/dashboard" },
-      { label: "Quản lý Chiến dịch", key: "/marketing/campaigns" },
-      { label: "Phân khúc Khách hàng", key: "/marketing/segments" },
-      { label: "Thư viện Nội dung", key: "/marketing/library" },
-      { label: "Chatbot AI", key: "/marketing/chatbot" },
-      {
-        label: "Khuyến mại & Giảm giá",
-        key: "marketing-promo",
-        icon: <TagOutlined />,
-        children: [
-          { label: "Quản lý Khuyến mại", key: "/promotions" },
-          { label: "Quản lý Mã Giảm Giá", key: "/vouchers" },
-        ],
-      },
-    ],
-  },
-  {
-    label: "Đối Tác",
-    key: "partners",
-    icon: <UsergroupAddOutlined />,
-    children: [{ label: "Nhà Cung Cấp", key: "/suppliers" }],
-  },
-  {
-    label: "Nhân sự",
-    key: "hr",
-    icon: <UserOutlined />,
-    children: [
-      { label: "Quản lý Nhân viên", key: "/employees" },
-      { label: "Quản lý Tài khoản", key: "/users" },
-      { label: "Quản lý Bệnh nhân", key: "/patients" },
-    ],
-  },
-  {
-    label: "Tài chính",
-    key: "finance",
-    icon: <DollarOutlined />,
-    children: [
-      { label: "Quản lý Thu - Chi", key: "/financial-transactions" },
-      { label: "Sổ Quỹ", key: "/cash-ledger" },
-    ],
-  },
-  {
-    label: "Cấu hình",
-    key: "settings",
-    icon: <SettingOutlined />,
-    children: [
-      { label: "Quản lý Phòng", key: "/rooms" },
-      { label: "Quản lý Quỹ", key: "/settings/funds" },
-      { label: "Cảnh báo Thiếu Tài liệu", key: "/missing-documentation" },
-    ],
-  },
-];
+const { useBreakpoint } = Grid;
 
 // === BẢN CẬP NHẬT THEME HOÀN CHỈNH ===
 const namVietTheme = {
@@ -162,7 +91,8 @@ const ComingSoon = () => <h1>Tính năng này sắp ra mắt!</h1>;
 const SiderContent: React.FC<{
   onMenuClick: MenuProps["onClick"];
   onLogout: () => void;
-}> = ({ onMenuClick, onLogout }) => (
+  menuItems: MenuProps["items"];
+}> = ({ onMenuClick, onLogout, menuItems }) => (
   <div
     style={{
       display: "flex",
@@ -228,6 +158,10 @@ const AppLayout: React.FC = () => {
   const navigate = useNavigate();
   const screens = useBreakpoint(); // Lấy thông tin màn hình hiện tại
   const isMobile = !screens.lg; // Coi là mobile nếu màn hình nhỏ hơn 'lg'
+  const { user } = useScreens();
+
+  // Generate menu items from CMS_APP_MENU based on user permissions
+  const menuItems = user ? generateMenu(CMS_APP_MENU, user.permissions) : [];
 
   const handleMenuClick: MenuProps["onClick"] = (e) => {
     navigate(e.key);
@@ -341,6 +275,7 @@ const AppLayout: React.FC = () => {
             <SiderContent
               onMenuClick={handleMenuClick}
               onLogout={handleLogout}
+              menuItems={menuItems}
             />
           </Drawer>
         )}
@@ -370,13 +305,13 @@ const AppLayout: React.FC = () => {
               />
             </div>
           )}
-          <Content style={{ margin: "16px", overflow: "initial" }}>
+          <Content style={{ margin: "8px", overflow: "initial" }}>
             <div
               style={{
-                padding: 16,
+                padding: 8,
                 background: "#ffffff",
                 borderRadius: namVietTheme.token.borderRadius,
-                minHeight: "calc(100vh - 32px)",
+                minHeight: "calc(100vh - 16px)",
               }}
             >
               <Routes>

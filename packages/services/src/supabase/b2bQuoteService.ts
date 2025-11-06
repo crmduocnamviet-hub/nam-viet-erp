@@ -318,6 +318,7 @@ export const getQuoteStatistics = async (filters?: {
   employeeId?: string;
   startDate?: string;
   endDate?: string;
+  stage?: string | string[]; // Support single stage or array of stages
 }) => {
   let query = supabase
     .from(TABLES.B2B_QUOTES)
@@ -333,6 +334,15 @@ export const getQuoteStatistics = async (filters?: {
 
   if (filters?.endDate) {
     query = query.lte("quote_date", filters.endDate);
+  }
+
+  // Support stage filtering (single stage or array of stages)
+  if (filters?.stage) {
+    if (Array.isArray(filters.stage)) {
+      query = query.in("quote_stage", filters.stage);
+    } else {
+      query = query.eq("quote_stage", filters.stage);
+    }
   }
 
   const { data: quotes, error } = await query;

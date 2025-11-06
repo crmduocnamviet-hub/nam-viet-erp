@@ -356,7 +356,9 @@ const CreatePurchaseImportPage: React.FC = () => {
                 <Form.Item
                   name="supplier_id"
                   label="Nhà Cung Cấp"
-                  rules={[{ message: "Vui lòng chọn nhà cung cấp" }]}
+                  rules={[
+                    { required: true, message: "Vui lòng chọn nhà cung cấp" },
+                  ]}
                 >
                   <Select
                     placeholder="Chọn nhà cung cấp"
@@ -371,6 +373,10 @@ const CreatePurchaseImportPage: React.FC = () => {
                       value: s.id,
                     }))}
                     size="large"
+                    onChange={(value) => {
+                      // Clear selected products when supplier changes
+                      setSelectedProducts([]);
+                    }}
                   />
                 </Form.Item>
               </Col>
@@ -447,33 +453,80 @@ const CreatePurchaseImportPage: React.FC = () => {
         </Card>
 
         {/* Products Table */}
-        <Card
-          title="Danh Sách Sản Phẩm"
-          extra={
-            <Button
-              type="dashed"
-              icon={<PlusOutlined />}
-              onClick={handleAddProduct}
-              disabled={!selectedSupplierId}
-              size="large"
-            >
-              Thêm Sản Phẩm
-            </Button>
-          }
-        >
+        <Card title="Danh Sách Sản Phẩm">
           {!selectedSupplierId ? (
             <Empty description="Vui lòng chọn nhà cung cấp để thêm sản phẩm" />
-          ) : selectedProducts.length === 0 ? (
-            <Empty description="Chưa có sản phẩm nào. Nhấn 'Thêm Sản Phẩm' để bắt đầu" />
           ) : (
-            <Table
-              dataSource={selectedProducts}
-              columns={productColumns}
-              rowKey="id"
-              pagination={false}
-              scroll={{ x: 1000 }}
-              size="large"
-            />
+            <>
+              {/* Search box - Like shopping cart */}
+              <div
+                style={{
+                  marginBottom: 16,
+                  padding: 12,
+                  background: "#f5f5f5",
+                  borderRadius: 8,
+                }}
+              >
+                <Select
+                  showSearch
+                  placeholder="🔍 Tìm kiếm và thêm sản phẩm vào giỏ hàng..."
+                  optionFilterProp="children"
+                  size="large"
+                  style={{ width: "100%" }}
+                  onSelect={(value) => {
+                    const product = supplierProducts.find(
+                      (p) => p.id === value,
+                    );
+                    if (product) {
+                      setSelectedProducts([
+                        ...selectedProducts,
+                        {
+                          id: Date.now(),
+                          product_id: product.id,
+                          quantity: 1,
+                          lot_number: "",
+                          expiration_date: "",
+                        },
+                      ]);
+                    }
+                  }}
+                  allowClear
+                  filterOption={(input, option) => {
+                    const product = supplierProducts.find(
+                      (p) => p.id === option?.value,
+                    );
+                    if (!product) return false;
+                    const searchStr =
+                      `${product.name} ${product.sku || ""} ${product.barcode || ""}`.toLowerCase();
+                    return searchStr.includes(input.toLowerCase());
+                  }}
+                  options={supplierProducts.map((product) => ({
+                    value: product.id,
+                    label: `${product.name}${product.sku ? ` (SKU: ${product.sku})` : ""}${product.cost_price ? ` - ${product.cost_price.toLocaleString("vi-VN")}đ` : ""}`,
+                  }))}
+                />
+                <Text
+                  type="secondary"
+                  style={{ fontSize: 12, display: "block", marginTop: 8 }}
+                >
+                  Gõ tên sản phẩm, SKU hoặc mã vạch để tìm và tự động thêm vào
+                  giỏ hàng
+                </Text>
+              </div>
+
+              {selectedProducts.length === 0 ? (
+                <Empty description="Chưa có sản phẩm nào. Tìm kiếm và chọn sản phẩm ở trên để thêm vào giỏ hàng" />
+              ) : (
+                <Table
+                  dataSource={selectedProducts}
+                  columns={productColumns}
+                  rowKey="id"
+                  pagination={false}
+                  scroll={{ x: 1000 }}
+                  size="large"
+                />
+              )}
+            </>
           )}
         </Card>
       </Space>

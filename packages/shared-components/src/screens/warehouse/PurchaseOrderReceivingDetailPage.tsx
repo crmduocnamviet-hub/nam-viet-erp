@@ -1593,23 +1593,6 @@ const PurchaseOrderReceivingDetailPage: React.FC = () => {
                                 </ul>
                               </div>
                             )}
-                            <div>
-                              <Text strong>Chi tiết phân tích:</Text>
-                              <div
-                                style={{
-                                  marginTop: 4,
-                                  padding: 8,
-                                  background: "#f5f5f5",
-                                  borderRadius: 4,
-                                  fontSize: 12,
-                                  whiteSpace: "pre-wrap",
-                                  maxHeight: 200,
-                                  overflow: "auto",
-                                }}
-                              >
-                                {result.text || "Không có kết quả"}
-                              </div>
-                            </div>
                           </div>
                         )}
                       </Card>

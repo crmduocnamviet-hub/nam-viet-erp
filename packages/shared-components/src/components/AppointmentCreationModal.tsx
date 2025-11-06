@@ -538,27 +538,63 @@ const AppointmentCreationModal: React.FC<AppointmentCreationModalProps> = ({
     setCurrentStep(currentStep - 1);
   };
 
-  const handleFormFinish = () => {
-    form
-      .validateFields()
-      .then(() => {
-        const formValues = form.getFieldsValue(true);
-        // Ensure patient_id is set correctly
-        const patientId =
-          selectedPatient?.patient_id ||
-          selectedPatient?.id ||
-          formValues.patient_id;
-        const allValues = {
-          ...formValues,
-          patient_id: patientId,
-          patientId: patientId, // Keep both for compatibility
-        };
-        onFinish(allValues);
-        handleReset();
-      })
-      .catch((info) => {
-        console.log("Validate Failed:", info);
-      });
+  const handleFormFinish = async () => {
+    try {
+      // Validate all fields before proceeding
+      await form.validateFields();
+      const formValues = form.getFieldsValue(true);
+
+      // Ensure patient_id is set correctly
+      const patientId =
+        selectedPatient?.patient_id ||
+        selectedPatient?.id ||
+        formValues.patient_id;
+
+      // Ensure required fields are present
+      if (!patientId) {
+        form.setFields([
+          {
+            name: "patient_id",
+            errors: ["Vui lòng chọn bệnh nhân"],
+          },
+        ]);
+        return;
+      }
+
+      if (!formValues.resourceId) {
+        form.setFields([
+          {
+            name: "resourceId",
+            errors: ["Vui lòng chọn bác sĩ"],
+          },
+        ]);
+        return;
+      }
+
+      if (!formValues.appointmentDate || !formValues.appointmentTime) {
+        form.setFields([
+          {
+            name: formValues.appointmentDate
+              ? "appointmentTime"
+              : "appointmentDate",
+            errors: ["Vui lòng chọn đầy đủ ngày và giờ"],
+          },
+        ]);
+        return;
+      }
+
+      const allValues = {
+        ...formValues,
+        patient_id: patientId,
+        patientId: patientId, // Keep both for compatibility
+      };
+
+      onFinish(allValues);
+      handleReset();
+    } catch (info) {
+      console.log("Validate Failed:", info);
+      // Errors will be displayed on the form fields
+    }
   };
 
   const handleReset = () => {

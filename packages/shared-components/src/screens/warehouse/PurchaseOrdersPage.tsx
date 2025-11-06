@@ -76,6 +76,22 @@ const PurchaseOrdersPage: React.FC = () => {
         throw error;
       }
 
+      // Debug: Log first order structure to verify items are loaded
+      if (data && data.length > 0 && process.env.NODE_ENV === "development") {
+        console.log("[PurchaseOrdersPage] Sample order structure:", {
+          po_number: data[0].po_number,
+          hasItems: !!data[0].items,
+          itemsCount: data[0].items?.length || 0,
+          firstItem: data[0].items?.[0]
+            ? {
+                hasProduct: !!data[0].items[0].product,
+                productName: data[0].items[0].product?.name,
+                productSku: data[0].items[0].product?.sku,
+              }
+            : null,
+        });
+      }
+
       setPurchaseOrders(data || []);
     } catch (error: any) {
       notification.error({
@@ -98,11 +114,13 @@ const PurchaseOrdersPage: React.FC = () => {
     setDateRange(null);
   };
 
-  // Filter by search text (client-side) - includes product name search
+  // Filter by search text (client-side) - includes product name, SKU, barcode search
   const filteredData = useMemo(() => {
     if (!searchText) return purchaseOrders;
 
-    const lowerSearch = searchText.toLowerCase();
+    const lowerSearch = searchText.toLowerCase().trim();
+    if (!lowerSearch) return purchaseOrders;
+
     return purchaseOrders.filter((po) => {
       // Search by PO number
       if (po.po_number?.toLowerCase().includes(lowerSearch)) return true;
@@ -110,16 +128,42 @@ const PurchaseOrdersPage: React.FC = () => {
       // Search by supplier name
       if (po.supplier?.name?.toLowerCase().includes(lowerSearch)) return true;
 
-      // Search by product name in order items
-      if (po.items && Array.isArray(po.items)) {
+      // Search by product names, SKU, barcode in order items
+      if (po.items && Array.isArray(po.items) && po.items.length > 0) {
         const hasMatchingProduct = po.items.some((item: any) => {
-          const productName = item.product?.name?.toLowerCase() || "";
-          const productSku = item.product?.sku?.toLowerCase() || "";
-          const productBarcode = item.product?.barcode?.toLowerCase() || "";
+          // Try multiple paths for product data
+          const product = item.product || item.product_id || {};
+          const productName = (
+            product?.name ||
+            item.product_name ||
+            product?.product_name ||
+            ""
+          ).toLowerCase();
+          const productSku = (
+            product?.sku ||
+            item.sku ||
+            product?.product_sku ||
+            ""
+          ).toLowerCase();
+          const productBarcode = (
+            product?.barcode ||
+            item.barcode ||
+            product?.product_barcode ||
+            ""
+          ).toLowerCase();
+
+          // Also check product code if exists
+          const productCode = (
+            product?.code ||
+            item.product_code ||
+            ""
+          ).toLowerCase();
+
           return (
             productName.includes(lowerSearch) ||
             productSku.includes(lowerSearch) ||
-            productBarcode.includes(lowerSearch)
+            productBarcode.includes(lowerSearch) ||
+            productCode.includes(lowerSearch)
           );
         });
         if (hasMatchingProduct) return true;
@@ -364,12 +408,13 @@ const PurchaseOrdersPage: React.FC = () => {
       <Card style={{ marginBottom: 16, borderWidth: 0 }}>
         <Space wrap>
           <Input
-            placeholder="Tìm kiếm theo số đơn, nhà cung cấp..."
+            placeholder="Tìm kiếm theo số đơn, NCC, tên sản phẩm, SKU, mã vạch..."
             prefix={<SearchOutlined />}
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
-            style={{ width: 300 }}
+            style={{ width: 350 }}
             size="large"
+            allowClear
           />
           <Select
             value={statusFilter}

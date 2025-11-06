@@ -217,29 +217,43 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
   const loadOrders = async () => {
     setLoading(true);
     try {
+      // Role-based filtering - must match B2BOrderManagementPage logic EXACTLY
+      // Admin/super-admin should see all (no filter)
+      const isAdmin =
+        userPermissions.includes("admin") ||
+        userPermissions.includes("super-admin");
+
       // For inventory staff, automatically filter to show only accepted orders and inventory-related stages
       let stageFilter = filters.quoteStage;
-      if (
-        isInventoryStaff &&
-        !userPermissions.includes("admin") &&
-        !userPermissions.includes("super-admin")
-      ) {
-        // Inventory staff can only see orders that are accepted or in inventory processing stages
-        const inventoryRelevantStages = [
-          "accepted",
-          "pending_packaging",
-          "packaged",
-        ];
-        stageFilter =
-          stageFilter && inventoryRelevantStages.includes(stageFilter)
-            ? stageFilter
-            : undefined; // If no filter or invalid filter, don't restrict further, service will handle
+      let employeeIdFilter = filters.employeeId;
+
+      if (!isAdmin) {
+        // Only apply role-based filters for non-admin users
+        if (isInventoryStaff && !isSalesStaff) {
+          // Inventory staff can only see orders that are accepted or in inventory processing stages
+          const inventoryRelevantStages = [
+            "accepted",
+            "pending_packaging",
+            "packaged",
+          ];
+          stageFilter =
+            stageFilter && inventoryRelevantStages.includes(stageFilter)
+              ? stageFilter
+              : undefined; // If no filter or invalid filter, don't restrict further, service will handle
+        } else if (isDeliveryStaff && !isSalesStaff && !isInventoryStaff) {
+          // Delivery staff only sees orders ready for shipping
+          stageFilter = "packaged";
+        } else if (isSalesStaff) {
+          // Sales staff sees their own orders (unless admin/super-admin)
+          employeeIdFilter = employee?.employee_id;
+        }
       }
+      // Admin/super-admin sees all (no filter applied)
 
       // First, get total count with same filters (but without pagination)
       const countResponse = await getB2BQuotes({
         customerName: searchKeyword || filters.customerName || undefined,
-        employeeId: filters.employeeId || undefined,
+        employeeId: employeeIdFilter || undefined,
         stage: stageFilter || undefined,
         startDate: filters.startDate || undefined,
         endDate: filters.endDate || undefined,
@@ -253,7 +267,7 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
         // Creator filter (if supported by the service)
         // creatorName: filters.creatorName || undefined,
         // Employee filter (for personal quotes)
-        employeeId: filters.employeeId || undefined,
+        employeeId: employeeIdFilter || undefined,
         // Operation status filter
         stage: stageFilter || undefined,
         // Payment status filter (if supported by the service)
@@ -272,8 +286,11 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
       let allQuotesData = (countResponse.data || []) as B2BQuoteWithStatus[];
 
       // Client-side filtering for inventory staff - only show accepted and inventory-relevant orders
+      // This is a safety net in case API doesn't filter correctly
+      // Note: Server-side filtering should already handle this, but we keep this as backup
       if (
         isInventoryStaff &&
+        !isSalesStaff &&
         !userPermissions.includes("admin") &&
         !userPermissions.includes("super-admin")
       ) {
@@ -764,10 +781,9 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
     });
   };
 
-  // Handle create quote
+  // Handle create quote - navigate to create quote page instead of opening modal
   const handleCreateQuote = () => {
-    createQuoteForm.resetFields();
-    setCreateQuoteModalOpen(true);
+    navigate("/create-quote");
   };
 
   // Handle create new customer

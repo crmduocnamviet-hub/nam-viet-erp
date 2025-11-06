@@ -1,10 +1,11 @@
 import React from "react";
-import { Table, Button, Space, Tag, Tooltip, Popconfirm } from "antd";
+import { Table, Button, Space, Tag, Tooltip, Popconfirm, Popover } from "antd";
 import {
   EyeOutlined,
   EditOutlined,
   StopOutlined,
   DeleteOutlined,
+  ShoppingOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 
@@ -44,6 +45,106 @@ const PurchaseOrdersTable: React.FC<PurchaseOrdersTableProps> = ({
       dataIndex: ["supplier", "name"],
       key: "supplier_name",
       width: 200,
+    },
+    {
+      title: "Sản phẩm",
+      key: "products",
+      width: 300,
+      render: (_, record) => {
+        const items = record.items || [];
+        if (items.length === 0) {
+          return (
+            <Tag color="default" style={{ margin: 0 }}>
+              Chưa có sản phẩm
+            </Tag>
+          );
+        }
+
+        // Single product - show full name
+        if (items.length === 1) {
+          const product = items[0].product;
+          const productName =
+            product?.name || `Sản phẩm #${items[0].product_id}`;
+          return (
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <ShoppingOutlined style={{ color: "#1890ff" }} />
+              <span style={{ fontWeight: 500 }}>{productName}</span>
+              {items[0].quantity && (
+                <Tag color="blue" style={{ margin: 0 }}>
+                  x{items[0].quantity}
+                </Tag>
+              )}
+            </div>
+          );
+        }
+
+        // Multiple products - show count with popover
+        const productListContent = (
+          <div style={{ maxWidth: 400, maxHeight: 300, overflowY: "auto" }}>
+            <div style={{ marginBottom: 8, fontWeight: 600, color: "#1890ff" }}>
+              {items.length} sản phẩm trong đơn hàng:
+            </div>
+            {items.map((item: any, index: number) => {
+              const product = item.product;
+              const productName =
+                product?.name || `Sản phẩm #${item.product_id}`;
+              return (
+                <div
+                  key={index}
+                  style={{
+                    padding: "6px 0",
+                    borderBottom:
+                      index < items.length - 1 ? "1px solid #f0f0f0" : "none",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                  }}
+                >
+                  <span style={{ color: "#666", minWidth: 20 }}>
+                    {index + 1}.
+                  </span>
+                  <span style={{ flex: 1, fontWeight: 500 }}>
+                    {productName}
+                  </span>
+                  {item.quantity && (
+                    <Tag color="blue" style={{ margin: 0 }}>
+                      SL: {item.quantity}
+                    </Tag>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        );
+
+        return (
+          <Popover
+            content={productListContent}
+            title={null}
+            trigger="click"
+            placement="left"
+            overlayStyle={{ maxWidth: 450 }}
+          >
+            <div
+              style={{
+                cursor: "pointer",
+                padding: "4px 8px",
+                borderRadius: 4,
+                background: "#f0f7ff",
+                border: "1px solid #d6e4ff",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+              }}
+            >
+              <ShoppingOutlined style={{ color: "#1890ff" }} />
+              <span style={{ fontWeight: 600, color: "#1890ff" }}>
+                {items.length} sản phẩm
+              </span>
+            </div>
+          </Popover>
+        );
+      },
     },
     {
       title: "Trạng Thái",

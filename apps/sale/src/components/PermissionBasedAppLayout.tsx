@@ -499,6 +499,10 @@ const AppLayoutContent: React.FC = () => {
                   element={renderScreen("medical.scheduling")}
                 />
                 <Route
+                  path="/store-scheduling"
+                  element={renderScreen("medical.scheduling")}
+                />
+                <Route
                   path="/patients"
                   element={renderScreen("medical.patients")}
                 />
