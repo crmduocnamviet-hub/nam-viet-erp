@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 import { Routes, Route } from "react-router-dom";
 import Login from "./pages/Login";
+import Register from "./pages/Register";
 import { useAuth } from "./hooks/useAuth";
 import { Spin, Row } from "antd";
 import AuthenticatedApp from "./components/AuthenticatedApp";
@@ -9,6 +10,7 @@ import {
   useInitializeInventory,
   useAuthStore,
 } from "@nam-viet-erp/store";
+import "./App.css";
 
 const App: React.FC = () => {
   const { session, loading } = useAuth();
@@ -44,6 +46,7 @@ const App: React.FC = () => {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
       <Route path="/*" element={session ? <AuthenticatedApp /> : <Login />} />
     </Routes>
   );

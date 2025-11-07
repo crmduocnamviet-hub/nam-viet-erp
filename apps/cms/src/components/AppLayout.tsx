@@ -12,6 +12,9 @@ import {
   UserOutlined, // <-- IMPORT ICON MỚI
   LogoutOutlined,
   SwapOutlined,
+  BellOutlined,
+  MenuUnfoldOutlined,
+  MenuFoldOutlined,
 } from "@ant-design/icons";
 import type { MenuProps } from "antd";
 import { Routes, Route, useNavigate } from "react-router-dom";
@@ -24,6 +27,8 @@ import {
   Button,
   Grid,
   Drawer,
+  Badge,
+  Dropdown,
 } from "antd";
 import viVN from "antd/locale/vi_VN";
 import { signOut } from "@nam-viet-erp/services";
@@ -37,7 +42,7 @@ import {
 import logo from "../assets/logo.png";
 import MissingDocumentationWarning from "./MissingDocumentationWarning";
 
-const { Content, Sider } = Layout;
+const { Content, Sider, Header } = Layout;
 const { Title } = Typography;
 const { useBreakpoint } = Grid; // <-- "Mắt thần" theo dõi kích thước màn hình
 
@@ -50,7 +55,11 @@ const menuItems: MenuProps["items"] = [
     children: [
       { label: "Danh sách Sản phẩm", key: "/products" },
       { label: "Thêm sản phẩm mới", key: "/products/create" },
+      { label: "Quản lý Combo", key: "/combos" },
+      { type: "divider" },
       { label: "Quản lý Đặt hàng", key: "/purchase-orders" },
+      { label: "Nhận hàng", key: "/warehouse/receiving" },
+      { label: "Lấy hàng (Picking)", key: "/warehouse/picking" },
       {
         label: "Chuyển kho",
         key: "/warehouse/transfers",
@@ -67,10 +76,12 @@ const menuItems: MenuProps["items"] = [
     key: "b2b",
     icon: <ShopOutlined />,
     children: [
+      { label: "Dashboard B2B", key: "/b2b/dashboard" },
       { label: "Quản lý Đơn hàng B2B", key: "/b2b-orders" },
       { label: "📦 Đơn hàng - Kho", key: "/b2b/inventory" },
       { label: "Xem Nhanh Báo Giá", key: "/quick-quote" },
       { label: "Tạo Báo Giá / Đơn Hàng", key: "/create-quote" },
+      { label: "Tài chính B2B", key: "/b2b/financial" },
     ],
   },
   // --- MENU MARKETING ĐƯỢC NÂNG CẤP ---
@@ -163,8 +174,7 @@ const ComingSoon = () => <h1>Tính năng này sắp ra mắt!</h1>;
 // Tách nội dung của Sider ra một component riêng để tái sử dụng
 const SiderContent: React.FC<{
   onMenuClick: MenuProps["onClick"];
-  onLogout: () => void;
-}> = ({ onMenuClick, onLogout }) => (
+}> = ({ onMenuClick }) => (
   <div
     style={{
       display: "flex",
@@ -199,28 +209,6 @@ const SiderContent: React.FC<{
       onClick={onMenuClick}
       style={{ fontSize: "16px", flex: 1 }}
     />
-    <div
-      style={{
-        padding: "16px",
-        borderTop: "1px solid rgba(255, 255, 255, 0.1)",
-      }}
-    >
-      <Button
-        type="text"
-        icon={<LogoutOutlined />}
-        onClick={onLogout}
-        block
-        style={{
-          color: "rgba(255, 255, 255, 0.75)",
-          height: "40px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "flex-start",
-        }}
-      >
-        Đăng xuất
-      </Button>
-    </div>
   </div>
 );
 
@@ -242,6 +230,16 @@ const AppLayout: React.FC = () => {
     await signOut();
     navigate("/login");
   };
+
+  // User dropdown menu items
+  const userMenuItems: MenuProps["items"] = [
+    {
+      key: "logout",
+      icon: <LogoutOutlined />,
+      label: "Đăng xuất",
+      onClick: handleLogout,
+    },
+  ];
 
   return (
     <ConfigProvider theme={namVietTheme} locale={viVN}>
@@ -297,28 +295,6 @@ const AppLayout: React.FC = () => {
               onClick={handleMenuClick}
               style={{ fontSize: "16px", flex: 1 }}
             />
-            <div
-              style={{
-                padding: collapsed ? "8px" : "16px",
-                borderTop: "1px solid rgba(255, 255, 255, 0.1)",
-              }}
-            >
-              <Button
-                type="text"
-                icon={<LogoutOutlined />}
-                onClick={handleLogout}
-                block
-                style={{
-                  color: "rgba(255, 255, 255, 0.75)",
-                  height: "40px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: collapsed ? "center" : "flex-start",
-                }}
-              >
-                {!collapsed && "Đăng xuất"}
-              </Button>
-            </div>
           </Sider>
         )}
 
@@ -340,10 +316,7 @@ const AppLayout: React.FC = () => {
             }}
             width={230}
           >
-            <SiderContent
-              onMenuClick={handleMenuClick}
-              onLogout={handleLogout}
-            />
+            <SiderContent onMenuClick={handleMenuClick} />
           </Drawer>
         )}
 
@@ -354,24 +327,87 @@ const AppLayout: React.FC = () => {
             transition: "margin-left 0.2s",
           }}
         >
-          {isMobile && (
-            <div
-              style={{
-                position: "fixed",
-                top: 16,
-                right: 16,
-                zIndex: 1000,
-              }}
-            >
-              <Button
-                type="primary"
-                shape="circle"
-                icon={<MenuOutlined style={{ fontSize: "20px" }} />}
-                onClick={() => setMobileMenuOpen(true)}
-                size="large"
-              />
+          {/* Header with notification and user info */}
+          <Header
+            style={{
+              padding: "0 24px",
+              background: "#ffffff",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              boxShadow: "0 1px 4px rgba(0,21,41,.08)",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", flexGrow: 1 }}>
+              {!isMobile && (
+                <Button
+                  type="text"
+                  icon={
+                    collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />
+                  }
+                  onClick={() => setCollapsed(!collapsed)}
+                  style={{
+                    fontSize: "16px",
+                    width: 64,
+                    height: 64,
+                  }}
+                />
+              )}
+              {isMobile && (
+                <Button
+                  type="text"
+                  icon={<MenuOutlined />}
+                  onClick={() => setMobileMenuOpen(true)}
+                  style={{
+                    fontSize: "16px",
+                    width: 64,
+                    height: 64,
+                  }}
+                />
+              )}
             </div>
-          )}
+
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              {/* Notification Button */}
+              <Button
+                type="text"
+                shape="circle"
+                icon={
+                  <Badge dot>
+                    <BellOutlined style={{ fontSize: "18px" }} />
+                  </Badge>
+                }
+              />
+
+              {/* User Avatar Dropdown */}
+              <Dropdown
+                menu={{ items: userMenuItems }}
+                trigger={["click"]}
+                placement="bottomRight"
+              >
+                <Button
+                  type="text"
+                  style={{ height: "auto", padding: "4px 8px" }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                    }}
+                  >
+                    <Avatar icon={<UserOutlined />} />
+                    {!isMobile && (
+                      <span style={{ fontWeight: 500, color: "#333" }}>
+                        Admin
+                      </span>
+                    )}
+                  </div>
+                </Button>
+              </Dropdown>
+            </div>
+          </Header>
+
           <Content style={{ margin: "16px", overflow: "initial" }}>
             <div
               style={{
@@ -403,8 +439,20 @@ const AppLayout: React.FC = () => {
                   element={<Screen screenKey="inventory.lot-detail" />}
                 />
                 <Route
+                  path="/combos"
+                  element={<Screen screenKey="inventory.combos" />}
+                />
+                <Route
                   path="/b2b-orders"
                   element={<Screen screenKey="b2b.orders" />}
+                />
+                <Route
+                  path="/b2b/dashboard"
+                  element={<Screen screenKey="b2b.dashboard" />}
+                />
+                <Route
+                  path="/b2b/financial"
+                  element={<Screen screenKey="b2b.financial" />}
                 />
                 <Route
                   path="/b2b/orders/edit/:id"
@@ -453,6 +501,54 @@ const AppLayout: React.FC = () => {
                 <Route
                   path="/purchase-orders"
                   element={<Screen screenKey="inventory.purchase-orders" />}
+                />
+
+                {/* --- WAREHOUSE PURCHASE ORDER ROUTES --- */}
+                <Route
+                  path="/warehouse/purchase-orders"
+                  element={<Screen screenKey="warehouse.purchase-orders" />}
+                />
+                <Route
+                  path="/warehouse/purchase-orders/:id/edit"
+                  element={
+                    <Screen screenKey="warehouse.purchase-orders.edit" />
+                  }
+                />
+                <Route
+                  path="/warehouse/receiving"
+                  element={<Screen screenKey="warehouse.receiving" />}
+                />
+                <Route
+                  path="/warehouse/receiving/create"
+                  element={<Screen screenKey="warehouse.receiving.create" />}
+                />
+                <Route
+                  path="/warehouse/receiving/:id"
+                  element={<Screen screenKey="warehouse.receiving.detail" />}
+                />
+                <Route
+                  path="/warehouse/picking"
+                  element={<Screen screenKey="warehouse.picking" />}
+                />
+
+                {/* --- SUPPLIER ROUTES --- */}
+                <Route
+                  path="/suppliers"
+                  element={<Screen screenKey="warehouse.suppliers" />}
+                />
+                <Route
+                  path="/suppliers/new"
+                  element={<Screen screenKey="warehouse.suppliers.form" />}
+                />
+                <Route
+                  path="/suppliers/:id"
+                  element={<Screen screenKey="warehouse.suppliers.form" />}
+                />
+                <Route
+                  path="/suppliers/:id/promotions"
+                  element={
+                    <Screen screenKey="warehouse.suppliers.promotions" />
+                  }
                 />
 
                 {/* --- ROUTE CHO MODULE NHÂN SỰ --- */}

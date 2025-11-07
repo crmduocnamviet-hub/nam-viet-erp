@@ -28,7 +28,7 @@ import ProductsPage from "./inventory/ProductsPage";
 import ProductListPage from "./inventory/ProductListPage";
 import CreateProductPage from "./inventory/CreateProductPage";
 import EditProductPage from "./inventory/EditProductPage";
-import PurchaseOrdersPage from "./inventory/PurchaseOrdersPage";
+import PurchaseOrdersPage from "./warehouse/PurchaseOrdersPage"; // Using warehouse version
 import ComboListPage from "./inventory/ComboListPage";
 import ProductLotDetailPage from "./inventory/ProductLotDetailPage";
 

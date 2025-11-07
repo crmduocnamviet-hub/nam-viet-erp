@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   Modal,
   Table,
@@ -14,24 +14,15 @@ import {
 } from "antd";
 import {
   CheckCircleOutlined,
-  WarningOutlined,
   ShoppingCartOutlined,
   MedicineBoxOutlined,
 } from "@ant-design/icons";
+import {
+  useAutoGeneratePOModal,
+  type ProductToOrder,
+} from "@nam-viet-erp/store";
 
 const { Text, Title } = Typography;
-
-interface ProductToOrder {
-  product_id: number;
-  product_name: string;
-  supplier_id: number;
-  supplier_name: string;
-  current_stock: number;
-  min_stock: number;
-  max_stock: number;
-  quantity_needed: number;
-  unit_price: number;
-}
 
 interface AutoGeneratePOModalProps {
   open: boolean;
@@ -51,36 +42,16 @@ const AutoGeneratePOModal: React.FC<AutoGeneratePOModalProps> = ({
   warehouseName = "Unknown",
 }) => {
   const [confirming, setConfirming] = useState(false);
-  const [editedProducts, setEditedProducts] = useState<ProductToOrder[]>([]);
 
-  // Initialize edited products when products change
-  useEffect(() => {
-    setEditedProducts(products);
-  }, [products]);
-
-  // Handle quantity change with validation
-  const handleQuantityChange = (productId: number, newQuantity: number) => {
-    // Ensure quantity is within valid range
-    const validQuantity = Math.max(1, newQuantity);
-
-    setEditedProducts((prev) =>
-      prev.map((p) =>
-        p.product_id === productId
-          ? { ...p, quantity_needed: validQuantity }
-          : p,
-      ),
-    );
-  };
-
-  // Group products by supplier
-  const productsBySupplier: Record<string, ProductToOrder[]> = {};
-  editedProducts.forEach((product) => {
-    const supplierName = product.supplier_name;
-    if (!productsBySupplier[supplierName]) {
-      productsBySupplier[supplierName] = [];
-    }
-    productsBySupplier[supplierName].push(product);
-  });
+  // Use custom hook for purchase order draft logic
+  const {
+    editedProducts,
+    handleQuantityChange,
+    productsBySupplier,
+    totalAmount,
+    totalProducts,
+    totalSuppliers,
+  } = useAutoGeneratePOModal({ products });
 
   const columns = [
     {
@@ -177,13 +148,6 @@ const AutoGeneratePOModal: React.FC<AutoGeneratePOModalProps> = ({
     }
   };
 
-  const totalAmount = editedProducts.reduce(
-    (sum, p) => sum + p.quantity_needed * p.unit_price,
-    0,
-  );
-  const totalProducts = editedProducts.length;
-  const totalSuppliers = Object.keys(productsBySupplier).length;
-
   return (
     <Modal
       title={
@@ -259,7 +223,7 @@ const AutoGeneratePOModal: React.FC<AutoGeneratePOModalProps> = ({
 
           {/* Products grouped by supplier */}
           {Object.entries(productsBySupplier).map(
-            ([supplierName, supplierProducts], index) => {
+            ([supplierName, supplierProducts]) => {
               const supplierTotal = supplierProducts.reduce(
                 (sum, p) => sum + p.quantity_needed * p.unit_price,
                 0,

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Routes, Route } from "react-router-dom";
 import AppLayout from "./components/AppLayout"; // <-- Chúng ta sẽ tách Layout ra file riêng
 import Login from "./pages/Login";
+import Register from "./pages/Register";
 import { useAuth } from "./hooks/useAuth";
 import { ScreenProvider } from "@nam-viet-erp/shared-components";
 import { Spin, Row, notification } from "antd";
@@ -12,6 +13,7 @@ import {
   useEmployeeStore,
   useAuthStore,
 } from "@nam-viet-erp/store";
+import "./App.css";
 
 const App: React.FC = () => {
   const { session, loading } = useAuth();
@@ -119,8 +121,9 @@ const App: React.FC = () => {
 
   return (
     <Routes>
-      {/* Nếu chưa đăng nhập, chỉ có thể truy cập trang Login */}
+      {/* Nếu chưa đăng nhập, chỉ có thể truy cập trang Login và Register */}
       <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
 
       {/* Nếu đã đăng nhập, có thể truy cập các trang bên trong AppLayout */}
       <Route
