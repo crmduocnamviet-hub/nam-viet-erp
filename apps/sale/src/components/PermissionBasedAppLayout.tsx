@@ -27,6 +27,7 @@ import {
   useScreens,
   generateMenu,
   SALE_APP_MENU,
+  getNamVietTheme,
 } from "@nam-viet-erp/shared-components";
 import { useEmployee, useEmployeeStore } from "@nam-viet-erp/store";
 
@@ -36,30 +37,8 @@ const { Content, Sider } = Layout;
 const { Title } = Typography;
 const { useBreakpoint } = Grid;
 
-// Theme configuration
-const namVietTheme = {
-  token: {
-    colorBgLayout: "#f0f2f5",
-    colorPrimary: "#1773adff",
-    borderRadius: 5,
-  },
-  components: {
-    Layout: {
-      headerBg: "#ffffff",
-      siderBg: "#015ba9ff",
-      triggerBg: "#015ba9ff",
-    },
-    Menu: {
-      darkItemBg: "#015ba9ff",
-      darkSubMenuItemBg: "#015ba9ff",
-      darkItemColor: "rgba(255, 255, 255, 0.75)",
-      darkItemHoverBg: "rgba(255, 255, 255, 0.15)",
-      darkItemHoverColor: "#ffffff",
-      darkItemSelectedBg: "#00809D",
-      darkItemSelectedColor: "#ffffff",
-    },
-  },
-};
+// === SỬ DỤNG THEME CONFIG TỪ SHARED COMPONENTS ===
+const namVietTheme = getNamVietTheme();
 
 // Main component with providers
 const PermissionBasedAppLayout: React.FC = () => {

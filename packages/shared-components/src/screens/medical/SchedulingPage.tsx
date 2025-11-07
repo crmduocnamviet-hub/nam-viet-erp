@@ -17,7 +17,35 @@ import {
   getAppointments,
   getCurrentEmployee,
 } from "@nam-viet-erp/services";
-import { AppointmentCreationModal } from "@nam-viet-erp/shared-components";
+import {
+  AppointmentCreationModal,
+  PatientCrmModal,
+} from "@nam-viet-erp/shared-components";
+
+// Dịch service_type từ tiếng Anh sang tiếng Việt
+const getServiceName = (serviceType?: string | null): string => {
+  if (!serviceType) return "Chưa xác định";
+
+  const serviceMap: Record<string, string> = {
+    general: "Khám tổng quát",
+    specialist: "Khám chuyên khoa",
+    vaccine: "Tiêm chủng",
+    ultrasound: "Siêu âm",
+    // Các giá trị đã là tiếng Việt
+    "Khám tổng quát": "Khám tổng quát",
+    "Khám chuyên khoa": "Khám chuyên khoa",
+    "Tiêm chủng": "Tiêm chủng",
+    "Siêu âm": "Siêu âm",
+    "Khám Bệnh": "Khám Bệnh",
+    "Tiêm Chủng": "Tiêm Chủng",
+  };
+
+  if (serviceMap[serviceType]) {
+    return serviceMap[serviceType];
+  }
+
+  return serviceType;
+};
 // Basic functional scheduling dashboard
 const SchedulingDashboard: React.FC<{
   onAppointmentClick?: (appointment: any) => void;
@@ -245,9 +273,28 @@ const SchedulingDashboard: React.FC<{
                   </div>
 
                   <div
-                    onClick={() =>
-                      onAppointmentClick?.(appointment.appointment_id)
-                    }
+                    onClick={() => {
+                      // Lấy patient_id từ appointment (field chính)
+                      const patientId = appointment.patient_id;
+                      console.log("Appointment clicked:", {
+                        appointment_id: appointment.appointment_id,
+                        patient_id: appointment.patient_id,
+                        patients: appointment.patients,
+                        full_appointment: appointment,
+                      });
+                      if (patientId) {
+                        console.log(
+                          "Calling onAppointmentClick with patientId:",
+                          patientId,
+                        );
+                        onAppointmentClick?.(patientId);
+                      } else {
+                        console.warn(
+                          "Appointment không có patient_id:",
+                          appointment,
+                        );
+                      }
+                    }}
                     style={{
                       backgroundColor: "white",
                       padding: "16px",
@@ -330,7 +377,7 @@ const SchedulingDashboard: React.FC<{
                               color: "#666",
                             }}
                           >
-                            📋 {appointment.service_type || "Chưa xác định"}
+                            📋 {getServiceName(appointment.service_type)}
                           </p>
                           {appointment.notes && (
                             <p
@@ -375,85 +422,7 @@ const SchedulingDashboard: React.FC<{
   );
 };
 
-const PatientCrmModal: React.FC<any> = ({ open, onCancel, onClose }) => {
-  const handleClose = onClose || onCancel;
-
-  if (!open) return null;
-
-  return (
-    <div
-      style={{
-        position: "fixed",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: "rgba(0,0,0,0.5)",
-        zIndex: 1000,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-      onClick={handleClose}
-    >
-      <div
-        style={{
-          backgroundColor: "white",
-          padding: "20px",
-          borderRadius: "8px",
-          boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-          minWidth: "400px",
-          maxWidth: "80vw",
-          maxHeight: "80vh",
-          overflow: "auto",
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: "16px",
-          }}
-        >
-          <h3 style={{ margin: 0 }}>📋 Thông tin bệnh nhân</h3>
-          <button
-            onClick={handleClose}
-            style={{
-              background: "none",
-              border: "none",
-              fontSize: "20px",
-              cursor: "pointer",
-              color: "#999",
-              padding: "4px",
-            }}
-          >
-            ×
-          </button>
-        </div>
-        <p>
-          🎉 Modal CRM bệnh nhân sẽ được hiển thị tại đây (Live Update Test)
-        </p>
-        <div style={{ textAlign: "right", marginTop: "20px" }}>
-          <button
-            onClick={handleClose}
-            style={{
-              padding: "8px 16px",
-              backgroundColor: "#1890ff",
-              color: "white",
-              border: "none",
-              borderRadius: "4px",
-              cursor: "pointer",
-            }}
-          >
-            Đóng
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
+// PatientCrmModal đã được import từ shared-components
 
 const { Title } = Typography;
 
@@ -552,8 +521,9 @@ const SchedulingPageContent: React.FC = () => {
     }
   };
 
-  const handleAppointmentClick = (appointmentId: string) => {
-    setSelectedPatientId(appointmentId);
+  const handleAppointmentClick = (patientId: string) => {
+    // patientId được truyền từ onAppointmentClick trong SchedulingDashboard
+    setSelectedPatientId(patientId);
     setIsCrmModalOpen(true);
   };
 

@@ -20,6 +20,7 @@ body {
   border-bottom: 1.5px solid #c5c5c5; /* Ranh giới rõ ràng (Github-style) */
   display: flex;
   align-items: center;
+  justify-content: space-between;
 }
 
 /* 2. Tiêu đề trang bên trái (theo yêu cầu) */
@@ -37,6 +38,7 @@ body {
   cursor: pointer;
   transition: color 0.3s;
 }
+
 .menu-trigger-btn:hover {
   color: #00b96b; /* Màu thương hiệu của Sếp */
 }

@@ -1,4 +1,5 @@
 export { default as AppointmentCreationModal } from "./components/AppointmentCreationModal";
+export { default as PatientCrmModal } from "./components/PatientCrmModal";
 export { default as ProductForm } from "./components/ProductForm";
 export { default as PaymentModal } from "./components/PaymentModal";
 export { default as QRScannerModal } from "./components/QRScannerModal";
@@ -39,3 +40,7 @@ export * from "./providers/ScreenProvider";
 export * from "./utils/menuGenerator";
 export * from "./utils/b2bOrder";
 export * from "./utils";
+
+// Constants
+export * from "./constants/theme";
+export * from "./constants/spacing";

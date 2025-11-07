@@ -31,6 +31,37 @@ import PageLayout from "../../components/PageLayout";
 
 const { Title, Text } = Typography;
 
+// Hàm dịch role_name sang tiếng Việt (theo rule trong EmployeesPage.tsx)
+const translateRoleName = (roleName: string | null | undefined): string => {
+  if (!roleName) return "Chưa xác định";
+
+  // Theo rule trong EmployeesPage.tsx
+  switch (roleName) {
+    case "BacSi":
+      return "Bác sĩ";
+    case "DuocSi":
+      return "Dược sĩ";
+    case "LeTan":
+      return "Lễ tân";
+    case "inventory-staff":
+      return "Nhân Viên Kho";
+    case "medical-staff":
+      return "Nhân Viên Y Tế";
+    case "delivery-staff":
+      return "Nhân Viên Giao Hàng";
+    case "sales-staff":
+      return "Nhân Viên Kinh Doanh";
+    case "admin":
+      return "Quản trị viên";
+    case "super-admin":
+    case "super_admin":
+      return "Siêu quản trị viên";
+    default:
+      // Nếu đã là tiếng Việt thì giữ nguyên
+      return roleName;
+  }
+};
+
 const UserProfilePage: React.FC = () => {
   const { notification } = App.useApp();
   const user = useAuthStore((state) => state.user);
@@ -316,15 +347,15 @@ const UserProfilePage: React.FC = () => {
             <Space direction="vertical" style={{ width: "100%" }} size="middle">
               <div>
                 <Text type="secondary">Mã nhân viên: </Text>
-                <Text strong>{employee?.employee_code || "N/A"}</Text>
+                <Text strong>{employee?.employee_code || "Chưa có"}</Text>
               </div>
               <div>
                 <Text type="secondary">Chức vụ: </Text>
-                <Text strong>{employee?.role_name || "N/A"}</Text>
+                <Text strong>{translateRoleName(employee?.role_name)}</Text>
               </div>
               <div>
                 <Text type="secondary">Email đăng nhập: </Text>
-                <Text strong>{user?.email || "N/A"}</Text>
+                <Text strong>{user?.email || "Chưa có"}</Text>
               </div>
               <div>
                 <Text type="secondary">Ngày tạo tài khoản: </Text>
@@ -333,7 +364,7 @@ const UserProfilePage: React.FC = () => {
                     ? new Date((user as any).created_at).toLocaleDateString(
                         "vi-VN",
                       )
-                    : "N/A"}
+                    : "Chưa có"}
                 </Text>
               </div>
             </Space>

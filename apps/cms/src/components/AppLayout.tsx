@@ -57,6 +57,7 @@ import {
   CMS_APP_MENU,
   useScreens,
   InventoryB2BOrdersPage,
+  getNamVietTheme,
 } from "@nam-viet-erp/shared-components";
 import logo from "../assets/logo.png";
 import MissingDocumentationWarning from "./MissingDocumentationWarning";
@@ -65,31 +66,8 @@ const { Content, Sider, Header } = Layout;
 const { Title } = Typography;
 const { useBreakpoint } = Grid;
 
-// === BẢN CẬP NHẬT THEME HOÀN CHỈNH ===
-const namVietTheme = {
-  token: {
-    colorBgLayout: "#f0f2f5",
-    colorPrimary: "#1773adff", // <-- ĐỔI MÀU CHỦ ĐẠO
-    borderRadius: 5,
-  },
-  components: {
-    Layout: {
-      headerBg: "#ffffff",
-      siderBg: "#015ba9ff", // <-- ĐỔI MÀU NỀN SIDER
-      triggerBg: "#015ba9ff", // <-- ĐỔI MÀU NÚT ẨN / HIỆN SIDEBAR MENU BAR
-    },
-    Menu: {
-      // Tùy chỉnh cho Menu có theme="dark"
-      darkItemBg: "#015ba9ff", // Nền item trùng với nền Sider
-      darkSubMenuItemBg: "#015ba9ff", //Nền menu con khi rê chu
-      darkItemColor: "rgba(255, 255, 255, 0.75)", // Màu chữ item thường
-      darkItemHoverBg: "rgba(255, 255, 255, 0.15)", // Nền item khi rê chuột
-      darkItemHoverColor: "#ffffff", // Màu chữ item khi rê chuột
-      darkItemSelectedBg: "#00809D", // Màu nền item được chọn (có thể dùng colorPrimary hoặc màu khác)
-      darkItemSelectedColor: "#ffffff", // Màu chữ item được chọn
-    },
-  },
-};
+// === SỬ DỤNG THEME CONFIG TỪ SHARED COMPONENTS ===
+const namVietTheme = getNamVietTheme();
 
 const ComingSoon = () => <h1>Tính năng này sắp ra mắt!</h1>;
 
@@ -257,16 +235,7 @@ const AppLayout: React.FC = () => {
           }}
         >
           {/* Header with notification and user info */}
-          <Header
-            style={{
-              padding: "0 24px",
-              background: "#ffffff",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              boxShadow: "0 1px 4px rgba(0,21,41,.08)",
-            }}
-          >
+          <Header className="app-header">
             <div style={{ display: "flex", alignItems: "center", flexGrow: 1 }}>
               {!isMobile && (
                 <Button
@@ -275,11 +244,7 @@ const AppLayout: React.FC = () => {
                     collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />
                   }
                   onClick={() => setCollapsed(!collapsed)}
-                  style={{
-                    fontSize: "16px",
-                    width: 64,
-                    height: 64,
-                  }}
+                  className="menu-trigger-btn"
                 />
               )}
               {isMobile && (
@@ -287,11 +252,7 @@ const AppLayout: React.FC = () => {
                   type="text"
                   icon={<MenuOutlined />}
                   onClick={() => setMobileMenuOpen(true)}
-                  style={{
-                    fontSize: "16px",
-                    width: 64,
-                    height: 64,
-                  }}
+                  className="menu-trigger-btn"
                 />
               )}
             </div>
@@ -303,9 +264,10 @@ const AppLayout: React.FC = () => {
                 shape="circle"
                 icon={
                   <Badge dot>
-                    <BellOutlined style={{ fontSize: "18px" }} />
+                    <BellOutlined />
                   </Badge>
                 }
+                style={{ marginRight: 8 }}
               />
 
               {/* User Avatar Dropdown */}
@@ -337,13 +299,16 @@ const AppLayout: React.FC = () => {
             </div>
           </Header>
 
-          <Content style={{ margin: "8px", overflow: "initial" }}>
+          <Content
+            className="app-content-layout"
+            style={{ overflow: "initial" }}
+          >
             <div
               style={{
                 padding: 8,
                 background: "#ffffff",
-                borderRadius: namVietTheme.token.borderRadius,
-                minHeight: "calc(100vh - 16px)",
+                borderRadius: 5,
+                minHeight: "calc(100vh - 20px)",
               }}
             >
               <Routes>

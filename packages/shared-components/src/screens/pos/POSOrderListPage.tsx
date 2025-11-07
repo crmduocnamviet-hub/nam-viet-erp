@@ -15,8 +15,15 @@ import {
   Empty,
   notification,
   Modal,
+  Grid,
+  Popover,
 } from "antd";
-import { SearchOutlined, EyeOutlined, ReloadOutlined } from "@ant-design/icons";
+import {
+  SearchOutlined,
+  EyeOutlined,
+  ReloadOutlined,
+  ShoppingOutlined,
+} from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 import { getSalesOrders, getSalesOrderById } from "@nam-viet-erp/services";
@@ -32,6 +39,10 @@ interface POSOrderListPageProps {
 
 const POSOrderListPage: React.FC<POSOrderListPageProps> = ({ employee }) => {
   const user = useAuthStore((state) => state.user);
+  const { useBreakpoint } = Grid;
+  const screens = useBreakpoint();
+  const isMobile = !screens.md; // Mobile khi màn hình < 768px
+
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
@@ -64,73 +75,7 @@ const POSOrderListPage: React.FC<POSOrderListPageProps> = ({ employee }) => {
         throw error;
       }
 
-      const ordersData = data || [];
-      setOrders(ordersData);
-
-      // Debug: Log data structure and unique values for filter testing
-      if (ordersData.length > 0) {
-        try {
-          const uniqueStatuses = [
-            ...new Set(
-              ordersData.map((o: any) => o.operational_status).filter(Boolean),
-            ),
-          ];
-          const uniquePaymentStatuses = [
-            ...new Set(
-              ordersData.map((o: any) => o.payment_status).filter(Boolean),
-            ),
-          ];
-
-          // Get sample order structure (safe stringify)
-          const sampleOrder = {
-            order_id: ordersData[0].order_id,
-            operational_status: ordersData[0].operational_status,
-            payment_status: ordersData[0].payment_status,
-            total_value: ordersData[0].total_value,
-            order_datetime: ordersData[0].order_datetime,
-            patient_id: ordersData[0].patient_id,
-            patients: ordersData[0].patients
-              ? {
-                  full_name: Array.isArray(ordersData[0].patients)
-                    ? ordersData[0].patients[0]?.full_name
-                    : ordersData[0].patients?.full_name,
-                  phone_number: Array.isArray(ordersData[0].patients)
-                    ? ordersData[0].patients[0]?.phone_number
-                    : ordersData[0].patients?.phone_number,
-                }
-              : null,
-            items_count: ordersData[0].sales_order_items?.length || 0,
-          };
-
-          console.log("==========================================");
-          console.log("📦 POS ORDER LIST DATA STRUCTURE");
-          console.log("==========================================");
-          console.log("Total orders loaded:", ordersData.length);
-          console.log("\n📊 Sample order structure:");
-          console.log(JSON.stringify(sampleOrder, null, 2));
-          console.log("\n🔍 Unique operational_status values:");
-          console.log(uniqueStatuses);
-          console.log("\n💰 Unique payment_status values:");
-          console.log(uniquePaymentStatuses);
-          console.log("\n📋 All operational_status counts:");
-          const statusCounts: Record<string, number> = {};
-          ordersData.forEach((o: any) => {
-            const status = o.operational_status || "null";
-            statusCounts[status] = (statusCounts[status] || 0) + 1;
-          });
-          console.log(statusCounts);
-          console.log("\n📋 All payment_status counts:");
-          const paymentCounts: Record<string, number> = {};
-          ordersData.forEach((o: any) => {
-            const payment = o.payment_status || "null";
-            paymentCounts[payment] = (paymentCounts[payment] || 0) + 1;
-          });
-          console.log(paymentCounts);
-          console.log("==========================================");
-        } catch (err) {
-          console.error("Error logging data structure:", err);
-        }
-      }
+      setOrders(data || []);
     } catch (error: any) {
       notification.error({
         message: "Lỗi tải dữ liệu",
@@ -352,13 +297,106 @@ const POSOrderListPage: React.FC<POSOrderListPageProps> = ({ employee }) => {
       ),
     },
     {
-      title: "Số Sản Phẩm",
-      key: "item_count",
-      width: 120,
-      align: "center" as const,
-      render: (_: any, record: any) => (
-        <Tag color="blue">{record.sales_order_items?.length || 0}</Tag>
-      ),
+      title: "Sản phẩm",
+      key: "products",
+      width: 300,
+      render: (_: any, record: any) => {
+        const items = record.sales_order_items || [];
+        if (items.length === 0) {
+          return (
+            <Tag color="default" style={{ margin: 0 }}>
+              Chưa có sản phẩm
+            </Tag>
+          );
+        }
+
+        // Single product - show full name
+        if (items.length === 1) {
+          const product = items[0].products;
+          const productData = Array.isArray(product) ? product[0] : product;
+          const productName =
+            productData?.name || `Sản phẩm #${items[0].product_id}`;
+          return (
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <ShoppingOutlined style={{ color: "#1890ff" }} />
+              <span style={{ fontWeight: 500 }}>{productName}</span>
+              {items[0].quantity && (
+                <Tag color="blue" style={{ margin: 0 }}>
+                  x{items[0].quantity}
+                </Tag>
+              )}
+            </div>
+          );
+        }
+
+        // Multiple products - show count with popover
+        const productListContent = (
+          <div style={{ maxWidth: 400, maxHeight: 300, overflowY: "auto" }}>
+            <div style={{ marginBottom: 8, fontWeight: 600, color: "#1890ff" }}>
+              {items.length} sản phẩm trong đơn hàng:
+            </div>
+            {items.map((item: any, index: number) => {
+              const product = item.products;
+              const productData = Array.isArray(product) ? product[0] : product;
+              const productName =
+                productData?.name || `Sản phẩm #${item.product_id}`;
+              return (
+                <div
+                  key={index}
+                  style={{
+                    padding: "6px 0",
+                    borderBottom:
+                      index < items.length - 1 ? "1px solid #f0f0f0" : "none",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                  }}
+                >
+                  <span style={{ color: "#666", minWidth: 20 }}>
+                    {index + 1}.
+                  </span>
+                  <span style={{ flex: 1, fontWeight: 500 }}>
+                    {productName}
+                  </span>
+                  {item.quantity && (
+                    <Tag color="blue" style={{ margin: 0 }}>
+                      SL: {item.quantity}
+                    </Tag>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        );
+
+        return (
+          <Popover
+            content={productListContent}
+            title={null}
+            trigger="click"
+            placement="left"
+            overlayStyle={{ maxWidth: 450 }}
+          >
+            <div
+              style={{
+                cursor: "pointer",
+                padding: "4px 8px",
+                borderRadius: 4,
+                background: "#f0f7ff",
+                border: "1px solid #d6e4ff",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+              }}
+            >
+              <ShoppingOutlined style={{ color: "#1890ff" }} />
+              <span style={{ fontWeight: 600, color: "#1890ff" }}>
+                {items.length} sản phẩm
+              </span>
+            </div>
+          </Popover>
+        );
+      },
     },
     {
       title: "Tổng Tiền",
@@ -491,22 +529,26 @@ const POSOrderListPage: React.FC<POSOrderListPageProps> = ({ employee }) => {
 
       {/* Filters */}
       <Card style={{ marginBottom: 24 }}>
-        <Row gutter={16} align="middle">
-          <Col xs={24} sm={12} md={8}>
+        <Row gutter={isMobile ? [0, 12] : [16, 0]} align="middle">
+          <Col xs={24} sm={24} md={10} lg={8} xl={7}>
             <Input
+              size={isMobile ? "middle" : "large"}
               placeholder="Tìm kiếm theo mã đơn, khách hàng, sản phẩm..."
               prefix={<SearchOutlined />}
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
               allowClear
+              style={{ width: "100%" }}
             />
           </Col>
-          <Col xs={24} sm={12} md={4}>
+          <Col xs={12} sm={12} md={4} lg={3} xl={3}>
             <Select
+              size={isMobile ? "middle" : "large"}
               placeholder="Trạng thái"
               value={statusFilter}
               onChange={setStatusFilter}
               style={{ width: "100%" }}
+              allowClear
             >
               <Select.Option value="all">Tất cả</Select.Option>
               <Select.Option value="Hoàn tất">Hoàn tất</Select.Option>
@@ -515,12 +557,14 @@ const POSOrderListPage: React.FC<POSOrderListPageProps> = ({ employee }) => {
               <Select.Option value="Đã hủy">Đã hủy</Select.Option>
             </Select>
           </Col>
-          <Col xs={24} sm={12} md={4}>
+          <Col xs={12} sm={12} md={4} lg={3} xl={3}>
             <Select
+              size={isMobile ? "middle" : "large"}
               placeholder="Thanh toán"
               value={paymentFilter}
               onChange={setPaymentFilter}
               style={{ width: "100%" }}
+              allowClear
             >
               <Select.Option value="all">Tất cả</Select.Option>
               <Select.Option value="Đã thanh toán">Đã thanh toán</Select.Option>
@@ -532,8 +576,9 @@ const POSOrderListPage: React.FC<POSOrderListPageProps> = ({ employee }) => {
               </Select.Option>
             </Select>
           </Col>
-          <Col xs={24} sm={12} md={8}>
+          <Col xs={24} sm={24} md={6} lg={6} xl={7}>
             <RangePicker
+              size={isMobile ? "middle" : "large"}
               style={{ width: "100%" }}
               format="DD/MM/YYYY"
               value={dateRange}
@@ -541,16 +586,16 @@ const POSOrderListPage: React.FC<POSOrderListPageProps> = ({ employee }) => {
               placeholder={["Từ ngày", "Đến ngày"]}
             />
           </Col>
-          <Col xs={24} sm={12} md={4}>
-            <Space>
-              <Button
-                icon={<ReloadOutlined />}
-                onClick={loadOrders}
-                loading={loading}
-              >
-                Làm mới
-              </Button>
-            </Space>
+          <Col xs={24} sm={24} md={4} lg={4} xl={4}>
+            <Button
+              size={isMobile ? "middle" : "large"}
+              icon={<ReloadOutlined />}
+              onClick={loadOrders}
+              loading={loading}
+              style={{ width: isMobile ? "100%" : "auto" }}
+            >
+              {!isMobile && "Làm mới"}
+            </Button>
           </Col>
         </Row>
       </Card>
