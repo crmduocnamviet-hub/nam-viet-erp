@@ -27,6 +27,8 @@ export { default as MainLayout } from "./components/MainLayout";
 export type { MainLayoutProps } from "./components/MainLayout";
 export { default as RegisterForm } from "./components/RegisterForm";
 export type { RegisterFormProps } from "./components/RegisterForm";
+export { default as RoleFormModal } from "./components/RoleFormModal";
+export * from "./types/role";
 export * from "./hooks/useDebounce";
 
 // Table Components

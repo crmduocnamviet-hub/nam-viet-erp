@@ -47,6 +47,10 @@ import {
   IdcardOutlined,
   SyncOutlined,
   CloudUploadOutlined,
+  PieChartOutlined,
+  AppstoreOutlined,
+  TagOutlined,
+  UsergroupAddOutlined,
 } from "@ant-design/icons";
 import { hasScreenPermission } from "../screens";
 
@@ -347,6 +351,28 @@ export const CMS_APP_MENU: MenuItemConfig[] = [
     screenKey: "management.dashboard",
   },
   {
+    key: "store-channel",
+    label: "Kênh Cửa Hàng",
+    icon: <ShopOutlined />,
+    children: [
+      {
+        key: "/store-scheduling",
+        label: "Đặt Lịch Hẹn",
+        screenKey: "medical.scheduling",
+      },
+      {
+        key: "/pos",
+        label: "Tạo đơn tại Cửa Hàng [ POS ]",
+        screenKey: "pos.main",
+      },
+      {
+        key: "/pos/orders",
+        label: "Danh sách đơn hàng B2C",
+        screenKey: "pos.orders",
+      },
+    ],
+  },
+  {
     key: "medical",
     label: "Nghiệp vụ Y Tế",
     icon: <MedicineBoxOutlined />,
@@ -356,17 +382,22 @@ export const CMS_APP_MENU: MenuItemConfig[] = [
         label: "Quản lý Bệnh nhân",
         screenKey: "medical.patients",
       },
+      {
+        key: "/medical/scheduling",
+        label: "Phòng Khám",
+        screenKey: "medical.scheduling",
+      },
     ],
   },
   {
     key: "b2b",
     label: "Bán buôn",
-    icon: <ShopOutlined />,
+    icon: <GlobalOutlined />,
     children: [
       {
-        key: "/b2b-orders",
-        label: "Danh sách đơn hàng",
-        screenKey: "b2b.orders",
+        key: "/b2b/dashboard",
+        label: "Thông tin chung B2B",
+        screenKey: "b2b.dashboard",
       },
       {
         key: "/create-quote",
@@ -374,9 +405,36 @@ export const CMS_APP_MENU: MenuItemConfig[] = [
         screenKey: "b2b.create-quote",
       },
       {
+        key: "/b2b-orders",
+        label: "Danh sách đơn hàng",
+        screenKey: "b2b.orders",
+      },
+      {
         key: "/quick-quote",
         label: "Xem Nhanh Báo Giá",
         screenKey: "b2b.quick-quote",
+      },
+      {
+        key: "/b2b/inventory",
+        label: "📦 Đơn hàng - Kho",
+        screenKey: "b2b.inventory",
+      },
+      {
+        key: "/b2b/financial",
+        label: "Tài chính B2B",
+        screenKey: "b2b.financial",
+      },
+    ],
+  },
+  {
+    key: "combos-services",
+    label: "Combo và Dịch Vụ",
+    icon: <GiftOutlined />,
+    children: [
+      {
+        key: "/combos",
+        label: "Quản lý Combo",
+        screenKey: "inventory.combos",
       },
     ],
   },
@@ -431,6 +489,30 @@ export const CMS_APP_MENU: MenuItemConfig[] = [
         key: "/warehouse/vat-reconciliation",
         label: "Đối Chiếu VAT",
         screenKey: "warehouse.vat-reconciliation",
+      },
+    ],
+  },
+  {
+    key: "partners",
+    label: "Đối tác",
+    icon: <UsergroupAddOutlined />,
+    children: [
+      {
+        key: "/suppliers",
+        label: "Nhà Cung Cấp",
+        screenKey: "warehouse.suppliers",
+      },
+    ],
+  },
+  {
+    key: "customers",
+    label: "Quản lý Khách hàng",
+    icon: <TeamOutlined />,
+    children: [
+      {
+        key: "/patients",
+        label: "Quản lý bệnh nhân",
+        screenKey: "medical.patients",
       },
     ],
   },
@@ -493,11 +575,11 @@ export const CMS_APP_MENU: MenuItemConfig[] = [
   {
     key: "hr",
     label: "Quản lý Nhân sự",
-    icon: <UserOutlined />,
+    icon: <IdcardOutlined />,
     children: [
       {
         key: "/employees",
-        label: "Quản lý Hồ sơ Nhân viên",
+        label: "Quản lý Nhân viên",
         screenKey: "management.employees",
       },
     ],
@@ -511,6 +593,11 @@ export const CMS_APP_MENU: MenuItemConfig[] = [
         key: "/financial-transactions",
         label: "Quản lý Thu – Chi",
         screenKey: "financial.transactions",
+      },
+      {
+        key: "/warehouse/vat-invoice-input",
+        label: "Quản lý Hóa Đơn VAT",
+        screenKey: "warehouse.vat-invoice-input",
       },
     ],
   },
@@ -533,8 +620,13 @@ export const CMS_APP_MENU: MenuItemConfig[] = [
     children: [
       {
         key: "/users",
-        label: "Quản lý Người dùng & Phân quyền",
+        label: "Quản lý tài khoản",
         screenKey: "management.users",
+      },
+      {
+        key: "/roles",
+        label: "Quản lý Vai trò",
+        screenKey: "management.roles",
       },
       {
         key: "/settings/funds",
