@@ -119,6 +119,7 @@ const menuItems: MenuProps["items"] = [
     children: [
       { label: "Quản lý Nhân viên", key: "/employees" },
       { label: "Quản lý Tài khoản", key: "/users" },
+      { label: "Quản lý Vai trò", key: "/roles" },
       { label: "Quản lý Bệnh nhân", key: "/patients" },
     ],
   },
@@ -569,6 +570,12 @@ const AppLayout: React.FC = () => {
                 <Route
                   path="/users"
                   element={<Screen screenKey="management.users" />}
+                />
+
+                {/* --- ROUTE CHO MODULE QUẢN LÝ VAI TRÒ --- */}
+                <Route
+                  path="/roles"
+                  element={<Screen screenKey="management.roles" />}
                 />
 
                 {/* --- ROUTE CHO MODULE BỆNH NHÂN --- */}

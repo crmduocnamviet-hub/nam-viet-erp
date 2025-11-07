@@ -55,6 +55,7 @@ import CreateEmployeePage from "./management/CreateEmployeePage";
 import EditEmployeePage from "./management/EditEmployeePage";
 import UserManagementPage from "./management/UserManagementPage";
 import RoomManagementPage from "./management/RoomManagementPage";
+import RoleManagementPage from "./management/RoleManagementPage";
 
 // Screen Imports - Staff Dashboards
 import SalesStaffDashboardPage from "./staff/SalesStaffDashboardPage";
@@ -388,6 +389,13 @@ export const SCREEN_REGISTRY: ScreenRegistry = {
     title: "Quản lý Phòng ban",
     description: "Quản lý phòng ban và cơ cấu tổ chức",
   },
+  "management.roles": {
+    component: RoleManagementPage,
+    permissions: ["management.access", "roles.view"],
+    category: "management",
+    title: "Quản lý Vai trò",
+    description: "Quản lý vai trò và phân quyền trong hệ thống",
+  },
 
   // ==================== STAFF DASHBOARD SCREENS ====================
   "staff.sales-dashboard": {
@@ -676,6 +684,10 @@ export const PERMISSIONS = {
   "rooms.view": "Xem danh sách phòng ban",
   "rooms.create": "Tạo phòng ban mới",
   "rooms.edit": "Chỉnh sửa thông tin phòng ban",
+  "roles.view": "Xem danh sách vai trò",
+  "roles.create": "Tạo vai trò mới",
+  "roles.edit": "Chỉnh sửa vai trò",
+  "roles.delete": "Xóa vai trò",
   "settings.access": "Truy cập cài đặt hệ thống",
 } as const;
 
@@ -694,6 +706,10 @@ export const ROLE_PERMISSIONS = {
     "users.edit",
     "users.delete",
     "users.manage",
+    "roles.view",
+    "roles.create",
+    "roles.edit",
+    "roles.delete",
     "inventory.access",
     "products.view",
     "products.create",
@@ -948,6 +964,7 @@ export {
   EditEmployeePage,
   UserManagementPage,
   RoomManagementPage,
+  RoleManagementPage,
   // Staff Dashboards
   SalesStaffDashboardPage,
   InventoryStaffDashboardPage,
