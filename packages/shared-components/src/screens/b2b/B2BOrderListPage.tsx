@@ -49,12 +49,12 @@ import {
   BulkUpdateModal,
   QRScannerVerificationModal,
 } from "@nam-viet-erp/shared-components";
+import { B2B_ORDER_STAGES } from "../../constants/b2b";
 import {
-  B2B_ORDER_STAGES,
-  DELIVERY_STATUSES,
-  INVENTORY_STATUSES,
-  SALE_STATUSES,
-} from "../../constants/b2b";
+  isSuperAdmin,
+  canEditB2BOrderStatus,
+  getAllowedB2BStatuses,
+} from "../../utils/permissions";
 
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
@@ -63,12 +63,6 @@ const { useBreakpoint } = Grid;
 // Use the global IB2BQuote interface and extend with additional fields if needed
 interface B2BQuoteWithStatus extends IB2BQuote {
   // Using quote_stage for all order statuses - no separate operation_status needed
-}
-
-interface User {
-  id: string;
-  name: string;
-  permissions: string[];
 }
 
 interface B2BOrderListPageProps {
@@ -114,103 +108,39 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
   const [createCustomerForm] = Form.useForm();
   const [bulkUpdateForm] = Form.useForm();
 
-  // Permission checks
-  const userPermissions = user?.permissions || [];
+  // Permission checks using employee (simplified with role-based logic)
+  const userPermissions = employee?.permissions || user?.permissions || [];
   const canCreateQuotes =
+    isSuperAdmin(employee) ||
     userPermissions.includes("quotes.create") ||
     userPermissions.includes("b2b.create");
   const canEditQuotes =
+    isSuperAdmin(employee) ||
     userPermissions.includes("quotes.edit") ||
     userPermissions.includes("b2b.edit");
   const canViewQuotes =
+    isSuperAdmin(employee) ||
     userPermissions.includes("quotes.view") ||
     userPermissions.includes("b2b.view");
 
-  // Role-based status change permissions
-  const isSalesStaff =
-    userPermissions.includes("sales.create") ||
-    userPermissions.includes("sales.manage");
-  const isInventoryStaff =
-    userPermissions.includes("inventory.access") ||
-    userPermissions.includes("inventory.manage");
-  const isDeliveryStaff =
-    userPermissions.includes("delivery.access") ||
-    userPermissions.includes("shipping.manage");
+  // Role-based checks
+  const isInventoryStaff = employee?.role_name === "inventory-staff";
+  const isDeliveryStaff = employee?.role_name === "delivery-staff";
+  const isSalesStaff = employee?.role_name === "sales-staff";
 
-  // Get allowed statuses based on user role and current order status
+  // Get allowed statuses based on employee role and current order status
   const getAllowedStatuses = (currentStatus?: string) => {
-    const salesStatuses = [
-      "draft",
-      "sent",
-      "negotiating",
-      "accepted",
-      "cancelled",
-      "rejected",
-      "expired",
-    ];
-    const inventoryStatuses = ["accepted", "pending_packaging", "packaged"];
-    const deliveryStatuses = ["packaged", "shipping", "completed"];
+    const allowedStatusKeys = getAllowedB2BStatuses(employee, currentStatus);
 
-    // If user has admin permissions, allow all statuses
-    if (
-      userPermissions.includes("admin") ||
-      userPermissions.includes("super-admin")
-    ) {
-      return B2B_ORDER_STAGES;
-    }
-
-    let allowedStatuses: string[] = [];
-
-    if (isSalesStaff) {
-      allowedStatuses = [...allowedStatuses, ...salesStatuses];
-    }
-    if (isInventoryStaff) {
-      allowedStatuses = [...allowedStatuses, ...inventoryStatuses];
-    }
-    if (isDeliveryStaff) {
-      allowedStatuses = [...allowedStatuses, ...deliveryStatuses];
-    }
-
-    // If editing an existing order, check if current status is in user's range
-    if (currentStatus) {
-      const isCurrentStatusInUserRange =
-        allowedStatuses.includes(currentStatus);
-
-      // If current status is NOT in user's range, they cannot change it
-      if (!isCurrentStatusInUserRange) {
-        // Return only the current status (read-only)
-        return B2B_ORDER_STAGES.filter((stage) => stage.key === currentStatus);
-      }
-    }
-
-    // Filter stages based on allowed statuses
+    // Filter B2B_ORDER_STAGES to only include allowed statuses
     return B2B_ORDER_STAGES.filter((stage) =>
-      allowedStatuses.includes(stage.key),
+      allowedStatusKeys.includes(stage.key),
     );
   };
 
-  // Check if user can edit the current order status
+  // Check if employee can edit the current order status
   const canEditOrderStatus = (currentStatus: string) => {
-    const salesStatuses = SALE_STATUSES;
-    const inventoryStatuses = INVENTORY_STATUSES;
-    const deliveryStatuses = DELIVERY_STATUSES;
-
-    // Admin can edit any status
-    if (
-      userPermissions.includes("admin") ||
-      userPermissions.includes("super-admin")
-    ) {
-      return true;
-    }
-
-    // Check if current status is in user's authorized range
-    if (isSalesStaff && salesStatuses.includes(currentStatus)) return true;
-    if (isInventoryStaff && inventoryStatuses.includes(currentStatus))
-      return true;
-    if (isDeliveryStaff && deliveryStatuses.includes(currentStatus))
-      return true;
-
-    return false;
+    return canEditB2BOrderStatus(employee, currentStatus);
   };
 
   // Load B2B orders
@@ -768,6 +698,258 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
       setLoading(false);
     }
   };
+
+  // Handle mark as shipping (for inventory and delivery staff)
+  const handleMarkAsShipping = async () => {
+    if (!selectedOrder) return;
+
+    try {
+      setLoading(true);
+      const { error } = await updateQuoteStage(
+        selectedOrder.quote_id,
+        "shipping",
+      );
+
+      if (error) {
+        notification.error({
+          message: "Lỗi cập nhật trạng thái",
+          description: "Không thể cập nhật trạng thái đơn hàng",
+        });
+        return;
+      }
+
+      const message = isInventoryStaff
+        ? "Bàn giao cho giao hàng thành công"
+        : "Nhận hàng thành công";
+      const description = isInventoryStaff
+        ? `Đơn hàng ${selectedOrder.quote_number} đã được bàn giao cho bộ phận giao hàng`
+        : `Đơn hàng ${selectedOrder.quote_number} đã được nhận`;
+
+      notification.success({
+        message,
+        description,
+      });
+
+      // Update the selected order status
+      setSelectedOrder({
+        ...selectedOrder,
+        quote_stage: "shipping",
+      });
+
+      // Close the detail modal first
+      setOrderDetailModalOpen(false);
+
+      // Refresh the orders list after modal is closed
+      await loadOrders();
+    } catch (error) {
+      console.error("Error updating order status:", error);
+      notification.error({
+        message: "Lỗi hệ thống",
+        description: "Có lỗi xảy ra khi cập nhật trạng thái đơn hàng",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle mark as completed (for delivery staff)
+  const handleMarkAsCompleted = async () => {
+    if (!selectedOrder) return;
+
+    try {
+      setLoading(true);
+      const { error } = await updateQuoteStage(
+        selectedOrder.quote_id,
+        "completed",
+      );
+
+      if (error) {
+        notification.error({
+          message: "Lỗi cập nhật trạng thái",
+          description: "Không thể cập nhật trạng thái đơn hàng",
+        });
+        return;
+      }
+
+      notification.success({
+        message: "Hoàn thành đơn hàng",
+        description: `Đơn hàng ${selectedOrder.quote_number} đã được hoàn thành`,
+      });
+
+      // Update the selected order status
+      setSelectedOrder({
+        ...selectedOrder,
+        quote_stage: "completed",
+      });
+
+      // Close the detail modal first
+      setOrderDetailModalOpen(false);
+
+      // Refresh the orders list after modal is closed
+      await loadOrders();
+    } catch (error) {
+      console.error("Error updating order status:", error);
+      notification.error({
+        message: "Lỗi hệ thống",
+        description: "Có lỗi xảy ra khi cập nhật trạng thái đơn hàng",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ========== Sales Staff Handlers ==========
+
+  // Handle mark as sent (for sales staff: draft → sent)
+  const handleMarkAsSent = async () => {
+    if (!selectedOrder) return;
+
+    try {
+      setLoading(true);
+      const { error } = await updateQuoteStage(selectedOrder.quote_id, "sent");
+
+      if (error) {
+        notification.error({
+          message: "Lỗi cập nhật trạng thái",
+          description: "Không thể gửi báo giá",
+        });
+        return;
+      }
+
+      notification.success({
+        message: "Đã gửi báo giá",
+        description: `Báo giá ${selectedOrder.quote_number} đã được gửi cho khách hàng`,
+      });
+
+      setSelectedOrder({ ...selectedOrder, quote_stage: "sent" });
+      setOrderDetailModalOpen(false);
+      await loadOrders();
+    } catch (error) {
+      console.error("Error updating order status:", error);
+      notification.error({
+        message: "Lỗi hệ thống",
+        description: "Có lỗi xảy ra khi cập nhật trạng thái",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle mark as negotiating (for sales staff: sent → negotiating)
+  const handleMarkAsNegotiating = async () => {
+    if (!selectedOrder) return;
+
+    try {
+      setLoading(true);
+      const { error } = await updateQuoteStage(
+        selectedOrder.quote_id,
+        "negotiating",
+      );
+
+      if (error) {
+        notification.error({
+          message: "Lỗi cập nhật trạng thái",
+          description: "Không thể cập nhật trạng thái",
+        });
+        return;
+      }
+
+      notification.success({
+        message: "Chuyển sang đàm phán",
+        description: `Đơn hàng ${selectedOrder.quote_number} đang trong quá trình đàm phán`,
+      });
+
+      setSelectedOrder({ ...selectedOrder, quote_stage: "negotiating" });
+      setOrderDetailModalOpen(false);
+      await loadOrders();
+    } catch (error) {
+      console.error("Error updating order status:", error);
+      notification.error({
+        message: "Lỗi hệ thống",
+        description: "Có lỗi xảy ra khi cập nhật trạng thái",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle mark as accepted (for sales staff: negotiating → accepted)
+  const handleMarkAsAccepted = async () => {
+    if (!selectedOrder) return;
+
+    try {
+      setLoading(true);
+      const { error } = await updateQuoteStage(
+        selectedOrder.quote_id,
+        "accepted",
+      );
+
+      if (error) {
+        notification.error({
+          message: "Lỗi cập nhật trạng thái",
+          description: "Không thể chấp nhận đơn hàng",
+        });
+        return;
+      }
+
+      notification.success({
+        message: "Đã chấp nhận đơn hàng",
+        description: `Đơn hàng ${selectedOrder.quote_number} đã được chấp nhận và chuyển sang kho xử lý`,
+      });
+
+      setSelectedOrder({ ...selectedOrder, quote_stage: "accepted" });
+      setOrderDetailModalOpen(false);
+      await loadOrders();
+    } catch (error) {
+      console.error("Error updating order status:", error);
+      notification.error({
+        message: "Lỗi hệ thống",
+        description: "Có lỗi xảy ra khi cập nhật trạng thái",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle mark as cancelled (for sales staff)
+  const handleMarkAsCancelled = async () => {
+    if (!selectedOrder) return;
+
+    try {
+      setLoading(true);
+      const { error } = await updateQuoteStage(
+        selectedOrder.quote_id,
+        "cancelled",
+      );
+
+      if (error) {
+        notification.error({
+          message: "Lỗi hủy đơn",
+          description: "Không thể hủy đơn hàng",
+        });
+        return;
+      }
+
+      notification.success({
+        message: "Đã hủy đơn hàng",
+        description: `Đơn hàng ${selectedOrder.quote_number} đã được hủy`,
+      });
+
+      setSelectedOrder({ ...selectedOrder, quote_stage: "cancelled" });
+      setOrderDetailModalOpen(false);
+      await loadOrders();
+    } catch (error) {
+      console.error("Error updating order status:", error);
+      notification.error({
+        message: "Lỗi hệ thống",
+        description: "Có lỗi xảy ra khi hủy đơn hàng",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ========== End Sales Staff Handlers ==========
 
   // Handle manual verification (for items without QR)
   const handleManualVerify = (item: any) => {
@@ -1335,31 +1517,32 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
           )}
 
           {/* Edit button - only for those with edit permission and proper status */}
-          {canEditQuotes && canEditOrderStatus(record.quote_stage) && (
-            <Button
-              type="link"
-              icon={<EditOutlined />}
-              onClick={() => handleEditOrder(record)}
-              size="small"
-              title="Chỉnh sửa đơn hàng"
-            ></Button>
-          )}
-          {canEditQuotes && !canEditOrderStatus(record.quote_stage) && (
-            <Button
-              type="link"
-              icon={<EditOutlined />}
-              onClick={() => handleEditOrder(record)}
-              size="small"
-              disabled
-              title={
-                isInventoryStaff &&
-                !userPermissions.includes("admin") &&
-                !userPermissions.includes("super-admin")
-                  ? "Đơn hàng này không thuộc phạm vi quản lý của bộ phận kho"
-                  : "Bạn không có quyền chỉnh sửa trạng thái này"
-              }
-            ></Button>
-          )}
+          {/* Hide Edit button for inventory-staff and delivery-staff */}
+          {canEditQuotes &&
+            !isInventoryStaff &&
+            !isDeliveryStaff &&
+            canEditOrderStatus(record.quote_stage) && (
+              <Button
+                type="link"
+                icon={<EditOutlined />}
+                onClick={() => handleEditOrder(record)}
+                size="small"
+                title="Chỉnh sửa đơn hàng"
+              ></Button>
+            )}
+          {canEditQuotes &&
+            !isInventoryStaff &&
+            !isDeliveryStaff &&
+            !canEditOrderStatus(record.quote_stage) && (
+              <Button
+                type="link"
+                icon={<EditOutlined />}
+                onClick={() => handleEditOrder(record)}
+                size="small"
+                disabled
+                title="Bạn không có quyền chỉnh sửa trạng thái này"
+              ></Button>
+            )}
         </Space>
       ),
     },
@@ -1376,16 +1559,14 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
             <Text type="secondary">
               Quản lý và theo dõi tất cả đơn hàng bán buôn
             </Text>
-            {isInventoryStaff &&
-              !userPermissions.includes("admin") &&
-              !userPermissions.includes("super-admin") && (
-                <div style={{ marginTop: 8 }}>
-                  <Tag color="orange" icon="📦">
-                    Chế độ Kho: Chỉ hiển thị đơn hàng đã được chấp nhận và cần
-                    xử lý
-                  </Tag>
-                </div>
-              )}
+            {isInventoryStaff && !isSuperAdmin(employee) && (
+              <div style={{ marginTop: 8 }}>
+                <Tag color="orange" icon="📦">
+                  Chế độ Kho: Chỉ hiển thị đơn hàng đã được chấp nhận và cần xử
+                  lý
+                </Tag>
+              </div>
+            )}
           </div>
         </Col>
         <Col>
@@ -1421,8 +1602,8 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
 
       {/* Search and Filter */}
       <Card style={{ marginBottom: 24 }}>
-        <Row gutter={16} align="middle">
-          <Col flex={1}>
+        <Row gutter={16} align="middle" justify={"end"}>
+          <Col xs={24} md={6}>
             <Input.Search
               placeholder="🔍 Tìm kiếm nhanh theo mã đơn hàng, tên khách hàng..."
               value={searchKeyword}
@@ -1628,9 +1809,7 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
             ⚡ Lọc nhanh:
           </Text>
           <Space wrap>
-            {isInventoryStaff &&
-            !userPermissions.includes("admin") &&
-            !userPermissions.includes("super-admin") ? (
+            {isInventoryStaff && !isSuperAdmin(employee) ? (
               // Inventory staff only sees inventory-relevant quick filters
               <>
                 <Button
@@ -1709,9 +1888,7 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
 
           <Form.Item name="quoteStage" label="🔄 Trạng thái Vận hành">
             <Select placeholder="Chọn trạng thái vận hành" allowClear>
-              {(isInventoryStaff &&
-              !userPermissions.includes("admin") &&
-              !userPermissions.includes("super-admin")
+              {(isInventoryStaff && !isSuperAdmin(employee)
                 ? B2B_ORDER_STAGES.filter((stage) =>
                     ["accepted", "pending_packaging", "packaged"].includes(
                       stage.key,
@@ -1785,10 +1962,24 @@ const B2BOrderListPage: React.FC<B2BOrderListPageProps> = ({
         orderItems={orderItems}
         loadingItems={loadingItems}
         verifiedItems={verifiedItems}
+        // Role flags
         isInventoryStaff={isInventoryStaff}
+        isDeliveryStaff={isDeliveryStaff}
+        isSalesStaff={isSalesStaff}
+        // Inventory staff handlers
         onMarkAsPackaged={handleMarkAsPackaged}
+        // Delivery staff handlers
+        onMarkAsShipping={handleMarkAsShipping}
+        onMarkAsCompleted={handleMarkAsCompleted}
+        // Sales staff handlers
+        onMarkAsSent={handleMarkAsSent}
+        onMarkAsNegotiating={handleMarkAsNegotiating}
+        onMarkAsAccepted={handleMarkAsAccepted}
+        onMarkAsCancelled={handleMarkAsCancelled}
+        // Common handlers
         onOpenContinuousScanner={handleOpenContinuousScanner}
         onManualVerify={handleManualVerify}
+        onEdit={() => selectedOrder && handleEditOrder(selectedOrder)}
         formatCurrency={formatCurrency}
         getStageInfo={getStageInfo}
         loading={loading}

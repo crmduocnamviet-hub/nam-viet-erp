@@ -9,8 +9,9 @@ import {
   Row,
   Col,
 } from "antd";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@nam-viet-erp/services";
+import logo from "../assets/logo.png";
 
 const { Title, Text } = Typography;
 
@@ -52,6 +53,13 @@ const LoginPageContent: React.FC = () => {
       <Col xs={22} sm={16} md={12} lg={8} xl={6}>
         <Card>
           <div style={{ textAlign: "center", marginBottom: 24 }}>
+            <div style={{ marginBottom: 16 }}>
+              <img
+                src={logo}
+                alt="Nam Việt EMS"
+                style={{ width: 80, height: 80, objectFit: "contain" }}
+              />
+            </div>
             <Title level={2}>Nam Việt EMS</Title>
             <Text>Chào mừng trở lại! Vui lòng đăng nhập.</Text>
           </div>
@@ -88,6 +96,15 @@ const LoginPageContent: React.FC = () => {
                 Đăng nhập
               </Button>
             </Form.Item>
+
+            <div style={{ textAlign: "center" }}>
+              <Text>
+                Chưa có tài khoản?{" "}
+                <Link to="/register" style={{ fontWeight: 500 }}>
+                  Đăng ký ngay
+                </Link>
+              </Text>
+            </div>
           </Form>
         </Card>
       </Col>

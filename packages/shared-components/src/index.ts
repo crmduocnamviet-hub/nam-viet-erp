@@ -22,7 +22,14 @@ export { default as TransferSuggestionsModal } from "./components/TransferSugges
 export { default as DateInput } from "./components/DateInput";
 export { default as QuickQuoteTabContent } from "./components/QuickQuoteTabContent";
 export { default as PrintableReceipt } from "./components/PrintableReceipt";
+export { default as MainLayout } from "./components/MainLayout";
+export type { MainLayoutProps } from "./components/MainLayout";
+export { default as RegisterForm } from "./components/RegisterForm";
+export type { RegisterFormProps } from "./components/RegisterForm";
 export * from "./hooks/useDebounce";
+
+// Table Components
+export * from "./components/tables";
 
 // Screens and Permission System
 export * from "./screens";

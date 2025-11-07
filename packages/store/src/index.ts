@@ -45,6 +45,7 @@ export * from "./hooks/useB2BOrder";
 export * from "./hooks/usePurchaseOrder";
 export * from "./hooks/usePurchaseOrderMutations";
 export * from "./hooks/usePurchaseOrderAnalysis";
+export * from "./hooks/useAutoGeneratePOModal";
 
 // Export new hooks
 export * from "./hooks/usePromotion";

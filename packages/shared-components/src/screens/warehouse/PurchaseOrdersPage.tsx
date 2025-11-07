@@ -25,7 +25,7 @@ import {
 } from "@ant-design/icons";
 import PageLayout from "../../components/PageLayout";
 import ViewPurchaseOrderModal from "../../components/ViewPurchaseOrderModal";
-import PurchaseOrdersTable from "../../components/PurchaseOrdersTable";
+import { PurchaseOrdersTable } from "../../components/tables";
 import {
   analyzeProductsNeedingReorder,
   getPurchaseOrders,

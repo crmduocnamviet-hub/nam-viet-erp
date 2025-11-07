@@ -28,7 +28,6 @@ import {
   getOverallVATStats,
   getWarehouse,
 } from "@nam-viet-erp/services";
-import type { IVATInventorySummary, IWarehouse } from "../../../../../types";
 import dayjs from "dayjs";
 
 const { Title, Text } = Typography;

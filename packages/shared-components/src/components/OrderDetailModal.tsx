@@ -20,10 +20,23 @@ interface OrderDetailModalProps {
   orderItems: any[];
   loadingItems: boolean;
   verifiedItems: Set<string>;
-  isInventoryStaff: boolean;
-  onMarkAsPackaged: () => Promise<void>;
-  onOpenContinuousScanner: () => void;
-  onManualVerify: (item: any) => void;
+  isInventoryStaff?: boolean;
+  isDeliveryStaff?: boolean;
+  isSalesStaff?: boolean;
+  // Inventory staff callbacks
+  onMarkAsPackaged?: () => Promise<void>;
+  // Delivery staff callbacks
+  onMarkAsShipping?: () => Promise<void>;
+  onMarkAsCompleted?: () => Promise<void>;
+  // Sales staff callbacks
+  onMarkAsSent?: () => Promise<void>;
+  onMarkAsNegotiating?: () => Promise<void>;
+  onMarkAsAccepted?: () => Promise<void>;
+  onMarkAsCancelled?: () => Promise<void>;
+  // Common callbacks
+  onOpenContinuousScanner?: () => void;
+  onManualVerify?: (item: any) => void;
+  onEdit?: () => void;
   formatCurrency: (amount: number) => string;
   getStageInfo: (stage: string) => any;
   loading: boolean;
@@ -36,46 +49,180 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
   orderItems,
   loadingItems,
   verifiedItems,
-  isInventoryStaff,
+  isInventoryStaff = false,
+  isDeliveryStaff = false,
+  isSalesStaff = false,
   onMarkAsPackaged,
+  onMarkAsShipping,
+  onMarkAsCompleted,
+  onMarkAsSent,
+  onMarkAsNegotiating,
+  onMarkAsAccepted,
+  onMarkAsCancelled,
   onOpenContinuousScanner,
   onManualVerify,
+  onEdit,
   formatCurrency,
   getStageInfo,
   loading,
 }) => {
+  // Determine which action buttons to show based on role and current stage
+  const getActionButtons = () => {
+    const buttons = [
+      <Button key="close" onClick={onClose}>
+        Đóng
+      </Button>,
+    ];
+
+    // Sales staff buttons
+    if (isSalesStaff) {
+      const stage = selectedOrder?.quote_stage;
+
+      // draft → sent
+      if (stage === "draft" && onMarkAsSent) {
+        buttons.push(
+          <Button
+            key="send"
+            type="primary"
+            onClick={async () => await onMarkAsSent()}
+            loading={loading}
+          >
+            📤 Gửi báo giá
+          </Button>,
+        );
+      }
+      // sent → negotiating
+      else if (stage === "sent" && onMarkAsNegotiating) {
+        buttons.push(
+          <Button
+            key="negotiate"
+            type="primary"
+            onClick={async () => await onMarkAsNegotiating()}
+            loading={loading}
+          >
+            💬 Đang đàm phán
+          </Button>,
+        );
+      }
+      // negotiating → accepted
+      else if (stage === "negotiating" && onMarkAsAccepted) {
+        buttons.push(
+          <Button
+            key="accept"
+            type="primary"
+            onClick={async () => await onMarkAsAccepted()}
+            loading={loading}
+            style={{ background: "#52c41a", borderColor: "#52c41a" }}
+          >
+            ✅ Chấp nhận đơn hàng
+          </Button>,
+        );
+      }
+
+      // Cancel button (available in draft, sent, negotiating stages)
+      if (
+        ["draft", "sent", "negotiating"].includes(stage) &&
+        onMarkAsCancelled
+      ) {
+        buttons.push(
+          <Button
+            key="cancel"
+            danger
+            onClick={async () => await onMarkAsCancelled()}
+            loading={loading}
+          >
+            ❌ Hủy đơn
+          </Button>,
+        );
+      }
+
+      // Edit button for sales staff (in draft, sent, negotiating stages)
+      if (["draft", "sent", "negotiating"].includes(stage) && onEdit) {
+        buttons.push(
+          <Button key="edit" type="default" onClick={onEdit}>
+            ✏️ Chỉnh sửa
+          </Button>,
+        );
+      }
+    }
+
+    // Inventory staff buttons
+    if (isInventoryStaff) {
+      // accepted → packaged
+      if (selectedOrder?.quote_stage === "accepted" && onMarkAsPackaged) {
+        buttons.push(
+          <Button
+            key="packaged"
+            type="primary"
+            onClick={async () => await onMarkAsPackaged()}
+            loading={loading}
+          >
+            📦 Đóng gói
+          </Button>,
+        );
+      }
+      // packaged → shipping (hand over to delivery)
+      else if (selectedOrder?.quote_stage === "packaged" && onMarkAsShipping) {
+        buttons.push(
+          <Button
+            key="shipping"
+            type="primary"
+            onClick={async () => await onMarkAsShipping()}
+            loading={loading}
+          >
+            🚚 Bàn giao cho giao hàng
+          </Button>,
+        );
+      }
+    }
+
+    // Delivery staff buttons
+    if (isDeliveryStaff) {
+      // packaged → shipping (receive goods)
+      if (selectedOrder?.quote_stage === "packaged" && onMarkAsShipping) {
+        buttons.push(
+          <Button
+            key="receive"
+            type="primary"
+            onClick={async () => await onMarkAsShipping()}
+            loading={loading}
+          >
+            📥 Nhận hàng
+          </Button>,
+        );
+      }
+      // shipping → completed (complete and submit money)
+      else if (selectedOrder?.quote_stage === "shipping" && onMarkAsCompleted) {
+        buttons.push(
+          <Button
+            key="complete"
+            type="primary"
+            onClick={async () => await onMarkAsCompleted()}
+            loading={loading}
+          >
+            ✅ Hoàn thành & Nộp tiền
+          </Button>,
+        );
+      }
+    }
+
+    // Show Edit button for general staff (non-specialized roles)
+    if (!isInventoryStaff && !isDeliveryStaff && !isSalesStaff && onEdit) {
+      buttons.push(
+        <Button key="edit" type="default" onClick={onEdit}>
+          Chỉnh sửa
+        </Button>,
+      );
+    }
+
+    return buttons;
+  };
   return (
     <Modal
       title={`Chi tiết báo giá ${selectedOrder?.quote_number}`}
       open={open}
       onCancel={onClose}
-      footer={[
-        <Button key="close" onClick={onClose}>
-          Đóng
-        </Button>,
-        <Button key="edit" type="default">
-          Chỉnh sửa
-        </Button>,
-        // Show "Mark as Packaged" button for inventory staff when all products are verified
-        ...(isInventoryStaff &&
-        ["pending_packaging", "accepted"].includes(
-          selectedOrder?.quote_stage
-        ) &&
-        orderItems.length > 0 &&
-        verifiedItems.size === orderItems.length
-          ? [
-              <Button
-                key="packaged"
-                type="primary"
-                icon={<CheckCircleOutlined />}
-                onClick={async () => await onMarkAsPackaged()}
-                loading={loading}
-              >
-                ✅ Đánh dấu đã đóng gói
-              </Button>,
-            ]
-          : []),
-      ]}
+      footer={getActionButtons()}
       width={1000}
     >
       {selectedOrder && (
@@ -127,7 +274,9 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                 </Space>
                 {isInventoryStaff &&
                   orderItems.length > 0 &&
-                  selectedOrder?.quote_stage !== "packaged" && (
+                  !["packaged", "shipping", "completed"].includes(
+                    selectedOrder?.quote_stage,
+                  ) && (
                     <Button
                       type="primary"
                       icon={<QrcodeOutlined />}
@@ -204,8 +353,12 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                             );
                           }
 
-                          // Hide manual verify button if status is packaged
-                          if (selectedOrder?.quote_stage === "packaged") {
+                          // Hide manual verify button if status is packaged/shipping/completed
+                          if (
+                            ["packaged", "shipping", "completed"].includes(
+                              selectedOrder?.quote_stage,
+                            )
+                          ) {
                             return null;
                           }
 
@@ -215,7 +368,7 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                                 type="default"
                                 size="small"
                                 icon={<CheckCircleOutlined />}
-                                onClick={() => onManualVerify(record)}
+                                onClick={() => onManualVerify?.(record)}
                               >
                                 Xác thực thủ công
                               </Button>

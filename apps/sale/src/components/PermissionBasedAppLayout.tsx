@@ -190,78 +190,22 @@ const AppLayoutContent: React.FC = () => {
   if (isFullscreenRoute) {
     return (
       <Layout style={{ minHeight: "100vh" }}>
-        {!isMobile && (
-          <Sider
-            collapsible
-            collapsed={collapsed}
-            onCollapse={(value) => setCollapsed(value)}
-            width={230}
-            collapsedWidth={50}
-            style={{
-              overflow: "auto",
-              height: "100vh",
-              position: "fixed",
-              left: 0,
-              top: 0,
-              bottom: 0,
-              display: "flex",
-              flexDirection: "column",
-            }}
-          >
-            <div
-              style={{
-                height: "48px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "10px",
-              }}
-            >
-              <Avatar
-                src={logo}
-                shape="square"
-                size="large"
-                style={{ backgroundColor: "transparent" }}
-              />
-              {!collapsed && (
-                <Title level={5} style={{ color: "white", margin: 0 }}>
-                  Nam Việt Sale
-                </Title>
-              )}
-            </div>
-            <Menu
-              theme="dark"
-              mode="inline"
-              selectedKeys={[location.pathname]}
-              items={menuItems}
-              onClick={handleMenuClick}
-              style={{ flex: 1, borderRight: 0 }}
-            />
-          </Sider>
-        )}
-        <Layout
+        <Content
           style={{
-            marginLeft:
-              !isMobile && !collapsed ? 230 : !isMobile && collapsed ? 50 : 0,
+            margin: "0",
+            padding: "0",
+            overflow: "hidden",
+            height: "100vh",
           }}
         >
-          <Content
-            style={{
-              margin: "0",
-              padding: "0",
-              overflow: "hidden",
-              height: "100vh",
-            }}
-          >
-            <Routes>
-              <Route path="/pos" element={renderScreen("pos.main")} />
-              <Route
-                path="/create-quote"
-                element={renderScreen("b2b.create-quote")}
-              />
-            </Routes>
-          </Content>
-        </Layout>
+          <Routes>
+            <Route path="/pos" element={renderScreen("pos.main")} />
+            <Route
+              path="/create-quote"
+              element={renderScreen("b2b.create-quote")}
+            />
+          </Routes>
+        </Content>
       </Layout>
     );
   }

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import {
   Card,
-  Table,
   Button,
   Space,
   Typography,
@@ -10,8 +9,6 @@ import {
   Input,
   Select,
   InputNumber,
-  Tag,
-  Popconfirm,
   App,
   Row,
   Col,
@@ -21,11 +18,8 @@ import {
 import {
   HomeOutlined,
   PlusOutlined,
-  DeleteOutlined,
-  EyeOutlined,
   MedicineBoxOutlined,
 } from "@ant-design/icons";
-import type { ColumnsType } from "antd/es/table";
 import {
   getRooms,
   createRoom,
@@ -37,6 +31,7 @@ import {
   type CreateRoomData,
   type UpdateRoomData,
 } from "@nam-viet-erp/services";
+import { RoomManagementTable } from "../../components/tables";
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -206,105 +201,6 @@ const RoomManagementPage: React.FC = () => {
     }
   };
 
-  const columns: ColumnsType<Room> = [
-    {
-      title: "Tên Phòng",
-      dataIndex: "name",
-      key: "name",
-      render: (name: string, record: Room) => (
-        <Space>
-          <HomeOutlined style={{ color: "#1890ff" }} />
-          <Text strong>{name}</Text>
-          {!record.is_active && <Tag color="red">Ngưng hoạt động</Tag>}
-        </Space>
-      ),
-    },
-    {
-      title: "Loại Phòng",
-      dataIndex: "room_type",
-      key: "room_type",
-      render: (type: Room["room_type"]) => (
-        <Tag color="blue">{getRoomTypeDisplay(type)}</Tag>
-      ),
-    },
-    {
-      title: "Sức Chứa",
-      dataIndex: "capacity",
-      key: "capacity",
-      render: (capacity: number) => (capacity ? `${capacity} người` : "—"),
-      align: "center",
-    },
-    {
-      title: "Thiết Bị",
-      dataIndex: "equipment",
-      key: "equipment",
-      render: (equipment: string[]) => (
-        <div>
-          {equipment && equipment.length > 0 ? (
-            equipment.slice(0, 2).map((item, index) => (
-              <Tag key={index} style={{ marginBottom: 2 }}>
-                {item}
-              </Tag>
-            ))
-          ) : (
-            <Text type="secondary">Chưa có</Text>
-          )}
-          {equipment && equipment.length > 2 && (
-            <Tag>+{equipment.length - 2} khác</Tag>
-          )}
-        </div>
-      ),
-    },
-    {
-      title: "Trạng Thái",
-      dataIndex: "is_active",
-      key: "is_active",
-      render: (isActive: boolean) => (
-        <Badge
-          status={isActive ? "success" : "error"}
-          text={isActive ? "Đang hoạt động" : "Ngưng hoạt động"}
-        />
-      ),
-      align: "center",
-    },
-    {
-      title: "Thao Tác",
-      key: "action",
-      render: (_, record: Room) => (
-        <Space>
-          <Button
-            type="text"
-            icon={<EyeOutlined />}
-            onClick={(e) => {
-              e.stopPropagation();
-              handleViewRoom(record);
-            }}
-            title="Xem chi tiết"
-          />
-          <Popconfirm
-            title="Xóa phòng"
-            description="Bạn có chắc muốn xóa phòng này?"
-            onConfirm={(e) => {
-              e?.stopPropagation();
-              handleDeleteRoom(record.room_id);
-            }}
-            okText="Xóa"
-            cancelText="Hủy"
-          >
-            <Button
-              type="text"
-              icon={<DeleteOutlined />}
-              danger
-              title="Xóa"
-              onClick={(e) => e.stopPropagation()}
-            />
-          </Popconfirm>
-        </Space>
-      ),
-      align: "center" as const,
-    },
-  ];
-
   return (
     <div>
       {/* Header */}
@@ -375,21 +271,12 @@ const RoomManagementPage: React.FC = () => {
           </Button>
         }
       >
-        <Table
-          columns={columns}
-          dataSource={rooms}
-          rowKey="room_id"
+        <RoomManagementTable
+          rooms={rooms}
           loading={loading}
-          onRow={(record) => ({
-            onClick: () => handleEditRoom(record),
-            style: { cursor: "pointer" },
-          })}
-          pagination={{
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total, range) =>
-              `${range[0]}-${range[1]} của ${total} phòng`,
-          }}
+          onView={handleViewRoom}
+          onDelete={handleDeleteRoom}
+          getRoomTypeDisplay={getRoomTypeDisplay}
         />
       </Card>
 

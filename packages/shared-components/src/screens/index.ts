@@ -15,6 +15,7 @@ import QuickQuotePage from "./b2b/QuickQuotePage";
 import CreateOrderPage from "./b2b/CreateOrderPage";
 import EditB2BOrderPage from "./b2b/EditB2BOrderPage";
 import B2BFinancialManagementPage from "./b2b/B2BFinancialManagementPage";
+import InventoryB2BOrdersPage from "./b2b/InventoryB2BOrdersPage";
 
 // Screen Imports - Medical
 import PatientsPage from "./medical/PatientsPage";
@@ -27,7 +28,7 @@ import ProductsPage from "./inventory/ProductsPage";
 import ProductListPage from "./inventory/ProductListPage";
 import CreateProductPage from "./inventory/CreateProductPage";
 import EditProductPage from "./inventory/EditProductPage";
-import PurchaseOrdersPage from "./inventory/PurchaseOrdersPage";
+import InventoryPurchaseOrdersPage from "./inventory/PurchaseOrdersPage"; // Using inventory version with fixes
 import ComboListPage from "./inventory/ComboListPage";
 import ProductLotDetailPage from "./inventory/ProductLotDetailPage";
 
@@ -166,6 +167,15 @@ export const SCREEN_REGISTRY: ScreenRegistry = {
     description: "Quản lý thông tin cá nhân và đổi mật khẩu",
   },
 
+  // ==================== B2B SCREENS ====================
+  "b2b.inventory-orders": {
+    component: InventoryB2BOrdersPage,
+    permissions: ["b2b.access", "b2b.view", "inventory.dashboard"],
+    category: "b2b",
+    title: "Quản lý Đơn hàng - Kho",
+    description: "Kiểm hàng và đóng gói đơn hàng bán buôn cho nhân viên kho",
+  },
+
   // ==================== MEDICAL SCREENS ====================
   "medical.patients": {
     component: PatientsPage,
@@ -226,7 +236,7 @@ export const SCREEN_REGISTRY: ScreenRegistry = {
     description: "Cập nhật thông tin sản phẩm",
   },
   "inventory.purchase-orders": {
-    component: PurchaseOrdersPage,
+    component: InventoryPurchaseOrdersPage,
     permissions: ["inventory.access", "purchase-orders.view"],
     category: "inventory",
     title: "Đơn mua hàng",
@@ -903,6 +913,7 @@ export {
   QuickQuotePage,
   CreateOrderPage,
   EditB2BOrderPage,
+  InventoryB2BOrdersPage,
   // Medical
   PatientsPage,
   PatientDetailPage,
@@ -913,7 +924,7 @@ export {
   ProductListPage,
   CreateProductPage,
   EditProductPage,
-  PurchaseOrdersPage,
+  InventoryPurchaseOrdersPage,
   ComboListPage,
   ProductLotDetailPage,
   // Financial

@@ -23,7 +23,11 @@ import {
 } from "antd";
 import viVN from "antd/locale/vi_VN";
 import { signOut } from "@nam-viet-erp/services";
-import { useScreens, EditB2BOrderPage } from "@nam-viet-erp/shared-components";
+import {
+  useScreens,
+  EditB2BOrderPage,
+  InventoryB2BOrdersPage,
+} from "@nam-viet-erp/shared-components";
 import { useEmployee } from "../context/EmployeeContext";
 import logo from "../assets/logo.png";
 
@@ -58,6 +62,11 @@ const allMenuItems = [
         label: "Danh sách Đơn hàng",
         key: "/store-channel",
         screenKey: "b2b.orders",
+      },
+      {
+        label: "📦 Đơn hàng - Kho",
+        key: "/b2b/inventory",
+        screenKey: "b2b.inventory-orders",
       },
     ],
   },
@@ -341,6 +350,10 @@ const AppLayout: React.FC = () => {
                 <Route
                   path="/b2b/orders/edit/:id"
                   element={<EditB2BOrderPage employee={employee} />}
+                />
+                <Route
+                  path="/b2b/inventory"
+                  element={<InventoryB2BOrdersPage employee={employee} />}
                 />
                 <Route
                   path="/b2b-dashboard"

@@ -831,14 +831,13 @@ const PurchaseOrderReceivingDetailPage: React.FC = () => {
       if (analyzedProduct.lots && analyzedProduct.lots.length > 0) {
         const newLots: LotData[] = [];
 
-        analyzedProduct.lots.forEach((lot, idx) => {
+        analyzedProduct.lots.forEach((lot: any, idx: number) => {
           if (lot.quantity && lot.quantity > 0) {
             newLots.push({
               id: Date.now() + Math.random() + idx,
               quantityToReceive: lot.quantity,
               lotNumber: lot.lotNumber,
               expirationDate: lot.expirationDate,
-              unitPrice: analyzedProduct.unitPrice,
             });
             appliedLotCount++;
           }
