@@ -57,6 +57,9 @@ import UserManagementPage from "./management/UserManagementPage";
 import RoomManagementPage from "./management/RoomManagementPage";
 import RoleManagementPage from "./management/RoleManagementPage";
 
+// Screen Imports - Salary
+import SalaryManagementPage from "./salary/SalaryManagementPage";
+
 // Screen Imports - Staff Dashboards
 import SalesStaffDashboardPage from "./staff/SalesStaffDashboardPage";
 import InventoryStaffDashboardPage from "./staff/InventoryStaffDashboardPage";
@@ -397,6 +400,16 @@ export const SCREEN_REGISTRY: ScreenRegistry = {
     description: "Quản lý vai trò và phân quyền trong hệ thống",
   },
 
+  // ==================== SALARY & COMPENSATION SCREENS ====================
+  "salary.management": {
+    component: SalaryManagementPage,
+    permissions: ["salary.view", "salary.manage"],
+    category: "salary",
+    title: "Quản lý Lương & Thưởng",
+    description:
+      "Quản lý lương bổng, hoa hồng, KPIs và chính sách thâm niên cho nhân viên",
+  },
+
   // ==================== STAFF DASHBOARD SCREENS ====================
   "staff.sales-dashboard": {
     component: SalesStaffDashboardPage,
@@ -689,6 +702,17 @@ export const PERMISSIONS = {
   "roles.edit": "Chỉnh sửa vai trò",
   "roles.delete": "Xóa vai trò",
   "settings.access": "Truy cập cài đặt hệ thống",
+
+  // Salary & Compensation Permissions
+  "salary.view": "Xem thông tin lương & thưởng",
+  "salary.manage": "Quản lý hệ thống lương & thưởng",
+  "salary.create": "Tạo cấu trúc lương mới",
+  "salary.edit": "Chỉnh sửa cấu trúc lương",
+  "salary.delete": "Xóa cấu trúc lương",
+  "commission.view": "Xem hoa hồng & KPIs",
+  "commission.calculate": "Tính toán hoa hồng",
+  "seniority.view": "Xem chính sách thâm niên",
+  "seniority.manage": "Quản lý chính sách thâm niên",
 } as const;
 
 // ==================== ROLE-BASED PERMISSION PRESETS ====================
@@ -710,6 +734,15 @@ export const ROLE_PERMISSIONS = {
     "roles.create",
     "roles.edit",
     "roles.delete",
+    "salary.view",
+    "salary.manage",
+    "salary.create",
+    "salary.edit",
+    "salary.delete",
+    "commission.view",
+    "commission.calculate",
+    "seniority.view",
+    "seniority.manage",
     "inventory.access",
     "products.view",
     "products.create",

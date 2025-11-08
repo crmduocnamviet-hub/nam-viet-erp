@@ -1,3 +1,10 @@
+/**
+ * EXAMPLE: How to apply Permission Checking to RoleManagementPage
+ *
+ * This file demonstrates how to properly use the permission system
+ * to protect actions and content in the Role Management page.
+ */
+
 import React, { useState, useEffect } from "react";
 import {
   Table,
@@ -18,13 +25,11 @@ import {
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import { Role, SYSTEM_ROLES } from "../../types/role";
-import { ROLE_PERMISSIONS, PERMISSIONS } from "../index";
+import { ROLE_PERMISSIONS } from "../index";
 import RoleFormModal from "../../components/RoleFormModal";
-import {
-  checkAndCreate,
-  checkAndEdit,
-  checkAndDelete,
-} from "../../utils/permissionChecker";
+import PermissionGuard from "../../components/PermissionGuard";
+import { useResourcePermission } from "../../hooks/usePermission";
+import { requireScreenAccess } from "../../hoc/withPermission";
 
 const { Title, Text } = Typography;
 
@@ -59,13 +64,17 @@ const getRoleTitleFromKey = (key: string): string => {
   return titleMap[key] || key;
 };
 
-const RoleManagementPage: React.FC = () => {
+const RoleManagementPageExample: React.FC = () => {
   const [roles, setRoles] = useState<Role[]>([]);
   const [filteredRoles, setFilteredRoles] = useState<Role[]>([]);
   const [searchText, setSearchText] = useState("");
   const [modalVisible, setModalVisible] = useState(false);
   const [editingRole, setEditingRole] = useState<Role | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // ✅ PERMISSION CHECK: Use resource permission hook
+  const { canView, canCreate, canEdit, canDelete } =
+    useResourcePermission("roles");
 
   useEffect(() => {
     loadRoles();
@@ -89,7 +98,6 @@ const RoleManagementPage: React.FC = () => {
   const loadRoles = () => {
     setLoading(true);
     try {
-      // Load from configuration
       const rolesData = getRolesFromConfig();
       setRoles(rolesData);
       setFilteredRoles(rolesData);
@@ -101,49 +109,44 @@ const RoleManagementPage: React.FC = () => {
   };
 
   const handleCreate = () => {
-    // ✅ Check permission before executing
-    checkAndCreate(
-      "roles",
-      () => {
-        setEditingRole(null);
-        setModalVisible(true);
-      },
-      "Bạn không có quyền tạo vai trò mới",
-    );
+    // ✅ PERMISSION CHECK: Only allow if has create permission
+    if (!canCreate) {
+      message.error("Bạn không có quyền tạo vai trò mới");
+      return;
+    }
+    setEditingRole(null);
+    setModalVisible(true);
   };
 
   const handleEdit = (role: Role) => {
-    // ✅ Check permission before executing
-    checkAndEdit(
-      "roles",
-      () => {
-        setEditingRole(role);
-        setModalVisible(true);
-      },
-      "Bạn không có quyền chỉnh sửa vai trò",
-    );
+    // ✅ PERMISSION CHECK: Only allow if has edit permission
+    if (!canEdit) {
+      message.error("Bạn không có quyền chỉnh sửa vai trò");
+      return;
+    }
+    setEditingRole(role);
+    setModalVisible(true);
   };
 
   const handleDelete = async (role: Role) => {
+    // ✅ PERMISSION CHECK: Only allow if has delete permission
+    if (!canDelete) {
+      message.error("Bạn không có quyền xóa vai trò");
+      return;
+    }
+
     if (role.is_system_role) {
       message.error("Không thể xóa vai trò hệ thống");
       return;
     }
 
-    // ✅ Check permission before executing
-    await checkAndDelete(
-      "roles",
-      async () => {
-        try {
-          // TODO: Implement API call to delete role
-          message.success(`Đã xóa vai trò "${role.title}"`);
-          loadRoles();
-        } catch (error) {
-          message.error("Không thể xóa vai trò");
-        }
-      },
-      "Bạn không có quyền xóa vai trò",
-    );
+    try {
+      // TODO: Implement API call to delete role
+      message.success(`Đã xóa vai trò "${role.title}"`);
+      loadRoles();
+    } catch (error) {
+      message.error("Không thể xóa vai trò");
+    }
   };
 
   const handleModalClose = (saved: boolean) => {
@@ -196,32 +199,59 @@ const RoleManagementPage: React.FC = () => {
       align: "center",
       render: (_, record: Role) => (
         <Space size="small">
-          <Button
-            type="link"
-            icon={<EditOutlined />}
-            onClick={() => handleEdit(record)}
-            size="small"
+          {/* ✅ PERMISSION GUARD: Only show Edit button if has permission */}
+          <PermissionGuard
+            permissions={["roles.edit"]}
+            fallback={null} // Don't show anything if no permission
           >
-            Sửa
-          </Button>
-          {!record.is_system_role && (
-            <Popconfirm
-              title="Xác nhận xóa"
-              description={`Bạn có chắc muốn xóa vai trò "${record.title}"?`}
-              onConfirm={() => handleDelete(record)}
-              okText="Xóa"
-              cancelText="Hủy"
-              okButtonProps={{ danger: true }}
+            <Button
+              type="link"
+              icon={<EditOutlined />}
+              onClick={() => handleEdit(record)}
+              size="small"
             >
-              <Button type="link" danger icon={<DeleteOutlined />} size="small">
-                Xóa
-              </Button>
-            </Popconfirm>
-          )}
+              Sửa
+            </Button>
+          </PermissionGuard>
+
+          {/* ✅ PERMISSION GUARD: Only show Delete button if has permission AND not system role */}
+          <PermissionGuard permissions={["roles.delete"]}>
+            {!record.is_system_role && (
+              <Popconfirm
+                title="Xác nhận xóa"
+                description={`Bạn có chắc muốn xóa vai trò "${record.title}"?`}
+                onConfirm={() => handleDelete(record)}
+                okText="Xóa"
+                cancelText="Hủy"
+                okButtonProps={{ danger: true }}
+              >
+                <Button
+                  type="link"
+                  danger
+                  icon={<DeleteOutlined />}
+                  size="small"
+                >
+                  Xóa
+                </Button>
+              </Popconfirm>
+            )}
+          </PermissionGuard>
         </Space>
       ),
     },
   ];
+
+  // ✅ PERMISSION CHECK: If user doesn't have view permission, show message
+  if (!canView) {
+    return (
+      <Card>
+        <Text type="danger">
+          Bạn không có quyền xem danh sách vai trò. Vui lòng liên hệ quản trị
+          viên.
+        </Text>
+      </Card>
+    );
+  }
 
   return (
     <div>
@@ -241,9 +271,24 @@ const RoleManagementPage: React.FC = () => {
               Quản lý vai trò và phân quyền cho người dùng trong hệ thống
             </Text>
           </div>
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
-            Thêm vai trò mới
-          </Button>
+
+          {/* ✅ PERMISSION GUARD: Only show Create button if has permission */}
+          <PermissionGuard
+            permissions={["roles.create"]}
+            fallback={
+              <Text type="secondary" italic>
+                Bạn không có quyền tạo vai trò mới
+              </Text>
+            }
+          >
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={handleCreate}
+            >
+              Thêm vai trò mới
+            </Button>
+          </PermissionGuard>
         </Space>
       </div>
 
@@ -272,13 +317,22 @@ const RoleManagementPage: React.FC = () => {
         />
       </Card>
 
-      <RoleFormModal
-        visible={modalVisible}
-        role={editingRole}
-        onClose={handleModalClose}
-      />
+      {/* ✅ PERMISSION GUARD: Only show modal if has create or edit permission */}
+      <PermissionGuard anyPermissions={["roles.create", "roles.edit"]}>
+        <RoleFormModal
+          visible={modalVisible}
+          role={editingRole}
+          onClose={handleModalClose}
+        />
+      </PermissionGuard>
     </div>
   );
 };
 
-export default RoleManagementPage;
+// ✅ EXPORT WITH SCREEN PROTECTION: Protect the entire page
+// This will show access denied page if user doesn't have "management.roles" screen access
+export default requireScreenAccess(
+  RoleManagementPageExample,
+  "management.roles",
+  true, // showDenied = true means show 403 page instead of blank
+);

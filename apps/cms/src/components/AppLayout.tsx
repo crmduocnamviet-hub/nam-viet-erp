@@ -471,6 +471,12 @@ const AppLayout: React.FC = () => {
                   element={<Screen screenKey="management.roles" />}
                 />
 
+                {/* --- ROUTE CHO MODULE LƯƠNG & THƯỞNG --- */}
+                <Route
+                  path="/salary"
+                  element={<Screen screenKey="salary.management" />}
+                />
+
                 {/* --- ROUTE CHO MODULE BỆNH NHÂN --- */}
                 <Route
                   path="/patients"

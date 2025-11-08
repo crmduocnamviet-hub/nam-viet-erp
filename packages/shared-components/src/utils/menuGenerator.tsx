@@ -585,9 +585,21 @@ export const CMS_APP_MENU: MenuItemConfig[] = [
     ],
   },
   {
+    key: "salary",
+    label: "Lương & Thưởng",
+    icon: <DollarOutlined />,
+    children: [
+      {
+        key: "/salary",
+        label: "Quản lý Lương & Thưởng",
+        screenKey: "salary.management",
+      },
+    ],
+  },
+  {
     key: "finance",
     label: "Tài Chính & Kế Toán",
-    icon: <DollarOutlined />,
+    icon: <BankOutlined />,
     children: [
       {
         key: "/financial-transactions",

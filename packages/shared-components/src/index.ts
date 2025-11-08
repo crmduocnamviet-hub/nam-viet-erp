@@ -28,8 +28,13 @@ export type { MainLayoutProps } from "./components/MainLayout";
 export { default as RegisterForm } from "./components/RegisterForm";
 export type { RegisterFormProps } from "./components/RegisterForm";
 export { default as RoleFormModal } from "./components/RoleFormModal";
+export { default as PermissionGuard } from "./components/PermissionGuard";
+export type { PermissionGuardProps } from "./components/PermissionGuard";
 export * from "./types/role";
+export * from "./types/salary";
 export * from "./hooks/useDebounce";
+export * from "./hooks/usePermission";
+export * from "./hoc/withPermission";
 
 // Table Components
 export * from "./components/tables";

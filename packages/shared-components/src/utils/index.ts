@@ -26,3 +26,6 @@ export * from "./printUtils";
 
 // Excel export utilities
 export * from "./exportTransactionsToExcel";
+
+// Permission checking utilities
+export * from "./permissionChecker";
