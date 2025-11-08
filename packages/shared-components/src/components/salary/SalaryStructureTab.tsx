@@ -18,6 +18,7 @@ import {
   message,
   Popconfirm,
   Tooltip,
+  App,
 } from "antd";
 import {
   PlusOutlined,
@@ -30,10 +31,12 @@ import type { ColumnsType } from "antd/es/table";
 import { SalaryGrade, Allowance } from "../../types/salary";
 import { formatCurrency } from "../../utils";
 import SalaryGradeFormModal from "./SalaryGradeFormModal";
+import { getSalaryGrades, deleteSalaryGrade } from "@nam-viet-erp/services";
 
 const { Title, Text } = Typography;
 
 const SalaryStructureTab: React.FC = () => {
+  const { message: messageApi } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [salaryGrades, setSalaryGrades] = useState<SalaryGrade[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
@@ -43,91 +46,32 @@ const SalaryStructureTab: React.FC = () => {
     loadSalaryGrades();
   }, []);
 
-  const loadSalaryGrades = () => {
+  const loadSalaryGrades = async () => {
     setLoading(true);
     try {
-      // TODO: Load from API
-      // Mock data for now
-      const mockData: SalaryGrade[] = [
-        {
-          id: "1",
-          grade_name: "Ngạch A - Nhân viên cấp cao",
-          base_salary: 15000000,
-          description: "Dành cho nhân viên quản lý cấp cao",
-          allowances: [
-            {
-              id: "a1",
-              name: "Phụ cấp xăng xe",
-              amount: 2000000,
-            },
-            {
-              id: "a2",
-              name: "Phụ cấp điện thoại",
-              amount: 500000,
-            },
-            {
-              id: "a3",
-              name: "Phụ cấp ăn trưa",
-              amount: 1000000,
-            },
-          ],
-          total_salary: 18500000,
-          is_active: true,
-        },
-        {
-          id: "2",
-          grade_name: "Ngạch B - Nhân viên trung cấp",
-          base_salary: 10000000,
-          description: "Dành cho nhân viên có kinh nghiệm",
-          allowances: [
-            {
-              id: "a4",
-              name: "Phụ cấp xăng xe",
-              amount: 1000000,
-            },
-            {
-              id: "a5",
-              name: "Phụ cấp điện thoại",
-              amount: 300000,
-            },
-            {
-              id: "a6",
-              name: "Phụ cấp ăn trưa",
-              amount: 800000,
-            },
-          ],
-          total_salary: 12100000,
-          is_active: true,
-        },
-        {
-          id: "3",
-          grade_name: "Ngạch C - Nhân viên",
-          base_salary: 7000000,
-          description: "Dành cho nhân viên mới vào",
-          allowances: [
-            {
-              id: "a7",
-              name: "Phụ cấp ăn trưa",
-              amount: 500000,
-            },
-          ],
-          total_salary: 7500000,
-          is_active: true,
-        },
-        {
-          id: "4",
-          grade_name: "Ngạch D - Thử việc",
-          base_salary: 5000000,
-          description: "Dành cho nhân viên đang trong thời gian thử việc",
-          allowances: [],
-          total_salary: 5000000,
-          is_active: true,
-        },
-      ];
+      const { data, error } = await getSalaryGrades();
 
-      setSalaryGrades(mockData);
-    } catch (error) {
-      message.error("Không thể tải ngạch lương");
+      if (error) {
+        console.error("Error loading salary grades:", error);
+        messageApi.error("Không thể tải ngạch lương: " + error.message);
+        return;
+      }
+
+      // Transform data to match SalaryGrade interface
+      const transformedData: SalaryGrade[] = (data || []).map((item: any) => ({
+        id: item.id,
+        grade_name: item.grade_name,
+        base_salary: item.base_salary,
+        description: item.description,
+        total_salary: item.total_salary,
+        is_active: item.is_active,
+        allowances: Array.isArray(item.allowances) ? item.allowances : [],
+      }));
+
+      setSalaryGrades(transformedData);
+    } catch (error: any) {
+      console.error("Exception loading salary grades:", error);
+      messageApi.error("Không thể tải ngạch lương");
     } finally {
       setLoading(false);
     }
@@ -143,10 +87,22 @@ const SalaryStructureTab: React.FC = () => {
     setModalVisible(true);
   };
 
-  const handleDelete = (record: SalaryGrade) => {
-    // TODO: Delete salary grade via API
-    message.success(`Đã xóa ngạch lương "${record.grade_name}"`);
-    loadSalaryGrades();
+  const handleDelete = async (record: SalaryGrade) => {
+    try {
+      const { error } = await deleteSalaryGrade(record.id);
+
+      if (error) {
+        console.error("Error deleting salary grade:", error);
+        messageApi.error("Không thể xóa ngạch lương: " + error.message);
+        return;
+      }
+
+      messageApi.success(`Đã xóa ngạch lương "${record.grade_name}"`);
+      loadSalaryGrades();
+    } catch (error: any) {
+      console.error("Exception deleting salary grade:", error);
+      messageApi.error("Không thể xóa ngạch lương");
+    }
   };
 
   const handleModalClose = (saved: boolean) => {

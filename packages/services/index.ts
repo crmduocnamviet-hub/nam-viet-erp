@@ -40,6 +40,9 @@ export * from "./src/supabase/vatInvoiceService";
 // Room Management Services
 export * from "./src/supabase/roomService";
 
+// Salary Management Services
+export * from "./src/supabase/salaryService";
+
 // Firebase Services
 export * from "./src/firebase/fcmService";
 

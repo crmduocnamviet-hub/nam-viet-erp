@@ -13,11 +13,10 @@ import {
   Button,
   Space,
   Table,
-  message,
   Card,
-  Statistic,
   Typography,
   Divider,
+  App,
 } from "antd";
 import {
   PlusOutlined,
@@ -27,6 +26,7 @@ import {
 import type { ColumnsType } from "antd/es/table";
 import { SalaryGrade, Allowance } from "../../types/salary";
 import { formatCurrency } from "../../utils";
+import { createSalaryGrade, updateSalaryGrade } from "@nam-viet-erp/services";
 
 const { TextArea } = Input;
 const { Text } = Typography;
@@ -48,6 +48,7 @@ const SalaryGradeFormModal: React.FC<SalaryGradeFormModalProps> = ({
   grade,
   onClose,
 }) => {
+  const { message } = App.useApp();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [allowances, setAllowances] = useState<AllowanceFormItem[]>([]);
@@ -119,22 +120,34 @@ const SalaryGradeFormModal: React.FC<SalaryGradeFormModalProps> = ({
 
       setLoading(true);
 
-      // Build salary grade object
-      const salaryGrade: Partial<SalaryGrade> = {
+      // Build salary grade data
+      const salaryGradeData = {
         grade_name: values.grade_name,
         base_salary: values.base_salary,
         description: values.description,
         allowances: allowances.map((a) => ({
-          id: a.id,
           name: a.name,
           amount: a.amount,
         })),
-        total_salary: totalSalary,
-        is_active: true,
       };
 
-      // TODO: Call API to save
-      console.log("Saving salary grade:", salaryGrade);
+      let result;
+      if (grade) {
+        // Update existing salary grade
+        result = await updateSalaryGrade(grade.id, salaryGradeData);
+      } else {
+        // Create new salary grade
+        result = await createSalaryGrade(salaryGradeData);
+      }
+
+      if (result.error) {
+        console.error("Error saving salary grade:", result.error);
+        message.error(
+          `Không thể ${grade ? "cập nhật" : "tạo"} ngạch lương: ${result.error.message}`,
+        );
+        setLoading(false);
+        return;
+      }
 
       message.success(
         grade
@@ -144,8 +157,9 @@ const SalaryGradeFormModal: React.FC<SalaryGradeFormModalProps> = ({
 
       setLoading(false);
       onClose(true);
-    } catch (error) {
-      console.error("Validation error:", error);
+    } catch (error: any) {
+      console.error("Error in handleSubmit:", error);
+      message.error("Có lỗi xảy ra khi lưu ngạch lương");
       setLoading(false);
     }
   };
@@ -220,6 +234,7 @@ const SalaryGradeFormModal: React.FC<SalaryGradeFormModalProps> = ({
       width={900}
       okText={grade ? "Cập nhật" : "Tạo mới"}
       cancelText="Hủy"
+      destroyOnClose
     >
       <Form form={form} layout="vertical">
         {/* Thông tin cơ bản */}
