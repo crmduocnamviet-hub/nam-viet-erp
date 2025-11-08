@@ -372,13 +372,13 @@ const AppLayoutContent: React.FC = () => {
               />
             </div>
           )}
-          <Content style={{ margin: "0", padding: "8px", overflow: "initial" }}>
+          <Content style={{ margin: "0", padding: "0", overflow: "initial" }}>
             <div
               style={{
                 padding: 0,
                 background: "transparent",
                 borderRadius: namVietTheme.token.borderRadius,
-                minHeight: "calc(100vh - 16px)",
+                minHeight: "100vh",
               }}
             >
               <Routes>
