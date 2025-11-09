@@ -48,8 +48,75 @@ export interface SalaryStructure {
   updated_at?: string;
 }
 
+// ==================== KPI & COMMISSION POLICIES (NEW) ====================
+
+/**
+ * KPI Policy - Chính sách KPI (Configurable in UI)
+ * Thay thế cho KPIDefinition hardcoded
+ */
+export interface KPIPolicy {
+  kpi_id: string;
+  kpi_name: string;
+  description?: string;
+  kpi_type: "revenue" | "orders" | "customers" | "products_sold" | "custom";
+  default_target?: number;
+  measurement_period: "daily" | "weekly" | "monthly" | "quarterly" | "yearly";
+  kpi_applicable_roles?: string[];
+  kpi_is_active: boolean;
+  commission_policies: CommissionPolicyItem[];
+}
+
+/**
+ * Commission Policy Item - Chính sách hoa hồng
+ */
+export interface CommissionPolicyItem {
+  id: string;
+  policy_name: string;
+  commission_type: "percentage" | "fixed" | "tiered";
+  commission_rate?: number;
+  tiers?: CommissionTierConfig[];
+  min_threshold?: number;
+  max_commission?: number;
+  applicable_roles?: string[];
+  is_active: boolean;
+}
+
+/**
+ * Commission Tier Config - Cấu hình bậc thang hoa hồng
+ */
+export interface CommissionTierConfig {
+  from: number;
+  to?: number | null;
+  rate: number;
+  description?: string;
+}
+
+/**
+ * Employee KPI Result - Kết quả KPI của nhân viên
+ */
+export interface EmployeeKPIResultItem {
+  id: string;
+  employee_id: string;
+  full_name: string;
+  role_name: string;
+  kpi_id: string;
+  kpi_name: string;
+  kpi_type: string;
+  period_start: string;
+  period_end: string;
+  actual_value: number;
+  target_value?: number;
+  achievement_rate?: number;
+  commission_earned: number;
+  notes?: string;
+  created_at: string;
+}
+
+// ==================== LEGACY TYPES (To be deprecated) ====================
+
 /**
  * KPI Metric Type - Loại chỉ số KPI
+ * @deprecated Use kpi_type in KPIPolicy instead
  */
 export type KPIMetricType =
   | "revenue" // Doanh thu

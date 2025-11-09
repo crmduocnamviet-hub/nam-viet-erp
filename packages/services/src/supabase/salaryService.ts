@@ -217,3 +217,222 @@ export const getEmployeeSalaryHistory = async (employeeId: string) => {
 
   return response;
 };
+
+// ==================== KPI POLICIES ====================
+
+export const getKPIPolicies = async () => {
+  const response = await supabase
+    .from("kpi_with_commission_policies")
+    .select("*")
+    .order("kpi_name", { ascending: true });
+
+  return response;
+};
+
+export const getKPIPolicyById = async (id: string) => {
+  const response = await supabase
+    .from("kpi_with_commission_policies")
+    .select("*")
+    .eq("kpi_id", id)
+    .single();
+
+  return response;
+};
+
+export const createKPIPolicy = async (data: {
+  name: string;
+  description?: string;
+  kpi_type: string;
+  calculation_logic?: any;
+  target_value?: number;
+  measurement_period: string;
+  applicable_roles?: string[];
+}) => {
+  const response = await supabase
+    .from("kpi_policies")
+    .insert({
+      name: data.name,
+      description: data.description,
+      kpi_type: data.kpi_type,
+      calculation_logic: data.calculation_logic,
+      target_value: data.target_value,
+      measurement_period: data.measurement_period,
+      applicable_roles: data.applicable_roles,
+      is_active: true,
+    })
+    .select()
+    .single();
+
+  return response;
+};
+
+export const updateKPIPolicy = async (
+  id: string,
+  data: {
+    name?: string;
+    description?: string;
+    kpi_type?: string;
+    calculation_logic?: any;
+    target_value?: number;
+    measurement_period?: string;
+    applicable_roles?: string[];
+    is_active?: boolean;
+  },
+) => {
+  const response = await supabase
+    .from("kpi_policies")
+    .update(data)
+    .eq("id", id)
+    .select()
+    .single();
+
+  return response;
+};
+
+export const deleteKPIPolicy = async (id: string) => {
+  const response = await supabase.from("kpi_policies").delete().eq("id", id);
+
+  return response;
+};
+
+// ==================== COMMISSION POLICIES ====================
+
+export const getCommissionPolicies = async (kpiId?: string) => {
+  let query = supabase.from("commission_policies").select("*");
+
+  if (kpiId) {
+    query = query.eq("kpi_id", kpiId);
+  }
+
+  const response = await query.order("created_at", { ascending: false });
+  return response;
+};
+
+export const createCommissionPolicy = async (data: {
+  policy_name: string;
+  kpi_id: string;
+  commission_type: string;
+  commission_rate?: number;
+  tiers?: any;
+  min_threshold?: number;
+  max_commission?: number;
+  applicable_roles?: string[];
+}) => {
+  const response = await supabase
+    .from("commission_policies")
+    .insert({
+      policy_name: data.policy_name,
+      kpi_id: data.kpi_id,
+      commission_type: data.commission_type,
+      commission_rate: data.commission_rate,
+      tiers: data.tiers,
+      min_threshold: data.min_threshold,
+      max_commission: data.max_commission,
+      applicable_roles: data.applicable_roles,
+      is_active: true,
+    })
+    .select()
+    .single();
+
+  return response;
+};
+
+export const updateCommissionPolicy = async (
+  id: string,
+  data: {
+    policy_name?: string;
+    commission_type?: string;
+    commission_rate?: number;
+    tiers?: any;
+    min_threshold?: number;
+    max_commission?: number;
+    applicable_roles?: string[];
+    is_active?: boolean;
+  },
+) => {
+  const response = await supabase
+    .from("commission_policies")
+    .update(data)
+    .eq("id", id)
+    .select()
+    .single();
+
+  return response;
+};
+
+export const deleteCommissionPolicy = async (id: string) => {
+  const response = await supabase
+    .from("commission_policies")
+    .delete()
+    .eq("id", id);
+
+  return response;
+};
+
+// ==================== EMPLOYEE KPI RESULTS ====================
+
+export const getEmployeeKPIResults = async (filters?: {
+  employeeId?: string;
+  kpiId?: string;
+  periodStart?: string;
+  periodEnd?: string;
+}) => {
+  let query = supabase.from("employee_kpi_performance").select("*");
+
+  if (filters?.employeeId) {
+    query = query.eq("employee_id", filters.employeeId);
+  }
+
+  if (filters?.kpiId) {
+    query = query.eq("kpi_id", filters.kpiId);
+  }
+
+  if (filters?.periodStart) {
+    query = query.gte("period_start", filters.periodStart);
+  }
+
+  if (filters?.periodEnd) {
+    query = query.lte("period_end", filters.periodEnd);
+  }
+
+  const response = await query.order("period_start", { ascending: false });
+  return response;
+};
+
+export const createEmployeeKPIResult = async (data: {
+  employee_id: string;
+  kpi_id: string;
+  period_start: string;
+  period_end: string;
+  actual_value: number;
+  target_value?: number;
+  commission_earned?: number;
+  notes?: string;
+}) => {
+  const response = await supabase
+    .from("employee_kpi_results")
+    .insert(data)
+    .select()
+    .single();
+
+  return response;
+};
+
+export const updateEmployeeKPIResult = async (
+  id: string,
+  data: {
+    actual_value?: number;
+    target_value?: number;
+    commission_earned?: number;
+    notes?: string;
+  },
+) => {
+  const response = await supabase
+    .from("employee_kpi_results")
+    .update(data)
+    .eq("id", id)
+    .select()
+    .single();
+
+  return response;
+};

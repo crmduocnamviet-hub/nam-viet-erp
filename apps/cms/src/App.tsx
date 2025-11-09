@@ -95,10 +95,7 @@ const App: React.FC = () => {
   if (loading || isLoading) {
     return (
       <Row justify="center" align="middle" style={{ minHeight: "100vh" }}>
-        <Spin
-          size="large"
-          tip={isLoading ? "Đang kiểm tra quyền truy cập..." : "Đang tải..."}
-        >
+        <Spin size="large">
           <div style={{ minHeight: "200px" }} />
         </Spin>
       </Row>
