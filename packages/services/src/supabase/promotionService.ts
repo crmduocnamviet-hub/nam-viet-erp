@@ -78,14 +78,27 @@ export const updatePromotion = async (
 };
 
 export const createVoucher = async (record: Omit<IVoucher, "id">) => {
-  const response = await supabase.from("vouchers").insert([record]);
+  // Ensure promotion vouchers don't have point fields set
+  const insertData: any = {
+    ...record,
+    // If not explicitly a point voucher, ensure point fields are null/false
+    is_point_voucher: record.is_point_voucher ?? false,
+    point_rule_id: record.point_rule_id ?? null,
+    redeemed_by_patient_id: record.redeemed_by_patient_id ?? null,
+    points_used: record.points_used ?? 0,
+    redeemed_at: record.redeemed_at ?? null,
+    expires_at: record.expires_at ?? null,
+  };
+  const response = await supabase.from("vouchers").insert([insertData]);
   return response;
 };
 
 export const getVouchersWithPromotion = async () => {
   const response = await supabase
     .from("vouchers")
-    .select("*, promotions(name)")
+    .select(
+      "*, promotions(name), point_rules(name), patients(patient_id, full_name)",
+    )
     .order("created_at", { ascending: false });
 
   return response;
@@ -111,9 +124,25 @@ export const updateVoucher = async (
   id: number,
   record: Partial<IVoucher>,
 ): Promise<PostgrestSingleResponse<IVoucher | null>> => {
+  // If is_point_voucher is explicitly set to false, clear all point fields
+  // This ensures promotion vouchers don't accidentally have point data
+  const finalUpdateData: any = { ...record };
+
+  if (record.is_point_voucher === false) {
+    // Promotion voucher update - clear all point fields
+    finalUpdateData.is_point_voucher = false;
+    finalUpdateData.point_rule_id = null;
+    finalUpdateData.redeemed_by_patient_id = null;
+    finalUpdateData.points_used = 0;
+    finalUpdateData.redeemed_at = null;
+    finalUpdateData.expires_at = null;
+  }
+  // If is_point_voucher is true or undefined, preserve existing point fields
+  // (Point vouchers should only be updated through point redemption service)
+
   const response: PostgrestSingleResponse<IVoucher | null> = await supabase
     .from("vouchers")
-    .update(record)
+    .update(finalUpdateData)
     .eq("id", id);
 
   return response;
@@ -140,12 +169,110 @@ export const validatePromoCode = async (promoCode: string) => {
     };
   }
 
+  const trimmedCode = promoCode.trim();
+  const now = new Date();
+
+  // First check if it's a point voucher
+  const { data: voucher, error: voucherError } = await supabase
+    .from("vouchers")
+    .select(
+      "*, point_rules(redemption_points_required, redemption_voucher_value)",
+    )
+    .eq("code", trimmedCode)
+    .eq("is_active", true)
+    .single();
+
+  if (!voucherError && voucher) {
+    // It's a voucher code - validate point voucher
+    if (voucher.is_point_voucher) {
+      // Check expiration
+      if (voucher.expires_at) {
+        const expiresAt = new Date(voucher.expires_at);
+        if (now > expiresAt) {
+          return {
+            data: null,
+            error: { message: "Voucher đã hết hạn" },
+          };
+        }
+      }
+
+      // Check usage limit
+      if (voucher.times_used >= voucher.usage_limit) {
+        return {
+          data: null,
+          error: { message: "Voucher đã được sử dụng hết lượt" },
+        };
+      }
+
+      // Calculate voucher value from points used and rule
+      let voucherValue = 0;
+      if (voucher.point_rules && voucher.points_used) {
+        const rule = Array.isArray(voucher.point_rules)
+          ? voucher.point_rules[0]
+          : voucher.point_rules;
+        if (rule && rule.redemption_points_required > 0) {
+          const vouchersCount = Math.floor(
+            voucher.points_used / rule.redemption_points_required,
+          );
+          voucherValue = vouchersCount * rule.redemption_voucher_value;
+        }
+      }
+
+      // Return voucher data with type indicator
+      return {
+        data: {
+          ...voucher,
+          type: "point_voucher",
+          voucher_value: voucherValue,
+        },
+        error: null,
+      };
+    } else {
+      // Regular promotion voucher - check usage
+      if (voucher.times_used >= voucher.usage_limit) {
+        return {
+          data: null,
+          error: { message: "Mã giảm giá đã được sử dụng hết lượt" },
+        };
+      }
+
+      // Get promotion for regular voucher
+      const { data: promotion, error: promoError } = await supabase
+        .from("promotions")
+        .select("*")
+        .eq("id", voucher.promotion_id)
+        .eq("is_active", true)
+        .single();
+
+      if (promoError || !promotion) {
+        return {
+          data: null,
+          error: { message: "Chương trình khuyến mãi không hợp lệ" },
+        };
+      }
+
+      const today = new Date().toISOString().split("T")[0];
+      if (promotion.start_date > today || promotion.end_date < today) {
+        return {
+          data: null,
+          error: { message: "Chương trình khuyến mãi đã hết hạn" },
+        };
+      }
+
+      return {
+        data: { ...promotion, type: "promotion", voucher_id: voucher.id },
+        error: null,
+      };
+    }
+  }
+
+  // If not a voucher, check if it's a promotion code
   const today = new Date().toISOString().split("T")[0];
 
   const { data, error } = await supabase
     .from("promotions")
     .select("*")
-    .eq("code", promoCode.trim())
+    .eq("code", trimmedCode)
     .eq("is_active", true)
     .lte("start_date", today)
     .gte("end_date", today)
@@ -158,7 +285,7 @@ export const validatePromoCode = async (promoCode: string) => {
     };
   }
 
-  return { data, error: null };
+  return { data: { ...data, type: "promotion" }, error: null };
 };
 
 /**
@@ -175,20 +302,50 @@ export const applyPromoCode = async (
   promoName: string | null;
   error: any;
 }> => {
-  const { data: promotion, error } = await validatePromoCode(promoCode);
+  const { data: promotionOrVoucher, error } =
+    await validatePromoCode(promoCode);
 
-  if (error || !promotion) {
+  if (error || !promotionOrVoucher) {
     return { discountAmount: 0, promoCode: null, promoName: null, error };
   }
 
+  // Handle point vouchers
+  if (promotionOrVoucher.type === "point_voucher") {
+    const voucher = promotionOrVoucher as IVoucher & { voucher_value?: number };
+    const discountAmount = voucher.voucher_value || 0;
+
+    // Update voucher usage count
+    if (voucher.id) {
+      await supabase
+        .from("vouchers")
+        .update({
+          times_used: (voucher.times_used || 0) + 1,
+        })
+        .eq("id", voucher.id);
+    }
+
+    return {
+      discountAmount: Math.min(discountAmount, orderValue), // Don't exceed order value
+      promoCode: voucher.code,
+      promoName: `Voucher đổi từ điểm (${voucher.points_used || 0} điểm)`,
+      error: null,
+    };
+  }
+
+  // Handle regular promotions
+  const promotion = promotionOrVoucher as IPromotion & { voucher_id?: number };
+
   // Check conditions based on promotion type
-  const promotionType = promotion.type;
+  const promotionType = promotion.type || "percentage";
 
   // For order_discount type, MUST validate min_order_value BEFORE other checks
   if (promotionType === "order_discount") {
     const minOrderValue = promotion.conditions?.min_order_value;
 
-    if (!minOrderValue || minOrderValue <= 0) {
+    if (
+      !minOrderValue ||
+      (typeof minOrderValue === "number" && minOrderValue <= 0)
+    ) {
       return {
         discountAmount: 0,
         promoCode: null,
@@ -200,13 +357,15 @@ export const applyPromoCode = async (
       };
     }
 
-    if (orderValue < minOrderValue) {
+    const minValue =
+      typeof minOrderValue === "number" ? minOrderValue : Number(minOrderValue);
+    if (orderValue < minValue) {
       return {
         discountAmount: 0,
         promoCode: null,
         promoName: null,
         error: {
-          message: `Đơn hàng tối thiểu phải từ ${minOrderValue.toLocaleString()}đ để áp dụng mã khuyến mãi này`,
+          message: `Đơn hàng tối thiểu phải từ ${minValue.toLocaleString()}đ để áp dụng mã khuyến mãi này`,
         },
       };
     }
@@ -218,14 +377,23 @@ export const applyPromoCode = async (
     if (promotionType !== "order_discount") {
       const minOrderValue = promotion.conditions.min_order_value;
 
-      if (minOrderValue && minOrderValue > 0) {
-        if (orderValue < minOrderValue) {
+      if (
+        minOrderValue &&
+        (typeof minOrderValue === "number"
+          ? minOrderValue > 0
+          : Number(minOrderValue) > 0)
+      ) {
+        const minValue =
+          typeof minOrderValue === "number"
+            ? minOrderValue
+            : Number(minOrderValue);
+        if (orderValue < minValue) {
           return {
             discountAmount: 0,
             promoCode: null,
             promoName: null,
             error: {
-              message: `Đơn hàng tối thiểu phải từ ${minOrderValue.toLocaleString()}đ`,
+              message: `Đơn hàng tối thiểu phải từ ${minValue.toLocaleString()}đ`,
             },
           };
         }
@@ -345,17 +513,21 @@ export const applyPromoCode = async (
 
   // Calculate discount based on promotion type
   let discountAmount = 0;
+  const promotionValue =
+    typeof promotion.value === "number"
+      ? promotion.value
+      : Number(promotion.value || 0);
 
   if (promotionType === "order_discount") {
     // Fixed discount amount based on promotion.value
     // min_order_value already validated above
-    discountAmount = Math.min(promotion.value, orderValue);
+    discountAmount = Math.min(promotionValue, orderValue);
   } else if (promotionType === "percentage") {
     // Percentage discount
-    discountAmount = (orderValue * promotion.value) / 100;
+    discountAmount = (orderValue * promotionValue) / 100;
   } else if (promotionType === "fixed_amount") {
     // Fixed discount amount (no min_order_value required, but can be optional)
-    discountAmount = Math.min(promotion.value, orderValue);
+    discountAmount = Math.min(promotionValue, orderValue);
   } else {
     return {
       discountAmount: 0,

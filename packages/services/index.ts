@@ -15,6 +15,7 @@ export * from "./src/supabase/comboService";
 // Scheduling & Medical Services
 export * from "./src/supabase/patientService";
 export * from "./src/supabase/patientPointsService";
+export * from "./src/supabase/pointRulesService";
 export * from "./src/supabase/employeeService";
 export * from "./src/supabase/userManagementService";
 export * from "./src/supabase/appointmentStatusService";

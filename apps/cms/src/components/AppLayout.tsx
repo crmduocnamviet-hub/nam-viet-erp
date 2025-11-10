@@ -381,6 +381,18 @@ const AppLayout: React.FC = () => {
                   element={<Screen screenKey="marketing.vouchers" />}
                 />
                 <Route
+                  path="/point-rules"
+                  element={<Screen screenKey="marketing.point-rules" />}
+                />
+                <Route
+                  path="/point-rules/new"
+                  element={<Screen screenKey="marketing.point-rule-detail" />}
+                />
+                <Route
+                  path="/point-rules/:id"
+                  element={<Screen screenKey="marketing.point-rule-detail" />}
+                />
+                <Route
                   path="/financial-transactions"
                   element={<Screen screenKey="financial.transactions" />}
                 />

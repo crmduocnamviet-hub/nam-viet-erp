@@ -41,6 +41,8 @@ import FundManagementPage from "./financial/FundManagementPage";
 import PromotionsPage from "./marketing/PromotionsPage";
 import PromotionDetailPage from "./marketing/PromotionDetailPage";
 import VouchersPage from "./marketing/VouchersPage";
+import PointRulesPage from "./marketing/PointRulesPage";
+import PointRuleDetailPage from "./marketing/PointRuleDetailPage";
 import MarketingDashboardPage from "./marketing/MarketingDashboardPage";
 import CampaignsPage from "./marketing/CampaignsPage";
 import CampaignDetailPage from "./marketing/CampaignDetailPage";
@@ -312,6 +314,20 @@ export const SCREEN_REGISTRY: ScreenRegistry = {
     category: "marketing",
     title: "Phiếu giảm giá",
     description: "Quản lý phiếu giảm giá",
+  },
+  "marketing.point-rules": {
+    component: PointRulesPage,
+    permissions: ["marketing.access", "point-rules.view"],
+    category: "marketing",
+    title: "Quy tắc Tích điểm",
+    description: "Quản lý quy tắc tích điểm và đổi điểm",
+  },
+  "marketing.point-rule-detail": {
+    component: PointRuleDetailPage,
+    permissions: ["marketing.access", "point-rules.view"],
+    category: "marketing",
+    title: "Chi tiết Quy tắc Tích điểm",
+    description: "Xem và chỉnh sửa quy tắc tích điểm",
   },
   "marketing.campaigns": {
     component: CampaignsPage,

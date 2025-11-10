@@ -561,6 +561,11 @@ export const CMS_APP_MENU: MenuItemConfig[] = [
                 label: "Quản lý Mã Giảm Giá",
                 screenKey: "marketing.vouchers",
               },
+              {
+                key: "/point-rules",
+                label: "Quản lý Quy tắc Tích điểm",
+                screenKey: "marketing.point-rules",
+              },
             ],
           },
         ],

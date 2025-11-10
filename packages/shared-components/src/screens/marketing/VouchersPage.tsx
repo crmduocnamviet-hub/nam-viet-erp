@@ -8,7 +8,7 @@ import {
   App,
   Modal,
   Form,
-  Input as AntInput,
+  Input,
   Select,
   InputNumber,
   Switch,
@@ -24,6 +24,8 @@ import {
   SearchOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
+  StarOutlined,
+  EditOutlined,
 } from "@ant-design/icons";
 import PageLayout from "../../components/PageLayout";
 import {
@@ -46,6 +48,7 @@ const Vouchers: React.FC = () => {
   const [editingVoucher, setEditingVoucher] = useState<any | null>(null);
   const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [typeFilter, setTypeFilter] = useState<string>("all"); // all, promotion, point
 
   const fetchVouchers = async () => {
     setLoading(true);
@@ -89,6 +92,15 @@ const Vouchers: React.FC = () => {
   };
 
   const handleEdit = (record: any) => {
+    // Point vouchers cannot be edited (they are auto-generated)
+    if (record.is_point_voucher) {
+      notification.warning({
+        message: "Không thể chỉnh sửa",
+        description:
+          "Voucher đổi từ điểm không thể chỉnh sửa. Voucher này được tạo tự động khi bệnh nhân đổi điểm.",
+      });
+      return;
+    }
     setEditingVoucher(record);
     form.setFieldsValue(record);
     setIsModalOpen(true);
@@ -117,11 +129,28 @@ const Vouchers: React.FC = () => {
 
   const handleFinish = async (values: any) => {
     try {
+      // Only allow editing promotion vouchers
+      if (editingVoucher?.is_point_voucher) {
+        notification.error({
+          message: "Lỗi",
+          description: "Không thể chỉnh sửa voucher đổi từ điểm",
+        });
+        return;
+      }
+
+      // Create/Update promotion voucher - ensure point fields are not set
       const record: Omit<IVoucher, "id"> = {
         code: values.code,
         promotion_id: values.promotion_id,
         usage_limit: values.usage_limit,
         is_active: values.is_active,
+        // Explicitly set point fields to null/false for promotion vouchers
+        is_point_voucher: false,
+        point_rule_id: null,
+        redeemed_by_patient_id: null,
+        points_used: 0,
+        redeemed_at: null,
+        expires_at: null,
       };
 
       let error;
@@ -151,13 +180,24 @@ const Vouchers: React.FC = () => {
   const filteredData = useMemo(() => {
     let filtered = vouchers;
 
+    // Filter by type (promotion or point)
+    if (typeFilter !== "all") {
+      if (typeFilter === "point") {
+        filtered = filtered.filter((v) => v.is_point_voucher === true);
+      } else if (typeFilter === "promotion") {
+        filtered = filtered.filter((v) => !v.is_point_voucher);
+      }
+    }
+
     // Filter by search text
     if (searchText) {
       const lowerSearch = searchText.toLowerCase();
       filtered = filtered.filter(
         (voucher) =>
           voucher.code?.toLowerCase().includes(lowerSearch) ||
-          voucher.promotions?.name?.toLowerCase().includes(lowerSearch),
+          voucher.promotions?.name?.toLowerCase().includes(lowerSearch) ||
+          voucher.point_rules?.name?.toLowerCase().includes(lowerSearch) ||
+          voucher.patients?.full_name?.toLowerCase().includes(lowerSearch),
       );
     }
 
@@ -168,7 +208,7 @@ const Vouchers: React.FC = () => {
     }
 
     return filtered;
-  }, [vouchers, searchText, statusFilter]);
+  }, [vouchers, searchText, statusFilter, typeFilter]);
 
   // Calculate statistics
   const statistics = useMemo(() => {
@@ -184,12 +224,51 @@ const Vouchers: React.FC = () => {
   }, [vouchers]);
 
   const columns = [
+    {
+      title: "Loại",
+      key: "type",
+      width: 120,
+      render: (_: any, record: any) => {
+        if (record.is_point_voucher) {
+          return (
+            <Tag color="purple" icon={<StarOutlined />}>
+              Đổi từ Điểm
+            </Tag>
+          );
+        }
+        return (
+          <Tag color="blue" icon={<GiftOutlined />}>
+            Khuyến Mãi
+          </Tag>
+        );
+      },
+    },
     { title: "Mã Code", dataIndex: "code", key: "code" },
     {
-      title: "Thuộc Chương trình KM",
-      dataIndex: "promotions",
-      key: "promotion_name",
-      render: (promo: any) => promo?.name || "N/A",
+      title: "Nguồn",
+      key: "source",
+      width: 200,
+      render: (_: any, record: any) => {
+        if (record.is_point_voucher) {
+          return (
+            <div>
+              <div>
+                <strong>Quy tắc:</strong> {record.point_rules?.name || "N/A"}
+              </div>
+              {record.patients?.full_name && (
+                <div style={{ fontSize: "12px", color: "#666" }}>
+                  Bệnh nhân: {record.patients.full_name}
+                </div>
+              )}
+            </div>
+          );
+        }
+        return (
+          <div>
+            <strong>Chương trình KM:</strong> {record.promotions?.name || "N/A"}
+          </div>
+        );
+      },
     },
     {
       title: "Giới hạn Lượt dùng",
@@ -197,6 +276,29 @@ const Vouchers: React.FC = () => {
       key: "usage_limit",
     },
     { title: "Đã dùng", dataIndex: "times_used", key: "times_used" },
+    {
+      title: "Thông tin Điểm",
+      key: "points_info",
+      width: 150,
+      render: (_: any, record: any) => {
+        if (record.is_point_voucher) {
+          return (
+            <div>
+              <div>
+                <strong>Điểm dùng:</strong> {record.points_used || 0}
+              </div>
+              {record.expires_at && (
+                <div style={{ fontSize: "12px", color: "#666" }}>
+                  Hết hạn:{" "}
+                  {new Date(record.expires_at).toLocaleDateString("vi-VN")}
+                </div>
+              )}
+            </div>
+          );
+        }
+        return <span>-</span>;
+      },
+    },
     {
       title: "Trạng thái",
       dataIndex: "is_active",
@@ -210,18 +312,29 @@ const Vouchers: React.FC = () => {
     {
       title: "Hành động",
       key: "action",
-      width: 80,
+      width: 120,
       align: "center" as const,
       fixed: "right" as const,
       render: (_: any, record: any) => (
-        <Button
-          icon={<DeleteOutlined />}
-          danger
-          onClick={(e) => {
-            e.stopPropagation();
-            handleDelete(record.id, record.code);
-          }}
-        />
+        <Space>
+          {!record.is_point_voucher && (
+            <Button
+              icon={<EditOutlined />}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleEdit(record);
+              }}
+            />
+          )}
+          <Button
+            icon={<DeleteOutlined />}
+            danger
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDelete(record.id, record.code);
+            }}
+          />
+        </Space>
       ),
     },
   ];
@@ -296,7 +409,7 @@ const Vouchers: React.FC = () => {
       {/* Filters */}
       <Card style={{ marginBottom: 16 }}>
         <Space size="middle" wrap>
-          <AntInput
+          <Input
             placeholder="Tìm kiếm theo mã, chương trình..."
             prefix={<SearchOutlined />}
             value={searchText}
@@ -304,6 +417,17 @@ const Vouchers: React.FC = () => {
             style={{ width: 300 }}
             allowClear
             size="large"
+          />
+          <Select
+            value={typeFilter}
+            onChange={setTypeFilter}
+            style={{ width: 200 }}
+            size="large"
+            options={[
+              { label: "Tất cả loại", value: "all" },
+              { label: "Khuyến Mãi", value: "promotion" },
+              { label: "Đổi từ Điểm", value: "point" },
+            ]}
           />
           <Select
             value={statusFilter}
@@ -327,8 +451,13 @@ const Vouchers: React.FC = () => {
           loading={loading}
           rowKey="id"
           onRow={(record) => ({
-            onClick: () => handleEdit(record),
-            style: { cursor: "pointer" },
+            onClick: () => {
+              // Only allow editing promotion vouchers
+              if (!record.is_point_voucher) {
+                handleEdit(record);
+              }
+            },
+            style: { cursor: record.is_point_voucher ? "default" : "pointer" },
           })}
           pagination={{
             showSizeChanger: true,

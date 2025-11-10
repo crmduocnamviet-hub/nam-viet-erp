@@ -97,6 +97,13 @@ interface IVoucher {
   usage_limit: number;
   times_used?: number;
   is_active: boolean;
+  // Extended fields for point redemption
+  point_rule_id?: number | null;
+  redeemed_by_patient_id?: string | null;
+  points_used?: number;
+  redeemed_at?: string | null;
+  expires_at?: string | null;
+  is_point_voucher?: boolean;
 }
 
 interface IProductOrder {
@@ -576,6 +583,41 @@ interface IPatientPointsSummary {
   total_expired: number;
   transaction_count: number;
   last_transaction_at: string | null;
+}
+
+// Point Rules - Quy tắc Tích Điểm
+interface IPointRule {
+  id: number;
+  created_at: string;
+  updated_at: string;
+  name: string;
+  description: string | null;
+  is_active: boolean;
+  is_default: boolean;
+  // Accumulation rules (Quy tắc tích điểm)
+  accumulation_spend_amount: number; // Số tiền chi tiêu (VND)
+  accumulation_points_earned: number; // Số điểm nhận được
+  // Redemption rules (Quy tắc đổi điểm)
+  redemption_points_required: number; // Số điểm cần để đổi
+  redemption_voucher_value: number; // Giá trị voucher (VND)
+  // Branch/Warehouse application
+  applies_to_all_branches: boolean;
+  warehouse_ids: number[] | null; // Array of warehouse IDs
+  // Voucher settings
+  voucher_validity_days: number; // Số ngày có hiệu lực
+  voucher_min_points: number; // Minimum points to redeem
+  // Metadata
+  created_by: string | null;
+  notes: string | null;
+}
+
+// Extended Point Rule with warehouse details
+interface IPointRuleWithDetails extends IPointRule {
+  warehouses?: Array<{
+    id: number;
+    name: string;
+  }>;
+  created_by_employee?: IEmployee;
 }
 
 // Employee Management - Quản lý Nhân sự (Bác sĩ, Dược sĩ, Lễ tân, Kế toán)

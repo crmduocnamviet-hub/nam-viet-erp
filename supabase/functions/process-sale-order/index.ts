@@ -483,6 +483,100 @@ serve(async (req) => {
 
     console.log("[Process Sale] Created VAT invoices:", vatInvoiceItems.length);
 
+    // Step 6: Award loyalty points to patient if customer exists
+    if (customerId) {
+      try {
+        // Get applicable point rule for this warehouse
+        let pointRule = null;
+
+        // First try to get warehouse-specific rule
+        // Query for rules that apply to all branches OR include this warehouse
+        const { data: warehouseRules, error: warehouseError } = await supabase
+          .from("point_rules")
+          .select("*")
+          .eq("is_active", true)
+          .or(
+            `applies_to_all_branches.eq.true,warehouse_ids.cs.{${warehouseId}}`,
+          );
+
+        if (!warehouseError && warehouseRules && warehouseRules.length > 0) {
+          // Prefer default rule, otherwise use first active rule
+          pointRule =
+            warehouseRules.find((r) => r.is_default) || warehouseRules[0];
+        } else {
+          // Fallback to default rule
+          const { data: defaultRule } = await supabase
+            .from("point_rules")
+            .select("*")
+            .eq("is_active", true)
+            .eq("is_default", true)
+            .single();
+          pointRule = defaultRule;
+        }
+
+        if (pointRule && pointRule.is_active) {
+          // Calculate points to earn
+          const pointsToEarn = Math.floor(
+            (total / pointRule.accumulation_spend_amount) *
+              pointRule.accumulation_points_earned,
+          );
+
+          if (pointsToEarn > 0) {
+            // Get current patient points
+            const { data: patient, error: patientError } = await supabase
+              .from("patients")
+              .select("loyalty_points")
+              .eq("patient_id", customerId)
+              .single();
+
+            if (!patientError && patient) {
+              const balanceBefore = patient.loyalty_points || 0;
+              const balanceAfter = balanceBefore + pointsToEarn;
+
+              // Create points history record
+              const { error: historyError } = await supabase
+                .from("patient_points_history")
+                .insert({
+                  patient_id: customerId,
+                  transaction_type: "earn",
+                  points_amount: pointsToEarn,
+                  balance_before: balanceBefore,
+                  balance_after: balanceAfter,
+                  reference_type: "order",
+                  reference_id: orderData.order_id.toString(),
+                  description: `Earned from POS purchase - Order ${orderData.order_id}`,
+                  notes: `Order total: ${total.toLocaleString()} VND`,
+                  expires_at: new Date(
+                    Date.now() + 365 * 24 * 60 * 60 * 1000,
+                  ).toISOString(), // Expires in 1 year
+                  created_by: createdBy,
+                });
+
+              if (!historyError) {
+                // Update patient loyalty points
+                await supabase
+                  .from("patients")
+                  .update({ loyalty_points: balanceAfter })
+                  .eq("patient_id", customerId);
+
+                console.log(
+                  `[Process Sale] Awarded ${pointsToEarn} points to patient ${customerId}. New balance: ${balanceAfter}`,
+                );
+              } else {
+                console.warn(
+                  "[Process Sale] Failed to create points history:",
+                  historyError,
+                );
+              }
+            }
+          }
+        }
+      } catch (pointsError) {
+        // Don't fail the entire transaction if points calculation fails
+        console.warn("[Process Sale] Points calculation error:", pointsError);
+      }
+    }
+
     // Success response
     return new Response(
       JSON.stringify({

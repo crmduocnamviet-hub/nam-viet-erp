@@ -69,6 +69,7 @@ export const TABLES = {
 
   // Patient Points
   PATIENT_POINTS_HISTORY: "patient_points_history",
+  POINT_RULES: "point_rules",
   VAT_INVOICES: "vat_invoices",
 } as const;
 
