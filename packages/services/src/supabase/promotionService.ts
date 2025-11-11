@@ -105,10 +105,13 @@ export const getVouchersWithPromotion = async () => {
 };
 
 export const getActivePromotions = async () => {
+  // Only get promotions with valid types to avoid errors when creating vouchers
+  const validTypes = ["order_discount", "percentage", "fixed_amount"];
   const response = await supabase
     .from("promotions")
-    .select("id, name")
-    .eq("is_active", true);
+    .select("id, name, type")
+    .eq("is_active", true)
+    .in("type", validTypes);
 
   return response;
 };
@@ -180,7 +183,7 @@ export const validatePromoCode = async (promoCode: string) => {
     )
     .eq("code", trimmedCode)
     .eq("is_active", true)
-    .single();
+    .maybeSingle(); // Use maybeSingle() instead of single() to avoid 406 error
 
   if (!voucherError && voucher) {
     // It's a voucher code - validate point voucher
@@ -251,6 +254,17 @@ export const validatePromoCode = async (promoCode: string) => {
         };
       }
 
+      // Validate promotion type
+      const validTypes = ["order_discount", "percentage", "fixed_amount"];
+      if (!promotion.type || !validTypes.includes(promotion.type)) {
+        return {
+          data: null,
+          error: {
+            message: `Chương trình khuyến mãi có loại không hợp lệ (${promotion.type || "null"}). Vui lòng cập nhật loại khuyến mãi.`,
+          },
+        };
+      }
+
       const today = new Date().toISOString().split("T")[0];
       if (promotion.start_date > today || promotion.end_date < today) {
         return {
@@ -259,8 +273,13 @@ export const validatePromoCode = async (promoCode: string) => {
         };
       }
 
+      // Preserve original promotion type, add validationType to distinguish
       return {
-        data: { ...promotion, type: "promotion", voucher_id: voucher.id },
+        data: {
+          ...promotion,
+          validationType: "promotion",
+          voucher_id: voucher.id,
+        },
         error: null,
       };
     }
@@ -279,13 +298,61 @@ export const validatePromoCode = async (promoCode: string) => {
     .single();
 
   if (error || !data) {
+    // Check if promotion exists but is not in date range
+    const { data: promoCheck, error: promoCheckError } = await supabase
+      .from("promotions")
+      .select("code, start_date, end_date, is_active, type")
+      .eq("code", trimmedCode)
+      .single();
+
+    if (promoCheck) {
+      const today = new Date().toISOString().split("T")[0];
+
+      if (!promoCheck.is_active) {
+        return {
+          data: null,
+          error: { message: "Mã khuyến mãi đang tắt" },
+        };
+      }
+
+      if (promoCheck.start_date > today) {
+        return {
+          data: null,
+          error: {
+            message: `Mã khuyến mãi chưa bắt đầu. Thời gian hiệu lực: ${new Date(promoCheck.start_date).toLocaleDateString("vi-VN")} - ${new Date(promoCheck.end_date).toLocaleDateString("vi-VN")}`,
+          },
+        };
+      }
+      if (promoCheck.end_date < today) {
+        return {
+          data: null,
+          error: {
+            message: `Mã khuyến mãi đã hết hạn. Thời gian hiệu lực: ${new Date(promoCheck.start_date).toLocaleDateString("vi-VN")} - ${new Date(promoCheck.end_date).toLocaleDateString("vi-VN")}`,
+          },
+        };
+      }
+    }
+
     return {
       data: null,
       error: { message: "Mã khuyến mãi không hợp lệ hoặc đã hết hạn" },
     };
   }
 
-  return { data: { ...data, type: "promotion" }, error: null };
+  // Validate promotion type
+  const validTypes = ["order_discount", "percentage", "fixed_amount"];
+
+  if (!data.type || !validTypes.includes(data.type)) {
+    return {
+      data: null,
+      error: {
+        message: `Chương trình khuyến mãi có loại không hợp lệ (${data.type || "null"}). Vui lòng cập nhật loại khuyến mãi thành: Giảm giá theo đơn hàng, Phần trăm, hoặc Số tiền cố định.`,
+      },
+    };
+  }
+
+  // Return with original type preserved, add validationType to distinguish from point_voucher
+  return { data: { ...data, validationType: "promotion" }, error: null };
 };
 
 /**
@@ -302,247 +369,280 @@ export const applyPromoCode = async (
   promoName: string | null;
   error: any;
 }> => {
-  const { data: promotionOrVoucher, error } =
-    await validatePromoCode(promoCode);
+  try {
+    const { data: promotionOrVoucher, error } =
+      await validatePromoCode(promoCode);
 
-  if (error || !promotionOrVoucher) {
-    return { discountAmount: 0, promoCode: null, promoName: null, error };
-  }
-
-  // Handle point vouchers
-  if (promotionOrVoucher.type === "point_voucher") {
-    const voucher = promotionOrVoucher as IVoucher & { voucher_value?: number };
-    const discountAmount = voucher.voucher_value || 0;
-
-    // Update voucher usage count
-    if (voucher.id) {
-      await supabase
-        .from("vouchers")
-        .update({
-          times_used: (voucher.times_used || 0) + 1,
-        })
-        .eq("id", voucher.id);
+    if (error || !promotionOrVoucher) {
+      return { discountAmount: 0, promoCode: null, promoName: null, error };
     }
 
-    return {
-      discountAmount: Math.min(discountAmount, orderValue), // Don't exceed order value
-      promoCode: voucher.code,
-      promoName: `Voucher đổi từ điểm (${voucher.points_used || 0} điểm)`,
-      error: null,
-    };
-  }
-
-  // Handle regular promotions
-  const promotion = promotionOrVoucher as IPromotion & { voucher_id?: number };
-
-  // Check conditions based on promotion type
-  const promotionType = promotion.type || "percentage";
-
-  // For order_discount type, MUST validate min_order_value BEFORE other checks
-  if (promotionType === "order_discount") {
-    const minOrderValue = promotion.conditions?.min_order_value;
-
+    // Handle point vouchers
+    const validationType =
+      (promotionOrVoucher as any)?.validationType || promotionOrVoucher.type;
     if (
-      !minOrderValue ||
-      (typeof minOrderValue === "number" && minOrderValue <= 0)
+      validationType === "point_voucher" ||
+      promotionOrVoucher.type === "point_voucher"
     ) {
+      const voucher = promotionOrVoucher as IVoucher & {
+        voucher_value?: number;
+      };
+      const discountAmount = voucher.voucher_value || 0;
+
+      // Update voucher usage count
+      if (voucher.id) {
+        await supabase
+          .from("vouchers")
+          .update({
+            times_used: (voucher.times_used || 0) + 1,
+          })
+          .eq("id", voucher.id);
+      }
+
       return {
-        discountAmount: 0,
-        promoCode: null,
-        promoName: null,
-        error: {
-          message:
-            'Mã khuyến mãi loại "Giảm giá theo đơn hàng" cần có điều kiện đơn hàng tối thiểu. Vui lòng kiểm tra lại cấu hình khuyến mãi.',
-        },
+        discountAmount: Math.min(discountAmount, orderValue), // Don't exceed order value
+        promoCode: voucher.code,
+        promoName: `Voucher đổi từ điểm (${voucher.points_used || 0} điểm)`,
+        error: null,
       };
     }
 
-    const minValue =
-      typeof minOrderValue === "number" ? minOrderValue : Number(minOrderValue);
-    if (orderValue < minValue) {
-      return {
-        discountAmount: 0,
-        promoCode: null,
-        promoName: null,
-        error: {
-          message: `Đơn hàng tối thiểu phải từ ${minValue.toLocaleString()}đ để áp dụng mã khuyến mãi này`,
-        },
-      };
-    }
-  }
+    // Handle regular promotions
+    const promotion = promotionOrVoucher as IPromotion & {
+      voucher_id?: number;
+    };
 
-  // Check other conditions (manufacturers, categories) if specified
-  if (promotion.conditions) {
-    // For non-order_discount types, check min_order_value if specified (optional)
-    if (promotionType !== "order_discount") {
-      const minOrderValue = promotion.conditions.min_order_value;
+    // Check conditions based on promotion type (use original type, not validationType)
+    const promotionType = promotion.type || "percentage";
+
+    // For order_discount type, MUST validate min_order_value BEFORE other checks
+    if (promotionType === "order_discount") {
+      const minOrderValue = promotion.conditions?.min_order_value;
 
       if (
-        minOrderValue &&
-        (typeof minOrderValue === "number"
-          ? minOrderValue > 0
-          : Number(minOrderValue) > 0)
+        !minOrderValue ||
+        (typeof minOrderValue === "number" && minOrderValue <= 0)
       ) {
-        const minValue =
-          typeof minOrderValue === "number"
-            ? minOrderValue
-            : Number(minOrderValue);
-        if (orderValue < minValue) {
+        return {
+          discountAmount: 0,
+          promoCode: null,
+          promoName: null,
+          error: {
+            message:
+              'Mã khuyến mãi loại "Giảm giá theo đơn hàng" cần có điều kiện đơn hàng tối thiểu. Vui lòng kiểm tra lại cấu hình khuyến mãi.',
+          },
+        };
+      }
+
+      const minValue =
+        typeof minOrderValue === "number"
+          ? minOrderValue
+          : Number(minOrderValue);
+      if (orderValue < minValue) {
+        return {
+          discountAmount: 0,
+          promoCode: null,
+          promoName: null,
+          error: {
+            message: `Đơn hàng tối thiểu phải từ ${minValue.toLocaleString()}đ để áp dụng mã khuyến mãi này`,
+          },
+        };
+      }
+    }
+
+    // Check other conditions (manufacturers, categories) if specified
+    if (promotion.conditions) {
+      // For non-order_discount types, check min_order_value if specified (optional)
+      if (promotionType !== "order_discount") {
+        const minOrderValue = promotion.conditions.min_order_value;
+
+        if (
+          minOrderValue &&
+          (typeof minOrderValue === "number"
+            ? minOrderValue > 0
+            : Number(minOrderValue) > 0)
+        ) {
+          const minValue =
+            typeof minOrderValue === "number"
+              ? minOrderValue
+              : Number(minOrderValue);
+          if (orderValue < minValue) {
+            return {
+              discountAmount: 0,
+              promoCode: null,
+              promoName: null,
+              error: {
+                message: `Đơn hàng tối thiểu phải từ ${minValue.toLocaleString()}đ`,
+              },
+            };
+          }
+        }
+      }
+
+      // Fetch product details once if needed for manufacturers or categories check
+      const needsProductFetch =
+        items &&
+        ((promotion.conditions.manufacturers &&
+          Array.isArray(promotion.conditions.manufacturers)) ||
+          (promotion.conditions.product_categories &&
+            Array.isArray(promotion.conditions.product_categories)));
+
+      let productsMap: Record<number, any> = {};
+      if (needsProductFetch) {
+        const productIds = items
+          .map((item: any) => item.product_id)
+          .filter(Boolean);
+
+        if (productIds.length > 0) {
+          const { data: products } = await supabase
+            .from("products")
+            .select("id, manufacturer, category")
+            .in("id", productIds);
+
+          if (products) {
+            products.forEach((p: any) => {
+              productsMap[p.id] = p;
+            });
+          }
+        }
+      }
+
+      // Check manufacturers condition (if specified)
+      if (
+        items &&
+        promotion.conditions.manufacturers &&
+        Array.isArray(promotion.conditions.manufacturers)
+      ) {
+        const allowedManufacturers = promotion.conditions.manufacturers;
+
+        const hasMatchingManufacturer = items.some((item: any) => {
+          // Check if item has manufacturer field
+          let manufacturer = item.manufacturer || item.product?.manufacturer;
+
+          // If not found, fetch from productsMap
+          if (
+            !manufacturer &&
+            item.product_id &&
+            productsMap[item.product_id]
+          ) {
+            manufacturer = productsMap[item.product_id].manufacturer;
+          }
+
+          if (!manufacturer) return false;
+
+          // Normalize for comparison (trim and case-insensitive)
+          const normalizedManufacturer = manufacturer.trim().toLowerCase();
+          const isMatch = allowedManufacturers.some(
+            (allowed: string) =>
+              allowed.trim().toLowerCase() === normalizedManufacturer,
+          );
+
+          return isMatch;
+        });
+
+        if (!hasMatchingManufacturer) {
           return {
             discountAmount: 0,
             promoCode: null,
             promoName: null,
             error: {
-              message: `Đơn hàng tối thiểu phải từ ${minValue.toLocaleString()}đ`,
+              message: `Mã khuyến mãi này chỉ áp dụng cho các sản phẩm của hãng đã chỉ định. Vui lòng kiểm tra lại giỏ hàng.`,
+            },
+          };
+        }
+      }
+
+      // Check product categories condition (if specified)
+      if (
+        items &&
+        promotion.conditions.product_categories &&
+        Array.isArray(promotion.conditions.product_categories)
+      ) {
+        const allowedCategories = promotion.conditions.product_categories;
+
+        const hasMatchingCategory = items.some((item: any) => {
+          // Check if item has category field
+          let category = item.category || item.product?.category;
+
+          // If not found, fetch from productsMap
+          if (!category && item.product_id && productsMap[item.product_id]) {
+            category = productsMap[item.product_id].category;
+          }
+
+          if (!category) return false;
+
+          // Normalize for comparison (trim and case-insensitive)
+          const normalizedCategory = category.trim().toLowerCase();
+          const isMatch = allowedCategories.some(
+            (allowed: string) =>
+              allowed.trim().toLowerCase() === normalizedCategory,
+          );
+
+          return isMatch;
+        });
+
+        if (!hasMatchingCategory) {
+          return {
+            discountAmount: 0,
+            promoCode: null,
+            promoName: null,
+            error: {
+              message: `Mã khuyến mãi này chỉ áp dụng cho các sản phẩm thuộc phân loại đã chỉ định. Vui lòng kiểm tra lại giỏ hàng.`,
             },
           };
         }
       }
     }
 
-    // Fetch product details once if needed for manufacturers or categories check
-    const needsProductFetch =
-      items &&
-      ((promotion.conditions.manufacturers &&
-        Array.isArray(promotion.conditions.manufacturers)) ||
-        (promotion.conditions.product_categories &&
-          Array.isArray(promotion.conditions.product_categories)));
+    // Validate promotion type before calculating discount
+    const validTypes = ["order_discount", "percentage", "fixed_amount"];
 
-    let productsMap: Record<number, any> = {};
-    if (needsProductFetch) {
-      const productIds = items
-        .map((item: any) => item.product_id)
-        .filter(Boolean);
-
-      if (productIds.length > 0) {
-        const { data: products } = await supabase
-          .from("products")
-          .select("id, manufacturer, category")
-          .in("id", productIds);
-
-        if (products) {
-          products.forEach((p: any) => {
-            productsMap[p.id] = p;
-          });
-        }
-      }
+    if (!promotionType || !validTypes.includes(promotionType)) {
+      return {
+        discountAmount: 0,
+        promoCode: null,
+        promoName: null,
+        error: {
+          message: `Loại khuyến mãi không được hỗ trợ (${promotionType || "null"}). Chỉ hỗ trợ: Giảm giá theo đơn hàng, Phần trăm, Số tiền cố định.`,
+        },
+      };
     }
 
-    // Check manufacturers condition (if specified)
-    if (
-      items &&
-      promotion.conditions.manufacturers &&
-      Array.isArray(promotion.conditions.manufacturers)
-    ) {
-      const allowedManufacturers = promotion.conditions.manufacturers;
+    // Calculate discount based on promotion type
+    let discountAmount = 0;
+    const promotionValue =
+      typeof promotion.value === "number"
+        ? promotion.value
+        : Number(promotion.value || 0);
 
-      const hasMatchingManufacturer = items.some((item: any) => {
-        // Check if item has manufacturer field
-        let manufacturer = item.manufacturer || item.product?.manufacturer;
-
-        // If not found, fetch from productsMap
-        if (!manufacturer && item.product_id && productsMap[item.product_id]) {
-          manufacturer = productsMap[item.product_id].manufacturer;
-        }
-
-        if (!manufacturer) return false;
-
-        // Normalize for comparison (trim and case-insensitive)
-        const normalizedManufacturer = manufacturer.trim().toLowerCase();
-        const isMatch = allowedManufacturers.some(
-          (allowed: string) =>
-            allowed.trim().toLowerCase() === normalizedManufacturer,
-        );
-
-        return isMatch;
-      });
-
-      if (!hasMatchingManufacturer) {
-        return {
-          discountAmount: 0,
-          promoCode: null,
-          promoName: null,
-          error: {
-            message: `Mã khuyến mãi này chỉ áp dụng cho các sản phẩm của hãng đã chỉ định. Vui lòng kiểm tra lại giỏ hàng.`,
-          },
-        };
-      }
+    if (promotionType === "order_discount") {
+      // Fixed discount amount based on promotion.value
+      // min_order_value already validated above
+      discountAmount = Math.min(promotionValue, orderValue);
+    } else if (promotionType === "percentage") {
+      // Percentage discount
+      discountAmount = (orderValue * promotionValue) / 100;
+    } else if (promotionType === "fixed_amount") {
+      // Fixed discount amount (no min_order_value required, but can be optional)
+      discountAmount = Math.min(promotionValue, orderValue);
     }
 
-    // Check product categories condition (if specified)
-    if (
-      items &&
-      promotion.conditions.product_categories &&
-      Array.isArray(promotion.conditions.product_categories)
-    ) {
-      const allowedCategories = promotion.conditions.product_categories;
-
-      const hasMatchingCategory = items.some((item: any) => {
-        // Check if item has category field
-        let category = item.category || item.product?.category;
-
-        // If not found, fetch from productsMap
-        if (!category && item.product_id && productsMap[item.product_id]) {
-          category = productsMap[item.product_id].category;
-        }
-
-        if (!category) return false;
-
-        // Normalize for comparison (trim and case-insensitive)
-        const normalizedCategory = category.trim().toLowerCase();
-        const isMatch = allowedCategories.some(
-          (allowed: string) =>
-            allowed.trim().toLowerCase() === normalizedCategory,
-        );
-
-        return isMatch;
-      });
-
-      if (!hasMatchingCategory) {
-        return {
-          discountAmount: 0,
-          promoCode: null,
-          promoName: null,
-          error: {
-            message: `Mã khuyến mãi này chỉ áp dụng cho các sản phẩm thuộc phân loại đã chỉ định. Vui lòng kiểm tra lại giỏ hàng.`,
-          },
-        };
-      }
-    }
-  }
-
-  // Calculate discount based on promotion type
-  let discountAmount = 0;
-  const promotionValue =
-    typeof promotion.value === "number"
-      ? promotion.value
-      : Number(promotion.value || 0);
-
-  if (promotionType === "order_discount") {
-    // Fixed discount amount based on promotion.value
-    // min_order_value already validated above
-    discountAmount = Math.min(promotionValue, orderValue);
-  } else if (promotionType === "percentage") {
-    // Percentage discount
-    discountAmount = (orderValue * promotionValue) / 100;
-  } else if (promotionType === "fixed_amount") {
-    // Fixed discount amount (no min_order_value required, but can be optional)
-    discountAmount = Math.min(promotionValue, orderValue);
-  } else {
+    return {
+      discountAmount,
+      promoCode: promotion.code || promoCode,
+      promoName: promotion.name,
+      error: null,
+    };
+  } catch (error: any) {
     return {
       discountAmount: 0,
       promoCode: null,
       promoName: null,
-      error: { message: "Loại khuyến mãi không được hỗ trợ" },
+      error: {
+        message: `Lỗi khi áp dụng mã khuyến mãi: ${error?.message || "Lỗi không xác định"}`,
+      },
     };
   }
-
-  return {
-    discountAmount,
-    promoCode: promotion.code || promoCode,
-    promoName: promotion.name,
-    error: null,
-  };
 };
 /**
  * Get all active promo codes (promotions)

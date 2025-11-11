@@ -87,6 +87,7 @@ interface PosTabContentProps {
     originalTotal: number;
     totalDiscount: number;
     promoDiscount?: number;
+    pointsDiscount?: number;
     finalTotal?: number;
   };
   handleRemoveFromCart: (itemKey: string) => void;
@@ -102,6 +103,18 @@ interface PosTabContentProps {
   promoCodeError?: string;
   handleApplyPromoCode?: (codeToApply?: string) => void;
   handleRemovePromoCode?: () => void;
+
+  // Points discount
+  pointsToRedeem?: number;
+  setPointsToRedeem?: (points: number) => void;
+  appliedPointsDiscount?: {
+    pointsUsed: number;
+    discountAmount: number;
+    pointsRemaining: number;
+  } | null;
+  pointsDiscountError?: string;
+  handleApplyPointsDiscount?: () => void;
+  handleRemovePointsDiscount?: () => void;
 
   // Combos
   detectedCombos?: IComboWithItems[];
@@ -145,6 +158,12 @@ const PosTabContent: React.FC<PosTabContentProps> = ({
   promoCodeError,
   handleApplyPromoCode,
   handleRemovePromoCode,
+  pointsToRedeem,
+  setPointsToRedeem,
+  appliedPointsDiscount,
+  pointsDiscountError,
+  handleApplyPointsDiscount,
+  handleRemovePointsDiscount,
 }) => {
   const navigate = useNavigate();
   const inventory = useInventory();
@@ -945,6 +964,88 @@ const PosTabContent: React.FC<PosTabContentProps> = ({
                 </Text>
               )}
             </div>
+
+            {/* Points Discount Input */}
+            {selectedCustomer && selectedCustomer.loyalty_points > 0 && (
+              <div style={{ marginTop: 12, marginBottom: 12 }}>
+                {!appliedPointsDiscount ? (
+                  <Space.Compact style={{ width: "100%" }}>
+                    <InputNumber
+                      placeholder="Nhập số điểm muốn dùng"
+                      value={pointsToRedeem}
+                      onChange={(value) => setPointsToRedeem?.(value || 0)}
+                      onKeyDown={(e) => {
+                        if (
+                          e.key === "Enter" &&
+                          pointsToRedeem &&
+                          pointsToRedeem > 0
+                        ) {
+                          handleApplyPointsDiscount?.();
+                        }
+                      }}
+                      min={0}
+                      max={selectedCustomer.loyalty_points}
+                      style={{ width: "70%" }}
+                      addonBefore="Điểm"
+                      status={pointsDiscountError ? "error" : ""}
+                      disabled={cart.length === 0}
+                    />
+                    <Button
+                      type="primary"
+                      onClick={handleApplyPointsDiscount}
+                      disabled={
+                        !pointsToRedeem ||
+                        pointsToRedeem <= 0 ||
+                        cart.length === 0
+                      }
+                      style={{ width: "30%" }}
+                    >
+                      Áp dụng
+                    </Button>
+                  </Space.Compact>
+                ) : (
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      padding: "8px 12px",
+                      backgroundColor: "#fff7e6",
+                      border: "1px solid #ffd591",
+                      borderRadius: "6px",
+                    }}
+                  >
+                    <Space>
+                      <Tag color="orange">
+                        Đã dùng {appliedPointsDiscount.pointsUsed} điểm
+                      </Tag>
+                      <Text type="warning" style={{ fontSize: 13 }}>
+                        Giảm:{" "}
+                        {appliedPointsDiscount.discountAmount.toLocaleString()}đ
+                      </Text>
+                      <Text type="secondary" style={{ fontSize: 12 }}>
+                        Còn: {appliedPointsDiscount.pointsRemaining} điểm
+                      </Text>
+                    </Space>
+                    <Button
+                      type="text"
+                      size="small"
+                      danger
+                      icon={<CloseCircleOutlined />}
+                      onClick={handleRemovePointsDiscount}
+                    >
+                      Xóa
+                    </Button>
+                  </div>
+                )}
+                {pointsDiscountError && (
+                  <Text type="danger" style={{ fontSize: 12, marginTop: 4 }}>
+                    {pointsDiscountError}
+                  </Text>
+                )}
+              </div>
+            )}
+
             {/* Spacer to push content to bottom */}
             <div style={{ flex: 1 }} />
 
@@ -977,6 +1078,24 @@ const PosTabContent: React.FC<PosTabContentProps> = ({
                           <Text type="success" style={{ fontSize: 13 }}>
                             Giảm mã KM: -
                             {cartDetails.promoDiscount.toLocaleString()}đ
+                          </Text>
+                          <br />
+                        </>
+                      )}
+                    {cartDetails.pointsDiscount &&
+                      cartDetails.pointsDiscount > 0 && (
+                        <>
+                          <Text delete style={{ color: "#999", fontSize: 14 }}>
+                            {(
+                              cartDetails.itemTotal -
+                              (cartDetails.promoDiscount || 0)
+                            ).toLocaleString()}
+                            đ
+                          </Text>
+                          <br />
+                          <Text type="warning" style={{ fontSize: 13 }}>
+                            Giảm điểm: -
+                            {cartDetails.pointsDiscount.toLocaleString()}đ
                           </Text>
                           <br />
                         </>

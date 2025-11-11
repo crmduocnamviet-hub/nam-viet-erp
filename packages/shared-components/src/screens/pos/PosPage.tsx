@@ -32,6 +32,8 @@ import {
   calculateProductGlobalQuantities,
   supabase,
   applyPromoCode,
+  redeemPointsForDiscount,
+  refundPointsToPatient,
 } from "@nam-viet-erp/services";
 import {
   usePosStore,
@@ -62,6 +64,16 @@ const getErrorMessage = (error: any): string => {
 
 const { Title, Text } = Typography;
 const { useBreakpoint } = Grid;
+
+interface CartDetails {
+  items: any[];
+  itemTotal: number;
+  originalTotal: number;
+  totalDiscount: number;
+  promoDiscount?: number;
+  pointsDiscount?: number;
+  finalTotal?: number;
+}
 
 // Map UI selection to warehouse and fund IDs
 const WAREHOUSE_MAP: {
@@ -138,6 +150,15 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
   const appliedPromoCode = usePosAppliedPromoCode();
   const promoDiscount = usePosPromoDiscount();
   const promoCodeError = usePosPromoCodeError();
+
+  // Points discount state (local, per-tab)
+  const [pointsToRedeem, setPointsToRedeem] = useState<number>(0);
+  const [appliedPointsDiscount, setAppliedPointsDiscount] = useState<{
+    pointsUsed: number;
+    discountAmount: number;
+    pointsRemaining: number;
+  } | null>(null);
+  const [pointsDiscountError, setPointsDiscountError] = useState<string>("");
 
   // Customer management
   const [customerSearchTerm, setCustomerSearchTerm] = useState("");
@@ -1086,9 +1107,10 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
   // Calculate final cart details including promo discount
   const cartDetails = useMemo((): CartDetails => {
     const { items, itemTotal, originalTotal } = cartItemsWithPricing;
+    const pointsDiscount = appliedPointsDiscount?.discountAmount || 0;
 
-    // Calculate final total after promo code discount
-    const finalTotal = itemTotal - promoDiscount;
+    // Calculate final total after promo code discount and points discount
+    const finalTotal = itemTotal - promoDiscount - pointsDiscount;
 
     return {
       items,
@@ -1096,9 +1118,10 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
       originalTotal,
       totalDiscount: originalTotal - itemTotal,
       promoDiscount,
+      pointsDiscount,
       finalTotal: Math.max(0, finalTotal), // Ensure non-negative
     };
-  }, [cartItemsWithPricing, promoDiscount]);
+  }, [cartItemsWithPricing, promoDiscount, appliedPointsDiscount]);
 
   // Handle promo code application
   const handleApplyPromoCode = useCallback(
@@ -1119,7 +1142,6 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
       }
 
       try {
-        // Apply promo code
         const {
           discountAmount,
           promoCode: appliedCode,
@@ -1132,7 +1154,6 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
         );
 
         if (error) {
-          // Handle error
           setStorePromoCodeError(error.message);
           setStorePromoDiscount(0);
           setStoreAppliedPromoCode(null);
@@ -1149,11 +1170,16 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
           message: "Áp dụng mã khuyến mãi thành công!",
           description: `Giảm ${discountAmount.toLocaleString()}đ`,
         });
-      } catch (error) {
-        console.error("Error applying promo code:", error);
-        setStorePromoCodeError("Không thể áp dụng mã khuyến mãi");
+      } catch (error: any) {
+        const errorMessage =
+          error?.message || "Không thể áp dụng mã khuyến mãi";
+        setStorePromoCodeError(errorMessage);
         setStorePromoDiscount(0);
         setStoreAppliedPromoCode(null);
+        notification.error({
+          message: "Lỗi áp dụng mã khuyến mãi",
+          description: errorMessage,
+        });
       }
     },
     [
@@ -1179,6 +1205,68 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
     setStorePromoDiscount,
     setStorePromoCodeError,
   ]);
+
+  // Handle apply points discount
+  const handleApplyPointsDiscount = useCallback(async () => {
+    if (!selectedCustomer?.patient_id) {
+      setPointsDiscountError("Vui lòng chọn khách hàng trước");
+      return;
+    }
+
+    if (pointsToRedeem <= 0) {
+      setPointsDiscountError("Số điểm phải lớn hơn 0");
+      return;
+    }
+
+    try {
+      setPointsDiscountError("");
+      const warehouseId = employeeWarehouse?.id;
+      const { data, error } = await redeemPointsForDiscount({
+        patientId: selectedCustomer.patient_id,
+        points: pointsToRedeem,
+        warehouseId,
+        createdBy: employee?.employee_id,
+      });
+
+      if (error || !data) {
+        setPointsDiscountError(error?.message || "Lỗi khi đổi điểm");
+        return;
+      }
+
+      setAppliedPointsDiscount(data);
+      setPointsToRedeem(0);
+
+      if (selectedCustomer) {
+        setStoreSelectedCustomer({
+          ...selectedCustomer,
+          loyalty_points: data.pointsRemaining,
+        });
+      }
+
+      notification.success({
+        message: "Đổi điểm thành công!",
+        description: `Đã dùng ${data.pointsUsed} điểm, giảm ${data.discountAmount.toLocaleString()}đ`,
+      });
+    } catch (error: any) {
+      setPointsDiscountError(error?.message || "Lỗi khi đổi điểm");
+    }
+  }, [
+    selectedCustomer,
+    pointsToRedeem,
+    employeeWarehouse,
+    employee,
+    notification,
+    setStoreSelectedCustomer,
+  ]);
+
+  // Handle remove points discount
+  const handleRemovePointsDiscount = useCallback(() => {
+    if (appliedPointsDiscount && selectedCustomer) {
+      setAppliedPointsDiscount(null);
+      setPointsToRedeem(0);
+      setPointsDiscountError("");
+    }
+  }, [appliedPointsDiscount, selectedCustomer]);
 
   // Re-validate promo code when cart changes
   useEffect(() => {
@@ -1295,8 +1383,13 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
         inventory,
       );
 
-      // Reset promo code after successful payment
       handleRemovePromoCode();
+
+      if (appliedPointsDiscount && selectedCustomer) {
+        setAppliedPointsDiscount(null);
+        setPointsToRedeem(0);
+        setPointsDiscountError("");
+      }
 
       notification?.success({
         message: "Thanh toán thành công!",
@@ -1305,6 +1398,44 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
 
       // setIsPaymentModalOpen(false);
     } catch (error: unknown) {
+      if (appliedPointsDiscount && selectedCustomer?.patient_id) {
+        try {
+          await refundPointsToPatient({
+            patientId: selectedCustomer.patient_id,
+            points: appliedPointsDiscount.pointsUsed,
+            referenceType: "order",
+            description: `Hoàn điểm do thanh toán thất bại (${appliedPointsDiscount.pointsUsed} điểm)`,
+            notes: `Lỗi: ${getErrorMessage(error)}`,
+            createdBy: employee?.employee_id,
+          });
+
+          if (selectedCustomer) {
+            setStoreSelectedCustomer({
+              ...selectedCustomer,
+              loyalty_points:
+                (selectedCustomer.loyalty_points || 0) +
+                appliedPointsDiscount.pointsUsed,
+            });
+          }
+
+          setAppliedPointsDiscount(null);
+          setPointsToRedeem(0);
+          setPointsDiscountError("");
+
+          notification.warning({
+            message: "Đã hoàn điểm",
+            description: `Đã hoàn lại ${appliedPointsDiscount.pointsUsed} điểm do thanh toán thất bại.`,
+          });
+        } catch (refundError: any) {
+          notification.error({
+            message: "Lỗi hoàn điểm",
+            description:
+              "Thanh toán thất bại và không thể hoàn điểm. Vui lòng liên hệ quản trị viên.",
+            duration: 10,
+          });
+        }
+      }
+
       notification.error({
         message: "Thanh toán thất bại",
         description: getErrorMessage(error),
@@ -1435,6 +1566,12 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
               promoCodeError={promoCodeError}
               handleApplyPromoCode={handleApplyPromoCode}
               handleRemovePromoCode={handleRemovePromoCode}
+              pointsToRedeem={pointsToRedeem}
+              setPointsToRedeem={setPointsToRedeem}
+              appliedPointsDiscount={appliedPointsDiscount}
+              pointsDiscountError={pointsDiscountError}
+              handleApplyPointsDiscount={handleApplyPointsDiscount}
+              handleRemovePointsDiscount={handleRemovePointsDiscount}
             />
           ),
         }))}

@@ -61,16 +61,15 @@ export const getPointRuleWithDetails = async (
     .from(TABLES.POINT_RULES)
     .select(
       `
-      *,
-      warehouses:warehouse_ids (
-        id,
-        name
-      )
-    `,
+  *,
+  warehouses:warehouse_ids (
+    id,
+    name
+  )
+  `,
     )
     .eq("id", id)
     .single();
-
   // Transform the response to match IPointRuleWithDetails
   if (response.data) {
     // Note: Supabase array foreign key joins need special handling
@@ -81,7 +80,6 @@ export const getPointRuleWithDetails = async (
       error: response.error,
     };
   }
-
   return response;
 };
 
@@ -98,7 +96,6 @@ export const getDefaultPointRule = async (): Promise<{
     .eq("is_default", true)
     .eq("is_active", true)
     .single();
-
   return response;
 };
 
@@ -117,7 +114,6 @@ export const getPointRulesForWarehouse = async (
     .select("*")
     .eq("is_active", true)
     .or(`applies_to_all_branches.eq.true,warehouse_ids.cs.{${warehouseId}}`);
-
   return response;
 };
 
@@ -161,7 +157,6 @@ export const createPointRule = async (params: {
     created_by,
     notes,
   } = params;
-
   const insertData: any = {
     name,
     description: description || null,
@@ -184,13 +179,11 @@ export const createPointRule = async (params: {
     created_by: created_by || null,
     notes: notes || null,
   };
-
   const response = await supabase
     .from(TABLES.POINT_RULES)
     .insert(insertData)
     .select()
     .single();
-
   return response;
 };
 
@@ -262,14 +255,12 @@ export const updatePointRule = async (
   if (params.voucher_min_points !== undefined)
     updateData.voucher_min_points = params.voucher_min_points;
   if (params.notes !== undefined) updateData.notes = params.notes;
-
   const response = await supabase
     .from(TABLES.POINT_RULES)
     .update(updateData)
     .eq("id", id)
     .select()
     .single();
-
   return response;
 };
 
@@ -288,7 +279,6 @@ export const deletePointRule = async (
     .from(TABLES.POINT_RULES)
     .delete()
     .eq("id", id);
-
   return response;
 };
 
@@ -343,7 +333,6 @@ export const getApplicablePointRule = async (
       };
     }
   }
-
   // Fallback to default rule
   return getDefaultPointRule();
 };
@@ -367,7 +356,6 @@ export const redeemPointsForVoucher = async (params: {
   error: any;
 }> => {
   const { patientId, points, warehouseId, createdBy } = params;
-
   // Validate points
   if (points <= 0) {
     return {
@@ -375,21 +363,18 @@ export const redeemPointsForVoucher = async (params: {
       error: { message: "Số điểm phải lớn hơn 0" },
     };
   }
-
   // Get patient current points
   const { data: patient, error: patientError } = await supabase
     .from("patients")
     .select("loyalty_points")
     .eq("patient_id", patientId)
     .single();
-
   if (patientError || !patient) {
     return {
       data: null,
       error: { message: "Không tìm thấy bệnh nhân" },
     };
   }
-
   const currentPoints = patient.loyalty_points || 0;
   if (currentPoints < points) {
     return {
@@ -399,11 +384,9 @@ export const redeemPointsForVoucher = async (params: {
       },
     };
   }
-
   // Get applicable point rule
   const { data: rule, error: ruleError } =
     await getApplicablePointRule(warehouseId);
-
   if (ruleError || !rule) {
     return {
       data: null,
@@ -412,14 +395,12 @@ export const redeemPointsForVoucher = async (params: {
       },
     };
   }
-
   if (!rule.is_active) {
     return {
       data: null,
       error: { message: "Quy tắc tích điểm đang tắt" },
     };
   }
-
   // Check minimum points
   if (points < (rule.voucher_min_points || 0)) {
     return {
@@ -429,7 +410,6 @@ export const redeemPointsForVoucher = async (params: {
       },
     };
   }
-
   // Calculate voucher value
   const vouchersCount = Math.floor(points / rule.redemption_points_required);
   if (vouchersCount === 0) {
@@ -440,20 +420,16 @@ export const redeemPointsForVoucher = async (params: {
       },
     };
   }
-
   const voucherValue = vouchersCount * rule.redemption_voucher_value;
   const actualPointsUsed = vouchersCount * rule.redemption_points_required;
-
   // Generate voucher code
   const voucherCode = `POINT-${Date.now()}-${Math.random()
     .toString(36)
     .substring(2, 8)
     .toUpperCase()}`;
-
   // Calculate expiration date
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + rule.voucher_validity_days);
-
   // Create voucher
   const { data: voucher, error: voucherError } = await supabase
     .from("vouchers")
@@ -473,7 +449,6 @@ export const redeemPointsForVoucher = async (params: {
     })
     .select()
     .single();
-
   if (voucherError || !voucher) {
     return {
       data: null,
@@ -482,7 +457,6 @@ export const redeemPointsForVoucher = async (params: {
       },
     };
   }
-
   // Deduct points from patient
   const { redeemPointsFromPatient } = await import("./patientPointsService");
   const { error: redeemError } = await redeemPointsFromPatient({
@@ -494,7 +468,6 @@ export const redeemPointsForVoucher = async (params: {
     notes: `Voucher hết hạn: ${expiresAt.toLocaleDateString("vi-VN")}`,
     createdBy,
   });
-
   if (redeemError) {
     // Rollback: delete voucher if points deduction fails
     await supabase.from("vouchers").delete().eq("id", voucher.id);
@@ -505,9 +478,120 @@ export const redeemPointsForVoucher = async (params: {
       },
     };
   }
-
   return {
     data: voucher,
+    error: null,
+  };
+};
+
+/**
+ * Redeem points directly for discount (without creating voucher)
+ * This function:
+ * 1. Validates patient has enough points
+ * 2. Gets applicable point rule
+ * 3. Calculates discount value from points
+ * 4. Deducts points from patient
+ * Returns discount amount and points used
+ */
+export const redeemPointsForDiscount = async (params: {
+  patientId: string;
+  points: number;
+  warehouseId?: number;
+  orderId?: string;
+  createdBy?: string;
+}): Promise<{
+  data: {
+    discountAmount: number;
+    pointsUsed: number;
+    pointsRemaining: number;
+  } | null;
+  error: any;
+}> => {
+  const { patientId, points, warehouseId, orderId, createdBy } = params;
+  // Validate points
+  if (points <= 0) {
+    return {
+      data: null,
+      error: { message: "Số điểm phải lớn hơn 0" },
+    };
+  }
+  // Get patient current points
+  const { data: patient, error: patientError } = await supabase
+    .from("patients")
+    .select("loyalty_points")
+    .eq("patient_id", patientId)
+    .single();
+  if (patientError || !patient) {
+    return {
+      data: null,
+      error: { message: "Không tìm thấy bệnh nhân" },
+    };
+  }
+  const currentPoints = patient.loyalty_points || 0;
+  if (currentPoints < points) {
+    return {
+      data: null,
+      error: {
+        message: `Không đủ điểm. Hiện có: ${currentPoints}, Cần: ${points}`,
+      },
+    };
+  }
+  // Get applicable point rule
+  const { data: rule, error: ruleError } =
+    await getApplicablePointRule(warehouseId);
+  if (ruleError || !rule) {
+    return {
+      data: null,
+      error: {
+        message: "Không tìm thấy quy tắc tích điểm phù hợp",
+      },
+    };
+  }
+  if (!rule.is_active) {
+    return {
+      data: null,
+      error: { message: "Quy tắc tích điểm đang tắt" },
+    };
+  }
+  // Calculate discount value from points
+  // Formula: (points / redemption_points_required) * redemption_voucher_value
+  const vouchersCount = Math.floor(points / rule.redemption_points_required);
+  if (vouchersCount === 0) {
+    return {
+      data: null,
+      error: {
+        message: `Số điểm không đủ để đổi. Cần tối thiểu ${rule.redemption_points_required} điểm`,
+      },
+    };
+  }
+  const discountAmount = vouchersCount * rule.redemption_voucher_value;
+  const actualPointsUsed = vouchersCount * rule.redemption_points_required;
+  const pointsRemaining = currentPoints - actualPointsUsed;
+  // Deduct points from patient
+  const { redeemPointsFromPatient } = await import("./patientPointsService");
+  const { error: redeemError } = await redeemPointsFromPatient({
+    patientId,
+    points: actualPointsUsed,
+    referenceType: "order",
+    referenceId: orderId,
+    description: `Đổi ${actualPointsUsed} điểm lấy giảm giá trực tiếp (Giá trị: ${discountAmount.toLocaleString()} VND)`,
+    notes: `Đơn hàng: ${orderId || "POS"}`,
+    createdBy,
+  });
+  if (redeemError) {
+    return {
+      data: null,
+      error: {
+        message: `Lỗi trừ điểm: ${redeemError.message}`,
+      },
+    };
+  }
+  return {
+    data: {
+      discountAmount,
+      pointsUsed: actualPointsUsed,
+      pointsRemaining,
+    },
     error: null,
   };
 };

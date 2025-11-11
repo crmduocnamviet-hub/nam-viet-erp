@@ -187,7 +187,55 @@ export const createSalesOrderFromMedicalVisit = async (
     is_ai_checked: false,
   };
 
-  return createSalesOrder(salesOrder);
+  const { data: orderData, error: orderError } =
+    await createSalesOrder(salesOrder);
+
+  if (orderError || !orderData) {
+    return { data: null, error: orderError };
+  }
+
+  // Award loyalty points to patient if exists and payment is completed
+  if (visit.patient_id && paymentMethod && orderData.order_id) {
+    try {
+      // Get warehouse from employee or use default (you may need to pass warehouseId as parameter)
+      // For now, we'll get the default point rule
+      const { getApplicablePointRule, calculatePointsToEarn } = await import(
+        "./pointRulesService"
+      );
+      const { addPointsToPatient } = await import("./patientPointsService");
+
+      const { data: pointRule, error: ruleError } =
+        await getApplicablePointRule();
+
+      if (!ruleError && pointRule && pointRule.is_active) {
+        // Calculate points to earn
+        const pointsToEarn = calculatePointsToEarn(totalValue, pointRule);
+
+        if (pointsToEarn > 0) {
+          await addPointsToPatient({
+            patientId: visit.patient_id,
+            points: pointsToEarn,
+            referenceType: "order",
+            referenceId: orderData.order_id.toString(),
+            description: `Earned from medical visit order - Order ${orderData.order_id}`,
+            notes: `Order total: ${totalValue.toLocaleString()} VND`,
+            expiresAt: new Date(
+              Date.now() + 365 * 24 * 60 * 60 * 1000,
+            ).toISOString(), // Expires in 1 year
+            createdBy: createdByEmployeeId,
+          });
+        }
+      }
+    } catch (pointsError) {
+      // Don't fail the order creation if points calculation fails
+      console.warn(
+        "[createSalesOrderFromMedicalVisit] Points calculation error:",
+        pointsError,
+      );
+    }
+  }
+
+  return { data: orderData, error: null };
 };
 
 // Update sales order

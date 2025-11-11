@@ -120,10 +120,14 @@ const Promotions: React.FC = () => {
 
   // Calculate statistics
   const statistics = useMemo(() => {
+    const validTypes = ["order_discount", "percentage", "fixed_amount"];
     const total = promotions.length;
     const active = promotions.filter((p) => p.is_active).length;
     const inactive = promotions.filter((p) => !p.is_active).length;
-    const withCode = promotions.filter((p) => p.code).length;
+    // Only count promotions with valid types and code
+    const withCode = promotions.filter(
+      (p) => p.code && p.type && validTypes.includes(p.type),
+    ).length;
 
     return { total, active, inactive, withCode };
   }, [promotions]);
