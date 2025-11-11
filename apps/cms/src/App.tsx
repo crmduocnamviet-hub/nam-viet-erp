@@ -116,26 +116,21 @@ const App: React.FC = () => {
     );
   }
 
+  // Wrap ScreenProvider at the top level to ensure it's always available
   return (
-    <Routes>
-      {/* Nếu chưa đăng nhập, chỉ có thể truy cập trang Login và Register */}
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
+    <ScreenProvider>
+      <Routes>
+        {/* Nếu chưa đăng nhập, chỉ có thể truy cập trang Login và Register */}
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
 
-      {/* Nếu đã đăng nhập, có thể truy cập các trang bên trong AppLayout */}
-      <Route
-        path="/*"
-        element={
-          session && employee ? (
-            <ScreenProvider>
-              <AppLayout />
-            </ScreenProvider>
-          ) : (
-            <Login />
-          )
-        }
-      />
-    </Routes>
+        {/* Nếu đã đăng nhập, có thể truy cập các trang bên trong AppLayout */}
+        <Route
+          path="/*"
+          element={session && employee ? <AppLayout /> : <Login />}
+        />
+      </Routes>
+    </ScreenProvider>
   );
 };
 

@@ -510,7 +510,7 @@ export const CMS_APP_MENU: MenuItemConfig[] = [
     icon: <TeamOutlined />,
     children: [
       {
-        key: "/patients",
+        key: "/customers/patients",
         label: "Quản lý bệnh nhân",
         screenKey: "medical.patients",
       },
@@ -612,7 +612,7 @@ export const CMS_APP_MENU: MenuItemConfig[] = [
         screenKey: "financial.transactions",
       },
       {
-        key: "/warehouse/vat-invoice-input",
+        key: "/finance/vat-invoice-input",
         label: "Quản lý Hóa Đơn VAT",
         screenKey: "warehouse.vat-invoice-input",
       },

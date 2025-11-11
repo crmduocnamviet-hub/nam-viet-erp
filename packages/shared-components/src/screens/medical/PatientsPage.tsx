@@ -30,6 +30,7 @@ import {
   MedicineBoxOutlined,
   EditOutlined,
   DeleteOutlined,
+  EyeOutlined,
 } from "@ant-design/icons";
 import {
   getPatients,
@@ -39,6 +40,7 @@ import {
   getPatientPointsHistory,
 } from "@nam-viet-erp/services";
 import { COMMON_SPACING, getResponsivePadding } from "../../constants/spacing";
+import { useNavigate } from "react-router-dom";
 
 const { Title, Text } = Typography;
 const { Search } = Input;
@@ -47,6 +49,7 @@ const { useBreakpoint } = Grid;
 const PatientsPage: React.FC = () => {
   const { notification, modal } = AntApp.useApp();
   const screens = useBreakpoint();
+  const navigate = useNavigate();
   const [patients, setPatients] = useState<IPatient[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -305,10 +308,16 @@ const PatientsPage: React.FC = () => {
       title: "Tên bệnh nhân",
       dataIndex: "full_name",
       key: "full_name",
-      render: (text: string) => (
+      render: (text: string, record: IPatient) => (
         <Space>
           <UserOutlined />
-          <Text strong>{text}</Text>
+          <Text
+            strong
+            style={{ cursor: "pointer", color: "#1890ff" }}
+            onClick={() => navigate(`/patients/${record.patient_id}`)}
+          >
+            {text}
+          </Text>
         </Space>
       ),
     },
@@ -428,6 +437,14 @@ const PatientsPage: React.FC = () => {
       width: 120,
       render: (record: IPatient) => (
         <Space size="small">
+          <Tooltip title="Xem chi tiết">
+            <Button
+              type="link"
+              size="small"
+              icon={<EyeOutlined />}
+              onClick={() => navigate(`/patients/${record.patient_id}`)}
+            />
+          </Tooltip>
           <Tooltip title="Chỉnh sửa">
             <Button
               type="link"

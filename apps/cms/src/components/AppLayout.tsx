@@ -113,7 +113,8 @@ const SiderContent: React.FC<{
   </div>
 );
 
-const AppLayout: React.FC = () => {
+// Inner component that uses screen context - MUST be inside ScreenProvider
+const AppLayoutContent: React.FC = () => {
   const [collapsed, setCollapsed] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false); // State cho menu di động
   const navigate = useNavigate();
@@ -495,6 +496,10 @@ const AppLayout: React.FC = () => {
                   element={<Screen screenKey="medical.patients" />}
                 />
                 <Route
+                  path="/customers/patients"
+                  element={<Screen screenKey="medical.patients" />}
+                />
+                <Route
                   path="/patients/:patientId"
                   element={<Screen screenKey="medical.patient-detail" />}
                 />
@@ -567,6 +572,10 @@ const AppLayout: React.FC = () => {
                   element={<Screen screenKey="warehouse.vat-invoice-input" />}
                 />
                 <Route
+                  path="/finance/vat-invoice-input"
+                  element={<Screen screenKey="warehouse.vat-invoice-input" />}
+                />
+                <Route
                   path="/warehouse/vat-invoice-pos"
                   element={<Screen screenKey="warehouse.vat-invoice-pos" />}
                 />
@@ -581,6 +590,15 @@ const AppLayout: React.FC = () => {
           </Content>
         </Layout>
       </Layout>
+    </ConfigProvider>
+  );
+};
+
+// Main component - wraps ConfigProvider
+const AppLayout: React.FC = () => {
+  return (
+    <ConfigProvider theme={namVietTheme} locale={viVN}>
+      <AppLayoutContent />
     </ConfigProvider>
   );
 };

@@ -34,6 +34,8 @@ import {
   CloseCircleOutlined,
   CloseOutlined,
   EditOutlined,
+  GiftOutlined,
+  ClockCircleOutlined,
 } from "@ant-design/icons";
 import { useInventory, usePosStore } from "@nam-viet-erp/store";
 import {
@@ -116,6 +118,10 @@ interface PosTabContentProps {
   handleApplyPointsDiscount?: () => void;
   handleRemovePointsDiscount?: () => void;
 
+  // Patient vouchers
+  patientVouchers?: IVoucher[];
+  loadingPatientVouchers?: boolean;
+
   // Combos
   detectedCombos?: IComboWithItems[];
   handleAddCombo?: (combo: IComboWithItems) => void;
@@ -164,6 +170,8 @@ const PosTabContent: React.FC<PosTabContentProps> = ({
   pointsDiscountError,
   handleApplyPointsDiscount,
   handleRemovePointsDiscount,
+  patientVouchers = [],
+  loadingPatientVouchers = false,
 }) => {
   const navigate = useNavigate();
   const inventory = useInventory();
@@ -965,6 +973,159 @@ const PosTabContent: React.FC<PosTabContentProps> = ({
               )}
             </div>
 
+            {/* Patient Vouchers List - Desktop */}
+            {selectedCustomer && patientVouchers.length > 0 && (
+              <div style={{ marginTop: 12, marginBottom: 12 }}>
+                <Text
+                  strong
+                  style={{ fontSize: 13, marginBottom: 8, display: "block" }}
+                >
+                  <GiftOutlined style={{ marginRight: 4 }} />
+                  Voucher có thể dùng ({patientVouchers.length})
+                </Text>
+                <List
+                  size="small"
+                  loading={loadingPatientVouchers}
+                  dataSource={patientVouchers}
+                  renderItem={(voucher: any) => {
+                    const isPointVoucher = voucher.is_point_voucher;
+                    const isPatientVoucher =
+                      voucher.redeemed_by_patient_id ===
+                      selectedCustomer?.patient_id;
+                    const isUsed =
+                      (voucher.times_used || 0) >= (voucher.usage_limit || 1);
+                    const isExpired = voucher.expires_at
+                      ? new Date(voucher.expires_at) < new Date()
+                      : false;
+                    const canUse = !isUsed && !isExpired && !appliedPromoCode;
+
+                    // Calculate voucher value
+                    let voucherValue = 0;
+                    if (isPointVoucher && voucher.point_rules) {
+                      const rule = Array.isArray(voucher.point_rules)
+                        ? voucher.point_rules[0]
+                        : voucher.point_rules;
+                      if (
+                        rule &&
+                        rule.redemption_points_required > 0 &&
+                        voucher.points_used
+                      ) {
+                        const vouchersCount = Math.floor(
+                          voucher.points_used / rule.redemption_points_required,
+                        );
+                        voucherValue =
+                          vouchersCount * rule.redemption_voucher_value;
+                      }
+                    } else if (voucher.promotions) {
+                      const promo = Array.isArray(voucher.promotions)
+                        ? voucher.promotions[0]
+                        : voucher.promotions;
+                      if (promo) {
+                        if (promo.type === "percentage") {
+                          voucherValue =
+                            (cartDetails.itemTotal * (promo.value || 0)) / 100;
+                        } else if (promo.type === "fixed_amount") {
+                          voucherValue = promo.value || 0;
+                        }
+                      }
+                    }
+
+                    return (
+                      <List.Item
+                        style={{
+                          padding: "8px 12px",
+                          marginBottom: 8,
+                          backgroundColor: canUse
+                            ? isPatientVoucher
+                              ? "#e6f7ff"
+                              : "#f6ffed"
+                            : "#fafafa",
+                          border: canUse
+                            ? isPatientVoucher
+                              ? "1px solid #91d5ff"
+                              : "1px solid #b7eb8f"
+                            : "1px solid #d9d9d9",
+                          borderRadius: "6px",
+                          cursor: canUse ? "pointer" : "not-allowed",
+                          opacity: canUse ? 1 : 0.6,
+                        }}
+                        onClick={() => {
+                          if (canUse && voucher.code && handleApplyPromoCode) {
+                            handleApplyPromoCode(voucher.code);
+                          }
+                        }}
+                      >
+                        <Space
+                          direction="vertical"
+                          size={4}
+                          style={{ width: "100%" }}
+                        >
+                          <div
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                            }}
+                          >
+                            <Space>
+                              <Text strong style={{ fontSize: 13 }}>
+                                {voucher.code}
+                              </Text>
+                              {isPatientVoucher && (
+                                <Tag color="cyan">Của bạn</Tag>
+                              )}
+                              {isPointVoucher ? (
+                                <Tag color="orange">Đổi từ điểm</Tag>
+                              ) : (
+                                <Tag color="blue">Khuyến mãi</Tag>
+                              )}
+                            </Space>
+                            {voucherValue > 0 && (
+                              <Text
+                                strong
+                                style={{ color: "#52c41a", fontSize: 13 }}
+                              >
+                                -{voucherValue.toLocaleString()}đ
+                              </Text>
+                            )}
+                          </div>
+                          {voucher.expires_at && (
+                            <div
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                fontSize: 11,
+                              }}
+                            >
+                              <ClockCircleOutlined
+                                style={{ marginRight: 4, color: "#999" }}
+                              />
+                              <Text type="secondary">
+                                Hết hạn:{" "}
+                                {new Date(
+                                  voucher.expires_at,
+                                ).toLocaleDateString("vi-VN")}
+                              </Text>
+                            </div>
+                          )}
+                          {isUsed && (
+                            <Text type="danger" style={{ fontSize: 11 }}>
+                              Đã sử dụng
+                            </Text>
+                          )}
+                          {isExpired && !isUsed && (
+                            <Text type="danger" style={{ fontSize: 11 }}>
+                              Đã hết hạn
+                            </Text>
+                          )}
+                        </Space>
+                      </List.Item>
+                    );
+                  }}
+                />
+              </div>
+            )}
+
             {/* Points Discount Input */}
             {selectedCustomer && selectedCustomer.loyalty_points > 0 && (
               <div style={{ marginTop: 12, marginBottom: 12 }}>
@@ -1308,6 +1469,157 @@ const PosTabContent: React.FC<PosTabContentProps> = ({
             </Text>
           )}
         </div>
+
+        {/* Patient Vouchers List */}
+        {selectedCustomer && patientVouchers.length > 0 && (
+          <div style={{ marginTop: 12, marginBottom: 12 }}>
+            <Text
+              strong
+              style={{ fontSize: 13, marginBottom: 8, display: "block" }}
+            >
+              <GiftOutlined style={{ marginRight: 4 }} />
+              Voucher có thể dùng ({patientVouchers.length})
+            </Text>
+            <List
+              size="small"
+              loading={loadingPatientVouchers}
+              dataSource={patientVouchers}
+              renderItem={(voucher: any) => {
+                const isPointVoucher = voucher.is_point_voucher;
+                const isPatientVoucher =
+                  voucher.redeemed_by_patient_id ===
+                  selectedCustomer?.patient_id;
+                const isUsed =
+                  (voucher.times_used || 0) >= (voucher.usage_limit || 1);
+                const isExpired = voucher.expires_at
+                  ? new Date(voucher.expires_at) < new Date()
+                  : false;
+                const canUse = !isUsed && !isExpired && !appliedPromoCode;
+
+                // Calculate voucher value
+                let voucherValue = 0;
+                if (isPointVoucher && voucher.point_rules) {
+                  const rule = Array.isArray(voucher.point_rules)
+                    ? voucher.point_rules[0]
+                    : voucher.point_rules;
+                  if (
+                    rule &&
+                    rule.redemption_points_required > 0 &&
+                    voucher.points_used
+                  ) {
+                    const vouchersCount = Math.floor(
+                      voucher.points_used / rule.redemption_points_required,
+                    );
+                    voucherValue =
+                      vouchersCount * rule.redemption_voucher_value;
+                  }
+                } else if (voucher.promotions) {
+                  const promo = Array.isArray(voucher.promotions)
+                    ? voucher.promotions[0]
+                    : voucher.promotions;
+                  if (promo) {
+                    if (promo.type === "percentage") {
+                      voucherValue =
+                        (cartDetails.itemTotal * (promo.value || 0)) / 100;
+                    } else if (promo.type === "fixed_amount") {
+                      voucherValue = promo.value || 0;
+                    }
+                  }
+                }
+
+                return (
+                  <List.Item
+                    style={{
+                      padding: "8px 12px",
+                      marginBottom: 8,
+                      backgroundColor: canUse
+                        ? isPatientVoucher
+                          ? "#e6f7ff"
+                          : "#f6ffed"
+                        : "#fafafa",
+                      border: canUse
+                        ? isPatientVoucher
+                          ? "1px solid #91d5ff"
+                          : "1px solid #b7eb8f"
+                        : "1px solid #d9d9d9",
+                      borderRadius: "6px",
+                      cursor: canUse ? "pointer" : "not-allowed",
+                      opacity: canUse ? 1 : 0.6,
+                    }}
+                    onClick={() => {
+                      if (canUse && voucher.code && handleApplyPromoCode) {
+                        handleApplyPromoCode(voucher.code);
+                      }
+                    }}
+                  >
+                    <Space
+                      direction="vertical"
+                      size={4}
+                      style={{ width: "100%" }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                        }}
+                      >
+                        <Space>
+                          <Text strong style={{ fontSize: 13 }}>
+                            {voucher.code}
+                          </Text>
+                          {isPatientVoucher && <Tag color="cyan">Của bạn</Tag>}
+                          {isPointVoucher ? (
+                            <Tag color="orange">Đổi từ điểm</Tag>
+                          ) : (
+                            <Tag color="blue">Khuyến mãi</Tag>
+                          )}
+                        </Space>
+                        {voucherValue > 0 && (
+                          <Text
+                            strong
+                            style={{ color: "#52c41a", fontSize: 13 }}
+                          >
+                            -{voucherValue.toLocaleString()}đ
+                          </Text>
+                        )}
+                      </div>
+                      {voucher.expires_at && (
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            fontSize: 11,
+                          }}
+                        >
+                          <ClockCircleOutlined
+                            style={{ marginRight: 4, color: "#999" }}
+                          />
+                          <Text type="secondary">
+                            Hết hạn:{" "}
+                            {new Date(voucher.expires_at).toLocaleDateString(
+                              "vi-VN",
+                            )}
+                          </Text>
+                        </div>
+                      )}
+                      {isUsed && (
+                        <Text type="danger" style={{ fontSize: 11 }}>
+                          Đã sử dụng
+                        </Text>
+                      )}
+                      {isExpired && !isUsed && (
+                        <Text type="danger" style={{ fontSize: 11 }}>
+                          Đã hết hạn
+                        </Text>
+                      )}
+                    </Space>
+                  </List.Item>
+                );
+              }}
+            />
+          </div>
+        )}
 
         {/* Combo Suggestions */}
         {detectedCombos.length > 0 && (

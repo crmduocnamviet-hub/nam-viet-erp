@@ -34,6 +34,7 @@ import {
   applyPromoCode,
   redeemPointsForDiscount,
   refundPointsToPatient,
+  getPatientVouchers,
 } from "@nam-viet-erp/services";
 import {
   usePosStore,
@@ -144,6 +145,8 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "card">("cash");
   const [promotions, setPromotions] = useState<IPromotion[]>([]);
+  const [patientVouchers, setPatientVouchers] = useState<IVoucher[]>([]);
+  const [loadingPatientVouchers, setLoadingPatientVouchers] = useState(false);
 
   // Promo code state - from store (per-tab)
   const promoCode = usePosPromoCode();
@@ -270,7 +273,7 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
         if (!mounted) return;
 
         if (error) {
-          console.error("Error loading promotions:", error);
+          // console.error("Error loading promotions:", error);
           // Don't show notification on every error to avoid spam
           setPromotions([]);
         } else {
@@ -278,7 +281,7 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
         }
       } catch (err) {
         if (!mounted) return;
-        console.error("Error in fetchPromos:", err);
+        // console.error("Error in fetchPromos:", err);
         setPromotions([]);
       }
     };
@@ -293,6 +296,37 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
       clearTimeout(timeoutId);
     };
   }, []); // Only fetch once on mount
+
+  // Load patient vouchers when customer is selected
+  useEffect(() => {
+    const loadPatientVouchers = async () => {
+      if (!selectedCustomer?.patient_id) {
+        setPatientVouchers([]);
+        return;
+      }
+
+      setLoadingPatientVouchers(true);
+      try {
+        const { data, error } = await getPatientVouchers(
+          selectedCustomer.patient_id,
+        );
+
+        if (error) {
+          // console.error("[PosPage] Error loading patient vouchers:", error);
+          setPatientVouchers([]);
+        } else {
+          setPatientVouchers(data || []);
+        }
+      } catch (err) {
+        // console.error("[PosPage] Error in loadPatientVouchers:", err);
+        setPatientVouchers([]);
+      } finally {
+        setLoadingPatientVouchers(false);
+      }
+    };
+
+    loadPatientVouchers();
+  }, [selectedCustomer?.patient_id]);
 
   // Detect combos whenever cart changes
   const detectedCombos = useMemo(() => {
@@ -1292,7 +1326,7 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
             setStorePromoDiscount(discountAmount);
           }
         } catch (error) {
-          console.error("Error revalidating promo code:", error);
+          // console.error("Error revalidating promo code:", error);
         }
       };
 
@@ -1559,6 +1593,8 @@ const PosPage: React.FC<PosPageProps> = ({ employee }) => {
               isMobile={isMobile}
               isCartModalOpen={isCartModalOpen}
               setIsCartModalOpen={setIsCartModalOpen}
+              patientVouchers={patientVouchers}
+              loadingPatientVouchers={loadingPatientVouchers}
               promoCode={promoCode}
               setPromoCode={setStorePromoCode}
               appliedPromoCode={appliedPromoCode}

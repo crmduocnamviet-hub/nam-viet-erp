@@ -104,6 +104,84 @@ export const getVouchersWithPromotion = async () => {
   return response;
 };
 
+/**
+ * Get available vouchers for a patient (usable, not expired, not fully used)
+ * Includes both patient-specific vouchers and general vouchers
+ * Patient vouchers are prioritized (shown first)
+ */
+export const getPatientVouchers = async (patientId: string) => {
+  const now = new Date().toISOString();
+
+  // Get both patient-specific vouchers AND general vouchers
+  // Split into 2 queries to avoid .or() issues with UUID
+  const [patientVouchersResponse, generalVouchersResponse] = await Promise.all([
+    // Query 1: Patient-specific vouchers
+    supabase
+      .from("vouchers")
+      .select(
+        "*, promotions(name, type, value, conditions), point_rules(name, redemption_points_required, redemption_voucher_value)",
+      )
+      .eq("is_active", true)
+      .eq("redeemed_by_patient_id", patientId)
+      .order("expires_at", { ascending: true, nullsFirst: false }),
+    // Query 2: General vouchers (redeemed_by_patient_id IS NULL)
+    supabase
+      .from("vouchers")
+      .select(
+        "*, promotions(name, type, value, conditions), point_rules(name, redemption_points_required, redemption_voucher_value)",
+      )
+      .eq("is_active", true)
+      .is("redeemed_by_patient_id", null)
+      .order("expires_at", { ascending: true, nullsFirst: false }),
+  ]);
+
+  // Check for errors
+  if (patientVouchersResponse.error) {
+    // console.error("Error loading patient vouchers:", patientVouchersResponse.error);
+  }
+  if (generalVouchersResponse.error) {
+    // console.error("Error loading general vouchers:", generalVouchersResponse.error);
+  }
+
+  // Combine results
+  const allVouchers = [
+    ...(patientVouchersResponse.data || []),
+    ...(generalVouchersResponse.data || []),
+  ];
+
+  // Filter vouchers that:
+  // 1. Haven't been fully used
+  // 2. Are not expired (expires_at IS NULL OR expires_at >= now)
+  const availableVouchers = allVouchers.filter((voucher) => {
+    const timesUsed = voucher.times_used || 0;
+    const usageLimit = voucher.usage_limit || 1;
+    const isFullyUsed = timesUsed >= usageLimit;
+
+    const isExpired = voucher.expires_at
+      ? new Date(voucher.expires_at) < new Date(now)
+      : false;
+
+    return !isFullyUsed && !isExpired;
+  });
+
+  // Sort: Patient vouchers first, then general vouchers
+  const sortedVouchers = availableVouchers.sort((a, b) => {
+    const aIsPatientVoucher = a.redeemed_by_patient_id === patientId;
+    const bIsPatientVoucher = b.redeemed_by_patient_id === patientId;
+
+    // Patient vouchers come first
+    if (aIsPatientVoucher && !bIsPatientVoucher) return -1;
+    if (!aIsPatientVoucher && bIsPatientVoucher) return 1;
+
+    // Within same category, sort by expiration date (earlier first)
+    const aExpires = a.expires_at ? new Date(a.expires_at).getTime() : Infinity;
+    const bExpires = b.expires_at ? new Date(b.expires_at).getTime() : Infinity;
+    return aExpires - bExpires;
+  });
+
+  return { data: sortedVouchers, error: null };
+};
+
 export const getActivePromotions = async () => {
   // Only get promotions with valid types to avoid errors when creating vouchers
   const validTypes = ["order_discount", "percentage", "fixed_amount"];

@@ -231,7 +231,7 @@ export const redeemPointsFromPatient = async (params: {
   patientId: string;
   points: number;
   referenceType: PointsReferenceType;
-  referenceId?: string;
+  referenceId?: string | null;
   description?: string;
   notes?: string;
   createdBy?: string;
@@ -269,6 +269,7 @@ export const redeemPointsFromPatient = async (params: {
   const balanceAfter = balanceBefore - points;
 
   // Create points history record (negative amount for redemption)
+  // Note: reference_id must be UUID or null (not BIGINT like voucher.id)
   const { data: historyData, error: historyError } = await supabase
     .from("patient_points_history")
     .insert({
@@ -278,7 +279,7 @@ export const redeemPointsFromPatient = async (params: {
       balance_before: balanceBefore,
       balance_after: balanceAfter,
       reference_type: referenceType,
-      reference_id: referenceId,
+      reference_id: referenceId || null, // Ensure it's UUID or null
       description: description || "Points redeemed",
       notes,
       created_by: createdBy,

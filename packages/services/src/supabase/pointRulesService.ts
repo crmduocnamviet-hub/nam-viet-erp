@@ -430,12 +430,37 @@ export const redeemPointsForVoucher = async (params: {
   // Calculate expiration date
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + rule.voucher_validity_days);
+
+  // Get a placeholder promotion_id (required by DB constraint)
+  // Use the first active promotion as placeholder, or create a default one
+  let placeholderPromotionId = 0;
+  const { data: firstPromotion } = await supabase
+    .from("promotions")
+    .select("id")
+    .eq("is_active", true)
+    .limit(1)
+    .single();
+
+  if (firstPromotion?.id) {
+    placeholderPromotionId = firstPromotion.id;
+  } else {
+    // If no promotion exists, we need to create a default one
+    // This should rarely happen, but handle it gracefully
+    return {
+      data: null,
+      error: {
+        message:
+          "Không tìm thấy promotion nào trong hệ thống. Vui lòng tạo ít nhất một promotion trước khi đổi điểm.",
+      },
+    };
+  }
+
   // Create voucher
   const { data: voucher, error: voucherError } = await supabase
     .from("vouchers")
     .insert({
       code: voucherCode,
-      promotion_id: 0, // Placeholder - point vouchers don't need promotion_id
+      promotion_id: placeholderPromotionId, // Use placeholder promotion_id (required by DB)
       usage_limit: 1, // Point vouchers can only be used once
       times_used: 0,
       is_active: true,
@@ -463,9 +488,9 @@ export const redeemPointsForVoucher = async (params: {
     patientId,
     points: actualPointsUsed,
     referenceType: "order", // Use "order" as voucher redemption is similar to order redemption
-    referenceId: voucher.id.toString(),
+    referenceId: null, // Voucher ID is BIGINT, not UUID, so set to null
     description: `Đổi ${actualPointsUsed} điểm thành voucher ${voucherCode} (Giá trị: ${voucherValue.toLocaleString()} VND)`,
-    notes: `Voucher hết hạn: ${expiresAt.toLocaleDateString("vi-VN")}`,
+    notes: `Voucher ID: ${voucher.id}, Hết hạn: ${expiresAt.toLocaleDateString("vi-VN")}`,
     createdBy,
   });
   if (redeemError) {

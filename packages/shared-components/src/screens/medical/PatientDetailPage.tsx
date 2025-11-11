@@ -8,6 +8,7 @@ import {
   Tabs,
   List,
   Input,
+  InputNumber,
   Button,
   Spin,
   App,
@@ -31,6 +32,7 @@ import {
   EditOutlined,
   ArrowLeftOutlined,
   HomeOutlined,
+  GiftOutlined,
 } from "@ant-design/icons";
 import {
   getProfileById,
@@ -38,7 +40,10 @@ import {
   getAppointmentsByPatientId,
   getPatientMedicalHistory,
   updatePatient,
+  redeemPointsForVoucher,
+  getApplicablePointRule,
 } from "@nam-viet-erp/services";
+import { useEmployeeStore } from "@nam-viet-erp/store";
 import dayjs from "dayjs";
 import { useDebounce } from "@nam-viet-erp/shared-components";
 const getErrorMessage = (error: any): string => {
@@ -68,6 +73,8 @@ const PatientDetailPage: React.FC = () => {
   const { notification } = App.useApp();
   const screens = useBreakpoint();
   const [form] = Form.useForm();
+  const [redeemForm] = Form.useForm();
+  const employee = useEmployeeStore((state) => state.employee);
 
   const [profile, setProfile] = useState<any | null>(null);
   const [appointments, setAppointments] = useState<any[]>([]);
@@ -78,8 +85,13 @@ const PatientDetailPage: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [isRedeemModalOpen, setIsRedeemModalOpen] = useState(false);
+  const [isRedeeming, setIsRedeeming] = useState(false);
+  const [pointRule, setPointRule] = useState<IPointRule | null>(null);
+  const [redeemedVoucher, setRedeemedVoucher] = useState<IVoucher | null>(null);
 
   const debouncedNotes = useDebounce(notes, 500);
+  const pointsToRedeem = Form.useWatch("points", redeemForm);
 
   useEffect(() => {
     if (patientId) {
@@ -127,6 +139,20 @@ const PatientDetailPage: React.FC = () => {
       fetchData();
     }
   }, [patientId, notification, form]);
+
+  useEffect(() => {
+    const loadPointRule = async () => {
+      try {
+        const { data, error } = await getApplicablePointRule();
+        if (!error && data) {
+          setPointRule(data);
+        }
+      } catch (error) {
+        // Silently fail - point rule is optional
+      }
+    };
+    loadPointRule();
+  }, []);
 
   const handleSaveNotes = async () => {
     if (!patientId) return;
@@ -204,6 +230,63 @@ const PatientDetailPage: React.FC = () => {
     } else {
       setIsEditing(false);
       setHasUnsavedChanges(false);
+    }
+  };
+
+  const handleOpenRedeemModal = () => {
+    setIsRedeemModalOpen(true);
+    setRedeemedVoucher(null);
+    redeemForm.resetFields();
+  };
+
+  const handleCloseRedeemModal = () => {
+    setIsRedeemModalOpen(false);
+    setRedeemedVoucher(null);
+    redeemForm.resetFields();
+  };
+
+  const handleRedeemPoints = async (values: { points: number }) => {
+    if (!patientId) return;
+
+    setIsRedeeming(true);
+    try {
+      const { data, error } = await redeemPointsForVoucher({
+        patientId,
+        points: values.points,
+        createdBy: employee?.employee_id,
+      });
+
+      if (error || !data) {
+        notification.error({
+          message: "Lỗi đổi điểm",
+          description: error?.message || "Không thể đổi điểm thành voucher",
+        });
+        return;
+      }
+
+      setRedeemedVoucher(data);
+
+      // Refresh profile to update points
+      const profileRes = await getProfileById(patientId);
+      if (!profileRes.error && profileRes.data) {
+        setProfile(profileRes.data);
+      }
+
+      notification.success({
+        message: "Đổi điểm thành công!",
+        description: `Đã tạo voucher ${data.code} với giá trị ${
+          ((data.points_used || 0) /
+            (pointRule?.redemption_points_required || 1)) *
+          (pointRule?.redemption_voucher_value || 0)
+        } VND`,
+      });
+    } catch (error: unknown) {
+      notification.error({
+        message: "Lỗi đổi điểm",
+        description: getErrorMessage(error),
+      });
+    } finally {
+      setIsRedeeming(false);
     }
   };
 
@@ -470,6 +553,23 @@ const PatientDetailPage: React.FC = () => {
                     )}
                   </Text>
                 </Descriptions.Item>
+                <Descriptions.Item label="⭐ Điểm tích lũy">
+                  <Space>
+                    <Text strong style={{ fontSize: 16, color: "#1890ff" }}>
+                      {profile.loyalty_points || 0} điểm
+                    </Text>
+                    {profile.loyalty_points > 0 && (
+                      <Button
+                        type="primary"
+                        size="small"
+                        icon={<GiftOutlined />}
+                        onClick={handleOpenRedeemModal}
+                      >
+                        Đổi điểm thành voucher
+                      </Button>
+                    )}
+                  </Space>
+                </Descriptions.Item>
               </Descriptions>
             )}
           </Card>
@@ -696,6 +796,200 @@ const PatientDetailPage: React.FC = () => {
           </Card>
         </Col>
       </Row>
+
+      {/* Redeem Points Modal */}
+      <Modal
+        title="Đổi điểm thành voucher"
+        open={isRedeemModalOpen}
+        onCancel={handleCloseRedeemModal}
+        footer={null}
+        width={600}
+      >
+        {redeemedVoucher ? (
+          <div>
+            <div
+              style={{
+                padding: 24,
+                backgroundColor: "#f6ffed",
+                border: "1px solid #b7eb8f",
+                borderRadius: 8,
+                marginBottom: 16,
+                textAlign: "center",
+              }}
+            >
+              <GiftOutlined
+                style={{ fontSize: 48, color: "#52c41a", marginBottom: 16 }}
+              />
+              <Title level={4} style={{ color: "#52c41a", marginBottom: 8 }}>
+                Đổi điểm thành công!
+              </Title>
+              <Text type="secondary">
+                Voucher đã được tạo và có thể sử dụng ngay
+              </Text>
+            </div>
+
+            <Descriptions bordered column={1} size="small">
+              <Descriptions.Item label="Mã voucher">
+                <Text strong copyable style={{ fontSize: 16 }}>
+                  {redeemedVoucher.code}
+                </Text>
+              </Descriptions.Item>
+              <Descriptions.Item label="Giá trị voucher">
+                <Text strong style={{ fontSize: 16, color: "#52c41a" }}>
+                  {(
+                    ((redeemedVoucher.points_used || 0) /
+                      (pointRule?.redemption_points_required || 1)) *
+                    (pointRule?.redemption_voucher_value || 0)
+                  ).toLocaleString()}{" "}
+                  VND
+                </Text>
+              </Descriptions.Item>
+              <Descriptions.Item label="Điểm đã sử dụng">
+                <Text>{redeemedVoucher.points_used || 0} điểm</Text>
+              </Descriptions.Item>
+              <Descriptions.Item label="Hết hạn">
+                <Text>
+                  {redeemedVoucher.expires_at
+                    ? dayjs(redeemedVoucher.expires_at).format(
+                        "DD/MM/YYYY HH:mm",
+                      )
+                    : "Không giới hạn"}
+                </Text>
+              </Descriptions.Item>
+              <Descriptions.Item label="Điểm còn lại">
+                <Text strong style={{ fontSize: 16 }}>
+                  {profile?.loyalty_points || 0} điểm
+                </Text>
+              </Descriptions.Item>
+            </Descriptions>
+
+            <div style={{ marginTop: 16, textAlign: "right" }}>
+              <Button onClick={handleCloseRedeemModal}>Đóng</Button>
+            </div>
+          </div>
+        ) : (
+          <Form
+            form={redeemForm}
+            layout="vertical"
+            onFinish={handleRedeemPoints}
+          >
+            <div
+              style={{
+                padding: 16,
+                backgroundColor: "#f9f9f9",
+                borderRadius: 8,
+                marginBottom: 16,
+              }}
+            >
+              <Text type="secondary">
+                <strong>Thông tin quy tắc đổi điểm:</strong>
+              </Text>
+              {pointRule ? (
+                <div style={{ marginTop: 8 }}>
+                  <Text>
+                    • {pointRule.redemption_points_required} điểm ={" "}
+                    {pointRule.redemption_voucher_value.toLocaleString()} VND
+                  </Text>
+                  <br />
+                  <Text>
+                    • Điểm tối thiểu: {pointRule.voucher_min_points} điểm
+                  </Text>
+                  <br />
+                  <Text>
+                    • Voucher có hiệu lực: {pointRule.voucher_validity_days}{" "}
+                    ngày
+                  </Text>
+                </div>
+              ) : (
+                <Text
+                  type="secondary"
+                  style={{ marginTop: 8, display: "block" }}
+                >
+                  Đang tải thông tin quy tắc...
+                </Text>
+              )}
+            </div>
+
+            <Form.Item
+              name="points"
+              label="Số điểm muốn đổi"
+              rules={[
+                { required: true, message: "Vui lòng nhập số điểm" },
+                {
+                  type: "number",
+                  min: pointRule?.voucher_min_points || 1,
+                  message: `Số điểm tối thiểu là ${
+                    pointRule?.voucher_min_points || 1
+                  } điểm`,
+                },
+                {
+                  type: "number",
+                  max: profile?.loyalty_points || 0,
+                  message: `Số điểm không được vượt quá ${
+                    profile?.loyalty_points || 0
+                  } điểm`,
+                },
+              ]}
+            >
+              <InputNumber
+                style={{ width: "100%" }}
+                placeholder="Nhập số điểm muốn đổi"
+                min={pointRule?.voucher_min_points || 1}
+                max={profile?.loyalty_points || 0}
+                addonAfter="điểm"
+              />
+            </Form.Item>
+
+            {pointsToRedeem &&
+              pointRule &&
+              pointsToRedeem >= (pointRule.voucher_min_points || 1) && (
+                <div
+                  style={{
+                    padding: 12,
+                    backgroundColor: "#e6f7ff",
+                    borderRadius: 6,
+                    marginBottom: 16,
+                  }}
+                >
+                  <Text type="secondary">
+                    <strong>Dự kiến nhận được:</strong>{" "}
+                    {Math.floor(
+                      pointsToRedeem / pointRule.redemption_points_required,
+                    ) * pointRule.redemption_voucher_value}{" "}
+                    VND
+                  </Text>
+                  <br />
+                  <Text type="secondary" style={{ fontSize: 12 }}>
+                    (Sử dụng{" "}
+                    {Math.floor(
+                      pointsToRedeem / pointRule.redemption_points_required,
+                    ) * pointRule.redemption_points_required}{" "}
+                    điểm)
+                  </Text>
+                </div>
+              )}
+
+            <div style={{ marginTop: 16, textAlign: "right" }}>
+              <Space>
+                <Button onClick={handleCloseRedeemModal}>Hủy</Button>
+                <Button
+                  type="primary"
+                  htmlType="submit"
+                  loading={isRedeeming}
+                  icon={<GiftOutlined />}
+                  disabled={
+                    !pointsToRedeem ||
+                    pointsToRedeem < (pointRule?.voucher_min_points || 1) ||
+                    pointsToRedeem > (profile?.loyalty_points || 0)
+                  }
+                >
+                  Đổi điểm
+                </Button>
+              </Space>
+            </div>
+          </Form>
+        )}
+      </Modal>
     </div>
   );
 };
