@@ -32,6 +32,7 @@ export { default as PermissionGuard } from "./components/PermissionGuard";
 export type { PermissionGuardProps } from "./components/PermissionGuard";
 export * from "./types/role";
 export * from "./types/salary";
+export * from "./types/employeeRole";
 export * from "./hooks/useDebounce";
 export * from "./hooks/usePermission";
 export * from "./hoc/withPermission";

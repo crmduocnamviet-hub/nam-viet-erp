@@ -34,7 +34,6 @@ import {
   updateEmployee,
   getUsers,
 } from "@nam-viet-erp/services";
-import { COMMON_SPACING, getResponsivePadding } from "../../constants/spacing";
 
 const { Title, Text } = Typography;
 const { Search } = Input;
@@ -453,7 +452,7 @@ const EmployeesPage: React.FC = () => {
   ];
 
   return (
-    <div style={{ padding: getResponsivePadding(screens) }}>
+    <div>
       <Row style={{ marginBottom: 24 }} gutter={[16, 16]}>
         <Col xs={24} md={12}>
           <Title

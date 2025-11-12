@@ -625,11 +625,20 @@ interface IEmployee {
   employee_id: string;
   full_name: string;
   employee_code: string | null;
-  role_name: string; // 'BacSi', 'DuocSi', 'LeTan', 'KeToan'
+  permission_role_id?: string; // UUID reference to permission_roles table
+  role_name?: string; // DEPRECATED: Only kept for backward compatibility
   is_active: boolean;
   user_id?: string;
-  permissions?: string[];
+  permissions?: string[]; // Individual permissions (override role permissions)
   warehouse_id?: number;
+}
+
+// Extended employee with role information from join
+interface IEmployeeWithRole extends IEmployee {
+  role_key?: string; // From permission_roles.role_key
+  role_title?: string; // From permission_roles.role_title
+  role_permissions?: string[]; // Permissions from permission_roles
+  all_permissions?: string[]; // Merged individual + role permissions
 }
 
 // Appointment Status Lookup - Bảng tra cứu Trạng thái Lịch hẹn

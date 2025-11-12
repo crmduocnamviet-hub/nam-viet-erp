@@ -304,7 +304,7 @@ const InventoryB2BOrdersPage: React.FC<InventoryB2BOrdersPageProps> = ({
   };
 
   return (
-    <div style={{ padding: "24px" }}>
+    <div style={{ padding: "12px" }}>
       {/* Header */}
       <Row justify="space-between" align="middle" style={{ marginBottom: 24 }}>
         <Col>

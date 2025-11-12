@@ -269,7 +269,7 @@ const VATInventoryDashboard: React.FC = () => {
   ];
 
   return (
-    <div style={{ padding: "24px" }}>
+    <div style={{ padding: "12px" }}>
       <div
         style={{
           marginBottom: "24px",

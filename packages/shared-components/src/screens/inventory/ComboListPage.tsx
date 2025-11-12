@@ -47,7 +47,9 @@ const ComboListPageContent: React.FC<ComboListPageContentProps> = ({
   const debouncedSearchTerm = useDebounce(searchTerm, 500);
 
   const [isComboModalOpen, setIsComboModalOpen] = useState(false);
-  const [editingCombo, setEditingCombo] = useState<IComboWithItems | null>(null);
+  const [editingCombo, setEditingCombo] = useState<IComboWithItems | null>(
+    null,
+  );
 
   // Combo Store
   const { fetchCombos: fetchCombosToStore } = useComboStore();
@@ -73,7 +75,8 @@ const ComboListPageContent: React.FC<ComboListPageContentProps> = ({
           }
         }
         const discountAmount = originalPrice - combo.combo_price;
-        const discountPercentage = originalPrice > 0 ? (discountAmount / originalPrice) * 100 : 0;
+        const discountPercentage =
+          originalPrice > 0 ? (discountAmount / originalPrice) * 100 : 0;
 
         return {
           ...combo,
@@ -84,9 +87,14 @@ const ComboListPageContent: React.FC<ComboListPageContentProps> = ({
       });
 
       // Filter by search term
-      const filtered = combosWithPricing.filter((combo) =>
-        combo.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
-        combo.description?.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
+      const filtered = combosWithPricing.filter(
+        (combo) =>
+          combo.name
+            .toLowerCase()
+            .includes(debouncedSearchTerm.toLowerCase()) ||
+          combo.description
+            ?.toLowerCase()
+            .includes(debouncedSearchTerm.toLowerCase()),
       );
 
       setCombos(filtered);
@@ -158,7 +166,10 @@ const ComboListPageContent: React.FC<ComboListPageContentProps> = ({
             style={{ backgroundColor: "#faad14" }}
           />
           <div>
-            <Typography.Text strong style={{ display: "block", marginBottom: 4 }}>
+            <Typography.Text
+              strong
+              style={{ display: "block", marginBottom: 4 }}
+            >
               {text}
             </Typography.Text>
             {record.description && (
@@ -185,7 +196,8 @@ const ComboListPageContent: React.FC<ComboListPageContentProps> = ({
         <div>
           {record.combo_items?.slice(0, 3).map((item, idx) => (
             <div key={idx} style={{ fontSize: "11px", marginBottom: 2 }}>
-              • {item.products?.name || `Product ${item.product_id}`} x{item.quantity}
+              • {item.products?.name || `Product ${item.product_id}`} x
+              {item.quantity}
             </div>
           ))}
           {record.combo_items && record.combo_items.length > 3 && (
@@ -256,12 +268,7 @@ const ComboListPageContent: React.FC<ComboListPageContentProps> = ({
               cancelText="Hủy"
               okButtonProps={{ danger: true }}
             >
-              <Button
-                type="link"
-                danger
-                icon={<DeleteOutlined />}
-                size="small"
-              >
+              <Button type="link" danger icon={<DeleteOutlined />} size="small">
                 {!isMobile && "Xóa"}
               </Button>
             </Popconfirm>
@@ -272,20 +279,26 @@ const ComboListPageContent: React.FC<ComboListPageContentProps> = ({
   ];
 
   return (
-    <div style={{ padding: "24px", minHeight: "100vh" }}>
+    <div style={{ padding: "12px", minHeight: "100vh" }}>
       <Space direction="vertical" size="large" style={{ width: "100%" }}>
         <div>
           <Title level={isMobile ? 3 : 2} style={{ margin: 0 }}>
             🎁 Quản lý Combo Sản phẩm
           </Title>
-          <Text type="secondary" style={{ fontSize: isMobile ? "14px" : "16px" }}>
+          <Text
+            type="secondary"
+            style={{ fontSize: isMobile ? "14px" : "16px" }}
+          >
             Tạo và quản lý các combo khuyến mãi
           </Text>
         </div>
 
         <Card>
           <Space direction="vertical" size="middle" style={{ width: "100%" }}>
-            <Space style={{ width: "100%", justifyContent: "space-between" }} wrap>
+            <Space
+              style={{ width: "100%", justifyContent: "space-between" }}
+              wrap
+            >
               <Search
                 placeholder="Tìm kiếm combo..."
                 value={searchTerm}

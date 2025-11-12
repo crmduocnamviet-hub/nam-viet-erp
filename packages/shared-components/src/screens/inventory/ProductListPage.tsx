@@ -77,7 +77,7 @@ const ProductListPageContent: React.FC<ProductListPageContentProps> = () => {
   };
 
   return (
-    <div style={{ padding: "24px", minHeight: "100vh" }}>
+    <div style={{ padding: "12px", minHeight: "100vh" }}>
       <Space direction="vertical" size="large" style={{ width: "100%" }}>
         <div>
           <Title level={isMobile ? 3 : 2} style={{ margin: 0 }}>

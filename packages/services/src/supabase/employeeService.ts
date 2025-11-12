@@ -1,15 +1,19 @@
 import type { PostgrestSingleResponse } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
 
-// Get all employees with optional filtering
+// Get all employees with optional filtering (using view to include role information)
 export const getEmployees = async (filters?: {
   search?: string;
   roleName?: string;
   isActive?: boolean;
   limit?: number;
   offset?: number;
+  includeRoleInfo?: boolean; // If true, use employee_with_role view
 }) => {
-  let query = supabase.from("employees").select("*");
+  const tableName = filters?.includeRoleInfo
+    ? "employee_with_role"
+    : "employees";
+  let query = supabase.from(tableName).select("*");
 
   if (filters?.search) {
     query = query.or(
@@ -38,6 +42,17 @@ export const getEmployees = async (filters?: {
 
   const response = await query.order("full_name", { ascending: true });
   return response;
+};
+
+// Get employees with full role information
+export const getEmployeesWithRoles = async (filters?: {
+  search?: string;
+  roleName?: string;
+  isActive?: boolean;
+  limit?: number;
+  offset?: number;
+}) => {
+  return getEmployees({ ...filters, includeRoleInfo: true });
 };
 
 // Get employee by ID

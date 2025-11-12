@@ -41,7 +41,7 @@ const CreateProductPage: React.FC<CreateProductPageProps> = ({
   // Check permission
   if (!hasPermission("products:create")) {
     return (
-      <div style={{ padding: "24px", minHeight: "100vh" }}>
+      <div style={{ padding: "12px", minHeight: "100vh" }}>
         <Card>
           <div style={{ textAlign: "center", padding: "40px 0" }}>
             <Title level={3}>🚫 Không có quyền truy cập</Title>
@@ -136,7 +136,7 @@ const CreateProductPage: React.FC<CreateProductPageProps> = ({
   };
 
   return (
-    <div style={{ padding: "24px", minHeight: "100vh" }}>
+    <div style={{ padding: "12px", minHeight: "100vh" }}>
       {/* Breadcrumb */}
       <Breadcrumb
         style={{ marginBottom: "16px" }}

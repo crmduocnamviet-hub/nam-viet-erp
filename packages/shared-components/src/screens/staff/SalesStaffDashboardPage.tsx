@@ -601,7 +601,7 @@ const SalesStaffDashboardPage: React.FC<SalesStaffDashboardPageProps> = ({
   const completedTodos = todos.filter((todo) => todo.status === "completed");
 
   return (
-    <div style={{ padding: "24px" }}>
+    <div style={{ padding: "12px" }}>
       <Title level={2}>📊 Dashboard Nhân viên Bán hàng</Title>
       <Text type="secondary">
         Xin chào {employee?.full_name || "Nhân viên"}! Đây là danh sách công

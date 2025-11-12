@@ -16,7 +16,7 @@ import {
   Row,
   Col,
   Typography,
-  message,
+  App,
   Popconfirm,
   Progress,
 } from "antd";
@@ -30,10 +30,17 @@ import {
 import type { ColumnsType } from "antd/es/table";
 import { SeniorityPolicy, EmployeeSeniority } from "../../types/salary";
 import { formatCurrency } from "../../utils";
+import {
+  getSeniorityPolicies,
+  deleteSeniorityPolicy,
+} from "@nam-viet-erp/services";
+import SeniorityPolicyFormModal from "./SeniorityPolicyFormModal";
+import { formatRoleTitles } from "../../constants/roles";
 
 const { Title, Text } = Typography;
 
 const SeniorityPolicyTab: React.FC = () => {
+  const { message: messageApi } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [policies, setPolicies] = useState<SeniorityPolicy[]>([]);
   const [employeeSeniority, setEmployeeSeniority] = useState<
@@ -42,62 +49,32 @@ const SeniorityPolicyTab: React.FC = () => {
   const [activeTab, setActiveTab] = useState<"policies" | "employees">(
     "policies",
   );
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedPolicy, setSelectedPolicy] = useState<SeniorityPolicy | null>(
+    null,
+  );
 
   useEffect(() => {
     loadPolicies();
     loadEmployeeSeniority();
   }, []);
 
-  const loadPolicies = () => {
+  const loadPolicies = async () => {
     setLoading(true);
     try {
-      // TODO: Load from API
-      const mockPolicies: SeniorityPolicy[] = [
-        {
-          id: "sp_1",
-          name: "Thưởng 1 năm",
-          description: "Thưởng sau 1 năm làm việc",
-          min_years: 1,
-          max_years: 2,
-          bonus_type: "fixed",
-          bonus_amount: 2000000,
-          is_active: true,
-        },
-        {
-          id: "sp_2",
-          name: "Thưởng 2 năm",
-          description: "Thưởng sau 2 năm làm việc",
-          min_years: 2,
-          max_years: 3,
-          bonus_type: "fixed",
-          bonus_amount: 3000000,
-          is_active: true,
-        },
-        {
-          id: "sp_3",
-          name: "Thưởng 3-5 năm",
-          description: "Thưởng 5% lương cơ bản cho nhân viên 3-5 năm",
-          min_years: 3,
-          max_years: 5,
-          bonus_type: "percentage",
-          bonus_amount: 5,
-          is_active: true,
-        },
-        {
-          id: "sp_4",
-          name: "Thưởng trên 5 năm",
-          description: "Thưởng 10% lương cơ bản cho nhân viên trên 5 năm",
-          min_years: 5,
-          max_years: undefined,
-          bonus_type: "percentage",
-          bonus_amount: 10,
-          is_active: true,
-        },
-      ];
+      const { data, error } = await getSeniorityPolicies();
 
-      setPolicies(mockPolicies);
+      if (error) {
+        messageApi.error(
+          "Không thể tải chính sách thâm niên: " + error.message,
+        );
+        return;
+      }
+
+      setPolicies(data || []);
     } catch (error) {
-      message.error("Không thể tải chính sách thâm niên");
+      console.error("Error loading seniority policies:", error);
+      messageApi.error("Có lỗi xảy ra khi tải dữ liệu");
     } finally {
       setLoading(false);
     }
@@ -171,23 +148,48 @@ const SeniorityPolicyTab: React.FC = () => {
   };
 
   const handleCreatePolicy = () => {
-    message.info("Chức năng đang phát triển");
+    setSelectedPolicy(null);
+    setModalVisible(true);
   };
 
   const handleEditPolicy = (record: SeniorityPolicy) => {
-    message.info("Chức năng đang phát triển");
+    setSelectedPolicy(record);
+    setModalVisible(true);
   };
 
-  const handleDeletePolicy = (record: SeniorityPolicy) => {
-    message.success(`Đã xóa chính sách "${record.name}"`);
-    loadPolicies();
+  const handleDeletePolicy = async (record: SeniorityPolicy) => {
+    try {
+      const { error } = await deleteSeniorityPolicy(record.id);
+
+      if (error) {
+        messageApi.error(
+          "Không thể xóa chính sách thâm niên: " + error.message,
+        );
+        return;
+      }
+
+      messageApi.success(`Đã xóa chính sách "${record.policy_name}"`);
+      loadPolicies();
+    } catch (error) {
+      console.error("Error deleting seniority policy:", error);
+      messageApi.error("Có lỗi xảy ra khi xóa chính sách");
+    }
+  };
+
+  const handleModalClose = (saved: boolean) => {
+    setModalVisible(false);
+    setSelectedPolicy(null);
+
+    if (saved) {
+      loadPolicies();
+    }
   };
 
   const policyColumns: ColumnsType<SeniorityPolicy> = [
     {
       title: "Tên chính sách",
-      dataIndex: "name",
-      key: "name",
+      dataIndex: "policy_name",
+      key: "policy_name",
       width: 200,
       render: (text: string, record) => (
         <Space direction="vertical" size={0}>
@@ -205,18 +207,18 @@ const SeniorityPolicyTab: React.FC = () => {
       key: "years",
       width: 150,
       render: (_, record) => {
-        const max = record.max_years ? `${record.max_years} năm` : "vô hạn";
+        const max = record.years_to ? `${record.years_to} năm` : "vô hạn";
         return (
           <Tag color="blue">
-            {record.min_years} - {max}
+            {record.years_from} - {max}
           </Tag>
         );
       },
     },
     {
-      title: "Loại thưởng",
-      dataIndex: "bonus_type",
-      key: "bonus_type",
+      title: "Loại phụ cấp",
+      dataIndex: "benefit_type",
+      key: "benefit_type",
       width: 120,
       render: (type: string) => (
         <Tag color={type === "fixed" ? "green" : "orange"}>
@@ -226,17 +228,26 @@ const SeniorityPolicyTab: React.FC = () => {
     },
     {
       title: "Giá trị",
-      dataIndex: "bonus_amount",
-      key: "bonus_amount",
+      dataIndex: "benefit_value",
+      key: "benefit_value",
       width: 150,
       align: "right",
       render: (amount: number, record) => {
-        if (record.bonus_type === "fixed") {
+        if (record.benefit_type === "fixed") {
           return <Text strong>{formatCurrency(amount)}</Text>;
         } else {
           return <Text strong>{amount}%</Text>;
         }
       },
+    },
+    {
+      title: "Vai trò áp dụng",
+      dataIndex: "applicable_roles",
+      key: "applicable_roles",
+      width: 180,
+      render: (roles: string[] | null) => (
+        <Text type="secondary">{formatRoleTitles(roles)}</Text>
+      ),
     },
     {
       title: "Trạng thái",
@@ -267,7 +278,7 @@ const SeniorityPolicyTab: React.FC = () => {
           </Button>
           <Popconfirm
             title="Xác nhận xóa"
-            description={`Bạn có chắc muốn xóa chính sách "${record.name}"?`}
+            description={`Bạn có chắc muốn xóa chính sách "${record.policy_name}"?`}
             onConfirm={() => handleDeletePolicy(record)}
             okText="Xóa"
             cancelText="Hủy"
@@ -477,6 +488,12 @@ const SeniorityPolicyTab: React.FC = () => {
           </>
         )}
       </Card>
+
+      <SeniorityPolicyFormModal
+        visible={modalVisible}
+        seniorityPolicy={selectedPolicy}
+        onClose={handleModalClose}
+      />
     </div>
   );
 };

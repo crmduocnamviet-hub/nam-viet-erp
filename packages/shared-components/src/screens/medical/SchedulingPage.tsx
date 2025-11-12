@@ -150,7 +150,7 @@ const SchedulingDashboard: React.FC<{
       style={{
         backgroundColor: "#f5f5f5",
         borderRadius: "8px",
-        padding: "24px",
+        padding: "12px",
       }}
     >
       <div

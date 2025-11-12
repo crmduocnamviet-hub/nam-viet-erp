@@ -578,18 +578,6 @@ export const CMS_APP_MENU: MenuItemConfig[] = [
     ],
   },
   {
-    key: "hr",
-    label: "Quản lý Nhân sự",
-    icon: <IdcardOutlined />,
-    children: [
-      {
-        key: "/employees",
-        label: "Quản lý Nhân viên",
-        screenKey: "management.employees",
-      },
-    ],
-  },
-  {
     key: "salary",
     label: "Lương & Thưởng",
     icon: <DollarOutlined />,
@@ -636,14 +624,9 @@ export const CMS_APP_MENU: MenuItemConfig[] = [
     icon: <SettingOutlined />,
     children: [
       {
-        key: "/users",
-        label: "Quản lý tài khoản",
-        screenKey: "management.users",
-      },
-      {
-        key: "/roles",
-        label: "Quản lý Vai trò",
-        screenKey: "management.roles",
+        key: "/user-roles",
+        label: "Quản lý Người dùng & Phân quyền",
+        screenKey: "management.user-roles",
       },
       {
         key: "/settings/funds",

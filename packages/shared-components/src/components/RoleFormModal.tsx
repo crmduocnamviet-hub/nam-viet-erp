@@ -22,6 +22,7 @@ interface RoleFormModalProps {
   visible: boolean;
   role: Role | null;
   onClose: (saved: boolean) => void;
+  onSave?: (roleData: Role) => void;
 }
 
 interface PermissionItem {
@@ -96,6 +97,7 @@ const RoleFormModal: React.FC<RoleFormModalProps> = ({
   visible,
   role,
   onClose,
+  onSave,
 }) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
@@ -123,21 +125,29 @@ const RoleFormModal: React.FC<RoleFormModalProps> = ({
       const values = await form.validateFields();
       setLoading(true);
 
-      const roleData: CreateRoleInput = {
+      const newRole: Role = {
+        id: role?.id || values.key,
         key: values.key,
         title: values.title,
         description: values.description,
         permissions: selectedPermissions,
+        is_system_role: role?.is_system_role || false,
       };
 
       if (role) {
         // Update existing role
         // TODO: Implement API call
-        message.success(`Đã cập nhật vai trò "${roleData.title}"`);
+        if (onSave) {
+          onSave(newRole);
+        }
+        message.success(`Đã cập nhật vai trò "${newRole.title}"`);
       } else {
         // Create new role
         // TODO: Implement API call
-        message.success(`Đã tạo vai trò "${roleData.title}"`);
+        if (onSave) {
+          onSave(newRole);
+        }
+        message.success(`Đã tạo vai trò "${newRole.title}"`);
       }
 
       onClose(true);

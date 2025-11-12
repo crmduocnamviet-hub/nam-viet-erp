@@ -39,16 +39,6 @@ import {
   getProductWithInventory,
 } from "@nam-viet-erp/services";
 import { getB2BQuotes } from "@nam-viet-erp/services";
-import type {
-  IVATInvoiceOutWithDetails,
-  IWarehouse,
-  IProduct,
-  ICreateVATInvoiceOut,
-  VATInvoiceStatus,
-  IB2BQuote,
-} from "../../../../../types";
-import { COMMON_SPACING, getResponsivePadding } from "../../constants/spacing";
-import dayjs from "dayjs";
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -422,7 +412,7 @@ const VATInvoiceB2BPage: React.FC = () => {
   };
 
   return (
-    <div style={{ padding: getResponsivePadding(screens) }}>
+    <div>
       <Space direction="vertical" size="large" style={{ width: "100%" }}>
         {/* Header */}
         <Row justify="space-between" align="middle" gutter={[16, 16]}>

@@ -208,7 +208,7 @@ const DeliveryStaffDashboardPage: React.FC<DeliveryStaffDashboardPageProps> = ({
   const todayDeliveries = todos.filter((todo) => todo.type === "delivery");
 
   return (
-    <div style={{ padding: "24px" }}>
+    <div style={{ padding: "12px" }}>
       <Title level={2}>🚚 Dashboard Nhân viên Giao hàng</Title>
       <Text type="secondary">
         Xin chào {employee?.full_name || "Nhân viên"}! Đây là lịch trình giao

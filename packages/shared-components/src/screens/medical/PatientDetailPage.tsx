@@ -23,7 +23,6 @@ import {
   Divider,
   Grid,
 } from "antd";
-import { getResponsivePadding } from "../../constants/spacing";
 import {
   UserOutlined,
   SaveOutlined,
@@ -325,7 +324,7 @@ const PatientDetailPage: React.FC = () => {
   }
 
   return (
-    <div style={{ padding: getResponsivePadding(screens) }}>
+    <div>
       {/* Breadcrumb Navigation */}
       <Card style={{ marginBottom: 16 }}>
         <Breadcrumb>

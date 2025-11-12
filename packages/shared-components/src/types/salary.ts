@@ -218,13 +218,13 @@ export interface CommissionResult {
  */
 export interface SeniorityPolicy {
   id: string;
-  name: string;
+  policy_name: string;
   description?: string;
-  min_years: number; // Số năm tối thiểu
-  max_years?: number; // Số năm tối đa (null = unlimited)
-  bonus_type: "fixed" | "percentage"; // Fixed amount hoặc %
-  bonus_amount: number; // Số tiền thưởng
-  applicable_roles?: string[]; // Roles áp dụng (null = all roles)
+  years_from: number; // Số năm tối thiểu (inclusive)
+  years_to?: number | null; // Số năm tối đa (inclusive, null = unlimited)
+  benefit_type: "fixed" | "percentage"; // Fixed amount hoặc %
+  benefit_value: number; // Số tiền phụ cấp hoặc % lương
+  applicable_roles?: string[] | null; // Roles áp dụng (null/empty = all roles)
   is_active: boolean;
   created_at?: string;
   updated_at?: string;

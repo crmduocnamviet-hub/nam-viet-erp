@@ -44,6 +44,10 @@ export * from "./src/supabase/roomService";
 // Salary Management Services
 export * from "./src/supabase/salaryService";
 
+// Role Management Services
+export * from "./src/supabase/roleService";
+export * from "./src/supabase/permissionRoleService";
+
 // Firebase Services
 export * from "./src/firebase/fcmService";
 

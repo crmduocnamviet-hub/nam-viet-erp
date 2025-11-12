@@ -59,9 +59,9 @@ const SalaryManagementPage: React.FC = () => {
   ];
 
   return (
-    <div style={{ padding: "0 24px 24px" }}>
+    <div style={{ padding: "0 12px 12px" }}>
       {/* Page Header */}
-      <div style={{ marginBottom: 24 }}>
+      <div style={{ marginBottom: 16 }}>
         <Title level={2} style={{ marginBottom: 8 }}>
           Quản lý Lương & Thưởng
         </Title>
@@ -71,14 +71,12 @@ const SalaryManagementPage: React.FC = () => {
       </div>
 
       {/* Tabs */}
-      <Card>
-        <Tabs
-          activeKey={activeTab}
-          onChange={(key) => setActiveTab(key as TabKey)}
-          items={tabItems}
-          size="large"
-        />
-      </Card>
+      <Tabs
+        activeKey={activeTab}
+        onChange={(key) => setActiveTab(key as TabKey)}
+        items={tabItems}
+        size="large"
+      />
     </div>
   );
 };

@@ -193,7 +193,7 @@ const InventoryStaffDashboardPage: React.FC<
   );
 
   return (
-    <div style={{ padding: "24px" }}>
+    <div style={{ padding: "12px" }}>
       <Title level={2}>📦 Dashboard Nhân viên Kho</Title>
       <Text type="secondary">
         Xin chào {employee?.full_name || "Nhân viên"}! Đây là danh sách công

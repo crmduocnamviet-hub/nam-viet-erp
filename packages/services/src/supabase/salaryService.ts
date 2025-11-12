@@ -436,3 +436,120 @@ export const updateEmployeeKPIResult = async (
 
   return response;
 };
+
+// ==================== SENIORITY POLICIES ====================
+
+export const getSeniorityPolicies = async () => {
+  const response = await supabase
+    .from("seniority_policies")
+    .select("*")
+    .order("years_from", { ascending: true });
+
+  return response;
+};
+
+export const getSeniorityPolicyById = async (id: string) => {
+  const response = await supabase
+    .from("seniority_policies")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  return response;
+};
+
+export const createSeniorityPolicy = async (data: {
+  policy_name: string;
+  description?: string;
+  years_from: number;
+  years_to?: number | null;
+  benefit_type: string;
+  benefit_value: number;
+  applicable_roles?: string[];
+}) => {
+  const response = await supabase
+    .from("seniority_policies")
+    .insert({
+      policy_name: data.policy_name,
+      description: data.description,
+      years_from: data.years_from,
+      years_to: data.years_to,
+      benefit_type: data.benefit_type,
+      benefit_value: data.benefit_value,
+      applicable_roles: data.applicable_roles,
+      is_active: true,
+    })
+    .select()
+    .single();
+
+  return response;
+};
+
+export const updateSeniorityPolicy = async (
+  id: string,
+  data: {
+    policy_name?: string;
+    description?: string;
+    years_from?: number;
+    years_to?: number | null;
+    benefit_type?: string;
+    benefit_value?: number;
+    applicable_roles?: string[];
+    is_active?: boolean;
+  },
+) => {
+  const response = await supabase
+    .from("seniority_policies")
+    .update(data)
+    .eq("id", id)
+    .select()
+    .single();
+
+  return response;
+};
+
+export const deleteSeniorityPolicy = async (id: string) => {
+  const response = await supabase
+    .from("seniority_policies")
+    .delete()
+    .eq("id", id);
+
+  return response;
+};
+
+export const toggleSeniorityPolicyStatus = async (id: string) => {
+  // Get current status
+  const { data: currentPolicy } = await supabase
+    .from("seniority_policies")
+    .select("is_active")
+    .eq("id", id)
+    .single();
+
+  if (!currentPolicy) {
+    return { data: null, error: { message: "Seniority policy not found" } };
+  }
+
+  // Toggle status
+  const response = await supabase
+    .from("seniority_policies")
+    .update({ is_active: !currentPolicy.is_active })
+    .eq("id", id)
+    .select()
+    .single();
+
+  return response;
+};
+
+export const getEmployeeSeniorityBenefit = async (
+  yearsOfService: number,
+  employeeRole: string,
+  baseSalary: number,
+) => {
+  const { data, error } = await supabase.rpc("get_employee_seniority_benefit", {
+    p_years_of_service: yearsOfService,
+    p_employee_role: employeeRole,
+    p_base_salary: baseSalary,
+  });
+
+  return { data, error };
+};

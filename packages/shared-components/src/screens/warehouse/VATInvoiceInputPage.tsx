@@ -44,16 +44,6 @@ import {
   getProductLotsByWarehouse,
   analyticInvoicePdf,
 } from "@nam-viet-erp/services";
-import type {
-  IVATInvoiceInWithDetails,
-  IWarehouse,
-  IProduct,
-  ISupplier,
-  ICreateVATInvoiceIn,
-  IVATInvoiceIn,
-  IProductLot,
-} from "../../../../../types";
-import { COMMON_SPACING, getResponsivePadding } from "../../constants/spacing";
 import dayjs from "dayjs";
 
 const { Title, Text } = Typography;
@@ -724,7 +714,7 @@ const VATInvoiceInputPage: React.FC = () => {
   const isTablet = screens.md && !screens.lg;
 
   return (
-    <div style={{ padding: getResponsivePadding(screens) }}>
+    <div>
       <Card>
         <Space direction="vertical" size="large" style={{ width: "100%" }}>
           {/* Header */}

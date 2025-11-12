@@ -26,7 +26,6 @@ import {
   updateUserAccount,
   deleteUserAccount,
 } from "@nam-viet-erp/services";
-import { COMMON_SPACING, getResponsivePadding } from "../../constants/spacing";
 import { UserManagementTable } from "../../components/tables";
 
 const { Title, Text } = Typography;
@@ -179,13 +178,9 @@ const UserManagementPageContent: React.FC = () => {
   const activeUsers = users.length; // All users are active since Supabase Auth doesn't have is_active field
 
   return (
-    <div style={{ padding: getResponsivePadding(screens) }}>
+    <div>
       <Row style={{ marginBottom: 24 }} gutter={[16, 16]}>
         <Col xs={24} md={16}>
-          <Title level={isMobile ? 3 : 2} style={{ margin: 0 }}>
-            <UserOutlined style={{ marginRight: 8 }} />
-            {isMobile ? "Tài khoản" : "Quản lý Tài khoản Người dùng"}
-          </Title>
           {!isMobile && (
             <Text
               type="secondary"
@@ -212,30 +207,6 @@ const UserManagementPageContent: React.FC = () => {
           >
             Thêm tài khoản
           </Button>
-        </Col>
-      </Row>
-
-      {/* Statistics Cards */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-        <Col xs={24} sm={12} md={12}>
-          <Card>
-            <Statistic
-              title="Tổng số tài khoản"
-              value={totalUsers}
-              prefix={<UserOutlined />}
-              valueStyle={{ color: "#1890ff" }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} md={12}>
-          <Card>
-            <Statistic
-              title="Tài khoản hoạt động"
-              value={activeUsers}
-              valueStyle={{ color: "#3f8600" }}
-              prefix={<UserOutlined />}
-            />
-          </Card>
         </Col>
       </Row>
 

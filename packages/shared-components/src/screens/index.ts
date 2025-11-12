@@ -58,6 +58,9 @@ import EditEmployeePage from "./management/EditEmployeePage";
 import UserManagementPage from "./management/UserManagementPage";
 import RoomManagementPage from "./management/RoomManagementPage";
 import RoleManagementPage from "./management/RoleManagementPage";
+import EmployeeRolesPage from "./management/EmployeeRolesPage";
+import UserRoleManagementPage from "./management/UserRoleManagementPage";
+import EmployeeManagementPage from "./management/EmployeeManagementPage";
 
 // Screen Imports - Salary
 import SalaryManagementPage from "./salary/SalaryManagementPage";
@@ -415,6 +418,14 @@ export const SCREEN_REGISTRY: ScreenRegistry = {
     title: "Quản lý Vai trò",
     description: "Quản lý vai trò và phân quyền trong hệ thống",
   },
+  "management.user-roles": {
+    component: UserRoleManagementPage,
+    permissions: ["management.access", "users.view"],
+    category: "management",
+    title: "Quản lý Người dùng & Phân quyền",
+    description:
+      "Quản lý tài khoản người dùng và vai trò nhân viên trong hệ thống",
+  },
 
   // ==================== SALARY & COMPENSATION SCREENS ====================
   "salary.management": {
@@ -590,6 +601,7 @@ export const PERMISSION_CATEGORIES = {
 export const PERMISSIONS = {
   // Authentication
   "auth.login": "Đăng nhập hệ thống",
+  "auth.logout": "Đăng xuất hệ thống",
 
   // POS Permissions
   "pos.access": "Truy cập hệ thống POS",
@@ -705,6 +717,7 @@ export const PERMISSIONS = {
   "employees.create": "Thêm nhân viên mới",
   "employees.edit": "Chỉnh sửa thông tin nhân viên",
   "employees.delete": "Xóa nhân viên",
+  "employees.permissions": "Quản lý quyền của nhân viên",
   "users.view": "Xem danh sách tài khoản",
   "users.create": "Tạo tài khoản mới",
   "users.edit": "Chỉnh sửa tài khoản",
@@ -1014,6 +1027,9 @@ export {
   UserManagementPage,
   RoomManagementPage,
   RoleManagementPage,
+  EmployeeRolesPage,
+  UserRoleManagementPage,
+  EmployeeManagementPage,
   // Staff Dashboards
   SalesStaffDashboardPage,
   InventoryStaffDashboardPage,

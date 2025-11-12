@@ -283,7 +283,7 @@ const B2BOrderManagementPage: React.FC<B2BOrderManagementPageProps> = ({
   };
 
   return (
-    <div style={{ padding: "24px" }}>
+    <div style={{ padding: "12px" }}>
       <Row justify="space-between" align="middle" style={{ marginBottom: 24 }}>
         <Col>
           <Title level={2} style={{ margin: 0 }}>

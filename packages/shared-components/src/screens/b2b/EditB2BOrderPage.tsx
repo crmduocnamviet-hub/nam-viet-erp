@@ -368,7 +368,7 @@ const EditB2BOrderPage: React.FC<EditB2BOrderPageProps> = ({
   }
 
   return (
-    <div style={{ padding: "24px", maxWidth: "1200px", margin: "0 auto" }}>
+    <div style={{ padding: "12px", maxWidth: "1200px", margin: "0 auto" }}>
       {/* Header */}
       <Row justify="space-between" align="middle" style={{ marginBottom: 24 }}>
         <Col>

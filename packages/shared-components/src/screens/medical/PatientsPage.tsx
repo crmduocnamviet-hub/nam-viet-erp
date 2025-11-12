@@ -39,7 +39,6 @@ import {
   deletePatient,
   getPatientPointsHistory,
 } from "@nam-viet-erp/services";
-import { COMMON_SPACING, getResponsivePadding } from "../../constants/spacing";
 import { useNavigate } from "react-router-dom";
 
 const { Title, Text } = Typography;
@@ -477,7 +476,7 @@ const PatientsPage: React.FC = () => {
   ];
 
   return (
-    <div style={{ padding: getResponsivePadding(screens) }}>
+    <div>
       <Row style={{ marginBottom: 24 }} gutter={[16, 16]} align="middle">
         <Col xs={24} sm={24} md={12} lg={12} xl={12}>
           <Title level={2} style={{ margin: 0 }}>
